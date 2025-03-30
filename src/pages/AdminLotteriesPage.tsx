@@ -1,10 +1,10 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Award, Plus, Trash } from 'lucide-react';
+import { Award, Plus, Trash, Check } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries, mockProducts } from '@/data/mockData';
 import { toast } from '@/lib/toast';
@@ -69,6 +69,7 @@ const AdminLotteriesPage: React.FC = () => {
     setIsCreating(true);
     setSelectedLotteryId(null);
     resetForm();
+    setSearchProductTerm('');
   };
   
   const handleEditLottery = (lotteryId: number) => {
@@ -77,6 +78,7 @@ const AdminLotteriesPage: React.FC = () => {
     
     setIsCreating(false);
     setSelectedLotteryId(lotteryId);
+    setSearchProductTerm('');
     
     form.reset({
       title: lottery.title,
@@ -144,6 +146,8 @@ const AdminLotteriesPage: React.FC = () => {
     } else {
       form.setValue('linkedProducts', [...currentProducts, productId]);
     }
+    // Force rerender by updating form
+    form.trigger('linkedProducts');
   };
   
   const getStatusColor = (status: string) => {
@@ -171,12 +175,17 @@ const AdminLotteriesPage: React.FC = () => {
   const selectAllProducts = () => {
     const allProductIds = mockProducts.map(product => product.id.toString());
     form.setValue('linkedProducts', allProductIds);
+    form.trigger('linkedProducts');
   };
   
   // Function to deselect all products
   const deselectAllProducts = () => {
     form.setValue('linkedProducts', []);
+    form.trigger('linkedProducts');
   };
+  
+  // Get the current selected products
+  const selectedProducts = form.watch('linkedProducts') || [];
   
   return (
     <>
@@ -419,19 +428,20 @@ const AdminLotteriesPage: React.FC = () => {
                         
                         <div className="grid grid-cols-1 gap-2 mt-2 max-h-[300px] overflow-y-auto pr-2">
                           {filteredProducts.map(product => {
-                            const isSelected = form.getValues('linkedProducts').includes(product.id.toString());
+                            const isSelected = selectedProducts.includes(product.id.toString());
                             return (
                               <div 
                                 key={product.id}
                                 className={`p-3 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-blue/30' : 'bg-winshirt-space-light'}`}
                                 onClick={() => toggleProduct(product.id.toString())}
                               >
-                                <input 
-                                  type="checkbox" 
-                                  checked={isSelected}
-                                  onChange={() => {}}
-                                  className="mr-3"
-                                />
+                                <div className="mr-3 flex items-center justify-center w-5 h-5">
+                                  {isSelected ? (
+                                    <Check size={16} className="text-winshirt-blue-light" />
+                                  ) : (
+                                    <div className="w-4 h-4 border border-gray-400 rounded" />
+                                  )}
+                                </div>
                                 <div className="flex items-center flex-grow">
                                   <img
                                     src={product.image}

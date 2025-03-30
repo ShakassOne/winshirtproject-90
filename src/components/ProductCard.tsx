@@ -12,10 +12,13 @@ export interface Product {
   image: string;
   lotteryName: string;
   lotteryImage: string;
-  // Add optional properties to match what's used in the app
+  // Add all required properties to match what's used in the app
   type?: string;
   description?: string;
+  colors: string[];
+  sizes: string[];
   popularity?: number;
+  linkedLotteries?: number[];
 }
 
 interface ProductCardProps {
