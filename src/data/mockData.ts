@@ -1,4 +1,3 @@
-
 export const mockProducts = [
   {
     id: 1,
@@ -9,7 +8,10 @@ export const mockProducts = [
     lotteryImage: "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?q=80&w=1000",
     colors: ["black", "white", "gray"],
     sizes: ["S", "M", "L", "XL"],
-    description: "T-shirt en coton premium avec motif cosmique. Parfait pour les amateurs d'astronomie."
+    description: "T-shirt en coton premium avec motif cosmique. Parfait pour les amateurs d'astronomie.",
+    type: "T-shirt",
+    popularity: 4.5,
+    linkedLotteries: [1, 5]
   },
   {
     id: 2,
@@ -20,7 +22,10 @@ export const mockProducts = [
     lotteryImage: "https://images.unsplash.com/photo-1697403996161-4bdb1badf921?q=80&w=1000",
     colors: ["blue", "purple", "black"],
     sizes: ["S", "M", "L", "XL"],
-    description: "T-shirt avec imprimé galaxie en bleu profond. Tissu ultra-doux et confortable."
+    description: "T-shirt avec imprimé galaxie en bleu profond. Tissu ultra-doux et confortable.",
+    type: "T-shirt",
+    popularity: 4.8,
+    linkedLotteries: [2, 6]
   },
   {
     id: 3,
@@ -31,7 +36,10 @@ export const mockProducts = [
     lotteryImage: "https://images.unsplash.com/photo-1593764592116-bfb2a97c642a?q=80&w=1000",
     colors: ["gray", "black", "red"],
     sizes: ["S", "M", "L", "XL"],
-    description: "T-shirt rétro avec design inspiré des jeux vidéo classiques. Pour les vrais gamers."
+    description: "T-shirt rétro avec design inspiré des jeux vidéo classiques. Pour les vrais gamers.",
+    type: "T-shirt",
+    popularity: 4.2,
+    linkedLotteries: [3, 7]
   },
   {
     id: 4,
@@ -42,7 +50,10 @@ export const mockProducts = [
     lotteryImage: "https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?q=80&w=1000", 
     colors: ["white", "black", "gray"],
     sizes: ["S", "M", "L", "XL"],
-    description: "T-shirt épuré avec un design tech minimaliste. Idéal pour le quotidien."
+    description: "T-shirt épuré avec un design tech minimaliste. Idéal pour le quotidien.",
+    type: "T-shirt",
+    popularity: 4.0,
+    linkedLotteries: [4, 8]
   },
   {
     id: 5,
@@ -53,7 +64,10 @@ export const mockProducts = [
     lotteryImage: "https://images.unsplash.com/photo-1537498425277-c283d32ef9db?q=80&w=1000",
     colors: ["purple", "blue", "black"],
     sizes: ["S", "M", "L", "XL"],
-    description: "T-shirt premium avec éléments cosmiques. Coupe moderne et confortable."
+    description: "T-shirt premium avec éléments cosmiques. Coupe moderne et confortable.",
+    type: "T-shirt",
+    popularity: 4.7,
+    linkedLotteries: [5, 1]
   },
   {
     id: 6,
@@ -64,7 +78,10 @@ export const mockProducts = [
     lotteryImage: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=1000",
     colors: ["black", "gray", "green"],
     sizes: ["S", "M", "L", "XL"],
-    description: "T-shirt style urbain avec design contemporain. Parfait pour la ville."
+    description: "T-shirt style urbain avec design contemporain. Parfait pour la ville.",
+    type: "T-shirt",
+    popularity: 4.3,
+    linkedLotteries: [6, 2]
   }
 ];
 
