@@ -6,7 +6,8 @@ import { toast } from '@/lib/toast';
 
 export const useProductForm = (
   products: ExtendedProduct[],
-  setProducts: React.Dispatch<React.SetStateAction<ExtendedProduct[]>>
+  setProducts: React.Dispatch<React.SetStateAction<ExtendedProduct[]>>,
+  availableLotteries: any[] = []
 ) => {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
@@ -136,6 +137,20 @@ export const useProductForm = (
     } else {
       form.setValue('linkedLotteries', [...currentLotteries, lotteryId]);
     }
+    // Forcer la mise à jour du formulaire
+    form.trigger('linkedLotteries');
+  };
+
+  // Nouvelles fonctions pour sélectionner/désélectionner toutes les loteries
+  const selectAllLotteries = () => {
+    const allLotteryIds = availableLotteries.map(lottery => lottery.id.toString());
+    form.setValue('linkedLotteries', allLotteryIds);
+    form.trigger('linkedLotteries');
+  };
+  
+  const deselectAllLotteries = () => {
+    form.setValue('linkedLotteries', []);
+    form.trigger('linkedLotteries');
   };
 
   return {
@@ -151,6 +166,8 @@ export const useProductForm = (
     removeSize,
     addColor,
     removeColor,
-    toggleLottery
+    toggleLottery,
+    selectAllLotteries,
+    deselectAllLotteries
   };
 };
