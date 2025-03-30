@@ -40,6 +40,7 @@ const DrawWinnerButton: React.FC<DrawWinnerButtonProps> = ({ lottery, onDrawWinn
           ? "bg-winshirt-purple hover:bg-winshirt-purple-dark text-white" 
           : "text-gray-400"
       }`}
+      size="sm"
     >
       <Gift size={16} />
       Tirer au sort

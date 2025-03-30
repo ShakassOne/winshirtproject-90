@@ -2,7 +2,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Award, Plus, Trash } from 'lucide-react';
-import { ExtendedLottery } from '@/types/lottery';
+import { ExtendedLottery, Participant } from '@/types/lottery';
+import DrawWinnerButton from './DrawWinnerButton';
 
 interface LotteryListProps {
   lotteries: ExtendedLottery[];
@@ -10,6 +11,7 @@ interface LotteryListProps {
   onCreateLottery: () => void;
   onEditLottery: (lotteryId: number) => void;
   onDeleteLottery: (lotteryId: number) => void;
+  onDrawWinner: (lotteryId: number, winner: Participant) => void;
 }
 
 const LotteryList: React.FC<LotteryListProps> = ({
@@ -17,7 +19,8 @@ const LotteryList: React.FC<LotteryListProps> = ({
   selectedLotteryId,
   onCreateLottery,
   onEditLottery,
-  onDeleteLottery
+  onDeleteLottery,
+  onDrawWinner
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -50,32 +53,40 @@ const LotteryList: React.FC<LotteryListProps> = ({
         {lotteries.map(lottery => (
           <div 
             key={lottery.id}
-            className={`p-4 rounded-lg transition-colors flex items-center justify-between ${selectedLotteryId === lottery.id ? 'bg-winshirt-blue/20' : 'bg-winshirt-space-light hover:bg-winshirt-space-light/70'}`}
+            className={`p-4 rounded-lg transition-colors ${selectedLotteryId === lottery.id ? 'bg-winshirt-blue/20' : 'bg-winshirt-space-light hover:bg-winshirt-space-light/70'}`}
           >
-            <div 
-              className="flex items-center cursor-pointer flex-grow"
-              onClick={() => onEditLottery(lottery.id)}
-            >
-              <Award className="mr-3 text-winshirt-blue-light" />
-              <div>
-                <h3 className="font-medium text-white">{lottery.title}</h3>
-                <div className="flex items-center text-sm">
-                  <span className={`${getStatusColor(lottery.status)}`}>
-                    {lottery.status.charAt(0).toUpperCase() + lottery.status.slice(1)}
-                  </span>
-                  <span className="mx-2 text-gray-500">•</span>
-                  <span className="text-gray-400">{lottery.value.toFixed(2)} €</span>
+            <div className="flex items-center justify-between">
+              <div 
+                className="flex items-center cursor-pointer flex-grow"
+                onClick={() => onEditLottery(lottery.id)}
+              >
+                <Award className="mr-3 text-winshirt-blue-light" />
+                <div>
+                  <h3 className="font-medium text-white">{lottery.title}</h3>
+                  <div className="flex items-center text-sm">
+                    <span className={`${getStatusColor(lottery.status)}`}>
+                      {lottery.status.charAt(0).toUpperCase() + lottery.status.slice(1)}
+                    </span>
+                    <span className="mx-2 text-gray-500">•</span>
+                    <span className="text-gray-400">{lottery.value.toFixed(2)} €</span>
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center gap-2">
+                <DrawWinnerButton 
+                  lottery={lottery} 
+                  onDrawWinner={onDrawWinner} 
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDeleteLottery(lottery.id)}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                >
+                  <Trash size={16} />
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDeleteLottery(lottery.id)}
-              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-            >
-              <Trash size={16} />
-            </Button>
           </div>
         ))}
         
