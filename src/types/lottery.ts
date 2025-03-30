@@ -9,7 +9,15 @@ export interface ExtendedLottery {
   status: string;
   image: string;
   linkedProducts?: number[];
-  participants?: any[];
-  winner?: any;
+  participants?: Participant[];
+  winner?: Participant | null;
   drawDate?: string;
+  endDate?: string;
+}
+
+export interface Participant {
+  id: number;
+  name: string;
+  email: string;
+  avatar?: string;
 }

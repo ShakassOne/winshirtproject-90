@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ExtendedLottery } from '@/types/lottery';
+import { ExtendedLottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
 import { Product } from '@/components/ProductCard';
 
@@ -22,7 +21,8 @@ export const useLotteryForm = (
       targetParticipants: '',
       status: 'active',
       linkedProducts: [] as string[],
-      image: ''
+      image: '',
+      endDate: ''
     }
   });
   
@@ -34,7 +34,8 @@ export const useLotteryForm = (
       targetParticipants: '',
       status: 'active',
       linkedProducts: [],
-      image: ''
+      image: '',
+      endDate: ''
     });
   };
   
@@ -60,7 +61,8 @@ export const useLotteryForm = (
       targetParticipants: lottery.targetParticipants.toString(),
       status: lottery.status,
       linkedProducts: lottery.linkedProducts?.map(id => id.toString()) || [],
-      image: lottery.image
+      image: lottery.image,
+      endDate: lottery.endDate || ''
     });
   };
   
@@ -86,8 +88,9 @@ export const useLotteryForm = (
       linkedProducts: data.linkedProducts.map(Number),
       image: data.image || 'https://placehold.co/600x400/png',
       participants: isCreating ? [] : lotteries.find(l => l.id === selectedLotteryId)?.participants || [],
-      winner: null,
-      drawDate: null
+      winner: isCreating ? null : lotteries.find(l => l.id === selectedLotteryId)?.winner || null,
+      drawDate: isCreating ? null : lotteries.find(l => l.id === selectedLotteryId)?.drawDate || null,
+      endDate: data.endDate || null
     };
     
     if (isCreating) {
@@ -132,6 +135,35 @@ export const useLotteryForm = (
     form.trigger('linkedProducts');
   };
 
+  const handleDrawWinner = (lotteryId: number, winner: Participant) => {
+    setLotteries(prevLotteries => 
+      prevLotteries.map(lottery => {
+        if (lottery.id === lotteryId) {
+          return {
+            ...lottery,
+            winner: winner,
+            drawDate: new Date().toISOString(),
+            status: 'completed'
+          };
+        }
+        return lottery;
+      })
+    );
+  };
+
+  // Fonction pour vérifier automatiquement si des loteries peuvent être tirées au sort
+  const checkLotteriesReadyForDraw = () => {
+    const now = new Date();
+    const lotteriesReadyForDraw = lotteries.filter(
+      lottery => 
+        lottery.status === 'active' && 
+        ((lottery.currentParticipants >= lottery.targetParticipants) || 
+        (lottery.endDate && new Date(lottery.endDate) <= now))
+    );
+    
+    return lotteriesReadyForDraw;
+  };
+
   return {
     isCreating,
     selectedLotteryId,
@@ -145,6 +177,8 @@ export const useLotteryForm = (
     handleCancel,
     toggleProduct,
     selectAllProducts,
-    deselectAllProducts
+    deselectAllProducts,
+    handleDrawWinner,
+    checkLotteriesReadyForDraw
   };
 };
