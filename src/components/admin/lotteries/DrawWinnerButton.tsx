@@ -33,7 +33,7 @@ const DrawWinnerButton: React.FC<DrawWinnerButtonProps> = ({ lottery, onDrawWinn
   return (
     <Button
       onClick={drawWinner}
-      disabled={!canDrawWinner || lottery.status !== 'active'}
+      disabled={!canDrawWinner}
       variant="outline"
       className={`flex items-center gap-2 ${
         canDrawWinner 

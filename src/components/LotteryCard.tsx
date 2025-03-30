@@ -61,7 +61,7 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
           </div>
         )}
         
-        {lottery.endDate && lottery.status === 'active' && (
+        {lottery.endDate && (
           <div className="absolute top-4 left-4 backdrop-blur-md bg-black/30 text-white px-4 py-3 rounded-lg border border-white/30 shadow-lg">
             <div className="text-sm font-light">Tirage le</div>
             <div className="text-xl font-bold flex items-center gap-2">
