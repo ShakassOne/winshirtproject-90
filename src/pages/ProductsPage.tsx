@@ -9,12 +9,12 @@ import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const ProductsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('all');
   
   const filteredProducts = mockProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === '' || (product.type || '') === selectedType;
+    const matchesType = selectedType === 'all' || (product.type || '') === selectedType;
     
     return matchesSearch && matchesType;
   });
@@ -59,7 +59,7 @@ const ProductsPage: React.FC = () => {
                     <SelectValue placeholder="Tous les types" />
                   </SelectTrigger>
                   <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                    <SelectItem value="">Tous les types</SelectItem>
+                    <SelectItem value="all">Tous les types</SelectItem>
                     {productTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         {type.charAt(0).toUpperCase() + type.slice(1)}
