@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +39,7 @@ const AdminLotteriesPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedLotteryId, setSelectedLotteryId] = useState<number | null>(null);
+  const [searchProductTerm, setSearchProductTerm] = useState('');
   
   const form = useForm({
     defaultValues: {
@@ -134,6 +134,7 @@ const AdminLotteriesPage: React.FC = () => {
     resetForm();
     setIsCreating(false);
     setSelectedLotteryId(null);
+    setSearchProductTerm('');
   };
   
   const toggleProduct = (productId: string) => {
@@ -158,6 +159,23 @@ const AdminLotteriesPage: React.FC = () => {
       default:
         return 'text-gray-400';
     }
+  };
+  
+  // Filter products based on search term
+  const filteredProducts = mockProducts.filter(product => 
+    product.name.toLowerCase().includes(searchProductTerm.toLowerCase()) ||
+    (product.description || '').toLowerCase().includes(searchProductTerm.toLowerCase())
+  );
+  
+  // Function to select all products
+  const selectAllProducts = () => {
+    const allProductIds = mockProducts.map(product => product.id.toString());
+    form.setValue('linkedProducts', allProductIds);
+  };
+  
+  // Function to deselect all products
+  const deselectAllProducts = () => {
+    form.setValue('linkedProducts', []);
   };
   
   return (
@@ -365,9 +383,42 @@ const AdminLotteriesPage: React.FC = () => {
                       
                       {/* Linked Products */}
                       <div>
-                        <FormLabel className="text-white">Produits associés</FormLabel>
-                        <div className="grid grid-cols-1 gap-2 mt-2">
-                          {mockProducts.map(product => {
+                        <div className="flex justify-between mb-2">
+                          <FormLabel className="text-white">Produits associés</FormLabel>
+                          <div className="space-x-2">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm"
+                              onClick={selectAllProducts}
+                              className="border-winshirt-blue/30 text-winshirt-blue-light hover:bg-winshirt-blue/20"
+                            >
+                              Tout sélectionner
+                            </Button>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm"
+                              onClick={deselectAllProducts}
+                              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                            >
+                              Tout désélectionner
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Product search */}
+                        <div className="mb-4">
+                          <Input
+                            placeholder="Rechercher des produits..."
+                            value={searchProductTerm}
+                            onChange={(e) => setSearchProductTerm(e.target.value)}
+                            className="bg-winshirt-space-light border-winshirt-purple/30"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-2 mt-2 max-h-[300px] overflow-y-auto pr-2">
+                          {filteredProducts.map(product => {
                             const isSelected = form.getValues('linkedProducts').includes(product.id.toString());
                             return (
                               <div 
@@ -381,16 +432,26 @@ const AdminLotteriesPage: React.FC = () => {
                                   onChange={() => {}}
                                   className="mr-3"
                                 />
-                                <div>
-                                  <h4 className="font-medium text-white">{product.name}</h4>
-                                  <p className="text-sm text-gray-400">Prix: {product.price.toFixed(2)} €</p>
+                                <div className="flex items-center flex-grow">
+                                  <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="w-10 h-10 object-cover rounded mr-3"
+                                  />
+                                  <div>
+                                    <h4 className="font-medium text-white">{product.name}</h4>
+                                    <p className="text-sm text-gray-400">
+                                      {product.type && <span className="mr-2">{product.type}</span>}
+                                      <span>Prix: {product.price.toFixed(2)} €</span>
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
                             );
                           })}
                           
-                          {mockProducts.length === 0 && (
-                            <p className="text-gray-400">Aucun produit disponible</p>
+                          {filteredProducts.length === 0 && (
+                            <p className="text-gray-400 text-center py-4">Aucun produit ne correspond à votre recherche</p>
                           )}
                         </div>
                       </div>

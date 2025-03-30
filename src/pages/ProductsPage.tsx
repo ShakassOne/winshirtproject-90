@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { mockProducts } from '../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { mockProducts, mockLotteries } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 import StarBackground from '../components/StarBackground';
 import { Input } from '@/components/ui/input';
@@ -8,15 +9,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const ProductsPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const lotteryIdParam = searchParams.get('lottery');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedLotteryId, setSelectedLotteryId] = useState<string | null>(lotteryIdParam);
+  
+  // Set the selected lottery ID from URL parameters
+  useEffect(() => {
+    if (lotteryIdParam) {
+      setSelectedLotteryId(lotteryIdParam);
+    }
+  }, [lotteryIdParam]);
+  
+  // Get the lottery details if a lottery ID is selected
+  const selectedLottery = selectedLotteryId 
+    ? mockLotteries.find(lottery => lottery.id.toString() === selectedLotteryId)
+    : null;
   
   const filteredProducts = mockProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || (product.type || '') === selectedType;
     
-    return matchesSearch && matchesType;
+    // Filter by lottery if a lottery ID is selected
+    const matchesLottery = !selectedLotteryId || 
+      (product.linkedLotteries && product.linkedLotteries.includes(Number(selectedLotteryId)));
+    
+    return matchesSearch && matchesType && matchesLottery;
   });
   
   const productTypes = ['entrée de gamme', 'standard', 'premium'];
@@ -33,6 +54,16 @@ const ProductsPage: React.FC = () => {
           <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Nos Produits
           </h1>
+          
+          {/* Lottery filter info */}
+          {selectedLottery && (
+            <div className="mb-6 text-center">
+              <p className="text-winshirt-blue-light text-xl">
+                Produits associés à la loterie: <span className="font-semibold">{selectedLottery.title}</span>
+              </p>
+            </div>
+          )}
+          
           <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
             Découvrez notre collection de vêtements tendance qui vous permettent de participer à nos loteries exclusives.
           </p>

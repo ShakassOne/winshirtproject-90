@@ -64,7 +64,7 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Link to={`/lotteries/${lottery.id}`} className="w-full">
+        <Link to={`/products?lottery=${lottery.id}`} className="w-full">
           <Button className="w-full bg-winshirt-blue hover:bg-winshirt-blue-dark">
             Voir les produits associés
           </Button>
