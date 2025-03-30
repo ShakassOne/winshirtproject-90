@@ -4,7 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Award, Plus } from 'lucide-react';
+import { Award, Plus, Calendar } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
   Form,
   FormControl,
@@ -169,6 +173,47 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
             )}
           />
         </div>
+        
+        {/* Date de fin (nouvelle section) */}
+        <FormField
+          control={form.control}
+          name="endDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel className="text-white">Date de fin</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      className={`w-full pl-3 text-left font-normal bg-winshirt-space-light border-winshirt-purple/30 ${!field.value && "text-gray-400"}`}
+                    >
+                      {field.value ? (
+                        format(new Date(field.value), "dd MMMM yyyy", { locale: fr })
+                      ) : (
+                        <span>Sélectionner une date</span>
+                      )}
+                      <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-winshirt-space border-winshirt-purple/30" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => field.onChange(date ? date.toISOString() : "")}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormDescription className="text-gray-400">
+                Date à laquelle le tirage au sort sera automatiquement effectué
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <FormField
           control={form.control}

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -77,19 +78,25 @@ export const useLotteryForm = (
   };
   
   const onSubmit = (data: any) => {
+    // Créer un nouvel ID pour les nouvelles loteries
+    const newId = isCreating ? Math.max(...lotteries.map(l => l.id), 0) + 1 : selectedLotteryId!;
+    
+    // Trouver la loterie existante pour préserver les données non modifiées
+    const existingLottery = lotteries.find(l => l.id === selectedLotteryId);
+    
     const newLottery: ExtendedLottery = {
-      id: isCreating ? Math.max(...lotteries.map(l => l.id)) + 1 : selectedLotteryId!,
+      id: newId,
       title: data.title,
       description: data.description,
       value: parseFloat(data.value),
       targetParticipants: parseInt(data.targetParticipants),
-      currentParticipants: isCreating ? 0 : lotteries.find(l => l.id === selectedLotteryId)?.currentParticipants || 0,
+      currentParticipants: isCreating ? 0 : existingLottery?.currentParticipants || 0,
       status: data.status,
       linkedProducts: data.linkedProducts.map(Number),
       image: data.image || 'https://placehold.co/600x400/png',
-      participants: isCreating ? [] : lotteries.find(l => l.id === selectedLotteryId)?.participants || [],
-      winner: isCreating ? null : lotteries.find(l => l.id === selectedLotteryId)?.winner || null,
-      drawDate: isCreating ? null : lotteries.find(l => l.id === selectedLotteryId)?.drawDate || null,
+      participants: isCreating ? [] : existingLottery?.participants || [],
+      winner: isCreating ? null : existingLottery?.winner || null,
+      drawDate: isCreating ? null : existingLottery?.drawDate || null,
       endDate: data.endDate || null
     };
     
@@ -99,6 +106,11 @@ export const useLotteryForm = (
     } else {
       setLotteries(prev => prev.map(l => l.id === selectedLotteryId ? newLottery : l));
       toast.success("Loterie mise à jour avec succès");
+      
+      // Forcer la mise à jour de l'état local des loteries
+      sessionStorage.setItem('lotteries', JSON.stringify(
+        prev => prev.map(l => l.id === selectedLotteryId ? newLottery : l)
+      ));
     }
     
     resetForm();
@@ -136,8 +148,8 @@ export const useLotteryForm = (
   };
 
   const handleDrawWinner = (lotteryId: number, winner: Participant) => {
-    setLotteries(prevLotteries => 
-      prevLotteries.map(lottery => {
+    setLotteries(prevLotteries => {
+      const updatedLotteries = prevLotteries.map(lottery => {
         if (lottery.id === lotteryId) {
           return {
             ...lottery,
@@ -147,9 +159,36 @@ export const useLotteryForm = (
           };
         }
         return lottery;
-      })
-    );
+      });
+      
+      // Forcer la mise à jour en stockant dans sessionStorage
+      sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      
+      return updatedLotteries;
+    });
   };
+
+  // Vérifier s'il y a des loteries en sessionStorage au montage du composant
+  useEffect(() => {
+    const savedLotteries = sessionStorage.getItem('lotteries');
+    if (savedLotteries) {
+      try {
+        const parsedLotteries = JSON.parse(savedLotteries);
+        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+          setLotteries(parsedLotteries);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des loteries:", error);
+      }
+    }
+  }, []);
+
+  // Sauvegarder les loteries dans sessionStorage à chaque changement
+  useEffect(() => {
+    if (lotteries.length > 0) {
+      sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
+    }
+  }, [lotteries]);
 
   // Fonction pour vérifier automatiquement si des loteries peuvent être tirées au sort
   const checkLotteriesReadyForDraw = () => {

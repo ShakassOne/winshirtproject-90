@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries, mockProducts } from '@/data/mockData';
 import { ExtendedProduct } from '@/types/product';
@@ -10,7 +10,24 @@ import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm
 
 const AdminProductsPage: React.FC = () => {
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
-  const activeLotteries = mockLotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
+  
+  // Charger les loteries depuis sessionStorage au montage
+  useEffect(() => {
+    const savedLotteries = sessionStorage.getItem('lotteries');
+    if (savedLotteries) {
+      try {
+        const parsedLotteries = JSON.parse(savedLotteries);
+        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+          setLotteries(parsedLotteries);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des loteries:", error);
+      }
+    }
+  }, []);
+  
+  const activeLotteries = lotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
   
   const {
     isCreating,

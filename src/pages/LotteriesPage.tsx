@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { mockLotteries } from '../data/mockData';
 import LotteryCard from '../components/LotteryCard';
 import StarBackground from '../components/StarBackground';
@@ -8,10 +8,26 @@ import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [lotteries, setLotteries] = useState(mockLotteries);
+  
+  // Charger les loteries depuis sessionStorage au montage
+  useEffect(() => {
+    const savedLotteries = sessionStorage.getItem('lotteries');
+    if (savedLotteries) {
+      try {
+        const parsedLotteries = JSON.parse(savedLotteries);
+        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+          setLotteries(parsedLotteries);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des loteries:", error);
+      }
+    }
+  }, []);
   
   const filteredLotteries = activeFilter === 'all' 
-    ? mockLotteries 
-    : mockLotteries.filter(lottery => lottery.status === activeFilter);
+    ? lotteries 
+    : lotteries.filter(lottery => lottery.status === activeFilter);
   
   return (
     <>
