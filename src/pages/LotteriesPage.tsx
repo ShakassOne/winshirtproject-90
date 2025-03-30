@@ -1,116 +1,79 @@
 
 import React, { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Search } from 'lucide-react';
-import LotteryCard from '@/components/LotteryCard';
-import { mockLotteries } from '@/data/mockData';
-import StarBackground from '@/components/StarBackground';
+import { mockLotteries } from '../data/mockData';
+import LotteryCard from '../components/LotteryCard';
+import StarBackground from '../components/StarBackground';
+import { Button } from '@/components/ui/button';
+import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const LotteriesPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState<string>('all');
   
-  // Filter lotteries by status and search term
-  const activeLotteries = mockLotteries
-    .filter(lottery => 
-      lottery.status === 'active' && 
-      lottery.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  
-  const completedLotteries = mockLotteries
-    .filter(lottery => 
-      lottery.status === 'completed' && 
-      lottery.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  
-  const relaunchedLotteries = mockLotteries
-    .filter(lottery => 
-      lottery.status === 'relaunched' && 
-      lottery.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const filteredLotteries = activeFilter === 'all' 
+    ? mockLotteries 
+    : mockLotteries.filter(lottery => lottery.status === activeFilter);
   
   return (
     <>
       <StarBackground />
       
-      <section className="pt-32 pb-8">
-        <div className="container mx-auto px-4 md:px-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white">Nos Loteries</h1>
-          <p className="text-xl text-gray-300 mb-8">
-            Découvrez les lots exceptionnels que vous pouvez gagner
+      {/* Admin Navigation */}
+      <AdminNavigation />
+      
+      <section className="pt-32 pb-16">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
+            Nos Loteries
+          </h1>
+          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+            Participez à nos loteries exclusives et tentez de gagner des prix exceptionnels.
           </p>
           
-          {/* Search */}
-          <div className="relative max-w-md mb-8">
-            <Input
-              type="text"
-              placeholder="Rechercher une loterie..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-winshirt-space-light border-winshirt-purple/30 focus:border-winshirt-purple"
-            />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          {/* Status Filters */}
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            <Button
+              variant={activeFilter === 'all' ? 'default' : 'outline'}
+              className={activeFilter === 'all' ? 'bg-winshirt-blue hover:bg-winshirt-blue-dark' : 'border-winshirt-blue-light/30 text-white'}
+              onClick={() => setActiveFilter('all')}
+            >
+              Toutes
+            </Button>
+            <Button
+              variant={activeFilter === 'active' ? 'default' : 'outline'}
+              className={activeFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'border-green-600/30 text-white'}
+              onClick={() => setActiveFilter('active')}
+            >
+              Actives
+            </Button>
+            <Button
+              variant={activeFilter === 'completed' ? 'default' : 'outline'}
+              className={activeFilter === 'completed' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-600/30 text-white'}
+              onClick={() => setActiveFilter('completed')}
+            >
+              Terminées
+            </Button>
+            <Button
+              variant={activeFilter === 'relaunched' ? 'default' : 'outline'}
+              className={activeFilter === 'relaunched' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-600/30 text-white'}
+              onClick={() => setActiveFilter('relaunched')}
+            >
+              Relancées
+            </Button>
           </div>
           
-          <Separator className="mb-8 bg-winshirt-purple/20" />
+          {/* Lotteries Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredLotteries.map(lottery => (
+              <LotteryCard key={lottery.id} lottery={lottery} />
+            ))}
+          </div>
           
-          {/* Tabs */}
-          <Tabs defaultValue="active" className="w-full">
-            <TabsList className="mb-8 bg-winshirt-space-light border border-winshirt-purple/20">
-              <TabsTrigger value="active" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
-                Loteries Actives
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-winshirt-blue data-[state=active]:text-white">
-                Loteries Terminées
-              </TabsTrigger>
-              <TabsTrigger value="relaunched" className="data-[state=active]:bg-winshirt-purple-dark data-[state=active]:text-white">
-                Loteries Relancées
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="active">
-              {activeLotteries.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                  {activeLotteries.map((lottery) => (
-                    <LotteryCard key={lottery.id} lottery={lottery} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-10">
-                  <h3 className="text-xl text-gray-300">Aucune loterie active ne correspond à votre recherche</h3>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="completed">
-              {completedLotteries.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                  {completedLotteries.map((lottery) => (
-                    <LotteryCard key={lottery.id} lottery={lottery} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-10">
-                  <h3 className="text-xl text-gray-300">Aucune loterie terminée ne correspond à votre recherche</h3>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="relaunched">
-              {relaunchedLotteries.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                  {relaunchedLotteries.map((lottery) => (
-                    <LotteryCard key={lottery.id} lottery={lottery} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-10">
-                  <h3 className="text-xl text-gray-300">Aucune loterie relancée ne correspond à votre recherche</h3>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          {filteredLotteries.length === 0 && (
+            <div className="text-center py-16">
+              <h3 className="text-xl text-gray-400 mb-2">Aucune loterie trouvée</h3>
+              <p className="text-gray-500">Il n'y a actuellement aucune loterie correspondant à ce filtre</p>
+            </div>
+          )}
         </div>
       </section>
     </>

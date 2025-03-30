@@ -1,178 +1,166 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import StarBackground from '@/components/StarBackground';
-import RotatingLottery from '@/components/RotatingLottery';
-import ProductCard from '@/components/ProductCard';
-import { mockLotteries, mockProducts } from '@/data/mockData';
+import LotteryCard from '../components/LotteryCard';
+import ProductCard from '../components/ProductCard';
+import RotatingLottery from '../components/RotatingLottery';
+import StarBackground from '../components/StarBackground';
+import AdminNavigation from '@/components/admin/AdminNavigation';
+import { mockLotteries, mockProducts } from '../data/mockData';
+
+// Show only active lotteries
+const activeLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
+
+// Get popular products
+const popularProducts = [...mockProducts]
+  .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+  .slice(0, 4);
 
 const HomePage: React.FC = () => {
   return (
     <>
       <StarBackground />
       
+      {/* Admin Navigation */}
+      <AdminNavigation />
+      
       {/* Hero Section */}
-      <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 overflow-hidden">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="flex flex-col items-center text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white leading-tight animate-float">
-              <span className="text-winshirt-purple-light">Portez</span> Votre Style,<br />
-              <span className="text-winshirt-blue-light">Tentez</span> Votre Chance!
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl">
-              Un concept innovant qui allie mode et loterie.
-              Achetez un t-shirt, obtenez vos tickets de participation,
-              et gagnez des lots exceptionnels!
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/products">
-                <Button size="lg" className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full px-8">
-                  Voir les T-shirts
-                </Button>
-              </Link>
-              <Link to="/how-it-works">
-                <Button size="lg" variant="outline" className="border-winshirt-blue-light text-winshirt-blue-light hover:bg-winshirt-blue/10 rounded-full px-8">
-                  Comment ça marche
-                </Button>
-              </Link>
-            </div>
+      <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-4">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
+            Achetez des vêtements, <br />Gagnez des cadeaux incroyables
+          </h1>
+          <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto">
+            WinShirt révolutionne le shopping en ligne. Achetez nos vêtements de qualité et participez automatiquement à nos loteries exclusives pour gagner des prix exceptionnels.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link to="/products">
+              <button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
+                Voir les produits
+              </button>
+            </Link>
+            <Link to="/lotteries">
+              <button className="bg-winshirt-blue hover:bg-winshirt-blue-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
+                Voir les loteries
+              </button>
+            </Link>
           </div>
+        </div>
+        
+        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2">
+          <svg 
+            className="animate-bounce w-6 h-6 text-winshirt-purple-light" 
+            fill="none" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth="2" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+          </svg>
         </div>
       </section>
       
-      {/* Rotating Lotteries */}
-      <section className="py-16 relative">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">Lots Exceptionnels à Gagner</h2>
-            <p className="text-xl text-gray-300">Des lots de rêve vous attendent. À vous de jouer!</p>
+      {/* Featured Lottery Section */}
+      <section className="py-20 relative overflow-hidden">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue text-center">
+            Loteries en vedette
+          </h2>
+          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+            Découvrez nos loteries exclusives. Chaque achat vous rapproche d'un gain exceptionnel.
+          </p>
+          
+          {/* Rotating lottery display */}
+          <div className="max-w-4xl mx-auto">
+            <RotatingLottery lotteries={activeLotteries} />
           </div>
           
-          <RotatingLottery lotteries={mockLotteries} />
-          
-          <div className="text-center mt-10">
+          <div className="text-center mt-12">
             <Link to="/lotteries">
-              <Button className="bg-winshirt-blue hover:bg-winshirt-blue-dark text-white rounded-full px-8">
+              <button className="bg-winshirt-blue hover:bg-winshirt-blue-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
                 Voir toutes les loteries
-              </Button>
+              </button>
             </Link>
           </div>
         </div>
       </section>
       
-      {/* Featured Products */}
-      <section className="py-16 bg-winshirt-space-light/30">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">T-shirts Tendance</h2>
-            <p className="text-xl text-gray-300">Style unique, qualité premium, et chance de gagner</p>
-          </div>
+      {/* Popular Products Section */}
+      <section className="py-20 relative">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue text-center">
+            Produits populaires
+          </h2>
+          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+            Découvrez nos vêtements tendance qui vous permettent de participer à nos loteries.
+          </p>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockProducts.slice(0, 3).map((product) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {popularProducts.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
           
-          <div className="text-center mt-10">
+          <div className="text-center mt-12">
             <Link to="/products">
-              <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full px-8">
-                Voir tous les T-shirts
-              </Button>
+              <button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
+                Voir tous les produits
+              </button>
             </Link>
           </div>
         </div>
       </section>
       
-      {/* How It Works */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">Comment Ça Marche</h2>
-            <p className="text-xl text-gray-300">Simple, transparent et fun!</p>
-          </div>
+      {/* How It Works Section */}
+      <section className="py-20 relative bg-winshirt-space-light/30">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue text-center">
+            Comment ça marche
+          </h2>
+          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+            Un concept unique qui révolutionne votre expérience shopping.
+          </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="winshirt-card p-6 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-winshirt-purple/30 flex items-center justify-center mb-4 text-winshirt-purple-light text-2xl font-bold">
-                1
+            <div className="winshirt-card p-6 text-center">
+              <div className="w-16 h-16 bg-winshirt-purple/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-winshirt-purple-light">1</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-white">Choisissez un T-shirt</h3>
-              <p className="text-gray-300">Parcourez notre collection et choisissez le T-shirt qui vous plaît le plus.</p>
+              <h3 className="text-xl font-bold mb-4 text-white">Achetez un produit</h3>
+              <p className="text-gray-400">
+                Parcourez notre collection de vêtements et trouvez celui qui vous plaît.
+              </p>
             </div>
             
-            <div className="winshirt-card p-6 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-winshirt-blue/30 flex items-center justify-center mb-4 text-winshirt-blue-light text-2xl font-bold">
-                2
+            <div className="winshirt-card p-6 text-center">
+              <div className="w-16 h-16 bg-winshirt-blue/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-winshirt-blue-light">2</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-white">Sélectionnez une Loterie</h3>
-              <p className="text-gray-300">Chaque T-shirt vous donne droit à une participation à la loterie de votre choix.</p>
+              <h3 className="text-xl font-bold mb-4 text-white">Participez automatiquement</h3>
+              <p className="text-gray-400">
+                Chaque achat vous inscrit automatiquement à la loterie liée au produit.
+              </p>
             </div>
             
-            <div className="winshirt-card p-6 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-winshirt-purple/30 flex items-center justify-center mb-4 text-winshirt-purple-light text-2xl font-bold">
-                3
+            <div className="winshirt-card p-6 text-center">
+              <div className="w-16 h-16 bg-winshirt-purple/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-winshirt-purple-light">3</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-white">Tentez Votre Chance</h3>
-              <p className="text-gray-300">Recevez votre ticket de participation et attendez le tirage au sort!</p>
+              <h3 className="text-xl font-bold mb-4 text-white">Gagnez des prix incroyables</h3>
+              <p className="text-gray-400">
+                Une fois le seuil de participants atteint, un gagnant est tiré au sort.
+              </p>
             </div>
           </div>
           
           <div className="text-center mt-12">
             <Link to="/how-it-works">
-              <Button variant="outline" className="border-winshirt-blue-light text-winshirt-blue-light hover:bg-winshirt-blue/10 rounded-full px-8">
+              <button className="bg-gradient-to-r from-winshirt-purple to-winshirt-blue hover:from-winshirt-purple-dark hover:to-winshirt-blue-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
                 En savoir plus
-              </Button>
+              </button>
             </Link>
-          </div>
-        </div>
-      </section>
-      
-      {/* Stats Section */}
-      <section className="py-16 bg-winshirt-space-light/30">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            <div className="winshirt-card p-6">
-              <h3 className="text-4xl font-bold text-winshirt-purple-light mb-2">3000+</h3>
-              <p className="text-gray-300">T-shirts vendus</p>
-            </div>
-            
-            <div className="winshirt-card p-6">
-              <h3 className="text-4xl font-bold text-winshirt-blue-light mb-2">24</h3>
-              <p className="text-gray-300">Loteries terminées</p>
-            </div>
-            
-            <div className="winshirt-card p-6">
-              <h3 className="text-4xl font-bold text-winshirt-purple-light mb-2">18</h3>
-              <p className="text-gray-300">Gagnants heureux</p>
-            </div>
-            
-            <div className="winshirt-card p-6">
-              <h3 className="text-4xl font-bold text-winshirt-blue-light mb-2">100K+</h3>
-              <p className="text-gray-300">Valeur des lots distribués</p>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="winshirt-card p-8 md:p-12">
-            <div className="text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-                Prêt à Tenter Votre Chance?
-              </h2>
-              <p className="text-xl text-gray-300 mb-8">
-                Rejoignez des milliers de participants et tentez de remporter des lots exceptionnels.
-              </p>
-              <Link to="/products">
-                <Button size="lg" className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full px-10">
-                  Acheter Maintenant
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </section>
