@@ -12,6 +12,10 @@ export interface Product {
   image: string;
   lotteryName: string;
   lotteryImage: string;
+  // Add optional properties to match what's used in the app
+  type?: string;
+  description?: string;
+  popularity?: number;
 }
 
 interface ProductCardProps {

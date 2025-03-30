@@ -13,8 +13,8 @@ const ProductsPage: React.FC = () => {
   
   const filteredProducts = mockProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === '' || product.type === selectedType;
+                         (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = selectedType === '' || (product.type || '') === selectedType;
     
     return matchesSearch && matchesType;
   });

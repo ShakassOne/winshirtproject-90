@@ -11,9 +11,9 @@ import { mockLotteries, mockProducts } from '../data/mockData';
 // Show only active lotteries
 const activeLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
 
-// Get popular products
+// Get popular products - adding a default of 0 for popularity if it doesn't exist
 const popularProducts = [...mockProducts]
-  .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+  .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
   .slice(0, 4);
 
 const HomePage: React.FC = () => {
