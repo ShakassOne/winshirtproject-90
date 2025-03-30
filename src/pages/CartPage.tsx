@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Trash, Plus, Minus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/lib/toast';
 
 // Mocked cart items for demonstration
 const initialCartItems = [

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Link, useNavigate } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/lib/toast';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();

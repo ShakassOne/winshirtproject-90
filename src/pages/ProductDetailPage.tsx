@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ShoppingCart } from 'lucide-react';
 import { mockProducts, mockLotteries } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/lib/toast';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
