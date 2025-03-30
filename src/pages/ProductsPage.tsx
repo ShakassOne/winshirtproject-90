@@ -11,7 +11,7 @@ import StarBackground from '@/components/StarBackground';
 
 const ProductsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [priceSort, setPriceSort] = useState('');
+  const [priceSort, setPriceSort] = useState('default');
   
   // Filter and sort products
   const filteredProducts = mockProducts
@@ -58,7 +58,7 @@ const ProductsPage: React.FC = () => {
                 <SelectValue placeholder="Trier par prix" />
               </SelectTrigger>
               <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                <SelectItem value="">Pertinence</SelectItem>
+                <SelectItem value="default">Pertinence</SelectItem>
                 <SelectItem value="low-to-high">Prix croissant</SelectItem>
                 <SelectItem value="high-to-low">Prix décroissant</SelectItem>
               </SelectContent>
