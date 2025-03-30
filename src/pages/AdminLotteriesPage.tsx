@@ -20,8 +20,24 @@ import {
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 
+// Extend the mock lottery type with the fields we need
+interface ExtendedLottery {
+  id: number;
+  title: string;
+  description: string;
+  value: number;
+  targetParticipants: number;
+  currentParticipants: number;
+  status: string;
+  image: string;
+  linkedProducts?: number[];
+  participants?: any[];
+  winner?: any;
+  drawDate?: any;
+}
+
 const AdminLotteriesPage: React.FC = () => {
-  const [lotteries, setLotteries] = useState(mockLotteries);
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedLotteryId, setSelectedLotteryId] = useState<number | null>(null);
   
@@ -84,7 +100,7 @@ const AdminLotteriesPage: React.FC = () => {
   };
   
   const onSubmit = (data: any) => {
-    const newLottery = {
+    const newLottery: ExtendedLottery = {
       id: isCreating ? Math.max(...lotteries.map(l => l.id)) + 1 : selectedLotteryId!,
       title: data.title,
       description: data.description,

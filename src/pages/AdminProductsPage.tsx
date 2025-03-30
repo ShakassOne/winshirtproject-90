@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { TShirt, Package, Plus, Trash } from 'lucide-react';
+import { Shirt, Package, Plus, Trash } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries, mockProducts } from '@/data/mockData';
 import { toast } from '@/lib/toast';
@@ -20,8 +20,24 @@ import {
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 
+// Extend the mock product type with the fields we need
+interface ExtendedProduct {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  sizes: string[];
+  colors: string[];
+  type?: string;
+  linkedLotteries?: number[];
+  lotteryName?: string;
+  lotteryImage?: string;
+  popularity?: number;
+}
+
 const AdminProductsPage: React.FC = () => {
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   
@@ -87,7 +103,7 @@ const AdminProductsPage: React.FC = () => {
   };
   
   const onSubmit = (data: any) => {
-    const newProduct = {
+    const newProduct: ExtendedProduct = {
       id: isCreating ? Math.max(...products.map(p => p.id)) + 1 : selectedProductId!,
       name: data.name,
       description: data.description,
@@ -186,7 +202,7 @@ const AdminProductsPage: React.FC = () => {
                         className="flex items-center cursor-pointer flex-grow"
                         onClick={() => handleEditProduct(product.id)}
                       >
-                        <TShirt className="mr-3 text-winshirt-purple-light" />
+                        <Shirt className="mr-3 text-winshirt-purple-light" />
                         <div>
                           <h3 className="font-medium text-white">{product.name}</h3>
                           <p className="text-sm text-gray-400">{product.price.toFixed(2)} €</p>

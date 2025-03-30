@@ -82,7 +82,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
       {lotteries.map((lottery, index) => (
         <Link
           key={lottery.id}
-          to={`/lotteries/${lottery.id}`}
+          to={`/lotteries#${lottery.id}`}
           className="spinning-lottery-item cursor-pointer"
           style={{
             width: '300px',
