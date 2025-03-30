@@ -1,0 +1,156 @@
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { ExtendedProduct } from '@/types/product';
+import { toast } from '@/lib/toast';
+
+export const useProductForm = (
+  products: ExtendedProduct[],
+  setProducts: React.Dispatch<React.SetStateAction<ExtendedProduct[]>>
+) => {
+  const [isCreating, setIsCreating] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  
+  const form = useForm({
+    defaultValues: {
+      name: '',
+      description: '',
+      price: '',
+      type: 'standard',
+      sizes: [] as string[],
+      colors: [] as string[],
+      linkedLotteries: [] as string[],
+      image: ''
+    }
+  });
+  
+  const resetForm = () => {
+    form.reset({
+      name: '',
+      description: '',
+      price: '',
+      type: 'standard',
+      sizes: [],
+      colors: [],
+      linkedLotteries: [],
+      image: ''
+    });
+  };
+  
+  const handleCreateProduct = () => {
+    setIsCreating(true);
+    setSelectedProductId(null);
+    resetForm();
+  };
+  
+  const handleEditProduct = (productId: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    setIsCreating(false);
+    setSelectedProductId(productId);
+    
+    form.reset({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      type: product.type || 'standard',
+      sizes: product.sizes,
+      colors: product.colors,
+      linkedLotteries: product.linkedLotteries?.map(id => id.toString()) || [],
+      image: product.image
+    });
+  };
+  
+  const handleDeleteProduct = (productId: number) => {
+    setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+    toast.success("Produit supprimé avec succès");
+    
+    if (selectedProductId === productId) {
+      setSelectedProductId(null);
+      resetForm();
+    }
+  };
+  
+  const onSubmit = (data: any) => {
+    const newProduct: ExtendedProduct = {
+      id: isCreating ? Math.max(...products.map(p => p.id), 0) + 1 : selectedProductId!,
+      name: data.name,
+      description: data.description,
+      price: parseFloat(data.price),
+      type: data.type,
+      sizes: data.sizes,
+      colors: data.colors,
+      linkedLotteries: data.linkedLotteries.map(Number),
+      image: data.image || 'https://placehold.co/600x400/png',
+      popularity: Math.random() * 100 // Just for mock data
+    };
+    
+    if (isCreating) {
+      setProducts(prev => [...prev, newProduct]);
+      toast.success("Produit créé avec succès");
+    } else {
+      setProducts(prev => prev.map(p => p.id === selectedProductId ? newProduct : p));
+      toast.success("Produit mis à jour avec succès");
+    }
+    
+    resetForm();
+    setIsCreating(false);
+    setSelectedProductId(null);
+  };
+  
+  const handleCancel = () => {
+    resetForm();
+    setIsCreating(false);
+    setSelectedProductId(null);
+  };
+  
+  const addSize = (size: string) => {
+    const currentSizes = form.getValues('sizes');
+    if (!currentSizes.includes(size)) {
+      form.setValue('sizes', [...currentSizes, size]);
+    }
+  };
+  
+  const removeSize = (size: string) => {
+    const currentSizes = form.getValues('sizes');
+    form.setValue('sizes', currentSizes.filter(s => s !== size));
+  };
+  
+  const addColor = (color: string) => {
+    const currentColors = form.getValues('colors');
+    if (!currentColors.includes(color)) {
+      form.setValue('colors', [...currentColors, color]);
+    }
+  };
+  
+  const removeColor = (color: string) => {
+    const currentColors = form.getValues('colors');
+    form.setValue('colors', currentColors.filter(c => c !== color));
+  };
+  
+  const toggleLottery = (lotteryId: string) => {
+    const currentLotteries = form.getValues('linkedLotteries');
+    if (currentLotteries.includes(lotteryId)) {
+      form.setValue('linkedLotteries', currentLotteries.filter(id => id !== lotteryId));
+    } else {
+      form.setValue('linkedLotteries', [...currentLotteries, lotteryId]);
+    }
+  };
+
+  return {
+    isCreating,
+    selectedProductId,
+    form,
+    handleCreateProduct,
+    handleEditProduct,
+    handleDeleteProduct,
+    onSubmit,
+    handleCancel,
+    addSize,
+    removeSize,
+    addColor,
+    removeColor,
+    toggleLottery
+  };
+};
