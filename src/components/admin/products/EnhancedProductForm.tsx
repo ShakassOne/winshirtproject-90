@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UseFormReturn } from "react-hook-form";
 import { ExtendedLottery } from '@/types/lottery';
 import LotterySelection from './LotterySelection';
+import ProductForm from './ProductForm';
 
 // Types d'importation pour les accessoires ProductForm existants
 interface ProductFormProps {
@@ -43,9 +44,6 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
   deselectAllLotteries
 }) => {
   const selectedLotteries = form.watch('linkedLotteries') || [];
-
-  // Réutiliser le composant ProductForm existant pour la plupart des fonctionnalités
-  const ProductForm = require('./ProductForm').default;
 
   return (
     <div>
