@@ -11,6 +11,9 @@ interface DrawWinnerButtonProps {
 }
 
 const DrawWinnerButton: React.FC<DrawWinnerButtonProps> = ({ lottery, onDrawWinner }) => {
+  // Une loterie peut être tirée au sort si:
+  // - Elle est active ET
+  // - Elle a atteint son nombre cible de participants OU sa date de fin est passée
   const canDrawWinner = 
     lottery.status === 'active' && 
     ((lottery.currentParticipants >= lottery.targetParticipants) || 
