@@ -10,10 +10,10 @@ const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [lotteries, setLotteries] = useState(mockLotteries);
   
-  // Charger les loteries depuis sessionStorage au montage et à chaque changement d'URL
+  // Charger les loteries depuis localStorage au montage
   useEffect(() => {
     const loadLotteries = () => {
-      const savedLotteries = sessionStorage.getItem('lotteries');
+      const savedLotteries = localStorage.getItem('lotteries');
       if (savedLotteries) {
         try {
           const parsedLotteries = JSON.parse(savedLotteries);

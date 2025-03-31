@@ -66,8 +66,8 @@ export const useProductForm = (
   const handleDeleteProduct = (productId: number) => {
     setProducts(prevProducts => {
       const updatedProducts = prevProducts.filter(p => p.id !== productId);
-      // Sauvegarder dans sessionStorage
-      sessionStorage.setItem('products', JSON.stringify(updatedProducts));
+      // Sauvegarder dans localStorage
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
       return updatedProducts;
     });
     
@@ -96,16 +96,16 @@ export const useProductForm = (
     if (isCreating) {
       setProducts(prev => {
         const updatedProducts = [...prev, newProduct];
-        // Sauvegarder dans sessionStorage
-        sessionStorage.setItem('products', JSON.stringify(updatedProducts));
+        // Sauvegarder dans localStorage
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
         return updatedProducts;
       });
       toast.success("Produit créé avec succès");
     } else {
       setProducts(prev => {
         const updatedProducts = prev.map(p => p.id === selectedProductId ? newProduct : p);
-        // Sauvegarder dans sessionStorage
-        sessionStorage.setItem('products', JSON.stringify(updatedProducts));
+        // Sauvegarder dans localStorage
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
         return updatedProducts;
       });
       toast.success("Produit mis à jour avec succès");
@@ -116,9 +116,9 @@ export const useProductForm = (
     setSelectedProductId(null);
   };
   
-  // Charger les produits depuis sessionStorage au montage du composant
+  // Charger les produits depuis localStorage au montage du composant
   useEffect(() => {
-    const savedProducts = sessionStorage.getItem('products');
+    const savedProducts = localStorage.getItem('products');
     if (savedProducts) {
       try {
         const parsedProducts = JSON.parse(savedProducts);
@@ -131,10 +131,10 @@ export const useProductForm = (
     }
   }, []);
   
-  // Sauvegarder les produits dans sessionStorage à chaque modification
+  // Sauvegarder les produits dans localStorage à chaque modification
   useEffect(() => {
     if (products.length > 0) {
-      sessionStorage.setItem('products', JSON.stringify(products));
+      localStorage.setItem('products', JSON.stringify(products));
     }
   }, [products]);
   

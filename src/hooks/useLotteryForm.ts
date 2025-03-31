@@ -70,8 +70,8 @@ export const useLotteryForm = (
   const handleDeleteLottery = (lotteryId: number) => {
     setLotteries(prevLotteries => {
       const updatedLotteries = prevLotteries.filter(l => l.id !== lotteryId);
-      // Sauvegarder dans sessionStorage
-      sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      // Sauvegarder dans localStorage
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       return updatedLotteries;
     });
     
@@ -109,16 +109,16 @@ export const useLotteryForm = (
     if (isCreating) {
       setLotteries(prev => {
         const updatedLotteries = [...prev, newLottery];
-        // Sauvegarder dans sessionStorage
-        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        // Sauvegarder dans localStorage
+        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
         return updatedLotteries;
       });
       toast.success("Loterie créée avec succès");
     } else {
       setLotteries(prev => {
         const updatedLotteries = prev.map(l => l.id === selectedLotteryId ? newLottery : l);
-        // Sauvegarder dans sessionStorage
-        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        // Sauvegarder dans localStorage
+        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
         return updatedLotteries;
       });
       toast.success("Loterie mise à jour avec succès");
@@ -172,16 +172,16 @@ export const useLotteryForm = (
         return lottery;
       });
       
-      // Forcer la mise à jour en stockant dans sessionStorage
-      sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      // Forcer la mise à jour en stockant dans localStorage
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       
       return updatedLotteries;
     });
   };
 
-  // Vérifier s'il y a des loteries en sessionStorage au montage du composant
+  // Vérifier s'il y a des loteries en localStorage au montage du composant
   useEffect(() => {
-    const savedLotteries = sessionStorage.getItem('lotteries');
+    const savedLotteries = localStorage.getItem('lotteries');
     if (savedLotteries) {
       try {
         const parsedLotteries = JSON.parse(savedLotteries);
@@ -194,10 +194,10 @@ export const useLotteryForm = (
     }
   }, []);
 
-  // Sauvegarder les loteries dans sessionStorage à chaque changement
+  // Sauvegarder les loteries dans localStorage à chaque changement
   useEffect(() => {
     if (lotteries.length > 0) {
-      sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
+      localStorage.setItem('lotteries', JSON.stringify(lotteries));
     }
   }, [lotteries]);
 

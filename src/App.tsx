@@ -19,6 +19,8 @@ import HowItWorksPage from "./pages/HowItWorksPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AdminProductsPage from "./pages/AdminProductsPage";
 import AdminLotteriesPage from "./pages/AdminLotteriesPage";
+import AdminClientsPage from "./pages/AdminClientsPage";
+import AdminCommandesPage from "./pages/AdminCommandesPage";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +44,8 @@ const App = () => (
               <Route path="/how-it-works" element={<HowItWorksPage />} />
               <Route path="/admin/products" element={<AdminProductsPage />} />
               <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
+              <Route path="/admin/clients" element={<AdminClientsPage />} />
+              <Route path="/admin/commandes" element={<AdminCommandesPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>

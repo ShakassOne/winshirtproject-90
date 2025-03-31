@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Award } from 'lucide-react';
+import { Package, Award, Users, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const AdminNavigation: React.FC = () => {
@@ -11,13 +11,25 @@ const AdminNavigation: React.FC = () => {
         <Link to="/admin/products">
           <Button variant="ghost" className="rounded-full hover:bg-winshirt-purple/20 text-white">
             <Package size={20} className="mr-2" />
-            Admin Produits
+            Produits
           </Button>
         </Link>
         <Link to="/admin/lotteries">
           <Button variant="ghost" className="rounded-full hover:bg-winshirt-blue/20 text-white">
             <Award size={20} className="mr-2" />
-            Admin Loteries
+            Loteries
+          </Button>
+        </Link>
+        <Link to="/admin/clients">
+          <Button variant="ghost" className="rounded-full hover:bg-green-600/20 text-white">
+            <Users size={20} className="mr-2" />
+            Clients
+          </Button>
+        </Link>
+        <Link to="/admin/commandes">
+          <Button variant="ghost" className="rounded-full hover:bg-orange-500/20 text-white">
+            <ShoppingBag size={20} className="mr-2" />
+            Commandes
           </Button>
         </Link>
       </div>

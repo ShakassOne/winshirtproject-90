@@ -48,28 +48,27 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
           alt={lottery.title} 
           className="w-full h-60 object-cover"
         />
-        <div className="absolute top-0 right-0 bg-winshirt-blue-dark/80 text-white px-3 py-1 rounded-bl-lg">
+        <div className="absolute top-0 right-0 bg-winshirt-blue-dark/90 text-white px-3 py-1 rounded-bl-lg">
           Valeur: {lottery.value.toFixed(2)} €
         </div>
         {lottery.status !== 'active' && (
           <div className={`absolute top-0 left-0 px-3 py-1 rounded-br-lg ${
             lottery.status === 'completed' 
-              ? 'bg-green-600/80' 
-              : 'bg-winshirt-purple-dark/80'
+              ? 'bg-green-600/90' 
+              : 'bg-winshirt-purple-dark/90'
           }`}>
             {lottery.status === 'completed' ? 'Terminée' : 'Relancée'}
           </div>
         )}
         
-        {lottery.endDate && (
-          <div className="absolute top-4 left-4 backdrop-blur-md bg-black/60 text-white px-4 py-3 rounded-lg border border-white/30 shadow-lg">
-            <div className="text-sm font-light">Tirage le</div>
-            <div className="text-xl font-bold flex items-center gap-2">
-              <Calendar size={16} />
-              {formatDate(lottery.endDate)}
-            </div>
+        {/* Date de tirage toujours visible avec un meilleur contraste */}
+        <div className="absolute bottom-4 left-4 backdrop-blur-md bg-black/80 text-white px-4 py-2 rounded-lg border border-white/30 shadow-lg">
+          <div className="text-sm font-light">Tirage le</div>
+          <div className="text-lg font-bold flex items-center gap-2">
+            <Calendar size={16} />
+            {formatDate(lottery.endDate) || "À définir"}
           </div>
-        )}
+        </div>
       </div>
       <CardContent className="flex-grow p-4">
         <h3 className="text-lg font-medium text-white mb-2">{lottery.title}</h3>

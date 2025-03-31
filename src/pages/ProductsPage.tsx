@@ -15,6 +15,8 @@ const ProductsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedLotteryId, setSelectedLotteryId] = useState<string | null>(lotteryIdParam);
+  const [products, setProducts] = useState(mockProducts);
+  const [lotteries, setLotteries] = useState(mockLotteries);
   
   // Set the selected lottery ID from URL parameters
   useEffect(() => {
@@ -23,12 +25,52 @@ const ProductsPage: React.FC = () => {
     }
   }, [lotteryIdParam]);
   
+  // Charger les produits et loteries depuis localStorage
+  useEffect(() => {
+    const loadData = () => {
+      // Chargement des produits
+      const savedProducts = localStorage.getItem('products');
+      if (savedProducts) {
+        try {
+          const parsedProducts = JSON.parse(savedProducts);
+          if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+            setProducts(parsedProducts);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des produits:", error);
+        }
+      }
+      
+      // Chargement des loteries
+      const savedLotteries = localStorage.getItem('lotteries');
+      if (savedLotteries) {
+        try {
+          const parsedLotteries = JSON.parse(savedLotteries);
+          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+            setLotteries(parsedLotteries);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des loteries:", error);
+        }
+      }
+    };
+    
+    loadData();
+    
+    // Écouter les changements d'URL
+    window.addEventListener('popstate', loadData);
+    
+    return () => {
+      window.removeEventListener('popstate', loadData);
+    };
+  }, []);
+  
   // Get the lottery details if a lottery ID is selected
   const selectedLottery = selectedLotteryId 
-    ? mockLotteries.find(lottery => lottery.id.toString() === selectedLotteryId)
+    ? lotteries.find(lottery => lottery.id.toString() === selectedLotteryId)
     : null;
   
-  const filteredProducts = mockProducts.filter(product => {
+  const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || (product.type || '') === selectedType;
