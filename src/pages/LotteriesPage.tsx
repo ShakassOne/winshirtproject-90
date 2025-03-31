@@ -10,19 +10,31 @@ const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [lotteries, setLotteries] = useState(mockLotteries);
   
-  // Charger les loteries depuis sessionStorage au montage
+  // Charger les loteries depuis sessionStorage au montage et à chaque changement d'URL
   useEffect(() => {
-    const savedLotteries = sessionStorage.getItem('lotteries');
-    if (savedLotteries) {
-      try {
-        const parsedLotteries = JSON.parse(savedLotteries);
-        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-          setLotteries(parsedLotteries);
+    const loadLotteries = () => {
+      const savedLotteries = sessionStorage.getItem('lotteries');
+      if (savedLotteries) {
+        try {
+          const parsedLotteries = JSON.parse(savedLotteries);
+          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+            setLotteries(parsedLotteries);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des loteries:", error);
         }
-      } catch (error) {
-        console.error("Erreur lors du chargement des loteries:", error);
       }
-    }
+    };
+    
+    // Charger lors du montage du composant
+    loadLotteries();
+    
+    // Ajouter un écouteur d'événements pour détecter les changements d'URL
+    window.addEventListener('popstate', loadLotteries);
+    
+    return () => {
+      window.removeEventListener('popstate', loadLotteries);
+    };
   }, []);
   
   const filteredLotteries = activeFilter === 'all' 

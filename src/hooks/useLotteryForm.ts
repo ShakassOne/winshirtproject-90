@@ -68,7 +68,13 @@ export const useLotteryForm = (
   };
   
   const handleDeleteLottery = (lotteryId: number) => {
-    setLotteries(prevLotteries => prevLotteries.filter(l => l.id !== lotteryId));
+    setLotteries(prevLotteries => {
+      const updatedLotteries = prevLotteries.filter(l => l.id !== lotteryId);
+      // Sauvegarder dans sessionStorage
+      sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      return updatedLotteries;
+    });
+    
     toast.success("Loterie supprimée avec succès");
     
     if (selectedLotteryId === lotteryId) {
@@ -79,7 +85,7 @@ export const useLotteryForm = (
   
   const onSubmit = (data: any) => {
     // Créer un nouvel ID pour les nouvelles loteries
-    const newId = isCreating ? Math.max(...lotteries.map(l => l.id), 0) + 1 : selectedLotteryId!;
+    const newId = isCreating ? Math.max(0, ...lotteries.map(l => l.id)) + 1 : selectedLotteryId!;
     
     // Trouver la loterie existante pour préserver les données non modifiées
     const existingLottery = lotteries.find(l => l.id === selectedLotteryId);
@@ -101,16 +107,21 @@ export const useLotteryForm = (
     };
     
     if (isCreating) {
-      setLotteries(prev => [...prev, newLottery]);
+      setLotteries(prev => {
+        const updatedLotteries = [...prev, newLottery];
+        // Sauvegarder dans sessionStorage
+        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        return updatedLotteries;
+      });
       toast.success("Loterie créée avec succès");
     } else {
-      setLotteries(prev => prev.map(l => l.id === selectedLotteryId ? newLottery : l));
+      setLotteries(prev => {
+        const updatedLotteries = prev.map(l => l.id === selectedLotteryId ? newLottery : l);
+        // Sauvegarder dans sessionStorage
+        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        return updatedLotteries;
+      });
       toast.success("Loterie mise à jour avec succès");
-      
-      // Forcer la mise à jour de l'état local des loteries
-      sessionStorage.setItem('lotteries', JSON.stringify(
-        prev => prev.map(l => l.id === selectedLotteryId ? newLottery : l)
-      ));
     }
     
     resetForm();

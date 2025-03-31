@@ -81,7 +81,7 @@ export const useProductForm = (
   
   const onSubmit = (data: any) => {
     const newProduct: ExtendedProduct = {
-      id: isCreating ? Math.max(...products.map(p => p.id), 0) + 1 : selectedProductId!,
+      id: isCreating ? Math.max(0, ...products.map(p => p.id)) + 1 : selectedProductId!,
       name: data.name,
       description: data.description,
       price: parseFloat(data.price),
@@ -130,6 +130,13 @@ export const useProductForm = (
       }
     }
   }, []);
+  
+  // Sauvegarder les produits dans sessionStorage à chaque modification
+  useEffect(() => {
+    if (products.length > 0) {
+      sessionStorage.setItem('products', JSON.stringify(products));
+    }
+  }, [products]);
   
   const handleCancel = () => {
     resetForm();
