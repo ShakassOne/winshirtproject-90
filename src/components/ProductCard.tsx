@@ -11,11 +11,16 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  // Vérifier que le produit existe avant de l'afficher
+  if (!product) {
+    return null;
+  }
+
   return (
     <Card className="winshirt-card winshirt-card-hover h-full flex flex-col">
       <div className="relative">
         <img 
-          src={product.image} 
+          src={product.image || 'https://placehold.co/600x400/png'} 
           alt={product.name} 
           className="w-full h-60 object-cover"
         />

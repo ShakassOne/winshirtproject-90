@@ -17,6 +17,7 @@ const ProductDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [product, setProduct] = useState<ExtendedProduct | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
   
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
@@ -24,8 +25,10 @@ const ProductDetailPage: React.FC = () => {
   
   // Charger le produit
   useEffect(() => {
-    // D'abord, essayer de le charger depuis localStorage
     const loadProduct = () => {
+      setLoading(true);
+      
+      // D'abord, essayer de le charger depuis localStorage
       const savedProducts = localStorage.getItem('products');
       
       if (savedProducts) {
@@ -35,6 +38,7 @@ const ProductDetailPage: React.FC = () => {
           
           if (foundProduct) {
             setProduct(foundProduct);
+            setLoading(false);
             return;
           }
         } catch (error) {
@@ -45,15 +49,30 @@ const ProductDetailPage: React.FC = () => {
       // Fallback aux données mock
       const mockProduct = mockProducts.find(p => p.id === Number(id)) as ExtendedProduct;
       setProduct(mockProduct);
+      setLoading(false);
     };
     
     loadProduct();
   }, [id]);
   
+  if (loading) {
+    return (
+      <div className="pt-32 pb-8 text-center">
+        <h1 className="text-2xl text-white">Chargement du produit...</h1>
+      </div>
+    );
+  }
+  
   if (!product) {
     return (
       <div className="pt-32 pb-8 text-center">
-        <h1 className="text-2xl text-white">Produit en cours de chargement ou non trouvé</h1>
+        <h1 className="text-2xl text-white">Produit non trouvé</h1>
+        <Button 
+          onClick={() => navigate('/products')}
+          className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
+        >
+          Retour aux produits
+        </Button>
       </div>
     );
   }

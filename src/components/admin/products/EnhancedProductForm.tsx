@@ -39,6 +39,21 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
   deselectAllLotteries
 }) => {
   const selectedLotteries = form.watch('linkedLotteries') || [];
+  
+  // Si l'utilisateur n'est ni en train de créer ni en train d'éditer un produit
+  if (!isCreating && !selectedProductId) {
+    return (
+      <div className="text-center p-8">
+        <h3 className="text-xl text-white mb-4">Sélectionnez un produit à modifier ou créez-en un nouveau</h3>
+        <button 
+          onClick={onCreateProduct}
+          className="px-4 py-2 bg-winshirt-blue rounded-lg hover:bg-winshirt-blue-dark transition-colors"
+        >
+          Créer un nouveau produit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
