@@ -125,10 +125,5 @@
     box-shadow: 0 0 25px rgba(155, 135, 245, 0.6);
     z-index: 100;
   }
-  
-  /* Ajout de la classe pour le menu gris */
-  .menu-gray {
-    @apply bg-blue-500 bg-opacity-80 backdrop-blur-md;
-  }
 }
 
