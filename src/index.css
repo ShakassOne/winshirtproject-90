@@ -106,11 +106,24 @@
     @apply hover:shadow-[0_0_20px_rgba(155,135,245,0.3)] transition-all duration-300 hover:-translate-y-1;
   }
 
+  /* 3D Rotating Lottery Styles */
   .spinning-lottery {
     @apply relative flex items-center justify-center;
+    perspective: 1000px;
+    perspective-origin: center;
+    transform-style: preserve-3d;
   }
 
   .spinning-lottery-item {
-    @apply absolute rounded-2xl overflow-hidden transition-all duration-500 opacity-80 hover:opacity-100 border-2 border-winshirt-purple/50;
+    @apply absolute rounded-2xl overflow-hidden transition-all duration-500 hover:z-50;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+  }
+  
+  /* Add cool glow effect for the active card */
+  .spinning-lottery-item.active {
+    box-shadow: 0 0 25px rgba(155, 135, 245, 0.6);
+    z-index: 100;
   }
 }
+

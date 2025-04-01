@@ -68,16 +68,16 @@ const HomePage: React.FC = () => {
           <h2 className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue text-center">
             Loteries en vedette
           </h2>
-          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+          <p className="text-gray-400 text-center mb-8 max-w-2xl mx-auto">
             Découvrez nos loteries exclusives. Chaque achat vous rapproche d'un gain exceptionnel.
           </p>
           
-          {/* Rotating lottery display - full width container */}
-          <div className="w-full px-4 md:px-8 lg:px-12">
+          {/* Rotating lottery display - 3D carousel */}
+          <div className="w-full mt-16">
             <RotatingLottery lotteries={activeLotteries} />
           </div>
           
-          <div className="text-center mt-12">
+          <div className="text-center mt-4">
             <Link to="/lotteries">
               <button className="bg-winshirt-blue hover:bg-winshirt-blue-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
                 Voir toutes les loteries
