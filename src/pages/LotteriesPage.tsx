@@ -10,18 +10,37 @@ const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [lotteries, setLotteries] = useState(mockLotteries);
   
-  // Charger les loteries depuis localStorage au montage et quand l'URL change
+  // Charger les loteries depuis le stockage au montage et quand l'URL change
   useEffect(() => {
     const loadLotteries = () => {
-      const savedLotteries = localStorage.getItem('lotteries');
-      if (savedLotteries) {
+      // Essayer d'abord localStorage
+      const localLotteries = localStorage.getItem('lotteries');
+      if (localLotteries) {
         try {
-          const parsedLotteries = JSON.parse(savedLotteries);
+          const parsedLotteries = JSON.parse(localLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
             setLotteries(parsedLotteries);
+            // Synchroniser avec sessionStorage
+            sessionStorage.setItem('lotteries', localLotteries);
+            return;
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des loteries:", error);
+          console.error("Erreur lors du chargement des loteries depuis localStorage:", error);
+        }
+      }
+      
+      // Fallback à sessionStorage
+      const sessionLotteries = sessionStorage.getItem('lotteries');
+      if (sessionLotteries) {
+        try {
+          const parsedLotteries = JSON.parse(sessionLotteries);
+          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+            setLotteries(parsedLotteries);
+            // Synchroniser avec localStorage
+            localStorage.setItem('lotteries', sessionLotteries);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des loteries depuis sessionStorage:", error);
         }
       }
     };

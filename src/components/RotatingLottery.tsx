@@ -15,9 +15,9 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
   const [currentTranslate, setCurrentTranslate] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Auto-rotation
+  // Auto-rotation - désactivée pendant le drag
   useEffect(() => {
-    if (!isDragging) {
+    if (!isDragging && lotteries.length > 1) {
       const interval = setInterval(() => {
         setActiveIndex((prev) => (prev + 1) % lotteries.length);
       }, 5000);
@@ -85,7 +85,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     };
   };
   
-  // Touch and drag handlers
+  // Touch and drag handlers - correction du problème d'interaction
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
     
@@ -93,10 +93,14 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     setStartX(clientX);
     
-    document.addEventListener('mousemove', handleDragMove);
-    document.addEventListener('touchmove', handleDragMove);
-    document.addEventListener('mouseup', handleDragEnd);
-    document.addEventListener('touchend', handleDragEnd);
+    // Ajouter les écouteurs d'événements
+    if ('touches' in e) {
+      document.addEventListener('touchmove', handleDragMove, { passive: false });
+      document.addEventListener('touchend', handleDragEnd);
+    } else {
+      document.addEventListener('mousemove', handleDragMove);
+      document.addEventListener('mouseup', handleDragEnd);
+    }
   };
   
   const handleDragMove = (e: MouseEvent | TouchEvent) => {
@@ -106,13 +110,15 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     e.preventDefault();
     
     // Get the current position
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const diff = clientX - startX;
     
     setCurrentTranslate(diff);
   };
   
   const handleDragEnd = () => {
+    if (!isDragging) return;
+    
     setIsDragging(false);
     
     // Clean up event listeners
@@ -136,6 +142,15 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     // Reset current translate
     setCurrentTranslate(0);
   };
+  
+  // Si pas de loteries, afficher un message
+  if (!lotteries || lotteries.length === 0) {
+    return (
+      <div className="spinning-lottery h-96 w-full flex items-center justify-center">
+        <p className="text-gray-400">Aucune loterie disponible</p>
+      </div>
+    );
+  }
   
   return (
     <div 

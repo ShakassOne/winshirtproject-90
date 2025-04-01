@@ -12,19 +12,42 @@ const AdminProductsPage: React.FC = () => {
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
   
-  // Charger les loteries depuis sessionStorage au montage
+  // Charger les loteries depuis les deux types de stockage au montage
   useEffect(() => {
-    const savedLotteries = sessionStorage.getItem('lotteries');
-    if (savedLotteries) {
-      try {
-        const parsedLotteries = JSON.parse(savedLotteries);
-        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-          setLotteries(parsedLotteries);
+    const loadLotteries = () => {
+      // Essayer d'abord localStorage
+      const localLotteries = localStorage.getItem('lotteries');
+      if (localLotteries) {
+        try {
+          const parsedLotteries = JSON.parse(localLotteries);
+          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+            setLotteries(parsedLotteries);
+            // Synchroniser avec sessionStorage
+            sessionStorage.setItem('lotteries', localLotteries);
+            return;
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des loteries depuis localStorage:", error);
         }
-      } catch (error) {
-        console.error("Erreur lors du chargement des loteries:", error);
       }
-    }
+      
+      // Fallback à sessionStorage
+      const sessionLotteries = sessionStorage.getItem('lotteries');
+      if (sessionLotteries) {
+        try {
+          const parsedLotteries = JSON.parse(sessionLotteries);
+          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+            setLotteries(parsedLotteries);
+            // Synchroniser avec localStorage
+            localStorage.setItem('lotteries', sessionLotteries);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des loteries depuis sessionStorage:", error);
+        }
+      }
+    };
+    
+    loadLotteries();
   }, []);
   
   const activeLotteries = lotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
