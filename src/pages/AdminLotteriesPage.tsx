@@ -60,12 +60,32 @@ const AdminLotteriesPage: React.FC = () => {
     }
   ];
 
-  // Fusionner les loteries spéciales avec les loteries existantes
-  const mergedLotteries = [...specialLotteries, ...mockLotteries];
+  // Chargement des loteries depuis localStorage ou fallback aux loteries spéciales + mockLotteries
+  const getInitialLotteries = () => {
+    try {
+      const storedLotteries = localStorage.getItem('lotteries');
+      if (storedLotteries) {
+        const parsedLotteries = JSON.parse(storedLotteries);
+        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+          return parsedLotteries;
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des loteries:", error);
+    }
+    
+    // Fusionner les loteries spéciales avec les loteries existantes
+    return [...specialLotteries, ...mockLotteries];
+  };
 
-  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mergedLotteries as ExtendedLottery[]);
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(getInitialLotteries());
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts);
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
+  
+  // Mettre à jour le localStorage quand les loteries changent
+  useEffect(() => {
+    localStorage.setItem('lotteries', JSON.stringify(lotteries));
+  }, [lotteries]);
   
   // Charger les produits depuis localStorage au montage
   useEffect(() => {

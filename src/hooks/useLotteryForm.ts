@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -80,6 +81,8 @@ export const useLotteryForm = (
   };
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
+    console.log("Données du formulaire soumises:", data); // Debug: afficher les données envoyées
+    
     if (isCreating) {
       // Create a new lottery with the correct type
       const newLottery: ExtendedLottery = {
@@ -89,7 +92,7 @@ export const useLotteryForm = (
         value: Number(data.value),
         targetParticipants: Number(data.targetParticipants),
         currentParticipants: 0,
-        status: data.status, // This is now type-safe
+        status: data.status,
         image: data.image,
         linkedProducts: data.linkedProducts?.map(Number) || [],
         participants: [],
@@ -100,6 +103,7 @@ export const useLotteryForm = (
       setLotteries(prev => [...prev, newLottery]);
       toast.success("Loterie créée avec succès !");
     } else if (selectedLotteryId) {
+      // Mettre à jour la loterie sélectionnée avec les nouvelles valeurs
       setLotteries(prev =>
         prev.map(lottery =>
           lottery.id === selectedLotteryId
@@ -109,15 +113,39 @@ export const useLotteryForm = (
                 description: data.description,
                 value: Number(data.value),
                 targetParticipants: Number(data.targetParticipants),
-                status: data.status, // This is now type-safe
-                image: data.image,
+                status: data.status,
+                image: data.image, // Assurons-nous que l'image est bien mise à jour
                 endDate: data.endDate,
                 linkedProducts: data.linkedProducts?.map(Number) || [],
               }
             : lottery
         )
       );
+      
+      // Debug: afficher la loterie avant et après la mise à jour
+      console.log("Loterie avant mise à jour:", lotteries.find(l => l.id === selectedLotteryId));
+      console.log("Nouvelles données d'image:", data.image);
+      
       toast.success("Loterie modifiée avec succès !");
+      
+      // Sauvegarder les loteries dans le localStorage pour persister les modifications
+      localStorage.setItem('lotteries', JSON.stringify(
+        lotteries.map(lottery => 
+          lottery.id === selectedLotteryId 
+          ? {
+              ...lottery,
+              title: data.title,
+              description: data.description,
+              value: Number(data.value),
+              targetParticipants: Number(data.targetParticipants),
+              status: data.status,
+              image: data.image,
+              endDate: data.endDate,
+              linkedProducts: data.linkedProducts?.map(Number) || [],
+            } 
+          : lottery
+        )
+      ));
     }
     setIsCreating(false);
     setSelectedLotteryId(null);
@@ -166,6 +194,19 @@ export const useLotteryForm = (
           : lottery
       )
     );
+    
+    // Mettre également à jour le localStorage après le tirage au sort
+    const updatedLotteries = lotteries.map(lottery => 
+      lottery.id === lotteryId 
+        ? { 
+            ...lottery, 
+            winner: winner,
+            drawDate: new Date().toISOString(),
+            status: 'completed'
+          } 
+        : lottery
+    );
+    localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
   };
 
   const checkLotteriesReadyForDraw = useCallback(() => {
