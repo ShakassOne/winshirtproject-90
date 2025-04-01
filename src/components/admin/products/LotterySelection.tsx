@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FormLabel } from '@/components/ui/form';
 import { ExtendedLottery } from '@/types/lottery';
 
 interface LotterySelectionProps {
@@ -32,7 +31,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   return (
     <div>
       <div className="flex justify-between mb-2">
-        <FormLabel className="text-white">Loteries associées</FormLabel>
+        <div className="text-white text-sm font-medium">Loteries associées</div>
         <div className="space-x-2">
           <Button 
             type="button" 
