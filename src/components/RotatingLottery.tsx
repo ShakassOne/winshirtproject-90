@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Lottery } from './LotteryCard';
+import { ExtendedLottery } from '@/types/lottery';
 import { 
   Carousel,
   CarouselContent,
@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Calendar, Users } from 'lucide-react';
 
 interface RotatingLotteryProps {
-  lotteries: Lottery[];
+  lotteries: ExtendedLottery[];
 }
 
 const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {

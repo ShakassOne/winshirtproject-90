@@ -29,21 +29,63 @@ const LotteriesPage: React.FC = () => {
     return mockLotteries;
   };
   
+  // Ajouter la loterie iPhone si elle n'existe pas déjà
+  const addIPhoneLottery = (currentLotteries: ExtendedLottery[]): ExtendedLottery[] => {
+    // Vérifier si une loterie avec l'iPhone existe déjà
+    const iPhoneLotteryExists = currentLotteries.some(
+      lottery => lottery.title.toLowerCase().includes('iphone')
+    );
+    
+    if (!iPhoneLotteryExists) {
+      // Créer une nouvelle loterie iPhone
+      const iPhoneLottery: ExtendedLottery = {
+        id: Math.max(...currentLotteries.map(l => l.id)) + 1, // ID unique
+        title: "iPhone 16 Pro",
+        description: "Gagnez le tout nouveau iPhone 16 Pro avec ses nouvelles couleurs exclusives et ses fonctionnalités révolutionnaires.",
+        value: 1299,
+        targetParticipants: 30,
+        currentParticipants: 12,
+        status: "active",
+        image: "https://pixelprint.world/wp-content/uploads/2025/04/iPhone-16-Pro-couleurs.jpg",
+        endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 jours à partir d'aujourd'hui
+      };
+      
+      return [...currentLotteries, iPhoneLottery];
+    }
+    
+    return currentLotteries;
+  };
+  
   // Charger les loteries au montage du composant
   useEffect(() => {
-    setLotteries(getInitialLotteries());
+    let loadedLotteries = getInitialLotteries();
+    
+    // Ajouter la loterie iPhone si nécessaire
+    loadedLotteries = addIPhoneLottery(loadedLotteries);
+    
+    // Mettre à jour l'état et localStorage
+    setLotteries(loadedLotteries);
+    localStorage.setItem('lotteries', JSON.stringify(loadedLotteries));
     
     // Ajouter un écouteur d'événement pour détecter les changements dans localStorage
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'lotteries') {
-        setLotteries(getInitialLotteries());
+        let updatedLotteries = getInitialLotteries();
+        updatedLotteries = addIPhoneLottery(updatedLotteries);
+        setLotteries(updatedLotteries);
       }
     };
     
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('storageUpdate', () => {
+      let updatedLotteries = getInitialLotteries();
+      updatedLotteries = addIPhoneLottery(updatedLotteries);
+      setLotteries(updatedLotteries);
+    });
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storageUpdate', () => {});
     };
   }, []);
   

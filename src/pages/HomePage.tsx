@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LotteryCard from '../components/LotteryCard';
 import ProductCard from '../components/ProductCard';
@@ -7,16 +7,71 @@ import RotatingLottery from '../components/RotatingLottery';
 import StarBackground from '../components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { mockLotteries, mockProducts } from '../data/mockData';
-
-// Show only active lotteries
-const activeLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
-
-// Get popular products - adding a default of 0 for popularity if it doesn't exist
-const popularProducts = [...mockProducts]
-  .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
-  .slice(0, 4);
+import { ExtendedLottery } from '@/types/lottery';
 
 const HomePage: React.FC = () => {
+  const [activeLotteries, setActiveLotteries] = useState<ExtendedLottery[]>([]);
+  const [popularProducts, setPopularProducts] = useState([]);
+  
+  // Chargement des loteries et produits
+  useEffect(() => {
+    // Chargement des loteries
+    const loadLotteries = () => {
+      try {
+        const storedLotteries = localStorage.getItem('lotteries');
+        if (storedLotteries) {
+          const parsedLotteries = JSON.parse(storedLotteries);
+          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+            const active = parsedLotteries.filter(lottery => lottery.status === 'active');
+            setActiveLotteries(active);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des loteries:", error);
+      }
+      
+      // Fallback aux loteries mock
+      setActiveLotteries(mockLotteries.filter(lottery => lottery.status === 'active'));
+    };
+    
+    // Chargement des produits populaires
+    const loadPopularProducts = () => {
+      try {
+        const storedProducts = localStorage.getItem('products');
+        if (storedProducts) {
+          const parsedProducts = JSON.parse(storedProducts);
+          if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+            const popular = [...parsedProducts]
+              .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
+              .slice(0, 4);
+            setPopularProducts(popular);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des produits:", error);
+      }
+      
+      // Fallback aux produits mock
+      setPopularProducts([...mockProducts]
+        .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
+        .slice(0, 4));
+    };
+    
+    loadLotteries();
+    loadPopularProducts();
+    
+    // Écouter les changements dans localStorage
+    window.addEventListener('storage', loadLotteries);
+    window.addEventListener('storageUpdate', loadLotteries);
+    
+    return () => {
+      window.removeEventListener('storage', loadLotteries);
+      window.removeEventListener('storageUpdate', loadLotteries);
+    };
+  }, []);
+  
   return (
     <>
       <StarBackground />
