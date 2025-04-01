@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries, mockProducts } from '@/data/mockData';
@@ -12,7 +13,57 @@ import { Gift } from 'lucide-react';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const AdminLotteriesPage: React.FC = () => {
-  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
+  // Création de deux loteries spéciales
+  const specialLotteries: ExtendedLottery[] = [
+    // 1. Loterie dont la date de fin est passée
+    {
+      id: 1001,
+      title: "Loterie date expirée",
+      description: "Cette loterie a dépassé sa date de fin et est prête pour le tirage",
+      value: 150,
+      targetParticipants: 10,
+      currentParticipants: 8, // Pas encore atteint le max
+      status: 'active',
+      image: "https://placehold.co/600x400/png?text=Date+Expiree",
+      endDate: new Date(Date.now() - 86400000).toISOString(), // Date dans le passé (hier)
+      linkedProducts: [1, 2],
+      participants: [
+        { id: 1, name: "Jules Martin", email: "jules@example.com", avatar: "https://i.pravatar.cc/150?u=jules" },
+        { id: 2, name: "Sophie Dubois", email: "sophie@example.com", avatar: "https://i.pravatar.cc/150?u=sophie" },
+        { id: 3, name: "Marc Lefevre", email: "marc@example.com", avatar: "https://i.pravatar.cc/150?u=marc" },
+        { id: 4, name: "Emma Laurent", email: "emma@example.com", avatar: "https://i.pravatar.cc/150?u=emma" },
+        { id: 5, name: "Thomas Petit", email: "thomas@example.com", avatar: "https://i.pravatar.cc/150?u=thomas" },
+        { id: 6, name: "Julie Moreau", email: "julie@example.com", avatar: "https://i.pravatar.cc/150?u=julie" },
+        { id: 7, name: "Nicolas Garcia", email: "nicolas@example.com", avatar: "https://i.pravatar.cc/150?u=nicolas" },
+        { id: 8, name: "Camille Robin", email: "camille@example.com", avatar: "https://i.pravatar.cc/150?u=camille" }
+      ]
+    },
+    // 2. Loterie qui a atteint son maximum de participants
+    {
+      id: 1002,
+      title: "Loterie max participants",
+      description: "Cette loterie a atteint son nombre maximum de participants et est prête pour le tirage",
+      value: 200,
+      targetParticipants: 5,
+      currentParticipants: 5, // Atteint le max
+      status: 'active',
+      image: "https://placehold.co/600x400/png?text=Max+Participants",
+      endDate: new Date(Date.now() + 86400000).toISOString(), // Date future (demain)
+      linkedProducts: [3, 4],
+      participants: [
+        { id: 1, name: "Louis Fournier", email: "louis@example.com", avatar: "https://i.pravatar.cc/150?u=louis" },
+        { id: 2, name: "Clara Simon", email: "clara@example.com", avatar: "https://i.pravatar.cc/150?u=clara" },
+        { id: 3, name: "Antoine Mercier", email: "antoine@example.com", avatar: "https://i.pravatar.cc/150?u=antoine" },
+        { id: 4, name: "Léa Durand", email: "lea@example.com", avatar: "https://i.pravatar.cc/150?u=lea" },
+        { id: 5, name: "Hugo Lemoine", email: "hugo@example.com", avatar: "https://i.pravatar.cc/150?u=hugo" }
+      ]
+    }
+  ];
+
+  // Fusionner les loteries spéciales avec les loteries existantes
+  const mergedLotteries = [...specialLotteries, ...mockLotteries];
+
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mergedLotteries as ExtendedLottery[]);
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts);
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   

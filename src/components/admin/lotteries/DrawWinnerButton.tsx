@@ -26,7 +26,7 @@ const DrawWinnerButton: React.FC<DrawWinnerButtonProps> = ({ lottery, onDrawWinn
       return;
     }
 
-    // S'il n'y a qu'un seul participant, il est automatiquement le gagnant
+    // S'il y a qu'un seul participant, il est automatiquement le gagnant
     if (lottery.participants.length === 1) {
       const winner = lottery.participants[0];
       onDrawWinner(lottery.id, winner);
