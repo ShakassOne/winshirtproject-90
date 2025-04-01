@@ -65,6 +65,22 @@ const ProductsPage: React.FC = () => {
     };
   }, []);
   
+  // Debug des données
+  useEffect(() => {
+    if (selectedLotteryId) {
+      console.log("Lottery ID sélectionné:", selectedLotteryId);
+      console.log("Produits disponibles:", products);
+      
+      // Trouver les produits liés à cette loterie
+      const linkedProducts = products.filter(product => 
+        product.linkedLotteries && 
+        product.linkedLotteries.includes(Number(selectedLotteryId))
+      );
+      
+      console.log("Produits liés à cette loterie:", linkedProducts);
+    }
+  }, [selectedLotteryId, products]);
+  
   // Get the lottery details if a lottery ID is selected
   const selectedLottery = selectedLotteryId 
     ? lotteries.find(lottery => lottery.id.toString() === selectedLotteryId)
@@ -154,7 +170,12 @@ const ProductsPage: React.FC = () => {
           {filteredProducts.length === 0 && (
             <div className="text-center py-16">
               <h3 className="text-xl text-gray-400 mb-2">Aucun produit trouvé</h3>
-              <p className="text-gray-500">Veuillez modifier vos critères de recherche</p>
+              <p className="text-gray-500">
+                {selectedLotteryId 
+                  ? "Aucun produit n'est associé à cette loterie"
+                  : "Veuillez modifier vos critères de recherche"
+                }
+              </p>
             </div>
           )}
         </div>

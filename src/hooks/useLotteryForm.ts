@@ -106,6 +106,43 @@ export const useLotteryForm = (
       endDate: data.endDate || null
     };
     
+    // Mise à jour des produits associés
+    const linkedProductIds = data.linkedProducts.map(Number);
+    
+    // Charger les produits actuels depuis localStorage
+    const savedProducts = localStorage.getItem('products');
+    if (savedProducts) {
+      try {
+        let parsedProducts = JSON.parse(savedProducts);
+        
+        // Mettre à jour les produits: ajouter la loterie à linkedLotteries des produits sélectionnés
+        // et supprimer la loterie des linkedLotteries des produits non sélectionnés
+        const updatedProducts = parsedProducts.map((product: any) => {
+          // S'assurer que linkedLotteries est un tableau
+          if (!product.linkedLotteries) {
+            product.linkedLotteries = [];
+          }
+          
+          // Si le produit est sélectionné et ne contient pas déjà la loterie, l'ajouter
+          if (linkedProductIds.includes(product.id)) {
+            if (!product.linkedLotteries.includes(newId)) {
+              product.linkedLotteries.push(newId);
+            }
+          } else {
+            // Si le produit n'est pas sélectionné, supprimer la loterie si elle existe
+            product.linkedLotteries = product.linkedLotteries.filter((id: number) => id !== newId);
+          }
+          
+          return product;
+        });
+        
+        // Sauvegarder les produits mis à jour
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour des produits associés:", error);
+      }
+    }
+    
     if (isCreating) {
       setLotteries(prev => {
         const updatedLotteries = [...prev, newLottery];

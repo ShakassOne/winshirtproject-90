@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries, mockProducts } from '@/data/mockData';
 import { ExtendedLottery } from '@/types/lottery';
+import { Product } from '@/components/ProductCard';
 import LotteryList from '@/components/admin/lotteries/LotteryList';
 import LotteryForm from '@/components/admin/lotteries/LotteryForm';
 import { useLotteryForm } from '@/hooks/useLotteryForm';
@@ -12,7 +13,23 @@ import { Gift } from 'lucide-react';
 
 const AdminLotteriesPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
+  const [products, setProducts] = useState<Product[]>(mockProducts);
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
+  
+  // Charger les produits depuis localStorage au montage
+  useEffect(() => {
+    const savedProducts = localStorage.getItem('products');
+    if (savedProducts) {
+      try {
+        const parsedProducts = JSON.parse(savedProducts);
+        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+          setProducts(parsedProducts);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des produits:", error);
+      }
+    }
+  }, []);
   
   const {
     isCreating,
@@ -28,7 +45,7 @@ const AdminLotteriesPage: React.FC = () => {
     deselectAllProducts,
     handleDrawWinner,
     checkLotteriesReadyForDraw
-  } = useLotteryForm(lotteries, setLotteries, mockProducts);
+  } = useLotteryForm(lotteries, setLotteries, products);
 
   // Vérifier périodiquement si des loteries sont prêtes pour le tirage
   useEffect(() => {
@@ -96,7 +113,7 @@ const AdminLotteriesPage: React.FC = () => {
                   selectedLotteryId={selectedLotteryId}
                   form={form}
                   lotteryStatuses={lotteryStatuses}
-                  products={mockProducts}
+                  products={products}
                   onSubmit={onSubmit}
                   onCancel={handleCancel}
                   onCreateClick={handleCreateLottery}
