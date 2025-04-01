@@ -10,6 +10,7 @@ import { useLotteryForm } from '@/hooks/useLotteryForm';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Gift } from 'lucide-react';
+import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const AdminLotteriesPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
@@ -75,7 +76,7 @@ const AdminLotteriesPage: React.FC = () => {
     <>
       <StarBackground />
       
-      <section className="pt-32 pb-16">
+      <section className="pt-32 pb-24">
         <div className="container mx-auto px-4 md:px-8">
           {lotteriesReadyForDraw.length > 0 && (
             <Alert className="mb-6 bg-green-500/20 border border-green-500/40">
@@ -126,6 +127,8 @@ const AdminLotteriesPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      <AdminNavigation />
     </>
   );
 };

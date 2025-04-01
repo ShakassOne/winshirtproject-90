@@ -45,10 +45,7 @@ const LotteriesPage: React.FC = () => {
     <>
       <StarBackground />
       
-      {/* Admin Navigation */}
-      <AdminNavigation />
-      
-      <section className="pt-32 pb-16">
+      <section className="pt-32 pb-24">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Nos Loteries
@@ -90,7 +87,7 @@ const LotteriesPage: React.FC = () => {
           </div>
           
           {/* Lotteries Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             {filteredLotteries.map(lottery => (
               <LotteryCard key={lottery.id} lottery={lottery} />
             ))}
@@ -104,6 +101,9 @@ const LotteriesPage: React.FC = () => {
           )}
         </div>
       </section>
+      
+      {/* Ajout d'un espace en bas pour éviter que le contenu soit masqué par le menu d'administration */}
+      <AdminNavigation />
     </>
   );
 };
