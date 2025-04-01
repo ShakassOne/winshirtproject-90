@@ -10,6 +10,7 @@ import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
 import { useAuth } from '@/contexts/AuthContext';
 import { simulateSendEmail } from '@/contexts/AuthContext';
+import { Client } from '@/types/client';
 
 // Define cart item type
 interface CartItem {
@@ -84,6 +85,125 @@ const CartPage: React.FC = () => {
   const shippingCost = subtotal > 50 ? 0 : 5.99;
   const total = subtotal + shippingCost;
   
+  // Function to ensure user is saved as a client
+  const ensureClientExists = (userData: any) => {
+    // Get existing clients from localStorage
+    const savedClients = localStorage.getItem('clients');
+    let clients: Client[] = [];
+    
+    if (savedClients) {
+      try {
+        clients = JSON.parse(savedClients);
+      } catch (error) {
+        console.error("Error parsing clients:", error);
+        clients = [];
+      }
+    }
+    
+    // Check if client with this email already exists
+    const existingClientIndex = clients.findIndex(c => c.email === userData.email);
+    
+    if (existingClientIndex >= 0) {
+      // Update existing client's last login and order count
+      const updatedClient = {
+        ...clients[existingClientIndex],
+        lastLogin: new Date().toISOString(),
+        orderCount: clients[existingClientIndex].orderCount + 1,
+        totalSpent: clients[existingClientIndex].totalSpent + total
+      };
+      clients[existingClientIndex] = updatedClient;
+      
+      // Save updated clients
+      localStorage.setItem('clients', JSON.stringify(clients));
+      return updatedClient;
+    } else {
+      // Create new client
+      const newClient: Client = {
+        id: Math.max(0, ...clients.map(c => c.id)) + 1,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone || "",
+        address: userData.address || "",
+        city: userData.city || "",
+        postalCode: userData.postalCode || "",
+        country: userData.country || "France",
+        registrationDate: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        orderCount: 1,
+        totalSpent: total,
+        participatedLotteries: cartItems.map(item => item.lotteryId),
+        wonLotteries: []
+      };
+      
+      // Add client to list and save to localStorage
+      clients.push(newClient);
+      localStorage.setItem('clients', JSON.stringify(clients));
+      
+      // Send welcome email
+      sendWelcomeEmail(newClient);
+      
+      return newClient;
+    }
+  };
+  
+  // Send welcome email to new client
+  const sendWelcomeEmail = (client: Client) => {
+    const emailContent = `
+Bonjour ${client.name},
+
+Bienvenue sur WinShirt ! Votre compte a été créé avec succès.
+
+En tant que nouveau membre, vous pouvez désormais:
+- Participer à nos loteries exclusives
+- Suivre vos commandes
+- Accéder à des offres spéciales
+
+N'hésitez pas à nous contacter si vous avez des questions.
+
+Merci pour votre confiance,
+L'équipe WinShirt
+    `;
+    
+    simulateSendEmail(
+      client.email,
+      "Bienvenue sur WinShirt - Votre inscription est confirmée",
+      emailContent
+    );
+    
+    console.info(`[SIMULATION EMAIL] À: ${client.email}, Sujet: Bienvenue sur WinShirt`);
+    console.info(`[SIMULATION EMAIL] Corps du message: ${emailContent}`);
+  };
+  
+  // Send order confirmation email
+  const sendOrderConfirmationEmail = (client: Client, orderDetails: any) => {
+    const emailContent = `
+Bonjour ${client.name},
+
+Nous vous confirmons votre commande sur WinShirt.
+
+Récapitulatif de votre commande:
+${cartItems.map(item => `- ${item.quantity}x ${item.name} (${item.size}, ${item.color}) - ${(item.price * item.quantity).toFixed(2)}€ - Participation à la loterie "${item.lotteryName}"`).join('\n')}
+
+Sous-total: ${subtotal.toFixed(2)}€
+Frais de livraison: ${shippingCost === 0 ? "Gratuit" : `${shippingCost.toFixed(2)}€`}
+Total: ${total.toFixed(2)}€
+
+Votre commande sera expédiée dans les 48 heures ouvrables.
+
+Merci pour votre achat!
+L'équipe WinShirt
+    `;
+    
+    simulateSendEmail(
+      client.email,
+      "Confirmation de votre commande WinShirt",
+      emailContent
+    );
+    
+    console.info(`[SIMULATION EMAIL] À: ${client.email}, Sujet: Confirmation de votre commande WinShirt`);
+    console.info(`[SIMULATION EMAIL] Corps du message: ${emailContent}`);
+  };
+  
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
       toast.error("Votre panier est vide");
@@ -98,6 +218,9 @@ const CartPage: React.FC = () => {
     setIsProcessing(true);
     
     try {
+      // Make sure client exists in the database
+      const client = ensureClientExists(user);
+      
       // Format items for Stripe
       const checkoutItems = cartItems.map(item => ({
         id: item.productId,
@@ -117,32 +240,15 @@ const CartPage: React.FC = () => {
         throw new Error("Échec de l'initialisation du paiement");
       }
       
-      // Envoyer un email de confirmation de commande au client
-      const emailContent = `
-Bonjour ${user.name},
-
-Nous vous confirmons votre commande sur WinShirt.
-
-Récapitulatif de votre commande:
-${cartItems.map(item => `- ${item.quantity}x ${item.name} (${item.size}, ${item.color}) - ${(item.price * item.quantity).toFixed(2)}€ - Participation à la loterie "${item.lotteryName}"`).join('\n')}
-
-Sous-total: ${subtotal.toFixed(2)}€
-Frais de livraison: ${shippingCost === 0 ? "Gratuit" : `${shippingCost.toFixed(2)}€`}
-Total: ${total.toFixed(2)}€
-
-Votre commande sera expédiée dans les 48 heures ouvrables.
-
-Merci pour votre achat!
-L'équipe WinShirt
-      `;
+      // Send confirmation email to customer
+      sendOrderConfirmationEmail(client, {
+        items: cartItems,
+        subtotal,
+        shippingCost,
+        total
+      });
       
-      simulateSendEmail(
-        user.email,
-        "Confirmation de votre commande WinShirt",
-        emailContent
-      );
-      
-      // Envoyer également une notification à l'administrateur
+      // Send notification to admin
       const adminEmails = localStorage.getItem('admin_notification_emails');
       const emails = adminEmails ? JSON.parse(adminEmails) : ['admin@winshirt.com'];
       
@@ -165,7 +271,16 @@ Cette commande est à préparer et expédier dans les plus brefs délais.
           "Nouvelle commande WinShirt",
           adminEmailContent
         );
+        
+        console.info(`[SIMULATION EMAIL] À: ${email}, Sujet: Nouvelle commande WinShirt`);
+        console.info(`[SIMULATION EMAIL] Corps du message: ${adminEmailContent}`);
       });
+      
+      // Clear cart after successful checkout
+      setCartItems([]);
+      localStorage.setItem('cart', JSON.stringify([]));
+      
+      toast.success("Commande effectuée avec succès ! Un email de confirmation vous a été envoyé.");
       
     } catch (error) {
       console.error("Erreur lors du paiement:", error);
