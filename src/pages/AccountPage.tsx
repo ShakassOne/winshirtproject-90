@@ -10,7 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LotteryParticipation } from '@/types/lottery';
 import { Order } from '@/types/order';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const AccountPage: React.FC = () => {
   const { user } = useAuth();
@@ -99,7 +100,16 @@ const AccountPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h1 className="text-3xl md:text-4xl font-bold text-white">{user.name}</h1>
                   {user.socialMediaDetails?.isVerified && (
-                    <CheckCircle2 className="text-blue-400 h-6 w-6" title="Compte vérifié" />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <CheckCircle2 className="text-blue-400 h-6 w-6" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Compte vérifié</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 <p className="text-gray-300">Membre depuis {user.registrationDate ? new Date(user.registrationDate).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</p>
