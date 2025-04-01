@@ -53,22 +53,27 @@ const AdminNavigation: React.FC = () => {
 
   // Contenu pour affichage mobile (drawer)
   const MobileMenu = () => (
-    <div className="flex justify-center w-full py-6 px-3 space-x-5">
-      {navigationItems.map((item) => (
-        <Link key={item.path} to={item.path}>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className={cn(
-              "flex flex-col items-center space-y-2 h-auto rounded-lg px-3 py-3",
-              isActive(item.path) && `bg-${item.color}/30`
-            )}
-          >
-            <item.icon size={30} className={`text-${item.color}`} />
-            <span className="text-base font-medium">{item.name}</span>
-          </Button>
-        </Link>
-      ))}
+    <div className="flex flex-col w-full h-full py-8 px-4">
+      <h2 className="text-2xl font-bold text-center mb-8 text-white">
+        Administration
+      </h2>
+      <div className="grid grid-cols-2 gap-4">
+        {navigationItems.map((item) => (
+          <Link key={item.path} to={item.path}>
+            <Button 
+              variant="ghost" 
+              size="lg"
+              className={cn(
+                "flex flex-col items-center justify-center space-y-3 h-32 w-full rounded-lg p-4",
+                isActive(item.path) ? `bg-${item.color}/30` : "hover:bg-gray-800"
+              )}
+            >
+              <item.icon size={36} className={`text-${item.color}`} />
+              <span className="text-base font-medium text-center">{item.name}</span>
+            </Button>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 
@@ -124,7 +129,7 @@ const AdminNavigation: React.FC = () => {
               <Menu size={32} />
             </Button>
           </DrawerTrigger>
-          <DrawerContent className="bg-winshirt-space border-t border-winshirt-purple/20">
+          <DrawerContent className="bg-winshirt-space border-t border-winshirt-purple/20 h-[85vh] max-h-[85vh]">
             <MobileMenu />
           </DrawerContent>
         </Drawer>
