@@ -14,7 +14,7 @@ export interface Lottery {
   description: string;
   currentParticipants: number;
   targetParticipants: number;
-  status: 'active' | 'completed' | 'relaunched';
+  status: 'active' | 'completed' | 'relaunched' | 'cancelled';
   winner?: { name: string, email: string } | null;
   drawDate?: string | null;
   endDate?: string | null;
@@ -55,9 +55,12 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
           <div className={`absolute top-0 left-0 px-3 py-1 rounded-br-lg ${
             lottery.status === 'completed' 
               ? 'bg-green-600/90' 
-              : 'bg-winshirt-purple-dark/90'
+              : lottery.status === 'cancelled'
+                ? 'bg-red-600/90'
+                : 'bg-winshirt-purple-dark/90'
           }`}>
-            {lottery.status === 'completed' ? 'Terminée' : 'Relancée'}
+            {lottery.status === 'completed' ? 'Terminée' : 
+             lottery.status === 'cancelled' ? 'Annulée' : 'Relancée'}
           </div>
         )}
         
