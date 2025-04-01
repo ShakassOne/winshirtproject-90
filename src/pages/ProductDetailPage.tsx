@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Ticket } from 'lucide-react';
 import { mockProducts, mockLotteries } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
@@ -21,7 +21,8 @@ const ProductDetailPage: React.FC = () => {
   
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
-  const [selectedLottery, setSelectedLottery] = useState<string>('');
+  // Tableau de loteries sélectionnées pour gérer plusieurs tickets
+  const [selectedLotteries, setSelectedLotteries] = useState<string[]>([]);
   
   // Charger le produit
   useEffect(() => {
@@ -38,6 +39,8 @@ const ProductDetailPage: React.FC = () => {
           
           if (foundProduct) {
             setProduct(foundProduct);
+            // Initialiser le tableau des loteries sélectionnées
+            setSelectedLotteries(Array(foundProduct.tickets || 1).fill(''));
             setLoading(false);
             return;
           }
@@ -49,11 +52,20 @@ const ProductDetailPage: React.FC = () => {
       // Fallback aux données mock
       const mockProduct = mockProducts.find(p => p.id === Number(id)) as ExtendedProduct;
       setProduct(mockProduct);
+      // Initialiser le tableau des loteries sélectionnées
+      setSelectedLotteries(Array(mockProduct?.tickets || 1).fill(''));
       setLoading(false);
     };
     
     loadProduct();
   }, [id]);
+  
+  // Mise à jour d'une loterie spécifique dans le tableau des loteries sélectionnées
+  const handleLotteryChange = (lotteryId: string, index: number) => {
+    const newSelectedLotteries = [...selectedLotteries];
+    newSelectedLotteries[index] = lotteryId;
+    setSelectedLotteries(newSelectedLotteries);
+  };
   
   if (loading) {
     return (
@@ -88,24 +100,28 @@ const ProductDetailPage: React.FC = () => {
       return;
     }
     
-    if (!selectedLottery) {
-      toast.error("Veuillez sélectionner une loterie");
-      return;
-    }
-    
-    // Trouver la loterie sélectionnée
-    const selectedLotteryObj = mockLotteries.find(lottery => lottery.id.toString() === selectedLottery);
-    
-    if (!selectedLotteryObj) {
-      toast.error("La loterie sélectionnée n'existe pas");
-      return;
+    // Vérification de chaque sélection de loterie
+    for (let i = 0; i < (product.tickets || 1); i++) {
+      if (!selectedLotteries[i]) {
+        toast.error(`Veuillez sélectionner une loterie pour le ticket ${i + 1}`);
+        return;
+      }
     }
     
     // Récupérer le panier actuel
     const cartString = localStorage.getItem('cart');
     const cart = cartString ? JSON.parse(cartString) : [];
     
-    // Ajouter le produit au panier
+    // Obtenir les informations des loteries sélectionnées
+    const selectedLotteriesInfo = selectedLotteries.map(lotteryId => {
+      const lottery = mockLotteries.find(l => l.id.toString() === lotteryId);
+      return {
+        id: parseInt(lotteryId),
+        name: lottery?.title || "Loterie inconnue"
+      };
+    });
+    
+    // Ajouter le produit au panier avec toutes les loteries sélectionnées
     const cartItem = {
       id: Date.now(), // ID unique pour cet élément du panier
       productId: product.id,
@@ -115,8 +131,9 @@ const ProductDetailPage: React.FC = () => {
       color: selectedColor,
       quantity: 1,
       image: product.image,
-      lotteryId: parseInt(selectedLottery),
-      lotteryName: selectedLotteryObj.title
+      secondaryImage: product.secondaryImage, // Inclure l'image secondaire si présente
+      tickets: product.tickets || 1,
+      selectedLotteries: selectedLotteriesInfo // Tableau des loteries sélectionnées
     };
     
     cart.push(cartItem);
@@ -129,6 +146,9 @@ const ProductDetailPage: React.FC = () => {
       navigate('/cart');
     }, 1500);
   };
+  
+  // Récupérer les loteries actives
+  const activeLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
   
   return (
     <>
@@ -145,6 +165,15 @@ const ProductDetailPage: React.FC = () => {
                   alt={product.name} 
                   className="w-full h-auto object-cover"
                 />
+                
+                {/* Image secondaire si présente */}
+                {product.secondaryImage && (
+                  <img 
+                    src={product.secondaryImage} 
+                    alt={`${product.name} - vue alternative`} 
+                    className="w-full h-auto object-cover mt-4"
+                  />
+                )}
               </div>
               
               {/* Product Details */}
@@ -152,6 +181,23 @@ const ProductDetailPage: React.FC = () => {
                 <div>
                   <h1 className="text-3xl font-bold text-white mb-2">{product.name}</h1>
                   <p className="text-2xl text-winshirt-purple-light">{product.price.toFixed(2)} €</p>
+                  
+                  {/* Nombre de tickets */}
+                  {(product.tickets && product.tickets > 1) ? (
+                    <div className="mt-2 bg-blue-500/10 border border-blue-500/30 rounded-md p-2 flex items-center">
+                      <Ticket className="text-blue-400 mr-2" size={18} />
+                      <p className="text-blue-100">
+                        Ce produit vous offre {product.tickets} tickets de participation à des loteries
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-2 bg-blue-500/10 border border-blue-500/30 rounded-md p-2 flex items-center">
+                      <Ticket className="text-blue-400 mr-2" size={18} />
+                      <p className="text-blue-100">
+                        Ce produit vous offre 1 ticket de participation à une loterie
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 <p className="text-gray-300">{product.description}</p>
@@ -214,30 +260,38 @@ const ProductDetailPage: React.FC = () => {
                   </RadioGroup>
                 </div>
                 
-                {/* Lottery Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="lottery-select" className="text-white">Loterie associée</Label>
-                  <Select
-                    value={selectedLottery}
-                    onValueChange={setSelectedLottery}
-                  >
-                    <SelectTrigger id="lottery-select" className="bg-winshirt-space-light border-winshirt-purple/30">
-                      <SelectValue placeholder="Sélectionner une loterie" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                      {mockLotteries
-                        .filter(lottery => lottery.status === 'active')
-                        .map((lottery) => (
-                          <SelectItem key={lottery.id} value={lottery.id.toString()}>
+                {/* Multiple Lottery Selections - One per ticket */}
+                {Array.from({ length: product.tickets || 1 }).map((_, index) => (
+                  <div key={index} className="space-y-2">
+                    <Label htmlFor={`lottery-select-${index}`} className="text-white flex items-center">
+                      <Ticket className="mr-2" size={16} />
+                      {product.tickets && product.tickets > 1 
+                        ? `Loterie ${index + 1} sur ${product.tickets}` 
+                        : "Loterie associée"}
+                    </Label>
+                    <Select
+                      value={selectedLotteries[index]}
+                      onValueChange={(value) => handleLotteryChange(value, index)}
+                    >
+                      <SelectTrigger 
+                        id={`lottery-select-${index}`} 
+                        className="bg-winshirt-space-light border-winshirt-purple/30"
+                      >
+                        <SelectValue placeholder="Sélectionner une loterie" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                        {activeLotteries.map((lottery) => (
+                          <SelectItem key={`${lottery.id}-${index}`} value={lottery.id.toString()}>
                             {lottery.title}
                           </SelectItem>
                         ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Chaque achat de produit vous donne droit à une participation à la loterie de votre choix
-                  </p>
-                </div>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Chaque ticket vous donne droit à une participation à la loterie de votre choix
+                    </p>
+                  </div>
+                ))}
                 
                 {/* Add to Cart */}
                 <Button 

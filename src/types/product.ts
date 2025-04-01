@@ -5,6 +5,7 @@ export interface ExtendedProduct {
   description: string;
   price: number;
   image: string;
+  secondaryImage?: string; // Nouvelle propriété pour une image secondaire
   sizes: string[];
   colors: string[];
   type: string; // Quality type: entry level, standard, premium

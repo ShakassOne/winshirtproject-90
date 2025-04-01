@@ -1,10 +1,9 @@
-
-import React from 'react';
+import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus, Ticket } from 'lucide-react';
+import { Package, Plus, Ticket, Image, Upload } from 'lucide-react';
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import {
@@ -17,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
+import { toast } from '@/lib/toast';
 
 interface ProductFormProps {
   isCreating: boolean;
@@ -59,6 +59,26 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const watchedColors = form.watch('colors') || [];
   const watchedLotteries = form.watch('linkedLotteries') || [];
   const watchedTickets = form.watch('tickets') || 1;
+  
+  // Ajout des refs pour les inputs de type file
+  const primaryImageInputRef = useRef<HTMLInputElement>(null);
+  const secondaryImageInputRef = useRef<HTMLInputElement>(null);
+  
+  // Fonction pour simuler l'upload d'image (sera implémentée en production)
+  const handleImageUpload = (inputRef: React.RefObject<HTMLInputElement>, fieldName: string) => {
+    const file = inputRef.current?.files?.[0];
+    if (file) {
+      // En production, nous téléchargerions le fichier sur un serveur
+      // Pour l'instant, nous simulons avec un message et nous n'utilisons pas vraiment le fichier
+      toast.success(`Image "${file.name}" sélectionnée`);
+      
+      // En production, nous obtiendrions l'URL de l'image téléchargée
+      // Pour l'instant, nous utilisons une URL de placeholder
+      const mockImageUrl = `https://placehold.co/600x400/png?text=${encodeURIComponent(file.name)}`;
+      form.setValue(fieldName, mockImageUrl);
+      form.trigger(fieldName);
+    }
+  };
 
   if (!isCreating && !selectedProductId) {
     return (
@@ -137,21 +157,80 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
+        {/* Image principale avec bouton parcourir */}
         <FormField
           control={form.control}
           name="image"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white text-lg">URL de l'image</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="https://example.com/image.jpg" 
-                  {...field}
-                  className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
+              <FormLabel className="text-white text-lg flex items-center gap-2">
+                <Image size={18} /> Image principale
+              </FormLabel>
+              <div className="flex gap-2">
+                <FormControl>
+                  <Input 
+                    placeholder="https://example.com/image.jpg" 
+                    {...field}
+                    className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12 flex-1"
+                  />
+                </FormControl>
+                <input 
+                  type="file" 
+                  ref={primaryImageInputRef}
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={() => handleImageUpload(primaryImageInputRef, 'image')}
                 />
-              </FormControl>
+                <Button 
+                  type="button" 
+                  onClick={() => primaryImageInputRef.current?.click()}
+                  className="bg-winshirt-blue"
+                >
+                  <Upload size={16} className="mr-2" /> Parcourir
+                </Button>
+              </div>
               <FormDescription className="text-gray-400 text-base">
-                Entrez l'URL de l'image du produit
+                URL de l'image principale du produit
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        {/* Nouvelle image secondaire avec bouton parcourir */}
+        <FormField
+          control={form.control}
+          name="secondaryImage"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white text-lg flex items-center gap-2">
+                <Image size={18} /> Image secondaire (optionnelle)
+              </FormLabel>
+              <div className="flex gap-2">
+                <FormControl>
+                  <Input 
+                    placeholder="https://example.com/image2.jpg" 
+                    {...field}
+                    className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12 flex-1"
+                  />
+                </FormControl>
+                <input 
+                  type="file" 
+                  ref={secondaryImageInputRef}
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={() => handleImageUpload(secondaryImageInputRef, 'secondaryImage')}
+                />
+                <Button 
+                  type="button" 
+                  onClick={() => secondaryImageInputRef.current?.click()}
+                  className="bg-winshirt-blue"
+                >
+                  <Upload size={16} className="mr-2" /> Parcourir
+                </Button>
+              </div>
+              <FormDescription className="text-gray-400 text-base">
+                URL d'une image secondaire ou alternative du produit
               </FormDescription>
               <FormMessage />
             </FormItem>

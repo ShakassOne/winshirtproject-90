@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedProduct } from '@/types/product';
@@ -24,6 +23,7 @@ export const useProductForm = (
       colors: [] as string[],
       linkedLotteries: [] as string[],
       image: '',
+      secondaryImage: '', // Ajout du champ pour l'image secondaire
       tickets: 1 // Valeur par défaut: 1 ticket
     }
   });
@@ -40,6 +40,7 @@ export const useProductForm = (
       colors: [],
       linkedLotteries: [],
       image: '',
+      secondaryImage: '', // Réinitialisation de l'image secondaire
       tickets: 1
     });
   };
@@ -77,6 +78,7 @@ export const useProductForm = (
       colors: colors,
       linkedLotteries: linkedLotteries,
       image: product.image,
+      secondaryImage: product.secondaryImage || '', // Ajout de l'image secondaire
       tickets: product.tickets || 1
     });
     
@@ -122,8 +124,9 @@ export const useProductForm = (
       colors: colors,
       linkedLotteries: linkedLotteries,
       image: data.image || 'https://placehold.co/600x400/png',
+      secondaryImage: data.secondaryImage || '', // Ajout de l'image secondaire
       popularity: Math.random() * 100, // Just for mock data
-      tickets: parseInt(data.tickets, 10) || 1 // Ajouter le nombre de tickets
+      tickets: parseInt(data.tickets, 10) || 1
     };
     
     if (isCreating) {
