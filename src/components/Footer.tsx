@@ -74,8 +74,8 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-gray-300">
-              <li>Email: contact@winshirt.com</li>
-              <li>Téléphone: +33 1 23 45 67 89</li>
+              <li>Email: contact@winshirt.fr</li>
+              <li>Téléphone: +33 6 62 37 16 76</li>
               <li>
                 <Link to="/contact" className="btn-primary mt-4 inline-block">
                   Contactez-nous
