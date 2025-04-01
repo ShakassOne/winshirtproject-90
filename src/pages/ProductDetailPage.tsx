@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,19 +9,48 @@ import { ShoppingCart } from 'lucide-react';
 import { mockProducts, mockLotteries } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
+import { ExtendedProduct } from '@/types/product';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const product = mockProducts.find(p => p.id === Number(id));
+  const [product, setProduct] = useState<ExtendedProduct | undefined>(undefined);
   
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedLottery, setSelectedLottery] = useState<string>('');
   
+  // Charger le produit
+  useEffect(() => {
+    // D'abord, essayer de le charger depuis localStorage
+    const loadProduct = () => {
+      const savedProducts = localStorage.getItem('products');
+      
+      if (savedProducts) {
+        try {
+          const parsedProducts = JSON.parse(savedProducts) as ExtendedProduct[];
+          const foundProduct = parsedProducts.find(p => p.id === Number(id));
+          
+          if (foundProduct) {
+            setProduct(foundProduct);
+            return;
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des produits:", error);
+        }
+      }
+      
+      // Fallback aux données mock
+      const mockProduct = mockProducts.find(p => p.id === Number(id)) as ExtendedProduct;
+      setProduct(mockProduct);
+    };
+    
+    loadProduct();
+  }, [id]);
+  
   if (!product) {
     return (
       <div className="pt-32 pb-8 text-center">
-        <h1 className="text-2xl text-white">Produit non trouvé</h1>
+        <h1 className="text-2xl text-white">Produit en cours de chargement ou non trouvé</h1>
       </div>
     );
   }
@@ -84,9 +113,13 @@ const ProductDetailPage: React.FC = () => {
                       <SelectValue placeholder="Sélectionner une taille" />
                     </SelectTrigger>
                     <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                      {product.sizes.map((size) => (
-                        <SelectItem key={size} value={size}>{size}</SelectItem>
-                      ))}
+                      {product.sizes && product.sizes.length > 0 ? (
+                        product.sizes.map((size) => (
+                          <SelectItem key={size} value={size}>{size}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="unique">Taille unique</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -97,20 +130,33 @@ const ProductDetailPage: React.FC = () => {
                   <RadioGroup
                     value={selectedColor}
                     onValueChange={setSelectedColor}
-                    className="flex gap-4"
+                    className="flex flex-wrap gap-4"
                   >
-                    {product.colors.map((color) => (
-                      <div key={color} className="flex items-center space-x-2">
+                    {product.colors && product.colors.length > 0 ? (
+                      product.colors.map((color) => (
+                        <div key={color} className="flex items-center space-x-2">
+                          <RadioGroupItem 
+                            value={color} 
+                            id={`color-${color}`} 
+                            className="bg-winshirt-space-light border-winshirt-purple/30"
+                          />
+                          <Label htmlFor={`color-${color}`} className="capitalize text-gray-300">
+                            {color}
+                          </Label>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem 
-                          value={color} 
-                          id={`color-${color}`} 
+                          value="default" 
+                          id="color-default" 
                           className="bg-winshirt-space-light border-winshirt-purple/30"
                         />
-                        <Label htmlFor={`color-${color}`} className="capitalize text-gray-300">
-                          {color}
+                        <Label htmlFor="color-default" className="text-gray-300">
+                          Couleur standard
                         </Label>
                       </div>
-                    ))}
+                    )}
                   </RadioGroup>
                 </div>
                 
@@ -135,7 +181,7 @@ const ProductDetailPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-400 mt-1">
-                    Chaque achat de t-shirt vous donne droit à une participation à la loterie de votre choix
+                    Chaque achat de produit vous donne droit à une participation à la loterie de votre choix
                   </p>
                 </div>
                 

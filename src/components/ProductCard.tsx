@@ -4,25 +4,10 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
-
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  lotteryName: string;
-  lotteryImage: string;
-  // Add all required properties to match what's used in the app
-  type?: string;
-  description?: string;
-  colors: string[];
-  sizes: string[];
-  popularity?: number;
-  linkedLotteries?: number[];
-}
+import { ExtendedProduct } from '@/types/product';
 
 interface ProductCardProps {
-  product: Product;
+  product: ExtendedProduct;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
@@ -44,11 +29,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <p className="text-xs text-gray-400">Participe à la loterie</p>
           <div className="flex items-center mt-1 space-x-2">
             <img 
-              src={product.lotteryImage} 
-              alt={product.lotteryName} 
+              src={product.lotteryImage || 'https://placehold.co/100x100/png'} 
+              alt={product.lotteryName || 'Loterie'} 
               className="w-8 h-8 rounded-full object-cover border border-winshirt-purple/50"
             />
-            <span className="text-sm text-winshirt-blue-light">{product.lotteryName}</span>
+            <span className="text-sm text-winshirt-blue-light">{product.lotteryName || 'Sélectionnez une loterie'}</span>
           </div>
         </div>
       </CardContent>
