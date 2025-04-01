@@ -21,29 +21,25 @@ const DrawWinnerButton: React.FC<DrawWinnerButtonProps> = ({ lottery, onDrawWinn
 
   const drawWinner = () => {
     if (!lottery.participants || lottery.participants.length === 0) {
-      // Si pas de participants, on simule quelques participants aléatoires
-      const mockParticipants: Participant[] = [
-        { id: 1, name: "Jean Dupont", email: "jean.dupont@example.com" },
-        { id: 2, name: "Marie Martin", email: "marie.martin@example.com" },
-        { id: 3, name: "Pierre Dubois", email: "pierre.dubois@example.com" },
-        { id: 4, name: "Sophie Lefevre", email: "sophie.lefevre@example.com" }
-      ];
-      
-      // Sélection aléatoire de l'un des participants simulés
-      const randomIndex = Math.floor(Math.random() * mockParticipants.length);
-      const winner = mockParticipants[randomIndex];
-      
-      onDrawWinner(lottery.id, winner);
-      toast.success(`Félicitations ! ${winner.name} a gagné la loterie "${lottery.title}" !`);
+      // Si pas de participants, montrer un message d'erreur au lieu de simuler des participants
+      toast.error(`Aucun participant n'a été enregistré pour cette loterie "${lottery.title}"`);
       return;
     }
 
-    // Tirage aléatoire d'un gagnant parmi les participants
+    // S'il n'y a qu'un seul participant, il est automatiquement le gagnant
+    if (lottery.participants.length === 1) {
+      const winner = lottery.participants[0];
+      onDrawWinner(lottery.id, winner);
+      toast.success(`Félicitations ! ${winner.name} est l'unique participant et remporte la loterie "${lottery.title}" !`);
+      return;
+    }
+
+    // S'il y a plusieurs participants, tirage aléatoire
     const randomIndex = Math.floor(Math.random() * lottery.participants.length);
     const winner = lottery.participants[randomIndex];
     
     onDrawWinner(lottery.id, winner);
-    toast.success(`Félicitations ! ${winner.name} a gagné la loterie "${lottery.title}" !`);
+    toast.success(`Félicitations ! ${winner.name} a gagné la loterie "${lottery.title}" parmi ${lottery.participants.length} participants !`);
   };
 
   return (

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Lottery } from './LotteryCard';
 import { Link } from 'react-router-dom';
@@ -84,7 +85,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     };
   };
   
-  // Touch and drag handlers - improvements for better interaction
+  // Touch and drag handlers
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
     
@@ -93,7 +94,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     setStartX(clientX);
     setCurrentTranslate(0);
     
-    // Add event listeners with proper passive settings for touch events
+    // Add document-level event listeners for better tracking
     if ('touches' in e) {
       document.addEventListener('touchmove', handleDragMove, { passive: false });
       document.addEventListener('touchend', handleDragEnd);
@@ -103,14 +104,18 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     }
     
     // Prevent default to avoid page scrolling
-    e.preventDefault();
+    if (e.cancelable) {
+      e.preventDefault();
+    }
   };
   
   const handleDragMove = (e: MouseEvent | TouchEvent) => {
     if (!isDragging) return;
     
     // Prevent default behavior to avoid scrolling while dragging
-    e.preventDefault();
+    if (e.cancelable) {
+      e.preventDefault();
+    }
     
     // Get the current position
     const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
@@ -167,11 +172,11 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
   
   return (
     <div 
-      className="spinning-lottery h-96 w-full relative"
+      className="spinning-lottery h-96 w-full relative select-none"
       ref={containerRef}
       onMouseDown={handleDragStart}
       onTouchStart={handleDragStart}
-      style={{ cursor: 'grab' }}
+      style={{ cursor: 'grab', touchAction: 'none' }}
     >
       {/* Drag indicator */}
       <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-winshirt-purple/30 text-winshirt-purple-light rounded-full px-3 py-1 flex items-center text-sm z-20">
@@ -182,14 +187,22 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
         <Link
           key={lottery.id}
           to={`/lotteries#${lottery.id}`}
-          className="spinning-lottery-item"
+          className="spinning-lottery-item absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+          onClick={(e) => {
+            // Annuler le clic si on est en train de faire glisser
+            if (isDragging || Math.abs(currentTranslate) > 10) {
+              e.preventDefault();
+            }
+          }}
           style={{
             width: '300px',
             height: '350px',
             transition: isDragging ? 'none' : 'all 0.5s ease',
-            transform: index === activeIndex && isDragging ? `translateX(${currentTranslate}px)` : '',
+            transform: getPositionStyle(index).transform + (index === activeIndex && isDragging ? ` translateX(${currentTranslate}px)` : ''),
+            opacity: getPositionStyle(index).opacity,
+            zIndex: getPositionStyle(index).zIndex,
             pointerEvents: isDragging ? 'none' : 'auto',
-            ...getPositionStyle(index),
+            display: getPositionStyle(index).display === 'none' ? 'none' : 'block',
           }}
         >
           <div className="w-full h-full bg-winshirt-space-light rounded-2xl overflow-hidden flex flex-col relative">
