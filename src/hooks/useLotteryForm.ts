@@ -68,13 +68,13 @@ export const useLotteryForm = (
   };
   
   const handleDeleteLottery = (lotteryId: number) => {
-    // Avant de supprimer, mettre à jour les produits associés
+    // Update associated products before deleting
     try {
       const savedProducts = localStorage.getItem('products');
       if (savedProducts) {
         const parsedProducts = JSON.parse(savedProducts);
         
-        // Retirer la loterie des linkedLotteries de tous les produits
+        // Remove the lottery from linkedLotteries of all products
         const updatedProducts = parsedProducts.map((product: any) => {
           if (product.linkedLotteries && Array.isArray(product.linkedLotteries)) {
             product.linkedLotteries = product.linkedLotteries.filter((id: number) => id !== lotteryId);
@@ -82,16 +82,16 @@ export const useLotteryForm = (
           return product;
         });
         
-        // Sauvegarder les produits mis à jour
+        // Save updated products
         localStorage.setItem('products', JSON.stringify(updatedProducts));
       }
     } catch (error) {
-      console.error("Erreur lors de la mise à jour des produits associés:", error);
+      console.error("Error updating associated products:", error);
     }
     
     setLotteries(prevLotteries => {
       const updatedLotteries = prevLotteries.filter(l => l.id !== lotteryId);
-      // Sauvegarder dans localStorage et sessionStorage pour compatibilité
+      // Save to both localStorage and sessionStorage for compatibility
       localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       return updatedLotteries;
@@ -106,10 +106,10 @@ export const useLotteryForm = (
   };
   
   const onSubmit = (data: any) => {
-    // Créer un nouvel ID pour les nouvelles loteries
+    // Create a new ID for new lotteries
     const newId = isCreating ? Math.max(0, ...lotteries.map(l => l.id)) + 1 : selectedLotteryId!;
     
-    // Trouver la loterie existante pour préserver les données non modifiées
+    // Find existing lottery to preserve unmodified data
     const existingLottery = lotteries.find(l => l.id === selectedLotteryId);
     
     const newLottery: ExtendedLottery = {
@@ -118,57 +118,57 @@ export const useLotteryForm = (
       description: data.description,
       value: parseFloat(data.value),
       targetParticipants: parseInt(data.targetParticipants),
-      currentParticipants: isCreating ? 0 : existingLottery?.currentParticipants || 0,
+      currentParticipants: isCreating ? 0 : (existingLottery?.currentParticipants || 0),
       status: data.status,
       linkedProducts: data.linkedProducts.map(Number),
       image: data.image || 'https://placehold.co/600x400/png',
-      participants: isCreating ? [] : existingLottery?.participants || [],
-      winner: isCreating ? null : existingLottery?.winner || null,
-      drawDate: isCreating ? null : existingLottery?.drawDate || null,
+      participants: isCreating ? [] : (existingLottery?.participants || []),
+      winner: isCreating ? null : (existingLottery?.winner || null),
+      drawDate: isCreating ? null : (existingLottery?.drawDate || null),
       endDate: data.endDate || null
     };
     
-    // Mise à jour des produits associés
+    // Update associated products
     const linkedProductIds = data.linkedProducts.map(Number);
     
-    // Charger les produits actuels depuis localStorage
-    const savedProducts = localStorage.getItem('products');
-    if (savedProducts) {
-      try {
+    try {
+      // Load current products from localStorage
+      const savedProducts = localStorage.getItem('products');
+      if (savedProducts) {
         let parsedProducts = JSON.parse(savedProducts);
         
-        // Mettre à jour les produits: ajouter la loterie à linkedLotteries des produits sélectionnés
-        // et supprimer la loterie des linkedLotteries des produits non sélectionnés
+        // Update products: add the lottery to linkedLotteries of selected products
+        // and remove the lottery from linkedLotteries of unselected products
         const updatedProducts = parsedProducts.map((product: any) => {
-          // S'assurer que linkedLotteries est un tableau
+          // Ensure linkedLotteries is an array
           if (!product.linkedLotteries) {
             product.linkedLotteries = [];
           }
           
-          // Si le produit est sélectionné et ne contient pas déjà la loterie, l'ajouter
+          // If the product is selected and doesn't already contain the lottery, add it
           if (linkedProductIds.includes(product.id)) {
             if (!product.linkedLotteries.includes(newId)) {
               product.linkedLotteries.push(newId);
             }
           } else {
-            // Si le produit n'est pas sélectionné, supprimer la loterie si elle existe
+            // If the product is not selected, remove the lottery if it exists
             product.linkedLotteries = product.linkedLotteries.filter((id: number) => id !== newId);
           }
           
           return product;
         });
         
-        // Sauvegarder les produits mis à jour
+        // Save updated products
         localStorage.setItem('products', JSON.stringify(updatedProducts));
-      } catch (error) {
-        console.error("Erreur lors de la mise à jour des produits associés:", error);
       }
+    } catch (error) {
+      console.error("Error updating associated products:", error);
     }
     
     if (isCreating) {
       setLotteries(prev => {
         const updatedLotteries = [...prev, newLottery];
-        // Sauvegarder dans localStorage ET sessionStorage pour compatibilité
+        // Save to both localStorage AND sessionStorage for compatibility
         localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
         sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
         return updatedLotteries;
@@ -177,7 +177,7 @@ export const useLotteryForm = (
     } else {
       setLotteries(prev => {
         const updatedLotteries = prev.map(l => l.id === selectedLotteryId ? newLottery : l);
-        // Sauvegarder dans localStorage ET sessionStorage pour compatibilité
+        // Save to both localStorage AND sessionStorage for compatibility
         localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
         sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
         return updatedLotteries;
@@ -198,12 +198,14 @@ export const useLotteryForm = (
   };
   
   const toggleProduct = (productId: string) => {
-    const currentProducts = form.getValues('linkedProducts');
+    const currentProducts = form.getValues('linkedProducts') || [];
+    
     if (currentProducts.includes(productId)) {
       form.setValue('linkedProducts', currentProducts.filter(id => id !== productId));
     } else {
       form.setValue('linkedProducts', [...currentProducts, productId]);
     }
+    
     // Force rerender by updating form
     form.trigger('linkedProducts');
   };
@@ -233,7 +235,7 @@ export const useLotteryForm = (
         return lottery;
       });
       
-      // Forcer la mise à jour en stockant dans localStorage ET sessionStorage
+      // Force update by storing in both localStorage AND sessionStorage
       localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       
@@ -241,10 +243,10 @@ export const useLotteryForm = (
     });
   };
 
-  // Vérifier s'il y a des loteries en localStorage au montage du composant
+  // Check for lotteries in localStorage on component mount
   useEffect(() => {
     const loadLotteries = () => {
-      // Essayer d'abord localStorage
+      // Try localStorage first
       const localStorageLotteries = localStorage.getItem('lotteries');
       if (localStorageLotteries) {
         try {
@@ -254,22 +256,22 @@ export const useLotteryForm = (
             return;
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des loteries depuis localStorage:", error);
+          console.error("Error loading lotteries from localStorage:", error);
         }
       }
       
-      // Ensuite, essayer sessionStorage comme fallback
+      // Then try sessionStorage as fallback
       const sessionStorageLotteries = sessionStorage.getItem('lotteries');
       if (sessionStorageLotteries) {
         try {
           const parsedLotteries = JSON.parse(sessionStorageLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
             setLotteries(parsedLotteries);
-            // Synchroniser avec localStorage
+            // Sync with localStorage
             localStorage.setItem('lotteries', sessionStorageLotteries);
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des loteries depuis sessionStorage:", error);
+          console.error("Error loading lotteries from sessionStorage:", error);
         }
       }
     };
@@ -277,15 +279,7 @@ export const useLotteryForm = (
     loadLotteries();
   }, []);
 
-  // Sauvegarder les loteries dans localStorage à chaque changement
-  useEffect(() => {
-    if (lotteries.length > 0) {
-      localStorage.setItem('lotteries', JSON.stringify(lotteries));
-      sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
-    }
-  }, [lotteries]);
-
-  // Fonction pour vérifier automatiquement si des loteries peuvent être tirées au sort
+  // Function to automatically check if lotteries can be drawn
   const checkLotteriesReadyForDraw = () => {
     const now = new Date();
     const lotteriesReadyForDraw = lotteries.filter(

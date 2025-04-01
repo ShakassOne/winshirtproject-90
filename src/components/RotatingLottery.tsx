@@ -16,7 +16,7 @@ interface RotatingLotteryProps {
 }
 
 const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
-  // Si pas de loteries, afficher un message
+  // If no lotteries, display a message
   if (!lotteries || lotteries.length === 0) {
     return (
       <div className="spinning-lottery h-96 w-full flex items-center justify-center">

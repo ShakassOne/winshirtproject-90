@@ -7,42 +7,43 @@ import { ExtendedLottery } from '@/types/lottery';
 import { useProductForm } from '@/hooks/useProductForm';
 import ProductList from '@/components/admin/products/ProductList';
 import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
+import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const AdminProductsPage: React.FC = () => {
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
   
-  // Charger les loteries depuis les deux types de stockage au montage
+  // Load lotteries from both storage types on mount
   useEffect(() => {
     const loadLotteries = () => {
-      // Essayer d'abord localStorage
+      // Try localStorage first
       const localLotteries = localStorage.getItem('lotteries');
       if (localLotteries) {
         try {
           const parsedLotteries = JSON.parse(localLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
             setLotteries(parsedLotteries);
-            // Synchroniser avec sessionStorage
+            // Sync with sessionStorage
             sessionStorage.setItem('lotteries', localLotteries);
             return;
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des loteries depuis localStorage:", error);
+          console.error("Error loading lotteries from localStorage:", error);
         }
       }
       
-      // Fallback à sessionStorage
+      // Fallback to sessionStorage
       const sessionLotteries = sessionStorage.getItem('lotteries');
       if (sessionLotteries) {
         try {
           const parsedLotteries = JSON.parse(sessionLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
             setLotteries(parsedLotteries);
-            // Synchroniser avec localStorage
+            // Sync with localStorage
             localStorage.setItem('lotteries', sessionLotteries);
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des loteries depuis sessionStorage:", error);
+          console.error("Error loading lotteries from sessionStorage:", error);
         }
       }
     };
@@ -50,6 +51,7 @@ const AdminProductsPage: React.FC = () => {
     loadLotteries();
   }, []);
   
+  // Filter for active lotteries to assign to products
   const activeLotteries = lotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
   
   const {
@@ -77,7 +79,7 @@ const AdminProductsPage: React.FC = () => {
       <section className="pt-32 pb-16">
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Liste des produits */}
+            {/* Product list */}
             <div className="w-full lg:w-1/3">
               <ProductList
                 products={products}
@@ -88,7 +90,7 @@ const AdminProductsPage: React.FC = () => {
               />
             </div>
             
-            {/* Formulaire de produit amélioré */}
+            {/* Enhanced product form */}
             <div className="w-full lg:w-2/3">
               <div className="winshirt-card p-6">
                 <h2 className="text-2xl font-bold text-white mb-6">
@@ -116,6 +118,8 @@ const AdminProductsPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      <AdminNavigation />
     </>
   );
 };

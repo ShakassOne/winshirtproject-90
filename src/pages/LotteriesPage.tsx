@@ -10,45 +10,45 @@ const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [lotteries, setLotteries] = useState(mockLotteries);
   
-  // Charger les loteries depuis le stockage au montage et quand l'URL change
+  // Load lotteries from storage on mount and when URL changes
   useEffect(() => {
     const loadLotteries = () => {
-      // Essayer d'abord localStorage
+      // Try localStorage first
       const localLotteries = localStorage.getItem('lotteries');
       if (localLotteries) {
         try {
           const parsedLotteries = JSON.parse(localLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
             setLotteries(parsedLotteries);
-            // Synchroniser avec sessionStorage
+            // Sync with sessionStorage
             sessionStorage.setItem('lotteries', localLotteries);
             return;
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des loteries depuis localStorage:", error);
+          console.error("Error loading lotteries from localStorage:", error);
         }
       }
       
-      // Fallback à sessionStorage
+      // Fallback to sessionStorage
       const sessionLotteries = sessionStorage.getItem('lotteries');
       if (sessionLotteries) {
         try {
           const parsedLotteries = JSON.parse(sessionLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
             setLotteries(parsedLotteries);
-            // Synchroniser avec localStorage
+            // Sync with localStorage
             localStorage.setItem('lotteries', sessionLotteries);
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des loteries depuis sessionStorage:", error);
+          console.error("Error loading lotteries from sessionStorage:", error);
         }
       }
     };
     
-    // Charger lors du montage du composant
+    // Load on component mount
     loadLotteries();
     
-    // Ajouter un écouteur d'événements pour détecter les changements d'URL
+    // Add event listener to detect URL changes
     window.addEventListener('popstate', loadLotteries);
     
     return () => {
@@ -121,7 +121,7 @@ const LotteriesPage: React.FC = () => {
         </div>
       </section>
       
-      {/* Ajout d'un espace en bas pour éviter que le contenu soit masqué par le menu d'administration */}
+      {/* Add space at the bottom to prevent content from being hidden by the admin menu */}
       <AdminNavigation />
     </>
   );

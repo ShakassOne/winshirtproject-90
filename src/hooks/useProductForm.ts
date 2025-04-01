@@ -80,8 +80,10 @@ export const useProductForm = (
   };
   
   const onSubmit = (data: any) => {
+    const productId = isCreating ? Math.max(0, ...products.map(p => p.id)) + 1 : selectedProductId!;
+    
     const newProduct: ExtendedProduct = {
-      id: isCreating ? Math.max(0, ...products.map(p => p.id)) + 1 : selectedProductId!,
+      id: productId,
       name: data.name,
       description: data.description,
       price: parseFloat(data.price),
@@ -131,13 +133,6 @@ export const useProductForm = (
     }
   }, []);
   
-  // Sauvegarder les produits dans localStorage à chaque modification
-  useEffect(() => {
-    if (products.length > 0) {
-      localStorage.setItem('products', JSON.stringify(products));
-    }
-  }, [products]);
-  
   const handleCancel = () => {
     resetForm();
     setIsCreating(false);
@@ -169,17 +164,19 @@ export const useProductForm = (
   };
   
   const toggleLottery = (lotteryId: string) => {
-    const currentLotteries = form.getValues('linkedLotteries');
+    const currentLotteries = form.getValues('linkedLotteries') || [];
+    
     if (currentLotteries.includes(lotteryId)) {
       form.setValue('linkedLotteries', currentLotteries.filter(id => id !== lotteryId));
     } else {
       form.setValue('linkedLotteries', [...currentLotteries, lotteryId]);
     }
-    // Forcer la mise à jour du formulaire
+    
+    // Force rerender by updating form
     form.trigger('linkedLotteries');
   };
 
-  // Nouvelles fonctions pour sélectionner/désélectionner toutes les loteries
+  // Functions to select/deselect all lotteries
   const selectAllLotteries = () => {
     const allLotteryIds = availableLotteries.map(lottery => lottery.id.toString());
     form.setValue('linkedLotteries', allLotteryIds);

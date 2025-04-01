@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -9,36 +9,43 @@ import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
 
-// Mocked cart items for demonstration
-const initialCartItems = [
-  {
-    id: 1,
-    productId: 1,
-    name: "T-shirt Cosmique Noir",
-    price: 29.99,
-    size: "M",
-    color: "Noir",
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?q=80&w=1000",
-    lotteryName: "PlayStation 5",
-  },
-  {
-    id: 2,
-    productId: 3,
-    name: "T-shirt Vintage Gaming",
-    price: 27.99,
-    size: "L",
-    color: "Gris",
-    quantity: 2,
-    image: "https://images.unsplash.com/photo-1503342394128-c104d54dba01?q=80&w=1000",
-    lotteryName: "Vélo Mountain Bike",
-  }
-];
+// Define cart item type
+interface CartItem {
+  id: number;
+  productId: number;
+  name: string;
+  price: number;
+  size: string;
+  color: string;
+  quantity: number;
+  image: string;
+  lotteryName: string;
+}
 
 const CartPage: React.FC = () => {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Load cart items from localStorage on component mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        if (Array.isArray(parsedCart)) {
+          setCartItems(parsedCart);
+        }
+      } catch (error) {
+        console.error("Error loading cart from localStorage:", error);
+      }
+    }
+  }, []);
+  
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cartItems));
+  }, [cartItems]);
   
   const handleRemoveItem = (id: number) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== id));
