@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,7 +19,7 @@ const formSchema = z.object({
   targetParticipants: z.number().min(2, {
     message: "Le nombre de participants doit être supérieur à 1.",
   }),
-  status: z.enum(["active", "completed", "relaunched"]),
+  status: z.enum(["active", "completed", "relaunched", "cancelled"]),
   image: z.string().url({
     message: "Veuillez entrer une URL valide.",
   }),
