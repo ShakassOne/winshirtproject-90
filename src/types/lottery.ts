@@ -11,8 +11,8 @@ export interface ExtendedLottery {
   linkedProducts?: number[];
   participants?: Participant[];
   winner?: Participant | null;
-  drawDate?: string;
-  endDate?: string;
+  drawDate?: string | null;
+  endDate?: string | null;
 }
 
 export interface Participant {

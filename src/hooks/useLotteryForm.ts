@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,16 +82,21 @@ export const useLotteryForm = (
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     if (isCreating) {
+      // Fix: Ensure all required properties are explicitly set and not optional
       const newLottery: ExtendedLottery = {
         id: Date.now(),
-        ...data,
+        title: data.title,           // Explicitly set required properties 
+        description: data.description,
         value: Number(data.value),
         targetParticipants: Number(data.targetParticipants),
         currentParticipants: 0,
+        status: data.status,
+        image: data.image,
         linkedProducts: data.linkedProducts?.map(Number) || [],
         participants: [],
         winner: null,
-        drawDate: null
+        drawDate: null,
+        endDate: data.endDate
       };
       setLotteries(prev => [...prev, newLottery]);
       toast.success("Loterie créée avec succès !");
