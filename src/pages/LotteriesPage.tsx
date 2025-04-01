@@ -5,54 +5,45 @@ import LotteryCard from '../components/LotteryCard';
 import StarBackground from '../components/StarBackground';
 import { Button } from '@/components/ui/button';
 import AdminNavigation from '@/components/admin/AdminNavigation';
+import { ExtendedLottery } from '@/types/lottery';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [lotteries, setLotteries] = useState(mockLotteries);
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   
-  // Load lotteries from storage on mount and when URL changes
-  useEffect(() => {
-    const loadLotteries = () => {
-      // Try localStorage first
-      const localLotteries = localStorage.getItem('lotteries');
-      if (localLotteries) {
-        try {
-          const parsedLotteries = JSON.parse(localLotteries);
-          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-            setLotteries(parsedLotteries);
-            // Sync with sessionStorage
-            sessionStorage.setItem('lotteries', localLotteries);
-            return;
-          }
-        } catch (error) {
-          console.error("Error loading lotteries from localStorage:", error);
+  // Fonction pour charger les loteries depuis localStorage ou fallback aux mocks
+  const getInitialLotteries = () => {
+    try {
+      const storedLotteries = localStorage.getItem('lotteries');
+      if (storedLotteries) {
+        const parsedLotteries = JSON.parse(storedLotteries);
+        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+          return parsedLotteries;
         }
       }
-      
-      // Fallback to sessionStorage
-      const sessionLotteries = sessionStorage.getItem('lotteries');
-      if (sessionLotteries) {
-        try {
-          const parsedLotteries = JSON.parse(sessionLotteries);
-          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-            setLotteries(parsedLotteries);
-            // Sync with localStorage
-            localStorage.setItem('lotteries', sessionLotteries);
-          }
-        } catch (error) {
-          console.error("Error loading lotteries from sessionStorage:", error);
-        }
+    } catch (error) {
+      console.error("Erreur lors du chargement des loteries:", error);
+    }
+    
+    // Fallback aux loteries mock si rien n'est trouvé dans localStorage
+    return mockLotteries;
+  };
+  
+  // Charger les loteries au montage du composant
+  useEffect(() => {
+    setLotteries(getInitialLotteries());
+    
+    // Ajouter un écouteur d'événement pour détecter les changements dans localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'lotteries') {
+        setLotteries(getInitialLotteries());
       }
     };
     
-    // Load on component mount
-    loadLotteries();
-    
-    // Add event listener to detect URL changes
-    window.addEventListener('popstate', loadLotteries);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
-      window.removeEventListener('popstate', loadLotteries);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
   

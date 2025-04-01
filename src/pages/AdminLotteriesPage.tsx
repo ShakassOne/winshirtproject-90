@@ -67,6 +67,19 @@ const AdminLotteriesPage: React.FC = () => {
       if (storedLotteries) {
         const parsedLotteries = JSON.parse(storedLotteries);
         if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+          // On vérifie si les loteries spéciales sont déjà présentes
+          const existingIds = parsedLotteries.map(lottery => lottery.id);
+          const missingSpecialLotteries = specialLotteries.filter(
+            lottery => !existingIds.includes(lottery.id)
+          );
+          
+          // On ajoute uniquement les loteries spéciales manquantes
+          if (missingSpecialLotteries.length > 0) {
+            const mergedLotteries = [...parsedLotteries, ...missingSpecialLotteries];
+            localStorage.setItem('lotteries', JSON.stringify(mergedLotteries));
+            return mergedLotteries;
+          }
+          
           return parsedLotteries;
         }
       }
@@ -74,17 +87,34 @@ const AdminLotteriesPage: React.FC = () => {
       console.error("Erreur lors du chargement des loteries:", error);
     }
     
-    // Fusionner les loteries spéciales avec les loteries existantes
-    return [...specialLotteries, ...mockLotteries];
+    // Fusionner les loteries spéciales avec les loteries mock si rien n'est trouvé
+    const initialLotteries = [...specialLotteries, ...mockLotteries];
+    localStorage.setItem('lotteries', JSON.stringify(initialLotteries));
+    return initialLotteries;
   };
 
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(getInitialLotteries());
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts);
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   
-  // Mettre à jour le localStorage quand les loteries changent
+  // Mettre à jour le localStorage ET déclencher un événement quand les loteries changent
   useEffect(() => {
     localStorage.setItem('lotteries', JSON.stringify(lotteries));
+    
+    // Déclencher un événement personnalisé pour notifier les autres composants
+    window.dispatchEvent(new Event('storageUpdate'));
+    
+    // Dispatch un StorageEvent pour que d'autres onglets puissent écouter
+    try {
+      const storageEvent = new StorageEvent('storage', {
+        key: 'lotteries',
+        newValue: JSON.stringify(lotteries),
+        url: window.location.href
+      });
+      window.dispatchEvent(storageEvent);
+    } catch (error) {
+      console.error("Erreur lors de la création de l'événement storage:", error);
+    }
   }, [lotteries]);
   
   // Charger les produits depuis localStorage au montage

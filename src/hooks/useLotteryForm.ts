@@ -68,8 +68,15 @@ export const useLotteryForm = (
         targetParticipants: lotteryToEdit.targetParticipants,
         status: lotteryToEdit.status,
         image: lotteryToEdit.image,
-        endDate: lotteryToEdit.endDate,
+        endDate: lotteryToEdit.endDate || undefined,
         linkedProducts: lotteryToEdit.linkedProducts?.map(String) || [],
+      });
+      
+      // Debug: vérifier les données chargées dans le formulaire
+      console.log("Données chargées pour édition:", {
+        id: lotteryId,
+        image: lotteryToEdit.image,
+        formValue: form.getValues()
       });
     }
   };
@@ -100,38 +107,17 @@ export const useLotteryForm = (
         drawDate: null,
         endDate: data.endDate
       };
-      setLotteries(prev => [...prev, newLottery]);
+      
+      const updatedLotteries = [...lotteries, newLottery];
+      setLotteries(updatedLotteries);
       toast.success("Loterie créée avec succès !");
+      
+      // Stocker également directement dans localStorage pour assurer la cohérence
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
     } else if (selectedLotteryId) {
       // Mettre à jour la loterie sélectionnée avec les nouvelles valeurs
-      setLotteries(prev =>
-        prev.map(lottery =>
-          lottery.id === selectedLotteryId
-            ? {
-                ...lottery,
-                title: data.title,
-                description: data.description,
-                value: Number(data.value),
-                targetParticipants: Number(data.targetParticipants),
-                status: data.status,
-                image: data.image, // Assurons-nous que l'image est bien mise à jour
-                endDate: data.endDate,
-                linkedProducts: data.linkedProducts?.map(Number) || [],
-              }
-            : lottery
-        )
-      );
-      
-      // Debug: afficher la loterie avant et après la mise à jour
-      console.log("Loterie avant mise à jour:", lotteries.find(l => l.id === selectedLotteryId));
-      console.log("Nouvelles données d'image:", data.image);
-      
-      toast.success("Loterie modifiée avec succès !");
-      
-      // Sauvegarder les loteries dans le localStorage pour persister les modifications
-      localStorage.setItem('lotteries', JSON.stringify(
-        lotteries.map(lottery => 
-          lottery.id === selectedLotteryId 
+      const updatedLotteries = lotteries.map(lottery =>
+        lottery.id === selectedLotteryId
           ? {
               ...lottery,
               title: data.title,
@@ -142,10 +128,20 @@ export const useLotteryForm = (
               image: data.image,
               endDate: data.endDate,
               linkedProducts: data.linkedProducts?.map(Number) || [],
-            } 
+            }
           : lottery
-        )
-      ));
+      );
+      
+      // Debug: afficher la loterie avant et après la mise à jour
+      console.log("Loterie avant mise à jour:", lotteries.find(l => l.id === selectedLotteryId));
+      console.log("Nouvelles données d'image:", data.image);
+      console.log("Loterie après mise à jour:", updatedLotteries.find(l => l.id === selectedLotteryId));
+      
+      setLotteries(updatedLotteries);
+      toast.success("Loterie modifiée avec succès !");
+      
+      // Stocker également directement dans localStorage pour assurer la cohérence
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
     }
     setIsCreating(false);
     setSelectedLotteryId(null);
@@ -182,31 +178,23 @@ export const useLotteryForm = (
   };
 
   const handleDrawWinner = (lotteryId: number, winner: Participant) => {
-    setLotteries(prev => 
-      prev.map(lottery => 
-        lottery.id === lotteryId 
-          ? { 
-              ...lottery, 
-              winner: winner,
-              drawDate: new Date().toISOString(),
-              status: 'completed' // Changer le statut en "completed"
-            } 
-          : lottery
-      )
-    );
-    
-    // Mettre également à jour le localStorage après le tirage au sort
     const updatedLotteries = lotteries.map(lottery => 
       lottery.id === lotteryId 
         ? { 
             ...lottery, 
             winner: winner,
             drawDate: new Date().toISOString(),
-            status: 'completed'
+            status: 'completed' as const // Changer le statut en "completed"
           } 
         : lottery
     );
+    
+    setLotteries(updatedLotteries);
+    
+    // Mettre également à jour le localStorage après le tirage au sort
     localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+    
+    toast.success(`Le gagnant de la loterie est ${winner.name} !`);
   };
 
   const checkLotteriesReadyForDraw = useCallback(() => {
