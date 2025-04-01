@@ -16,4 +16,17 @@ export interface ExtendedProduct {
   lotteryImage?: string;
   popularity?: number;
   tickets?: number; // Nombre de tickets (1-5) pour ce produit
+  deliveryInfo?: DeliveryInfo; // Information de livraison spécifique au produit
+}
+
+export interface DeliveryInfo {
+  weight?: number; // Poids en grammes
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  }; // Dimensions en cm
+  handlingTime?: number; // Temps de préparation en jours
+  freeShipping?: boolean; // Si le produit bénéficie de la livraison gratuite
+  shippingRestrictions?: string[]; // Pays où la livraison n'est pas possible
 }

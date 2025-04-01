@@ -1,5 +1,6 @@
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+export type DeliveryStatus = 'preparing' | 'ready_to_ship' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'failed' | 'returned';
 
 export interface OrderItem {
   id: number;
@@ -29,6 +30,18 @@ export interface Order {
     method: string;
     cost: number;
   };
+  delivery: {
+    status: DeliveryStatus;
+    estimatedDeliveryDate?: string;
+    actualDeliveryDate?: string;
+    carrier?: string;
+    trackingNumber?: string;
+    trackingUrl?: string;
+    deliveryInstructions?: string;
+    signatureRequired?: boolean;
+    lastUpdate?: string;
+    history?: DeliveryHistoryEntry[];
+  };
   payment: {
     method: string;
     transactionId?: string;
@@ -39,6 +52,13 @@ export interface Order {
   trackingNumber?: string;
   notes?: string;
   invoiceUrl?: string;
+}
+
+export interface DeliveryHistoryEntry {
+  date: string;
+  status: DeliveryStatus;
+  location?: string;
+  description: string;
 }
 
 export interface AdminSettings {
@@ -56,5 +76,21 @@ export interface AdminSettings {
     currency: string;
     language: string;
     orderPrefix: string;
+  };
+  deliverySettings: {
+    defaultCarriers: string[];
+    defaultHandlingTime: number;
+    freeShippingThreshold: number;
+    internationalShipping: boolean;
+    defaultShippingRates: {
+      national: {
+        standard: number;
+        express: number;
+      };
+      international: {
+        standard: number;
+        express: number;
+      };
+    };
   };
 }

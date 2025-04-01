@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Trash, Plus, Minus, CreditCard } from 'lucide-react';
+import { Trash, Plus, Minus, CreditCard, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
@@ -11,6 +11,7 @@ import { initiateStripeCheckout } from '@/lib/stripe';
 import { useAuth } from '@/contexts/AuthContext';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { Client } from '@/types/client';
+import ShippingOptions from '@/components/cart/ShippingOptions';
 
 // Define cart item type
 interface CartItem {
@@ -31,6 +32,7 @@ const CartPage: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [shippingMethod, setShippingMethod] = useState('standard');
   
   // Load cart items from localStorage on component mount
   useEffect(() => {
@@ -81,9 +83,82 @@ const CartPage: React.FC = () => {
     }
   };
   
+  const handleShippingMethodChange = (method: string) => {
+    setShippingMethod(method);
+  };
+  
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shippingCost = subtotal > 50 ? 0 : 5.99;
+  
+  // Calculate shipping cost based on selected method
+  const getShippingCost = () => {
+    const freeShippingThreshold = 50;
+    
+    if (subtotal >= freeShippingThreshold && (shippingMethod === 'standard' || shippingMethod === 'relay')) {
+      return 0;
+    }
+    
+    switch (shippingMethod) {
+      case 'express':
+        return 9.99;
+      case 'relay':
+        return 3.99;
+      case 'standard':
+      default:
+        return 5.99;
+    }
+  };
+  
+  const shippingCost = getShippingCost();
   const total = subtotal + shippingCost;
+  
+  // Get human-readable shipping method name
+  const getShippingMethodName = () => {
+    switch (shippingMethod) {
+      case 'express':
+        return 'Livraison express (24-48h)';
+      case 'relay':
+        return 'Point relais';
+      case 'standard':
+      default:
+        return 'Livraison standard (3-5 jours)';
+    }
+  };
+  
+  // Get estimated delivery date
+  const getEstimatedDeliveryDate = () => {
+    const today = new Date();
+    let days = 0;
+    
+    switch (shippingMethod) {
+      case 'express':
+        days = 2;
+        break;
+      case 'relay':
+        days = 4;
+        break;
+      case 'standard':
+      default:
+        days = 5;
+        break;
+    }
+    
+    // Skip weekends for a more accurate estimate
+    let deliveryDate = new Date(today);
+    let remainingDays = days;
+    
+    while (remainingDays > 0) {
+      deliveryDate.setDate(deliveryDate.getDate() + 1);
+      // Skip weekend days (0 = Sunday, 6 = Saturday)
+      if (deliveryDate.getDay() !== 0 && deliveryDate.getDay() !== 6) {
+        remainingDays--;
+      }
+    }
+    
+    return deliveryDate.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long'
+    });
+  };
   
   // Function to ensure user is saved as a client
   const ensureClientExists = (userData: any) => {
@@ -185,8 +260,11 @@ Récapitulatif de votre commande:
 ${cartItems.map(item => `- ${item.quantity}x ${item.name} (${item.size}, ${item.color}) - ${(item.price * item.quantity).toFixed(2)}€ - Participation à la loterie "${item.lotteryName}"`).join('\n')}
 
 Sous-total: ${subtotal.toFixed(2)}€
-Frais de livraison: ${shippingCost === 0 ? "Gratuit" : `${shippingCost.toFixed(2)}€`}
+Frais de livraison (${getShippingMethodName()}): ${shippingCost === 0 ? "Gratuit" : `${shippingCost.toFixed(2)}€`}
 Total: ${total.toFixed(2)}€
+
+Méthode de livraison: ${getShippingMethodName()}
+Date de livraison estimée: ${getEstimatedDeliveryDate()}
 
 Votre commande sera expédiée dans les 48 heures ouvrables.
 
@@ -233,8 +311,16 @@ L'équipe WinShirt
         color: item.color
       }));
       
+      // Add shipping information
+      const shippingInfo = {
+        method: shippingMethod,
+        methodName: getShippingMethodName(),
+        cost: shippingCost,
+        estimatedDeliveryDate: getEstimatedDeliveryDate()
+      };
+      
       // Initiate Stripe checkout
-      const result = await initiateStripeCheckout(checkoutItems);
+      const result = await initiateStripeCheckout(checkoutItems, shippingInfo);
       
       if (!result.success) {
         throw new Error("Échec de l'initialisation du paiement");
@@ -244,8 +330,10 @@ L'équipe WinShirt
       sendOrderConfirmationEmail(client, {
         items: cartItems,
         subtotal,
+        shippingMethod: getShippingMethodName(),
         shippingCost,
-        total
+        total,
+        estimatedDeliveryDate: getEstimatedDeliveryDate()
       });
       
       // Send notification to admin
@@ -260,7 +348,10 @@ Client: ${user.name} (${user.email})
 Produits:
 ${cartItems.map(item => `- ${item.quantity}x ${item.name} (${item.size}, ${item.color}) - ${(item.price * item.quantity).toFixed(2)}€ - Loterie: "${item.lotteryName}"`).join('\n')}
 
+Livraison: ${getShippingMethodName()} - ${shippingCost === 0 ? "Gratuit" : `${shippingCost.toFixed(2)}€`}
 Total: ${total.toFixed(2)}€
+
+Date de livraison estimée: ${getEstimatedDeliveryDate()}
 
 Cette commande est à préparer et expédier dans les plus brefs délais.
       `;
@@ -366,6 +457,30 @@ Cette commande est à préparer et expédier dans les plus brefs délais.
                     </div>
                   </div>
                 ))}
+                
+                <div className="winshirt-card p-6">
+                  <ShippingOptions 
+                    selectedMethod={shippingMethod}
+                    onChange={handleShippingMethodChange}
+                    subtotal={subtotal}
+                    freeShippingThreshold={50}
+                  />
+                  
+                  {/* Estimated delivery information */}
+                  <div className="mt-4 p-3 bg-winshirt-space-light rounded-lg border border-winshirt-purple/10">
+                    <div className="flex items-start gap-3">
+                      <Truck className="text-winshirt-purple-light mt-1 h-5 w-5" />
+                      <div>
+                        <p className="text-white">Livraison estimée: <strong>{getEstimatedDeliveryDate()}</strong></p>
+                        <p className="text-sm text-gray-400">
+                          {shippingMethod === 'express' ? 
+                            'Expédition prioritaire le jour ouvrable suivant' : 
+                            'Les articles seront expédiés sous 24 à 48h après validation de la commande'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               {/* Order Summary */}
@@ -383,6 +498,10 @@ Cette commande est à préparer et expédier dans les plus brefs délais.
                       <span className="text-white">
                         {shippingCost === 0 ? "Gratuit" : `${shippingCost.toFixed(2)} €`}
                       </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-400">{getShippingMethodName()}</span>
+                      <span className="text-gray-400">Livraison estimée le {getEstimatedDeliveryDate()}</span>
                     </div>
                     
                     <Separator className="my-3 bg-winshirt-purple/20" />

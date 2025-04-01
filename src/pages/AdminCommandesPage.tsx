@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import { Order, OrderStatus } from '@/types/order';
+import { Order, OrderStatus, DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -21,12 +21,14 @@ import {
   ShoppingBag,
   Calendar,
   ArrowUpDown,
-  CreditCard
+  CreditCard,
+  PackageCheck
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import OrderDetails from '@/components/admin/orders/OrderDetails';
+import { toast } from '@/lib/toast';
 
 // Exemple de commandes pour démo
 const mockOrders: Order[] = [
@@ -69,6 +71,35 @@ const mockOrders: Order[] = [
       method: "Standard",
       cost: 5.99
     },
+    delivery: {
+      status: "in_transit",
+      carrier: "Chronopost",
+      trackingNumber: "CP123456789FR",
+      trackingUrl: "https://www.chronopost.fr/tracking",
+      estimatedDeliveryDate: "2023-09-20T18:00:00.000Z",
+      signatureRequired: true,
+      lastUpdate: "2023-09-17T14:30:00.000Z",
+      history: [
+        {
+          date: "2023-09-16T10:45:00.000Z",
+          status: "preparing",
+          location: "Entrepôt Paris Nord",
+          description: "Commande en cours de préparation"
+        },
+        {
+          date: "2023-09-17T09:30:00.000Z",
+          status: "ready_to_ship",
+          location: "Entrepôt Paris Nord",
+          description: "Commande prête à être expédiée"
+        },
+        {
+          date: "2023-09-17T14:30:00.000Z",
+          status: "in_transit",
+          location: "Centre de tri Roissy",
+          description: "Colis en transit vers le centre de distribution"
+        }
+      ]
+    },
     payment: {
       method: "Carte bancaire",
       transactionId: "TR123456789",
@@ -107,6 +138,48 @@ const mockOrders: Order[] = [
       method: "Express",
       cost: 9.99
     },
+    delivery: {
+      status: "delivered",
+      carrier: "DHL",
+      trackingNumber: "DHL987654321",
+      trackingUrl: "https://www.dhl.fr/tracking",
+      estimatedDeliveryDate: "2023-09-20T18:00:00.000Z",
+      actualDeliveryDate: "2023-09-20T14:25:00.000Z",
+      signatureRequired: true,
+      lastUpdate: "2023-09-20T14:25:00.000Z",
+      history: [
+        {
+          date: "2023-09-18T16:30:00.000Z",
+          status: "preparing",
+          location: "Entrepôt Lyon",
+          description: "Commande en cours de préparation"
+        },
+        {
+          date: "2023-09-19T08:45:00.000Z",
+          status: "ready_to_ship",
+          location: "Entrepôt Lyon",
+          description: "Commande prête à être expédiée"
+        },
+        {
+          date: "2023-09-19T12:30:00.000Z",
+          status: "in_transit",
+          location: "Centre de tri Lyon",
+          description: "Colis en transit"
+        },
+        {
+          date: "2023-09-20T08:15:00.000Z",
+          status: "out_for_delivery",
+          location: "Lyon",
+          description: "Colis en cours de livraison"
+        },
+        {
+          date: "2023-09-20T14:25:00.000Z",
+          status: "delivered",
+          location: "Lyon",
+          description: "Colis livré et signé par le destinataire"
+        }
+      ]
+    },
     payment: {
       method: "PayPal",
       transactionId: "PP987654321",
@@ -143,6 +216,19 @@ const mockOrders: Order[] = [
       country: "France",
       method: "Standard",
       cost: 5.99
+    },
+    delivery: {
+      status: "preparing",
+      estimatedDeliveryDate: "2023-09-25T18:00:00.000Z",
+      lastUpdate: "2023-09-20T10:30:00.000Z",
+      history: [
+        {
+          date: "2023-09-20T10:30:00.000Z",
+          status: "preparing",
+          location: "Entrepôt Marseille",
+          description: "Commande reçue et en cours de préparation"
+        }
+      ]
     },
     payment: {
       method: "Carte bancaire",
@@ -190,6 +276,10 @@ const mockOrders: Order[] = [
       method: "Express",
       cost: 9.99
     },
+    delivery: {
+      status: "preparing",
+      lastUpdate: "2023-09-22T16:20:00.000Z"
+    },
     payment: {
       method: "Virement bancaire",
       status: "pending"
@@ -215,8 +305,17 @@ const AdminCommandesPage: React.FC = () => {
       try {
         const parsedOrders = JSON.parse(savedOrders);
         if (Array.isArray(parsedOrders) && parsedOrders.length > 0) {
-          setOrders(parsedOrders);
-          setFilteredOrders(parsedOrders);
+          // S'assurer que chaque commande a une propriété delivery
+          const ordersWithDelivery = parsedOrders.map(order => ({
+            ...order,
+            delivery: order.delivery || {
+              status: 'preparing',
+              lastUpdate: order.orderDate,
+              history: []
+            }
+          }));
+          setOrders(ordersWithDelivery);
+          setFilteredOrders(ordersWithDelivery);
         } else {
           // Si pas de commandes en localStorage, utiliser les mockOrders
           setOrders(mockOrders);
@@ -253,7 +352,8 @@ const AdminCommandesPage: React.FC = () => {
       result = result.filter(
         order => order.clientName.toLowerCase().includes(term) || 
                 order.clientEmail.toLowerCase().includes(term) || 
-                order.id.toString().includes(term)
+                order.id.toString().includes(term) ||
+                (order.delivery?.trackingNumber && order.delivery.trackingNumber.toLowerCase().includes(term))
       );
     }
     
@@ -269,6 +369,10 @@ const AdminCommandesPage: React.FC = () => {
         comparison = a.status.localeCompare(b.status);
       } else if (sortBy === 'client') {
         comparison = a.clientName.localeCompare(b.clientName);
+      } else if (sortBy === 'delivery') {
+        const aStatus = a.delivery?.status || 'preparing';
+        const bStatus = b.delivery?.status || 'preparing';
+        comparison = aStatus.localeCompare(bStatus);
       }
       
       return sortOrder === 'asc' ? comparison : -comparison;
@@ -287,17 +391,149 @@ const AdminCommandesPage: React.FC = () => {
   };
   
   const updateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
-    const updatedOrders = orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
+    const updatedOrders = orders.map(order => {
+      if (order.id === orderId) {
+        // Mise à jour automatique du statut de livraison en fonction du statut de commande
+        let deliveryStatus: DeliveryStatus = order.delivery?.status || 'preparing';
+        
+        if (newStatus === 'processing') {
+          deliveryStatus = 'preparing';
+        } else if (newStatus === 'shipped') {
+          deliveryStatus = 'in_transit';
+        } else if (newStatus === 'delivered') {
+          deliveryStatus = 'delivered';
+        }
+        
+        return { 
+          ...order, 
+          status: newStatus,
+          delivery: {
+            ...order.delivery,
+            status: deliveryStatus,
+            lastUpdate: new Date().toISOString(),
+            history: [
+              ...(order.delivery?.history || []),
+              {
+                date: new Date().toISOString(),
+                status: deliveryStatus,
+                description: `Statut de la commande mis à jour: ${getStatusLabel(newStatus)}`
+              }
+            ]
+          }
+        };
+      }
+      return order;
+    });
     
     setOrders(updatedOrders);
     localStorage.setItem('orders', JSON.stringify(updatedOrders));
     
     // Si la commande est actuellement sélectionnée, mettre à jour également
     if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder({ ...selectedOrder, status: newStatus });
+      const updatedOrder = updatedOrders.find(order => order.id === orderId);
+      if (updatedOrder) {
+        setSelectedOrder(updatedOrder);
+      }
     }
+  };
+  
+  const updateDeliveryInfo = (orderId: number, deliveryData: Partial<Order['delivery']>) => {
+    const updatedOrders = orders.map(order => {
+      if (order.id === orderId) {
+        // Mettre à jour le statut de la commande en fonction du statut de livraison
+        let orderStatus: OrderStatus = order.status;
+        
+        if (deliveryData.status === 'ready_to_ship' && order.status === 'pending') {
+          orderStatus = 'processing';
+        } else if (deliveryData.status === 'in_transit' && order.status !== 'shipped') {
+          orderStatus = 'shipped';
+        } else if (deliveryData.status === 'delivered' && order.status !== 'delivered') {
+          orderStatus = 'delivered';
+        }
+        
+        return { 
+          ...order,
+          status: orderStatus,
+          delivery: {
+            ...order.delivery,
+            ...deliveryData
+          }
+        };
+      }
+      return order;
+    });
+    
+    setOrders(updatedOrders);
+    localStorage.setItem('orders', JSON.stringify(updatedOrders));
+    
+    // Si la commande est actuellement sélectionnée, mettre à jour également
+    if (selectedOrder && selectedOrder.id === orderId) {
+      const updatedOrder = updatedOrders.find(order => order.id === orderId);
+      if (updatedOrder) {
+        setSelectedOrder(updatedOrder);
+      }
+    }
+    
+    toast.success("Informations de livraison mises à jour");
+  };
+  
+  const addDeliveryHistoryEntry = (orderId: number, entry: DeliveryHistoryEntry) => {
+    const updatedOrders = orders.map(order => {
+      if (order.id === orderId) {
+        return { 
+          ...order,
+          delivery: {
+            ...order.delivery,
+            history: [
+              ...(order.delivery?.history || []),
+              entry
+            ],
+            lastUpdate: entry.date
+          }
+        };
+      }
+      return order;
+    });
+    
+    setOrders(updatedOrders);
+    localStorage.setItem('orders', JSON.stringify(updatedOrders));
+    
+    // Si la commande est actuellement sélectionnée, mettre à jour également
+    if (selectedOrder && selectedOrder.id === orderId) {
+      const updatedOrder = updatedOrders.find(order => order.id === orderId);
+      if (updatedOrder) {
+        setSelectedOrder(updatedOrder);
+      }
+    }
+    
+    toast.success("Point d'historique de livraison ajouté");
+  };
+  
+  const getStatusLabel = (status: OrderStatus): string => {
+    const statusMap: Record<OrderStatus, string> = {
+      pending: 'En attente',
+      processing: 'En traitement',
+      shipped: 'Expédiée',
+      delivered: 'Livrée',
+      cancelled: 'Annulée',
+      refunded: 'Remboursée'
+    };
+    
+    return statusMap[status] || status;
+  };
+  
+  const getDeliveryStatusLabel = (status: DeliveryStatus): string => {
+    const statusMap: Record<DeliveryStatus, string> = {
+      preparing: 'En préparation',
+      ready_to_ship: 'Prêt à expédier',
+      in_transit: 'En transit',
+      out_for_delivery: 'En cours de livraison',
+      delivered: 'Livré',
+      failed: 'Échec de livraison',
+      returned: 'Retourné'
+    };
+    
+    return statusMap[status] || status;
   };
   
   const getStatusBadge = (status: OrderStatus) => {
@@ -337,6 +573,39 @@ const AdminCommandesPage: React.FC = () => {
     return <Badge className={`${color} border`}>{label}</Badge>;
   };
   
+  const getDeliveryStatusBadge = (status: DeliveryStatus) => {
+    let color;
+    let label = getDeliveryStatusLabel(status);
+    
+    switch (status) {
+      case 'preparing':
+        color = "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
+        break;
+      case 'ready_to_ship':
+        color = "bg-blue-500/20 text-blue-500 border-blue-500/30";
+        break;
+      case 'in_transit':
+        color = "bg-purple-500/20 text-purple-500 border-purple-500/30";
+        break;
+      case 'out_for_delivery':
+        color = "bg-indigo-500/20 text-indigo-500 border-indigo-500/30";
+        break;
+      case 'delivered':
+        color = "bg-green-500/20 text-green-500 border-green-500/30";
+        break;
+      case 'failed':
+        color = "bg-red-500/20 text-red-500 border-red-500/30";
+        break;
+      case 'returned':
+        color = "bg-orange-500/20 text-orange-500 border-orange-500/30";
+        break;
+      default:
+        color = "bg-gray-500/20 text-gray-500 border-gray-500/30";
+    }
+    
+    return <Badge className={`${color} border`}>{label}</Badge>;
+  };
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
@@ -364,6 +633,8 @@ const AdminCommandesPage: React.FC = () => {
               order={selectedOrder} 
               onBack={() => setSelectedOrder(null)} 
               onStatusChange={updateOrderStatus}
+              onUpdateDelivery={updateDeliveryInfo}
+              onAddDeliveryHistoryEntry={addDeliveryHistoryEntry}
             />
           ) : (
             <div className="space-y-6">
@@ -434,16 +705,21 @@ const AdminCommandesPage: React.FC = () => {
                           </div>
                         </TableHead>
                         <TableHead className="text-white">
-                          <div className="flex items-center gap-1">
+                          <button 
+                            className="flex items-center gap-1"
+                            onClick={() => handleSortToggle('delivery')}
+                          >
                             <Truck size={14} />
                             <span>Livraison</span>
-                          </div>
+                            {sortBy === 'delivery' && <ArrowUpDown size={14} />}
+                          </button>
                         </TableHead>
                         <TableHead className="text-white">
                           <button 
                             className="flex items-center gap-1"
                             onClick={() => handleSortToggle('status')}
                           >
+                            <PackageCheck size={14} />
                             <span>Statut</span>
                             {sortBy === 'status' && <ArrowUpDown size={14} />}
                           </button>
@@ -482,13 +758,22 @@ const AdminCommandesPage: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell className="text-gray-300">
-                            <div>{order.shipping.city}, {order.shipping.country}</div>
-                            <div className="text-xs text-gray-400">{order.shipping.method}</div>
-                            {order.trackingNumber && (
-                              <div className="text-xs text-winshirt-blue-light">
-                                #{order.trackingNumber}
+                            <div className="flex flex-col gap-1">
+                              <div>
+                                {order.shipping.city}, {order.shipping.country}
                               </div>
-                            )}
+                              <div className="text-xs text-gray-400">{order.shipping.method}</div>
+                              {order.delivery?.trackingNumber && (
+                                <div className="text-xs text-winshirt-blue-light">
+                                  {order.delivery.trackingNumber}
+                                </div>
+                              )}
+                              {order.delivery && (
+                                <div className="mt-1">
+                                  {getDeliveryStatusBadge(order.delivery.status)}
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(order.status)}

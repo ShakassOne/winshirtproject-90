@@ -1,20 +1,30 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Package, Truck, CreditCard, FileText, Send, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Order, OrderStatus } from '@/types/order';
+import { Order, OrderStatus, DeliveryHistoryEntry } from '@/types/order';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/lib/toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import DeliveryTracking from './DeliveryTracking';
 
 interface OrderDetailsProps {
   order: Order;
   onBack: () => void;
   onStatusChange: (orderId: number, newStatus: OrderStatus) => void;
+  onUpdateDelivery?: (orderId: number, deliveryData: Partial<Order['delivery']>) => void;
+  onAddDeliveryHistoryEntry?: (orderId: number, entry: DeliveryHistoryEntry) => void;
 }
 
-const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onBack, onStatusChange }) => {
+const OrderDetails: React.FC<OrderDetailsProps> = ({ 
+  order, 
+  onBack, 
+  onStatusChange,
+  onUpdateDelivery,
+  onAddDeliveryHistoryEntry 
+}) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
@@ -73,6 +83,20 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onBack, onStatusChan
     return <Badge className={`${color} border`}>{getStatusLabel(status)}</Badge>;
   };
   
+  // Fonction pour gérer la mise à jour des infos de livraison
+  const handleUpdateDelivery = (orderId: number, deliveryData: Partial<Order['delivery']>) => {
+    if (onUpdateDelivery) {
+      onUpdateDelivery(orderId, deliveryData);
+    }
+  };
+  
+  // Fonction pour ajouter un point d'historique
+  const handleAddHistoryEntry = (orderId: number, entry: DeliveryHistoryEntry) => {
+    if (onAddDeliveryHistoryEntry) {
+      onAddDeliveryHistoryEntry(orderId, entry);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       {/* En-tête */}
@@ -126,197 +150,324 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onBack, onStatusChan
         </div>
       </div>
       
-      {/* Informations détaillées */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Colonne 1: Détails client */}
-        <div className="space-y-6">
-          <Card className="winshirt-card overflow-hidden">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Informations client</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <p className="text-gray-400 text-sm">Nom complet</p>
-                  <p className="text-white">{order.clientName}</p>
-                </div>
-                
-                <div>
-                  <p className="text-gray-400 text-sm">Email</p>
-                  <p className="text-white">{order.clientEmail}</p>
-                </div>
-                
-                <div>
-                  <p className="text-gray-400 text-sm">Adresse de livraison</p>
-                  <p className="text-white">
-                    {order.shipping.address}<br />
-                    {order.shipping.postalCode} {order.shipping.city}<br />
-                    {order.shipping.country}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="winshirt-card overflow-hidden">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <CreditCard size={18} />
-                Paiement
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <p className="text-gray-400 text-sm">Méthode</p>
-                  <p className="text-white">{order.payment.method}</p>
-                </div>
-                
-                <div>
-                  <p className="text-gray-400 text-sm">Statut</p>
-                  <Badge className={
-                    order.payment.status === 'completed' 
-                      ? "bg-green-500/20 text-green-500 border-green-500/30 border" 
-                      : order.payment.status === 'pending'
-                        ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30 border"
-                        : "bg-red-500/20 text-red-500 border-red-500/30 border"
-                  }>
-                    {order.payment.status === 'completed' ? 'Payé' : 
-                     order.payment.status === 'pending' ? 'En attente' : 'Échoué'}
-                  </Badge>
-                </div>
-                
-                {order.payment.transactionId && (
-                  <div>
-                    <p className="text-gray-400 text-sm">Transaction ID</p>
-                    <p className="text-winshirt-blue-light">#{order.payment.transactionId}</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Onglets pour les différentes sections */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="bg-winshirt-space-light border border-winshirt-purple/20 w-full justify-start mb-6">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-winshirt-purple/20">
+            Aperçu
+          </TabsTrigger>
+          <TabsTrigger value="delivery" className="data-[state=active]:bg-winshirt-purple/20">
+            Livraison
+          </TabsTrigger>
+          <TabsTrigger value="history" className="data-[state=active]:bg-winshirt-purple/20">
+            Historique
+          </TabsTrigger>
+        </TabsList>
         
-        {/* Colonne 2: Articles */}
-        <div className="md:col-span-2">
-          <Card className="winshirt-card overflow-hidden">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Package size={18} />
-                Articles ({order.items.reduce((sum, item) => sum + item.quantity, 0)})
-              </h3>
-              
-              <div className="space-y-4">
-                {order.items.map(item => (
-                  <div key={item.id} className="flex border-b border-winshirt-purple/10 pb-4">
-                    <div className="w-16 h-16 mr-4 flex-shrink-0 bg-winshirt-space-light rounded overflow-hidden">
-                      <img 
-                        src={item.productImage} 
-                        alt={item.productName} 
-                        className="w-full h-full object-cover"
-                      />
+        {/* Contenu de l'onglet Aperçu */}
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Colonne 1: Détails client */}
+            <div className="space-y-6">
+              <Card className="winshirt-card overflow-hidden">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Informations client</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Nom complet</p>
+                      <p className="text-white">{order.clientName}</p>
                     </div>
                     
-                    <div className="flex-grow">
-                      <div className="flex justify-between">
-                        <h4 className="text-white font-medium">{item.productName}</h4>
-                        <span className="text-winshirt-purple-light font-semibold">
-                          {(item.price * item.quantity).toFixed(2)} €
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm text-gray-400 mt-1">
-                        <div>
-                          {item.quantity} x {item.price.toFixed(2)} € 
-                          {item.size && <span> &middot; Taille: {item.size}</span>}
-                          {item.color && <span> &middot; Couleur: {item.color}</span>}
-                        </div>
-                      </div>
-                      
-                      {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
-                        <div className="mt-2">
-                          <Badge className="bg-winshirt-blue/20 text-winshirt-blue-light border-winshirt-blue/30 border">
-                            Participation à {item.lotteriesEntries.length} loterie(s)
-                          </Badge>
-                        </div>
-                      )}
+                    <div>
+                      <p className="text-gray-400 text-sm">Email</p>
+                      <p className="text-white">{order.clientEmail}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Adresse de livraison</p>
+                      <p className="text-white">
+                        {order.shipping.address}<br />
+                        {order.shipping.postalCode} {order.shipping.city}<br />
+                        {order.shipping.country}
+                      </p>
                     </div>
                   </div>
-                ))}
-                
-                <div className="pt-4 space-y-2 border-t border-winshirt-purple/10">
-                  <div className="flex justify-between text-gray-300">
-                    <span>Sous-total</span>
-                    <span>{order.subtotal.toFixed(2)} €</span>
-                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="winshirt-card overflow-hidden">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <CreditCard size={18} />
+                    Paiement
+                  </h3>
                   
-                  <div className="flex justify-between text-gray-300">
-                    <span>Livraison ({order.shipping.method})</span>
-                    <span>{order.shipping.cost.toFixed(2)} €</span>
-                  </div>
-                  
-                  <div className="flex justify-between text-white font-bold pt-2 border-t border-winshirt-purple/10">
-                    <span>Total</span>
-                    <span className="text-winshirt-purple-light">{order.total.toFixed(2)} €</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Information de livraison */}
-          <div className="mt-6">
-            <Card className="winshirt-card overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Truck size={18} />
-                  Livraison
-                </h3>
-                
-                <div className="space-y-4">
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                  <div className="space-y-4">
                     <div>
                       <p className="text-gray-400 text-sm">Méthode</p>
-                      <p className="text-white">{order.shipping.method}</p>
+                      <p className="text-white">{order.payment.method}</p>
                     </div>
-                    
-                    {order.trackingNumber && (
-                      <div>
-                        <p className="text-gray-400 text-sm">Numéro de suivi</p>
-                        <p className="text-winshirt-blue-light">#{order.trackingNumber}</p>
-                      </div>
-                    )}
                     
                     <div>
                       <p className="text-gray-400 text-sm">Statut</p>
-                      {getStatusBadge(order.status)}
+                      <Badge className={
+                        order.payment.status === 'completed' 
+                          ? "bg-green-500/20 text-green-500 border-green-500/30 border" 
+                          : order.payment.status === 'pending'
+                            ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30 border"
+                            : "bg-red-500/20 text-red-500 border-red-500/30 border"
+                      }>
+                        {order.payment.status === 'completed' ? 'Payé' : 
+                         order.payment.status === 'pending' ? 'En attente' : 'Échoué'}
+                      </Badge>
                     </div>
                     
-                    {order.status === 'shipped' && (
-                      <Button className="bg-winshirt-blue hover:bg-winshirt-blue-dark md:self-end">
-                        Suivre le colis
-                      </Button>
+                    {order.payment.transactionId && (
+                      <div>
+                        <p className="text-gray-400 text-sm">Transaction ID</p>
+                        <p className="text-winshirt-blue-light">#{order.payment.transactionId}</p>
+                      </div>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Colonne 2: Articles */}
+            <div className="md:col-span-2">
+              <Card className="winshirt-card overflow-hidden">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Package size={18} />
+                    Articles ({order.items.reduce((sum, item) => sum + item.quantity, 0)})
+                  </h3>
                   
-                  {order.notes && (
-                    <div className="pt-4 border-t border-winshirt-purple/10">
-                      <p className="text-gray-400 text-sm">Notes de commande</p>
-                      <p className="text-white">{order.notes}</p>
+                  <div className="space-y-4">
+                    {order.items.map(item => (
+                      <div key={item.id} className="flex border-b border-winshirt-purple/10 pb-4">
+                        <div className="w-16 h-16 mr-4 flex-shrink-0 bg-winshirt-space-light rounded overflow-hidden">
+                          <img 
+                            src={item.productImage} 
+                            alt={item.productName} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        
+                        <div className="flex-grow">
+                          <div className="flex justify-between">
+                            <h4 className="text-white font-medium">{item.productName}</h4>
+                            <span className="text-winshirt-purple-light font-semibold">
+                              {(item.price * item.quantity).toFixed(2)} €
+                            </span>
+                          </div>
+                          
+                          <div className="flex justify-between text-sm text-gray-400 mt-1">
+                            <div>
+                              {item.quantity} x {item.price.toFixed(2)} € 
+                              {item.size && <span> &middot; Taille: {item.size}</span>}
+                              {item.color && <span> &middot; Couleur: {item.color}</span>}
+                            </div>
+                          </div>
+                          
+                          {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
+                            <div className="mt-2">
+                              <Badge className="bg-winshirt-blue/20 text-winshirt-blue-light border-winshirt-blue/30 border">
+                                Participation à {item.lotteriesEntries.length} loterie(s)
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <div className="pt-4 space-y-2 border-t border-winshirt-purple/10">
+                      <div className="flex justify-between text-gray-300">
+                        <span>Sous-total</span>
+                        <span>{order.subtotal.toFixed(2)} €</span>
+                      </div>
+                      
+                      <div className="flex justify-between text-gray-300">
+                        <span>Livraison ({order.shipping.method})</span>
+                        <span>{order.shipping.cost.toFixed(2)} €</span>
+                      </div>
+                      
+                      <div className="flex justify-between text-white font-bold pt-2 border-t border-winshirt-purple/10">
+                        <span>Total</span>
+                        <span className="text-winshirt-purple-light">{order.total.toFixed(2)} €</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Information de livraison rapide */}
+              <div className="mt-6">
+                <Card className="winshirt-card overflow-hidden">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <Truck size={18} />
+                      Aperçu de la livraison
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                        <div>
+                          <p className="text-gray-400 text-sm">Méthode</p>
+                          <p className="text-white">{order.shipping.method}</p>
+                        </div>
+                        
+                        {order.delivery?.carrier && (
+                          <div>
+                            <p className="text-gray-400 text-sm">Transporteur</p>
+                            <p className="text-white">{order.delivery.carrier}</p>
+                          </div>
+                        )}
+                        
+                        {order.delivery?.trackingNumber && (
+                          <div>
+                            <p className="text-gray-400 text-sm">Numéro de suivi</p>
+                            <p className="text-winshirt-blue-light">#{order.delivery.trackingNumber}</p>
+                          </div>
+                        )}
+                        
+                        <div>
+                          <p className="text-gray-400 text-sm">Statut</p>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        
+                        {order.delivery?.trackingUrl && (
+                          <Button 
+                            className="bg-winshirt-blue hover:bg-winshirt-blue-dark md:self-end"
+                            onClick={() => window.open(order.delivery.trackingUrl, '_blank')}
+                          >
+                            Suivre le colis
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {order.delivery?.estimatedDeliveryDate && (
+                        <div className="pt-2 border-t border-winshirt-purple/10">
+                          <p className="text-gray-400 text-sm">Date de livraison estimée</p>
+                          <p className="text-white">{formatDate(order.delivery.estimatedDeliveryDate)}</p>
+                        </div>
+                      )}
+                      
+                      {order.notes && (
+                        <div className="pt-2 border-t border-winshirt-purple/10">
+                          <p className="text-gray-400 text-sm">Notes de commande</p>
+                          <p className="text-white">{order.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Chronologie */}
+              <div className="mt-6">
+                <Card className="winshirt-card overflow-hidden">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <Clock size={18} />
+                      Historique de la commande
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <div className="relative pl-6 border-l-2 border-green-500">
+                        <div className="absolute w-4 h-4 bg-green-500 rounded-full -left-[9px] top-0"></div>
+                        <p className="text-white">Commande créée</p>
+                        <p className="text-gray-400 text-sm">{formatDate(order.orderDate)}</p>
+                      </div>
+                      
+                      {order.payment.status === 'completed' && (
+                        <div className="relative pl-6 border-l-2 border-winshirt-blue">
+                          <div className="absolute w-4 h-4 bg-winshirt-blue rounded-full -left-[9px] top-0"></div>
+                          <p className="text-white">Paiement confirmé</p>
+                          <p className="text-gray-400 text-sm">
+                            {new Date(new Date(order.orderDate).getTime() + 3600000).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {order.status === 'processing' && (
+                        <div className="relative pl-6 border-l-2 border-winshirt-purple">
+                          <div className="absolute w-4 h-4 bg-winshirt-purple rounded-full -left-[9px] top-0"></div>
+                          <p className="text-white">En cours de préparation</p>
+                          <p className="text-gray-400 text-sm">
+                            {new Date(new Date(order.orderDate).getTime() + 86400000).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {order.status === 'shipped' && (
+                        <div className="relative pl-6 border-l-2 border-purple-500">
+                          <div className="absolute w-4 h-4 bg-purple-500 rounded-full -left-[9px] top-0"></div>
+                          <p className="text-white">Commande expédiée</p>
+                          <p className="text-gray-400 text-sm">
+                            {new Date(new Date(order.orderDate).getTime() + 172800000).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {order.status === 'delivered' && (
+                        <div className="relative pl-6 border-l-2 border-gray-500">
+                          <div className="absolute w-4 h-4 bg-green-500 rounded-full -left-[9px] top-0"></div>
+                          <p className="text-white">Commande livrée</p>
+                          <p className="text-gray-400 text-sm">
+                            {new Date(new Date(order.orderDate).getTime() + 432000000).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
-          
-          {/* Chronologie */}
-          <div className="mt-6">
-            <Card className="winshirt-card overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Clock size={18} />
-                  Historique de la commande
-                </h3>
-                
+        </TabsContent>
+        
+        {/* Contenu de l'onglet Livraison */}
+        <TabsContent value="delivery">
+          <DeliveryTracking 
+            order={order} 
+            onUpdateDelivery={handleUpdateDelivery} 
+            onAddHistoryEntry={handleAddHistoryEntry} 
+          />
+        </TabsContent>
+        
+        {/* Contenu de l'onglet Historique */}
+        <TabsContent value="history">
+          <div className="winshirt-card p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Historique complet</h3>
+            
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h4 className="text-winshirt-purple-light font-medium">Création et paiement</h4>
                 <div className="space-y-4">
                   <div className="relative pl-6 border-l-2 border-green-500">
                     <div className="absolute w-4 h-4 bg-green-500 rounded-full -left-[9px] top-0"></div>
@@ -339,7 +490,12 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onBack, onStatusChan
                       </p>
                     </div>
                   )}
-                  
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-winshirt-purple-light font-medium">Préparation et expédition</h4>
+                <div className="space-y-4">
                   {order.status === 'processing' && (
                     <div className="relative pl-6 border-l-2 border-winshirt-purple">
                       <div className="absolute w-4 h-4 bg-winshirt-purple rounded-full -left-[9px] top-0"></div>
@@ -371,9 +527,37 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onBack, onStatusChan
                       </p>
                     </div>
                   )}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-winshirt-purple-light font-medium">Historique de livraison</h4>
+                <div className="space-y-4">
+                  {order.delivery?.history && order.delivery.history.length > 0 ? (
+                    order.delivery.history.sort((a, b) => 
+                      new Date(a.date).getTime() - new Date(b.date).getTime()
+                    ).map((entry, index) => (
+                      <div key={index} className="relative pl-6 border-l-2 border-winshirt-blue">
+                        <div className="absolute w-4 h-4 bg-winshirt-blue rounded-full -left-[9px] top-0"></div>
+                        <p className="text-white">{entry.description}</p>
+                        <p className="text-gray-400 text-sm">
+                          {new Date(entry.date).toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                          {entry.location && ` - ${entry.location}`}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400">Aucun historique de livraison disponible</p>
+                  )}
                   
                   {order.status === 'delivered' && (
-                    <div className="relative pl-6 border-l-2 border-gray-500">
+                    <div className="relative pl-6 border-l-2 border-green-500">
                       <div className="absolute w-4 h-4 bg-green-500 rounded-full -left-[9px] top-0"></div>
                       <p className="text-white">Commande livrée</p>
                       <p className="text-gray-400 text-sm">
@@ -388,11 +572,11 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onBack, onStatusChan
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
