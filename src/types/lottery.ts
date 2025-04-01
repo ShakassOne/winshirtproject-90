@@ -6,7 +6,7 @@ export interface ExtendedLottery {
   value: number;
   targetParticipants: number;
   currentParticipants: number;
-  status: string;
+  status: "active" | "completed" | "relaunched";
   image: string;
   linkedProducts?: number[];
   participants?: Participant[];
@@ -20,4 +20,13 @@ export interface Participant {
   name: string;
   email: string;
   avatar?: string;
+}
+
+export interface LotteryParticipation {
+  id: number;
+  userId: number;
+  lotteryId: number;
+  productId: number;
+  ticketNumber: string;
+  date: string;
 }

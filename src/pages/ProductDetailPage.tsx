@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -10,9 +10,12 @@ import { mockProducts, mockLotteries } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
 import { ExtendedProduct } from '@/types/product';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [product, setProduct] = useState<ExtendedProduct | undefined>(undefined);
   
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -71,9 +74,41 @@ const ProductDetailPage: React.FC = () => {
       return;
     }
     
+    // Trouver la loterie sélectionnée
+    const selectedLotteryObj = mockLotteries.find(lottery => lottery.id.toString() === selectedLottery);
+    
+    if (!selectedLotteryObj) {
+      toast.error("La loterie sélectionnée n'existe pas");
+      return;
+    }
+    
+    // Récupérer le panier actuel
+    const cartString = localStorage.getItem('cart');
+    const cart = cartString ? JSON.parse(cartString) : [];
+    
+    // Ajouter le produit au panier
+    const cartItem = {
+      id: Date.now(), // ID unique pour cet élément du panier
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      size: selectedSize,
+      color: selectedColor,
+      quantity: 1,
+      image: product.image,
+      lotteryId: parseInt(selectedLottery),
+      lotteryName: selectedLotteryObj.title
+    };
+    
+    cart.push(cartItem);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    
     toast.success("Produit ajouté au panier!");
     
-    // Dans une application réelle, vous ajouteriez ici la logique pour ajouter au panier
+    // Inciter à aller au panier
+    setTimeout(() => {
+      navigate('/cart');
+    }, 1500);
   };
   
   return (

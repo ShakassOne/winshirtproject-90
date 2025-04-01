@@ -4,58 +4,69 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { mockParticipations, mockLotteries, mockProducts } from '@/data/mockData';
+import { mockLotteries, mockProducts } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
 import { useAuth } from '@/contexts/AuthContext';
+import { LotteryParticipation } from '@/types/lottery';
+import { Order } from '@/types/order';
 
 const AccountPage: React.FC = () => {
   const { user } = useAuth();
   
-  // Filtrer les participations pour afficher uniquement celles de l'utilisateur connecté
+  // État pour les participations et commandes de l'utilisateur
   const [userParticipations, setUserParticipations] = useState<any[]>([]);
-  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
   
   useEffect(() => {
     if (user) {
-      // Dans un système réel, ces données viendraient d'une API
-      // Pour l'instant, nous simulons des données spécifiques à l'utilisateur
-      
-      // Simulation: l'utilisateur admin a accès à toutes les participations
-      // Les nouveaux utilisateurs n'ont aucune participation jusqu'à leur premier achat
-      if (user.email === 'admin@winshirt.com') {
-        // L'admin voit toutes les participations
-        const adminParticipations = mockParticipations.map(participation => {
-          const lottery = mockLotteries.find(l => l.id === participation.lotteryId);
-          const product = mockProducts.find(p => p.id === participation.productId);
+      // Récupérer les participations de l'utilisateur
+      const participationsString = localStorage.getItem('participations');
+      if (participationsString) {
+        try {
+          const allParticipations = JSON.parse(participationsString) as LotteryParticipation[];
+          // Filtrer les participations pour obtenir uniquement celles de l'utilisateur connecté
+          const userParticipationsList = allParticipations.filter(p => p.userId === user.id);
           
-          return {
-            ...participation,
-            lottery,
-            product,
-          };
-        });
-        setUserParticipations(adminParticipations);
-        
-        // Ordres fictifs pour l'admin
-        setUserOrders([
-          {
-            id: "ORD-12345",
-            date: "2023-10-15",
-            status: "Livrée",
-            total: 29.99,
-            items: 1
-          },
-          {
-            id: "ORD-67890",
-            date: "2023-11-02",
-            status: "En cours",
-            total: 62.98,
-            items: 2
-          }
-        ]);
+          // Ajouter les détails de la loterie et du produit à chaque participation
+          const enrichedParticipations = userParticipationsList.map(participation => {
+            const lotteriesString = localStorage.getItem('lotteries');
+            const productsString = localStorage.getItem('products');
+            
+            const lotteries = lotteriesString ? JSON.parse(lotteriesString) : mockLotteries;
+            const products = productsString ? JSON.parse(productsString) : mockProducts;
+            
+            const lottery = lotteries.find((l: any) => l.id === participation.lotteryId);
+            const product = products.find((p: any) => p.id === participation.productId);
+            
+            return {
+              ...participation,
+              lottery,
+              product,
+            };
+          });
+          
+          setUserParticipations(enrichedParticipations);
+        } catch (error) {
+          console.error("Erreur lors du chargement des participations:", error);
+          setUserParticipations([]);
+        }
       } else {
-        // Les nouveaux utilisateurs n'ont aucune participation ni commande
         setUserParticipations([]);
+      }
+      
+      // Récupérer les commandes de l'utilisateur
+      const ordersString = localStorage.getItem('orders');
+      if (ordersString) {
+        try {
+          const allOrders = JSON.parse(ordersString) as Order[];
+          // Filtrer les commandes pour obtenir uniquement celles de l'utilisateur connecté
+          const userOrdersList = allOrders.filter(o => o.clientId === user.id) as Order[];
+          setUserOrders(userOrdersList);
+        } catch (error) {
+          console.error("Erreur lors du chargement des commandes:", error);
+          setUserOrders([]);
+        }
+      } else {
         setUserOrders([]);
       }
     }
@@ -74,7 +85,7 @@ const AccountPage: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-white">{user.name}</h1>
-              <p className="text-gray-300">Membre depuis {new Date().toLocaleDateString('fr-FR')}</p>
+              <p className="text-gray-300">Membre depuis {user.registrationDate ? new Date(user.registrationDate).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</p>
             </div>
             <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark">
               Modifier mon profil
@@ -125,11 +136,17 @@ const AccountPage: React.FC = () => {
                                 Produit: {participation.product?.name}
                               </p>
                               <p className="text-xs text-gray-400">
-                                Date de participation: {participation.date}
+                                Date de participation: {new Date(participation.date).toLocaleDateString('fr-FR')}
                               </p>
                               
                               <div className="mt-2 flex items-center">
-                                <span className="text-xs bg-winshirt-space-light text-winshirt-purple-light py-1 px-2 rounded-full">
+                                <span className={`text-xs py-1 px-2 rounded-full
+                                  ${participation.lottery?.status === 'active' 
+                                    ? 'bg-winshirt-space-light text-winshirt-purple-light' 
+                                    : participation.lottery?.status === 'completed' 
+                                      ? 'bg-green-900/30 text-green-400'
+                                      : 'bg-blue-900/30 text-blue-400'
+                                  }`}>
                                   {participation.lottery?.status === 'active' 
                                     ? 'En cours' 
                                     : participation.lottery?.status === 'completed' 
@@ -137,6 +154,14 @@ const AccountPage: React.FC = () => {
                                       : 'Relancée'
                                   }
                                 </span>
+                                
+                                {participation.lottery?.winner && (
+                                  <span className="text-xs ml-2 text-yellow-400">
+                                    {participation.lottery.winner.email === user.email 
+                                      ? '🎉 Vous avez gagné!'
+                                      : 'Gagnant désigné'}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -167,19 +192,25 @@ const AccountPage: React.FC = () => {
                         <CardContent className="p-6">
                           <div className="flex flex-col md:flex-row justify-between gap-4">
                             <div>
-                              <h3 className="text-lg font-medium text-white mb-1">{order.id}</h3>
-                              <p className="text-sm text-gray-300">Date: {order.date}</p>
-                              <p className="text-sm text-gray-300">{order.items} article(s)</p>
+                              <h3 className="text-lg font-medium text-white mb-1">Commande #{order.id}</h3>
+                              <p className="text-sm text-gray-300">Date: {new Date(order.orderDate).toLocaleDateString('fr-FR')}</p>
+                              <p className="text-sm text-gray-300">{order.items.length} article(s)</p>
                             </div>
                             
                             <div className="flex flex-col md:items-end justify-between">
                               <div>
                                 <span className={`inline-block px-3 py-1 rounded-full text-sm 
-                                  ${order.status === 'Livrée' 
+                                  ${order.status === 'delivered' 
                                     ? 'bg-green-900/30 text-green-400' 
-                                    : 'bg-winshirt-blue/20 text-winshirt-blue-light'
+                                    : order.status === 'processing'
+                                    ? 'bg-blue-900/30 text-blue-400'
+                                    : 'bg-purple-900/30 text-purple-400'
                                   }`}>
-                                  {order.status}
+                                  {order.status === 'delivered' 
+                                    ? 'Livrée' 
+                                    : order.status === 'processing'
+                                    ? 'En traitement'
+                                    : order.status}
                                 </span>
                                 <p className="mt-1 text-winshirt-purple-light font-medium">
                                   {order.total.toFixed(2)} €

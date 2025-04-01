@@ -1,5 +1,6 @@
 
 import { toast } from './toast';
+import { simulateSendEmail } from '@/contexts/AuthContext';
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51abcdefghijklmnopqrstuvwxyz'; // Remplacez par votre clé publique Stripe
 
@@ -10,8 +11,19 @@ declare global {
   }
 }
 
+interface CheckoutItem {
+  id: string | number;
+  name: string; 
+  price: number;
+  quantity: number;
+  lotteryId?: number;
+  lotteryName?: string;
+  size?: string;
+  color?: string;
+}
+
 export const initiateStripeCheckout = async (
-  items: Array<{ id: string | number; name: string; price: number; quantity: number }>
+  items: Array<CheckoutItem>
 ) => {
   try {
     // Afficher un message d'initialisation
@@ -68,8 +80,8 @@ const loadStripeScript = () => {
 };
 
 // Fonction pour gérer le checkout avec Stripe
-const handleStripeCheckout = (items: Array<{ id: string | number; name: string; price: number; quantity: number }>, amount: number) => {
-  toast.success('Redirection vers Stripe...');
+const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number) => {
+  toast.success('Simulation de paiement Stripe...');
   
   // Simulation - Dans un environnement de production, vous créeriez une session checkout avec Stripe
   setTimeout(() => {
@@ -91,8 +103,17 @@ const handleStripeCheckout = (items: Array<{ id: string | number; name: string; 
 };
 
 // Fonction pour simuler un achat réussi
-const simulateSuccessfulOrder = (items: Array<{ id: string | number; name: string; price: number; quantity: number }>) => {
+const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
   try {
+    // Récupérer l'utilisateur actuellement connecté
+    const userString = localStorage.getItem('winshirt_user');
+    if (!userString) {
+      console.error('Aucun utilisateur connecté');
+      return false;
+    }
+    
+    const user = JSON.parse(userString);
+    
     // 1. Récupérer les loteries et les produits
     const lotteriesString = localStorage.getItem('lotteries');
     const productsString = localStorage.getItem('products');
@@ -107,37 +128,53 @@ const simulateSuccessfulOrder = (items: Array<{ id: string | number; name: strin
     
     // 2. Pour chaque article acheté, mettre à jour les participants de la loterie associée
     items.forEach(item => {
-      // Trouver le produit
-      const product = products.find((p: any) => p.id.toString() === item.id.toString());
-      
-      if (product && product.linkedLotteries && product.linkedLotteries.length > 0) {
-        // Pour chaque loterie liée au produit
-        product.linkedLotteries.forEach((lotteryId: number) => {
-          // Trouver la loterie
-          const lotteryIndex = lotteries.findIndex((l: any) => l.id === lotteryId);
+      if (item.lotteryId) {
+        // Trouver la loterie
+        const lotteryIndex = lotteries.findIndex((l: any) => l.id === item.lotteryId);
+        
+        if (lotteryIndex !== -1) {
+          // Créer un participant réel basé sur l'utilisateur connecté
+          const participant = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            name: user.name,
+            email: user.email,
+            avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+          };
           
-          if (lotteryIndex !== -1) {
-            // Créer un participant simulé
-            const mockParticipant = {
-              id: Date.now() + Math.floor(Math.random() * 1000),
-              name: 'Client Test',
-              email: 'client@example.com',
-              avatar: 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 70)
-            };
-            
-            // Si participants n'existe pas, l'initialiser
-            if (!lotteries[lotteryIndex].participants) {
-              lotteries[lotteryIndex].participants = [];
-            }
-            
-            // Ajouter le participant à la loterie (pour chaque quantité achetée)
-            for (let i = 0; i < item.quantity; i++) {
-              lotteries[lotteryIndex].participants.push({...mockParticipant, id: mockParticipant.id + i});
-              // Incrémenter le nombre de participants
-              lotteries[lotteryIndex].currentParticipants += 1;
+          // Si participants n'existe pas, l'initialiser
+          if (!lotteries[lotteryIndex].participants) {
+            lotteries[lotteryIndex].participants = [];
+          }
+          
+          // Ajouter le participant à la loterie (pour chaque quantité achetée)
+          for (let i = 0; i < item.quantity; i++) {
+            lotteries[lotteryIndex].participants.push({...participant, id: participant.id + i});
+            // Incrémenter le nombre de participants
+            lotteries[lotteryIndex].currentParticipants += 1;
+          }
+          
+          // Vérifier si la loterie a atteint le nombre cible de participants
+          if (lotteries[lotteryIndex].currentParticipants >= lotteries[lotteryIndex].targetParticipants) {
+            // Si oui, programmer un tirage automatique dans 24 heures
+            if (!lotteries[lotteryIndex].drawDate) {
+              const drawDate = new Date();
+              drawDate.setDate(drawDate.getDate() + 1); // +24 heures
+              lotteries[lotteryIndex].drawDate = drawDate.toISOString();
+              
+              // Notifier les administrateurs qu'une loterie a atteint son objectif
+              const adminEmails = localStorage.getItem('admin_notification_emails');
+              const emails = adminEmails ? JSON.parse(adminEmails) : ['admin@winshirt.com'];
+              
+              emails.forEach((email: string) => {
+                simulateSendEmail(
+                  email,
+                  "Loterie complète - Tirage programmé",
+                  `La loterie "${lotteries[lotteryIndex].title}" a atteint son objectif de ${lotteries[lotteryIndex].targetParticipants} participants. Un tirage est programmé pour le ${new Date(lotteries[lotteryIndex].drawDate).toLocaleString('fr-FR')}.`
+                );
+              });
             }
           }
-        });
+        }
       }
     });
     
@@ -145,15 +182,15 @@ const simulateSuccessfulOrder = (items: Array<{ id: string | number; name: strin
     localStorage.setItem('lotteries', JSON.stringify(lotteries));
     sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
     
-    // 4. Simuler un enregistrement de commande
+    // 4. Enregistrer la commande pour l'utilisateur actuel
     const ordersString = localStorage.getItem('orders') || '[]';
     const orders = JSON.parse(ordersString);
     
     const newOrder = {
       id: Date.now(),
-      clientId: 1,
-      clientName: 'Client Test',
-      clientEmail: 'client@example.com',
+      clientId: user.id,
+      clientName: user.name,
+      clientEmail: user.email,
       orderDate: new Date().toISOString(),
       status: 'processing',
       items: items.map(item => {
@@ -165,9 +202,9 @@ const simulateSuccessfulOrder = (items: Array<{ id: string | number; name: strin
           productImage: product?.image || 'https://placehold.co/600x400/png',
           quantity: item.quantity,
           price: item.price,
-          size: 'M',
-          color: 'Noir',
-          lotteriesEntries: product?.linkedLotteries || []
+          size: item.size || 'M',
+          color: item.color || 'Noir',
+          lotteriesEntries: item.lotteryId ? [item.lotteryId] : []
         };
       }),
       shipping: {
@@ -186,12 +223,33 @@ const simulateSuccessfulOrder = (items: Array<{ id: string | number; name: strin
       subtotal: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
       total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 5.99,
       trackingNumber: 'TRK' + Date.now(),
-      notes: 'Commande simulée'
+      notes: ''
     };
     
     orders.push(newOrder);
     
     localStorage.setItem('orders', JSON.stringify(orders));
+    
+    // 5. Enregistrer les participations de l'utilisateur
+    const participationsString = localStorage.getItem('participations') || '[]';
+    const participations = JSON.parse(participationsString);
+    
+    items.forEach(item => {
+      if (item.lotteryId) {
+        for (let i = 0; i < item.quantity; i++) {
+          participations.push({
+            id: Date.now() + Math.floor(Math.random() * 1000) + i,
+            userId: user.id,
+            lotteryId: item.lotteryId,
+            productId: item.id,
+            ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
+            date: new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    localStorage.setItem('participations', JSON.stringify(participations));
     
     // Vider le panier après achat réussi
     localStorage.setItem('cart', '[]');

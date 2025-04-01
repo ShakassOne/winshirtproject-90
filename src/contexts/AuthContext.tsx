@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  registrationDate?: string;
 }
 
 interface AuthContextType {
@@ -17,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => void;
   register: (name: string, email: string, password: string) => void;
   logout: () => void;
+  getAllUsers: () => User[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,7 +37,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Erreur lors du chargement de l'utilisateur:", error);
       }
     }
+    
+    // Initialiser les utilisateurs si cette entrée n'existe pas
+    if (!localStorage.getItem('winshirt_users')) {
+      const initialUsers = [
+        {
+          id: 1,
+          name: 'Admin',
+          email: 'admin@winshirt.com',
+          role: 'admin',
+          registrationDate: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem('winshirt_users', JSON.stringify(initialUsers));
+    }
   }, []);
+
+  const getAllUsers = (): User[] => {
+    const registeredUsers = localStorage.getItem('winshirt_users');
+    if (registeredUsers) {
+      try {
+        return JSON.parse(registeredUsers);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des utilisateurs:", error);
+      }
+    }
+    return [];
+  };
 
   const login = (email: string, password: string) => {
     // Simuler une vérification d'identifiants
@@ -44,7 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: 1,
         name: 'Admin',
         email: 'admin@winshirt.com',
-        role: 'admin'
+        role: 'admin',
+        registrationDate: new Date().toISOString()
       };
       setUser(adminUser);
       localStorage.setItem('winshirt_user', JSON.stringify(adminUser));
@@ -97,7 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: users.length + 2, // +2 car id 1 est réservé pour l'admin
       name,
       email,
-      role: 'user'
+      role: 'user',
+      registrationDate: new Date().toISOString()
     };
     
     users.push(newUser);
@@ -106,6 +136,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Connecter automatiquement l'utilisateur
     setUser(newUser);
     localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+    
+    // Simuler l'envoi d'un e-mail de confirmation
+    simulateSendEmail(
+      newUser.email, 
+      "Bienvenue sur WinShirt", 
+      `Bonjour ${newUser.name},\n\nMerci de vous être inscrit sur WinShirt. Votre compte a été créé avec succès.\n\nBien cordialement,\nL'équipe WinShirt`
+    );
     
     toast.success("Inscription réussie!");
     navigate('/account');
@@ -126,7 +163,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin: user?.role === 'admin',
         login, 
         register, 
-        logout 
+        logout,
+        getAllUsers
       }}
     >
       {children}
@@ -140,4 +178,13 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// Fonction pour simuler l'envoi d'un e-mail
+export const simulateSendEmail = (to: string, subject: string, body: string) => {
+  console.log(`[SIMULATION EMAIL] À: ${to}, Sujet: ${subject}`);
+  console.log(`[SIMULATION EMAIL] Corps du message: ${body}`);
+  
+  // Dans une application réelle, on appellerait ici un service d'envoi d'e-mail
+  return true;
 };

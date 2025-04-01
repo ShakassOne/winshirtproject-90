@@ -40,3 +40,21 @@ export interface Order {
   notes?: string;
   invoiceUrl?: string;
 }
+
+export interface AdminSettings {
+  notificationEmails: string[];
+  autoDrawEnabled: boolean;
+  securityOptions: {
+    requireTwoFactor: boolean;
+    sessionTimeout: number;
+  };
+  stripeSettings: {
+    liveMode: boolean;
+    webhookEnabled: boolean;
+  };
+  generalSettings: {
+    currency: string;
+    language: string;
+    orderPrefix: string;
+  };
+}

@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
+import { useAuth } from '@/contexts/AuthContext';
+import { simulateSendEmail } from '@/contexts/AuthContext';
 
 // Define cart item type
 interface CartItem {
@@ -19,10 +21,12 @@ interface CartItem {
   color: string;
   quantity: number;
   image: string;
+  lotteryId: number;
   lotteryName: string;
 }
 
 const CartPage: React.FC = () => {
+  const { user } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -86,6 +90,11 @@ const CartPage: React.FC = () => {
       return;
     }
     
+    if (!user) {
+      toast.error("Veuillez vous connecter pour finaliser votre commande");
+      return;
+    }
+    
     setIsProcessing(true);
     
     try {
@@ -94,7 +103,11 @@ const CartPage: React.FC = () => {
         id: item.productId,
         name: item.name,
         price: item.price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        lotteryId: item.lotteryId,
+        lotteryName: item.lotteryName,
+        size: item.size,
+        color: item.color
       }));
       
       // Initiate Stripe checkout
@@ -104,7 +117,56 @@ const CartPage: React.FC = () => {
         throw new Error("Échec de l'initialisation du paiement");
       }
       
-      // Dans une application réelle, la redirection se ferait dans la fonction initiateStripeCheckout
+      // Envoyer un email de confirmation de commande au client
+      const emailContent = `
+Bonjour ${user.name},
+
+Nous vous confirmons votre commande sur WinShirt.
+
+Récapitulatif de votre commande:
+${cartItems.map(item => `- ${item.quantity}x ${item.name} (${item.size}, ${item.color}) - ${(item.price * item.quantity).toFixed(2)}€ - Participation à la loterie "${item.lotteryName}"`).join('\n')}
+
+Sous-total: ${subtotal.toFixed(2)}€
+Frais de livraison: ${shippingCost === 0 ? "Gratuit" : `${shippingCost.toFixed(2)}€`}
+Total: ${total.toFixed(2)}€
+
+Votre commande sera expédiée dans les 48 heures ouvrables.
+
+Merci pour votre achat!
+L'équipe WinShirt
+      `;
+      
+      simulateSendEmail(
+        user.email,
+        "Confirmation de votre commande WinShirt",
+        emailContent
+      );
+      
+      // Envoyer également une notification à l'administrateur
+      const adminEmails = localStorage.getItem('admin_notification_emails');
+      const emails = adminEmails ? JSON.parse(adminEmails) : ['admin@winshirt.com'];
+      
+      const adminEmailContent = `
+Nouvelle commande sur WinShirt!
+
+Client: ${user.name} (${user.email})
+
+Produits:
+${cartItems.map(item => `- ${item.quantity}x ${item.name} (${item.size}, ${item.color}) - ${(item.price * item.quantity).toFixed(2)}€ - Loterie: "${item.lotteryName}"`).join('\n')}
+
+Total: ${total.toFixed(2)}€
+
+Cette commande est à préparer et expédier dans les plus brefs délais.
+      `;
+      
+      emails.forEach(email => {
+        simulateSendEmail(
+          email,
+          "Nouvelle commande WinShirt",
+          adminEmailContent
+        );
+      });
+      
     } catch (error) {
       console.error("Erreur lors du paiement:", error);
       toast.error("Une erreur s'est produite lors du paiement");
@@ -240,7 +302,7 @@ const CartPage: React.FC = () => {
                     <Button 
                       className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
                       onClick={handleCheckout}
-                      disabled={isProcessing}
+                      disabled={isProcessing || !user}
                     >
                       {isProcessing ? (
                         <span className="flex items-center">
