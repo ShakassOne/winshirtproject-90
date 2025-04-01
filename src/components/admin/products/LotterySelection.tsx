@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FormLabel } from '@/components/ui/form';
 import { ExtendedLottery } from '@/types/lottery';
 
 interface LotterySelectionProps {
@@ -22,23 +23,23 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filtrer les loteries en fonction du terme de recherche
+  // Filter lotteries based on search term
   const filteredLotteries = lotteries.filter(lottery => 
     lottery.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (lottery.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    lottery.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div>
       <div className="flex justify-between mb-2">
-        <div className="text-white text-sm font-medium">Loteries associées</div>
+        <FormLabel className="text-white">Loteries associées</FormLabel>
         <div className="space-x-2">
           <Button 
             type="button" 
             variant="outline" 
             size="sm"
             onClick={onSelectAll}
-            className="border-winshirt-blue/30 text-winshirt-blue-light hover:bg-winshirt-blue/20"
+            className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/20"
           >
             Tout sélectionner
           </Button>
@@ -54,7 +55,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
         </div>
       </div>
       
-      {/* Recherche de loteries */}
+      {/* Lottery search */}
       <div className="mb-4">
         <Input
           placeholder="Rechercher des loteries..."
@@ -70,29 +71,19 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
           return (
             <div 
               key={lottery.id}
-              className={`p-3 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-blue/30' : 'bg-winshirt-space-light'}`}
+              className={`p-3 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
               onClick={() => onToggleLottery(lottery.id.toString())}
             >
               <div className="mr-3 flex items-center justify-center w-5 h-5">
                 {isSelected ? (
-                  <Check size={16} className="text-winshirt-blue-light" />
+                  <Check size={16} className="text-winshirt-purple-light" />
                 ) : (
                   <div className="w-4 h-4 border border-gray-400 rounded" />
                 )}
               </div>
-              <div className="flex items-center flex-grow">
-                <img
-                  src={lottery.image}
-                  alt={lottery.title}
-                  className="w-10 h-10 object-cover rounded mr-3"
-                />
-                <div>
-                  <h4 className="font-medium text-white">{lottery.title}</h4>
-                  <p className="text-sm text-gray-400">
-                    <span className="mr-2">{lottery.status}</span>
-                    <span>Valeur: {lottery.value.toFixed(2)} €</span>
-                  </p>
-                </div>
+              <div>
+                <h4 className="font-medium text-white">{lottery.title}</h4>
+                <p className="text-sm text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
               </div>
             </div>
           );

@@ -58,9 +58,10 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
         toggleLottery={toggleLottery}
       />
 
-      {/* Ajouter le sélecteur de loteries avancé */}
-      {(isCreating || selectedProductId) && (
-        <div className="mt-6">
+      {/* Only show advanced lottery selector if we're creating or editing */}
+      {(isCreating || selectedProductId) && activeLotteries.length > 0 && (
+        <div className="mt-8 p-4 border border-winshirt-purple/20 rounded-lg">
+          <h3 className="text-lg font-medium text-white mb-4">Sélection avancée de loteries</h3>
           <LotterySelection
             lotteries={activeLotteries}
             selectedLotteries={selectedLotteries}

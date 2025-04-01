@@ -53,6 +53,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const productCategories = ['T-shirt', 'Sweatshirt', 'Polo', 'Autre'];
   const sleeveTypes = ['Courtes', 'Longues'];
 
+  // Use form watch to update the component when sizes change
+  const watchedSizes = form.watch('sizes') || [];
+  const watchedColors = form.watch('colors') || [];
+  const watchedLotteries = form.watch('linkedLotteries') || [];
+
   if (!isCreating && !selectedProductId) {
     return (
       <div className="text-center py-12">
@@ -238,78 +243,99 @@ const ProductForm: React.FC<ProductFormProps> = ({
         </div>
         
         {/* Sizes */}
-        <div>
-          <FormLabel className="text-white">Tailles disponibles</FormLabel>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mt-2">
-            {availableSizes.map(size => {
-              const isSelected = form.getValues('sizes').includes(size);
-              return (
-                <Button
-                  key={size}
-                  type="button"
-                  variant={isSelected ? "default" : "outline"}
-                  className={isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"}
-                  onClick={() => isSelected ? removeSize(size) : addSize(size)}
-                >
-                  {size}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
+        <FormField
+          control={form.control}
+          name="sizes"
+          render={() => (
+            <FormItem>
+              <FormLabel className="text-white">Tailles disponibles</FormLabel>
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mt-2">
+                {availableSizes.map(size => {
+                  const isSelected = watchedSizes.includes(size);
+                  return (
+                    <Button
+                      key={size}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      className={isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"}
+                      onClick={() => isSelected ? removeSize(size) : addSize(size)}
+                    >
+                      {size}
+                    </Button>
+                  );
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         {/* Colors */}
-        <div>
-          <FormLabel className="text-white">Couleurs disponibles</FormLabel>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-            {availableColors.map(color => {
-              const isSelected = form.getValues('colors').includes(color);
-              return (
-                <Button
-                  key={color}
-                  type="button"
-                  variant={isSelected ? "default" : "outline"}
-                  className={isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"}
-                  onClick={() => isSelected ? removeColor(color) : addColor(color)}
-                >
-                  {color}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
+        <FormField
+          control={form.control}
+          name="colors"
+          render={() => (
+            <FormItem>
+              <FormLabel className="text-white">Couleurs disponibles</FormLabel>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                {availableColors.map(color => {
+                  const isSelected = watchedColors.includes(color);
+                  return (
+                    <Button
+                      key={color}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      className={isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"}
+                      onClick={() => isSelected ? removeColor(color) : addColor(color)}
+                    >
+                      {color}
+                    </Button>
+                  );
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         {/* Linked Lotteries */}
-        <div>
-          <FormLabel className="text-white">Loteries associées</FormLabel>
-          <div className="grid grid-cols-1 gap-2 mt-2">
-            {activeLotteries.map(lottery => {
-              const isSelected = form.getValues('linkedLotteries').includes(lottery.id.toString());
-              return (
-                <div 
-                  key={lottery.id}
-                  className={`p-3 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
-                  onClick={() => toggleLottery(lottery.id.toString())}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={isSelected}
-                    onChange={() => {}}
-                    className="mr-3"
-                  />
-                  <div>
-                    <h4 className="font-medium text-white">{lottery.title}</h4>
-                    <p className="text-sm text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
-                  </div>
-                </div>
-              );
-            })}
-            
-            {activeLotteries.length === 0 && (
-              <p className="text-gray-400">Aucune loterie active disponible</p>
-            )}
-          </div>
-        </div>
+        <FormField
+          control={form.control}
+          name="linkedLotteries"
+          render={() => (
+            <FormItem>
+              <FormLabel className="text-white">Loteries associées</FormLabel>
+              <div className="grid grid-cols-1 gap-2 mt-2">
+                {activeLotteries.map(lottery => {
+                  const isSelected = watchedLotteries.includes(lottery.id.toString());
+                  return (
+                    <div 
+                      key={lottery.id}
+                      className={`p-3 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
+                      onClick={() => toggleLottery(lottery.id.toString())}
+                    >
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={() => {}}
+                        className="mr-3"
+                      />
+                      <div>
+                        <h4 className="font-medium text-white">{lottery.title}</h4>
+                        <p className="text-sm text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {activeLotteries.length === 0 && (
+                  <p className="text-gray-400">Aucune loterie active disponible</p>
+                )}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <div className="flex justify-end space-x-2 pt-4">
           <Button 

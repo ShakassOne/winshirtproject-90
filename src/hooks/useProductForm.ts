@@ -55,6 +55,15 @@ export const useProductForm = (
     setIsCreating(false);
     setSelectedProductId(productId);
     
+    // Convert linkedLotteries to string array or use empty array if undefined
+    const linkedLotteries = product.linkedLotteries
+      ? product.linkedLotteries.map(id => id.toString())
+      : [];
+    
+    // Ensure sizes and colors are arrays
+    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+    const colors = Array.isArray(product.colors) ? product.colors : [];
+    
     form.reset({
       name: product.name,
       description: product.description,
@@ -62,11 +71,14 @@ export const useProductForm = (
       type: product.type || 'standard',
       productType: product.productType || '',
       sleeveType: product.sleeveType || '',
-      sizes: product.sizes,
-      colors: product.colors,
-      linkedLotteries: product.linkedLotteries?.map(id => id.toString()) || [],
+      sizes: sizes,
+      colors: colors,
+      linkedLotteries: linkedLotteries,
       image: product.image
     });
+    
+    // Force update of form fields to trigger rerender
+    form.trigger();
   };
   
   const handleDeleteProduct = (productId: number) => {
@@ -88,6 +100,13 @@ export const useProductForm = (
   const onSubmit = (data: any) => {
     const productId = isCreating ? Math.max(0, ...products.map(p => p.id)) + 1 : selectedProductId!;
     
+    // Ensure all arrays are properly initialized
+    const sizes = Array.isArray(data.sizes) ? data.sizes : [];
+    const colors = Array.isArray(data.colors) ? data.colors : [];
+    const linkedLotteries = Array.isArray(data.linkedLotteries) 
+      ? data.linkedLotteries.map(Number) 
+      : [];
+    
     const newProduct: ExtendedProduct = {
       id: productId,
       name: data.name,
@@ -96,9 +115,9 @@ export const useProductForm = (
       type: data.type,
       productType: data.productType,
       sleeveType: data.sleeveType,
-      sizes: data.sizes,
-      colors: data.colors,
-      linkedLotteries: data.linkedLotteries.map(Number),
+      sizes: sizes,
+      colors: colors,
+      linkedLotteries: linkedLotteries,
       image: data.image || 'https://placehold.co/600x400/png',
       popularity: Math.random() * 100 // Just for mock data
     };
@@ -148,27 +167,37 @@ export const useProductForm = (
   };
   
   const addSize = (size: string) => {
-    const currentSizes = form.getValues('sizes');
+    // Get current sizes
+    const currentSizes = form.getValues('sizes') || [];
+    
+    // Only add if not already included
     if (!currentSizes.includes(size)) {
+      // Set new sizes array
       form.setValue('sizes', [...currentSizes, size]);
+      
+      // Trigger validation to update UI
+      form.trigger('sizes');
     }
   };
   
   const removeSize = (size: string) => {
-    const currentSizes = form.getValues('sizes');
+    const currentSizes = form.getValues('sizes') || [];
     form.setValue('sizes', currentSizes.filter(s => s !== size));
+    form.trigger('sizes');
   };
   
   const addColor = (color: string) => {
-    const currentColors = form.getValues('colors');
+    const currentColors = form.getValues('colors') || [];
     if (!currentColors.includes(color)) {
       form.setValue('colors', [...currentColors, color]);
+      form.trigger('colors');
     }
   };
   
   const removeColor = (color: string) => {
-    const currentColors = form.getValues('colors');
+    const currentColors = form.getValues('colors') || [];
     form.setValue('colors', currentColors.filter(c => c !== color));
+    form.trigger('colors');
   };
   
   const toggleLottery = (lotteryId: string) => {
