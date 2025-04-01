@@ -9,6 +9,8 @@ import StarBackground from '@/components/StarBackground';
 import { useAuth } from '@/contexts/AuthContext';
 import { LotteryParticipation } from '@/types/lottery';
 import { Order } from '@/types/order';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle2 } from 'lucide-react';
 
 const AccountPage: React.FC = () => {
   const { user } = useAuth();
@@ -83,9 +85,31 @@ const AccountPage: React.FC = () => {
       <section className="pt-32 pb-16">
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white">{user.name}</h1>
-              <p className="text-gray-300">Membre depuis {user.registrationDate ? new Date(user.registrationDate).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</p>
+            <div className="flex items-center gap-4">
+              {user.profilePicture && (
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-winshirt-purple">
+                  <img 
+                    src={user.profilePicture} 
+                    alt={user.name} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl md:text-4xl font-bold text-white">{user.name}</h1>
+                  {user.socialMediaDetails?.isVerified && (
+                    <CheckCircle2 className="text-blue-400 h-6 w-6" title="Compte vérifié" />
+                  )}
+                </div>
+                <p className="text-gray-300">Membre depuis {user.registrationDate ? new Date(user.registrationDate).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</p>
+                {user.provider && (
+                  <Badge className={`mt-2 ${user.provider === 'facebook' ? 'bg-[#1877F2]' : user.provider === 'google' ? 'bg-[#DB4437]' : 'bg-winshirt-purple'}`}>
+                    {user.provider === 'facebook' ? 'Connecté via Facebook' : 
+                     user.provider === 'google' ? 'Connecté via Google' : 'Inscrit par email'}
+                  </Badge>
+                )}
+              </div>
             </div>
             <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark">
               Modifier mon profil
@@ -258,6 +282,45 @@ const AccountPage: React.FC = () => {
                         <p className="text-sm text-gray-400">Email</p>
                         <p className="text-gray-300">{user.email}</p>
                       </div>
+                      
+                      {user.socialMediaDetails && (
+                        <>
+                          {user.socialMediaDetails.firstName && (
+                            <div className="space-y-1">
+                              <p className="text-sm text-gray-400">Prénom</p>
+                              <p className="text-gray-300">{user.socialMediaDetails.firstName}</p>
+                            </div>
+                          )}
+                          
+                          {user.socialMediaDetails.lastName && (
+                            <div className="space-y-1">
+                              <p className="text-sm text-gray-400">Nom de famille</p>
+                              <p className="text-gray-300">{user.socialMediaDetails.lastName}</p>
+                            </div>
+                          )}
+                          
+                          {user.provider && (
+                            <div className="space-y-1">
+                              <p className="text-sm text-gray-400">Méthode de connexion</p>
+                              <p className="text-gray-300 flex items-center gap-2">
+                                {user.provider === 'facebook' ? (
+                                  <>
+                                    <span className="inline-block w-4 h-4 bg-[#1877F2] rounded-sm"></span>
+                                    Facebook
+                                  </>
+                                ) : user.provider === 'google' ? (
+                                  <>
+                                    <span className="inline-block w-4 h-4 bg-[#DB4437] rounded-sm"></span>
+                                    Google
+                                  </>
+                                ) : (
+                                  'Email'
+                                )}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                     <Button variant="outline" className="mt-4 border-winshirt-purple text-winshirt-purple-light">
                       Modifier mes informations
@@ -269,6 +332,16 @@ const AccountPage: React.FC = () => {
                   <div className="space-y-2">
                     <h3 className="text-lg font-medium text-white">Sécurité</h3>
                     <p className="text-gray-300">Modifiez votre mot de passe ou les paramètres de sécurité</p>
+                    
+                    {user.provider === 'google' && (
+                      <div className="mt-3 p-3 bg-green-900/30 border border-green-600/30 rounded-md">
+                        <p className="text-green-400 flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5" />
+                          Authentification en deux étapes activée via Google
+                        </p>
+                      </div>
+                    )}
+                    
                     <Button variant="outline" className="mt-4 border-winshirt-purple text-winshirt-purple-light">
                       Changer de mot de passe
                     </Button>

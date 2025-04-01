@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
@@ -10,6 +9,15 @@ interface User {
   role: 'user' | 'admin';
   registrationDate?: string;
   provider?: 'email' | 'facebook' | 'google';
+  profilePicture?: string;
+  phoneNumber?: string;
+  socialMediaDetails?: {
+    providerId?: string;
+    displayName?: string;
+    firstName?: string;
+    lastName?: string;
+    isVerified?: boolean;
+  };
 }
 
 interface AuthContextType {
@@ -109,15 +117,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithSocialMedia = (provider: 'facebook' | 'google') => {
-    // Simuler une connexion avec un réseau social
-    // Dans une vraie application, on utiliserait les SDK de Facebook ou Google
+    // Simuler une connexion avec un réseau social, mais de manière plus réaliste
     
     const providerName = provider === 'facebook' ? 'Facebook' : 'Google';
     
-    // Générer un email aléatoire basé sur le provider (pour la simulation)
+    // Générer des données utilisateur plus réalistes
     const randomId = Math.floor(Math.random() * 10000);
-    const email = `user${randomId}@${provider === 'facebook' ? 'facebook' : 'gmail'}.com`;
-    const name = `Utilisateur ${providerName} ${randomId}`;
+    
+    let userData: Partial<User> = {};
+    
+    if (provider === 'facebook') {
+      // Simulation de données Facebook
+      userData = {
+        name: `Jean Dupont`, // Nom fictif pour la démo
+        email: `jean.dupont${randomId}@facebook.com`,
+        profilePicture: "https://i.pravatar.cc/150?u=facebook" + randomId,
+        socialMediaDetails: {
+          providerId: `facebook-${randomId}`,
+          displayName: "Jean Dupont",
+          firstName: "Jean",
+          lastName: "Dupont",
+          isVerified: true
+        }
+      };
+    } else {
+      // Simulation de données Google
+      userData = {
+        name: `Marie Martin`, // Nom fictif pour la démo
+        email: `marie.martin${randomId}@gmail.com`,
+        profilePicture: "https://i.pravatar.cc/150?u=google" + randomId,
+        socialMediaDetails: {
+          providerId: `google-${randomId}`,
+          displayName: "Marie Martin",
+          firstName: "Marie",
+          lastName: "Martin",
+          isVerified: true
+        }
+      };
+    }
     
     // Vérifier si l'utilisateur existe déjà
     const registeredUsers = localStorage.getItem('winshirt_users');
@@ -126,12 +163,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (registeredUsers) {
       try {
         users = JSON.parse(registeredUsers);
-        const existingUser = users.find(u => u.email === email);
+        
+        // Vérifier avec l'email ou l'ID du provider
+        const existingUserByEmail = users.find(u => u.email === userData.email);
+        const existingUserByProviderId = users.find(
+          u => u.socialMediaDetails?.providerId === userData.socialMediaDetails?.providerId
+        );
+        
+        const existingUser = existingUserByEmail || existingUserByProviderId;
         
         if (existingUser) {
           // L'utilisateur existe déjà, connectez-le
-          setUser(existingUser);
-          localStorage.setItem('winshirt_user', JSON.stringify(existingUser));
+          // Mettre à jour les informations si nécessaire
+          const updatedUser = {
+            ...existingUser,
+            ...userData,
+            id: existingUser.id // Conserver l'ID original
+          };
+          
+          // Mettre à jour l'utilisateur dans la liste
+          const updatedUsers = users.map(u => 
+            u.id === updatedUser.id ? updatedUser : u
+          );
+          
+          localStorage.setItem('winshirt_users', JSON.stringify(updatedUsers));
+          
+          setUser(updatedUser);
+          localStorage.setItem('winshirt_user', JSON.stringify(updatedUser));
           toast.success(`Connexion réussie avec ${providerName}!`);
           navigate('/account');
           return;
@@ -144,11 +202,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Créer un nouvel utilisateur
     const newUser: User = {
       id: users.length + 2, // +2 car id 1 est réservé pour l'admin
-      name,
-      email,
+      ...userData as User,
       role: 'user',
       registrationDate: new Date().toISOString(),
-      provider: provider === 'facebook' ? 'facebook' : 'google'
+      provider: provider
     };
     
     users.push(newUser);
@@ -164,6 +221,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       `Bienvenue sur WinShirt - Connexion avec ${providerName}`, 
       `Bonjour ${newUser.name},\n\nMerci de vous être inscrit sur WinShirt avec ${providerName}. Votre compte a été créé avec succès.\n\nBien cordialement,\nL'équipe WinShirt`
     );
+    
+    // Simuler la vérification en deux étapes pour Google
+    if (provider === 'google') {
+      // Afficher une notification pour simuler la 2FA
+      toast.info(`Simulation: Google vous a envoyé un code de vérification sur votre téléphone.`, {
+        duration: 5000
+      });
+      
+      // Après un délai, simuler que l'utilisateur a entré le code correct
+      setTimeout(() => {
+        toast.success(`Vérification en deux étapes réussie!`, {
+          duration: 3000
+        });
+      }, 3000);
+    }
     
     toast.success(`Inscription réussie avec ${providerName}!`);
     navigate('/account');
