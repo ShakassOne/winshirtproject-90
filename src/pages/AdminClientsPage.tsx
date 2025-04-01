@@ -1,84 +1,202 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import AdminNavigation from '@/components/admin/AdminNavigation';
+import { mockLotteries } from '@/data/mockData';
+import { Client } from '@/types/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, UserPlus, Mail, Trash, Edit } from 'lucide-react';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Search,
+  UserPlus,
+  Filter,
+  Award,
+  ShoppingBag,
+  Eye,
+  Edit,
+  Trash
+} from 'lucide-react';
+import { toast } from '@/lib/toast';
+import AdminNavigation from '@/components/admin/AdminNavigation';
+import ClientForm from '@/components/admin/clients/ClientForm';
 
-interface Client {
-  id: number;
-  name: string;
-  email: string;
-  createdAt: string;
-  ordersCount: number;
-  totalSpent: number;
-}
-
-// Données de clients fictives
+// Exemple de clients pour démo
 const mockClients: Client[] = [
   {
     id: 1,
-    name: 'Jean Dupont',
-    email: 'jean.dupont@example.com',
-    createdAt: '2023-05-15T10:30:00Z',
-    ordersCount: 3,
-    totalSpent: 125.75
+    name: "Jean Dupont",
+    email: "jean.dupont@example.com",
+    phone: "0601020304",
+    address: "123 Rue de Paris",
+    city: "Paris",
+    postalCode: "75001",
+    country: "France",
+    registrationDate: "2023-01-15T10:30:00.000Z",
+    lastLogin: "2023-09-20T14:15:00.000Z",
+    orderCount: 5,
+    totalSpent: 349.97,
+    participatedLotteries: [1, 3],
+    wonLotteries: [1]
   },
   {
     id: 2,
-    name: 'Marie Martin',
-    email: 'marie.martin@example.com',
-    createdAt: '2023-06-22T14:45:00Z',
-    ordersCount: 1,
-    totalSpent: 45.00
+    name: "Marie Martin",
+    email: "marie.martin@example.com",
+    phone: "0607080910",
+    address: "45 Avenue des Champs",
+    city: "Lyon",
+    postalCode: "69000",
+    country: "France",
+    registrationDate: "2023-02-20T09:45:00.000Z",
+    lastLogin: "2023-09-22T11:05:00.000Z",
+    orderCount: 3,
+    totalSpent: 178.50,
+    participatedLotteries: [2, 4, 5],
+    wonLotteries: []
   },
   {
     id: 3,
-    name: 'Pierre Dubois',
-    email: 'pierre.dubois@example.com',
-    createdAt: '2023-07-10T09:15:00Z',
-    ordersCount: 5,
-    totalSpent: 230.50
+    name: "Pierre Dubois",
+    email: "pierre.dubois@example.com",
+    phone: "0612131415",
+    address: "87 Boulevard Saint-Michel",
+    city: "Marseille",
+    postalCode: "13000",
+    country: "France",
+    registrationDate: "2023-03-10T15:20:00.000Z",
+    lastLogin: "2023-09-18T16:30:00.000Z",
+    orderCount: 2,
+    totalSpent: 99.99,
+    participatedLotteries: [1, 2, 3],
+    wonLotteries: [3]
   },
   {
     id: 4,
-    name: 'Sophie Lefevre',
-    email: 'sophie.lefevre@example.com',
-    createdAt: '2023-08-05T16:20:00Z',
-    ordersCount: 2,
-    totalSpent: 87.25
+    name: "Sophie Lefebvre",
+    email: "sophie.lefebvre@example.com",
+    phone: "0617181920",
+    address: "32 Rue de la République",
+    city: "Bordeaux",
+    postalCode: "33000",
+    country: "France",
+    registrationDate: "2023-04-05T11:10:00.000Z",
+    lastLogin: "2023-09-21T10:45:00.000Z",
+    orderCount: 7,
+    totalSpent: 499.95,
+    participatedLotteries: [4, 5],
+    wonLotteries: [5]
   }
 ];
 
 const AdminClientsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   
+  // Charger les clients depuis localStorage
   useEffect(() => {
-    // Charger les clients depuis localStorage ou utiliser les clients par défaut
     const savedClients = localStorage.getItem('clients');
     if (savedClients) {
       try {
         const parsedClients = JSON.parse(savedClients);
         if (Array.isArray(parsedClients) && parsedClients.length > 0) {
           setClients(parsedClients);
+          setFilteredClients(parsedClients);
         } else {
+          // Si pas de clients en localStorage, utiliser les mockClients
           setClients(mockClients);
+          setFilteredClients(mockClients);
           localStorage.setItem('clients', JSON.stringify(mockClients));
         }
       } catch (error) {
         console.error("Erreur lors du chargement des clients:", error);
+        // Utiliser les mockClients en cas d'erreur
         setClients(mockClients);
+        setFilteredClients(mockClients);
         localStorage.setItem('clients', JSON.stringify(mockClients));
       }
     } else {
+      // Si pas de clients en localStorage, utiliser les mockClients
       setClients(mockClients);
+      setFilteredClients(mockClients);
       localStorage.setItem('clients', JSON.stringify(mockClients));
     }
   }, []);
-
+  
+  // Filtrer les clients selon le terme de recherche
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredClients(clients);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = clients.filter(client => 
+        client.name.toLowerCase().includes(term) || 
+        client.email.toLowerCase().includes(term) ||
+        (client.phone && client.phone.includes(term)) ||
+        (client.city && client.city.toLowerCase().includes(term))
+      );
+      setFilteredClients(filtered);
+    }
+  }, [searchTerm, clients]);
+  
+  const handleDeleteClient = (clientId: number) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce client ?")) {
+      const updatedClients = clients.filter(client => client.id !== clientId);
+      setClients(updatedClients);
+      localStorage.setItem('clients', JSON.stringify(updatedClients));
+      toast.success("Client supprimé avec succès");
+    }
+  };
+  
+  const handleEditClient = (client: Client) => {
+    setEditingClient(client);
+    setShowForm(true);
+  };
+  
+  const handleAddClient = () => {
+    setEditingClient(null);
+    setShowForm(true);
+  };
+  
+  const handleSaveClient = (clientData: Client) => {
+    let updatedClients: Client[];
+    
+    if (editingClient) {
+      // Mise à jour d'un client existant
+      updatedClients = clients.map(c => 
+        c.id === clientData.id ? clientData : c
+      );
+      toast.success("Client mis à jour avec succès");
+    } else {
+      // Ajout d'un nouveau client
+      const newClient = {
+        ...clientData,
+        id: Math.max(0, ...clients.map(c => c.id)) + 1,
+        registrationDate: new Date().toISOString(),
+        orderCount: 0,
+        totalSpent: 0,
+        participatedLotteries: [],
+        wonLotteries: []
+      };
+      updatedClients = [...clients, newClient];
+      toast.success("Client ajouté avec succès");
+    }
+    
+    setClients(updatedClients);
+    localStorage.setItem('clients', JSON.stringify(updatedClients));
+    setShowForm(false);
+    setEditingClient(null);
+  };
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
@@ -87,123 +205,153 @@ const AdminClientsPage: React.FC = () => {
       year: 'numeric'
     });
   };
-
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleDeleteClient = (id: number) => {
-    const updatedClients = clients.filter(client => client.id !== id);
-    setClients(updatedClients);
-    localStorage.setItem('clients', JSON.stringify(updatedClients));
-  };
-
-  const handleContactClient = (email: string) => {
-    window.open(`mailto:${email}`);
-  };
-
+  
   return (
     <>
       <StarBackground />
       
-      {/* Admin Navigation */}
-      <AdminNavigation />
-      
       <section className="pt-32 pb-16">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-green-500">
+        <div className="container mx-auto px-4 md:px-8">
+          <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Gestion des Clients
           </h1>
-          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-            Visualisez et gérez tous vos clients depuis cette interface.
+          <p className="text-gray-400 text-center mb-8">
+            Gérez les informations de vos clients
           </p>
           
-          {/* Search and Add Bar */}
-          <div className="winshirt-card p-6 mb-10">
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <div className="relative flex-grow">
-                <Search className="absolute left-3 top-3 text-gray-400" size={16} />
-                <Input
-                  placeholder="Rechercher un client..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-winshirt-space-light border-winshirt-purple/30 pl-10"
-                />
-              </div>
-              <Button className="bg-green-600 hover:bg-green-700 whitespace-nowrap">
-                <UserPlus size={16} className="mr-2" />
-                Ajouter un client
-              </Button>
+          {showForm ? (
+            <div className="max-w-4xl mx-auto">
+              <ClientForm 
+                client={editingClient} 
+                onSave={handleSaveClient} 
+                onCancel={() => {
+                  setShowForm(false);
+                  setEditingClient(null);
+                }} 
+              />
             </div>
-          </div>
-          
-          {/* Clients Table */}
-          <div className="winshirt-card overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-winshirt-purple/30">
-                    <TableHead className="text-white">ID</TableHead>
-                    <TableHead className="text-white">Nom</TableHead>
-                    <TableHead className="text-white">Email</TableHead>
-                    <TableHead className="text-white">Date d'inscription</TableHead>
-                    <TableHead className="text-white text-right">Commandes</TableHead>
-                    <TableHead className="text-white text-right">Total dépensé</TableHead>
-                    <TableHead className="text-white text-center">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredClients.map((client) => (
-                    <TableRow key={client.id} className="border-b border-winshirt-space-light">
-                      <TableCell className="text-gray-300">{client.id}</TableCell>
-                      <TableCell className="text-white font-medium">{client.name}</TableCell>
-                      <TableCell className="text-winshirt-blue-light">{client.email}</TableCell>
-                      <TableCell className="text-gray-300">{formatDate(client.createdAt)}</TableCell>
-                      <TableCell className="text-gray-300 text-right">{client.ordersCount}</TableCell>
-                      <TableCell className="text-gray-300 text-right">{client.totalSpent.toFixed(2)} €</TableCell>
-                      <TableCell>
-                        <div className="flex justify-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-green-500 hover:text-green-400 hover:bg-green-500/10"
-                            onClick={() => handleContactClient(client.email)}
-                          >
-                            <Mail size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-winshirt-blue hover:text-winshirt-blue-light hover:bg-winshirt-blue/10"
-                          >
-                            <Edit size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                            onClick={() => handleDeleteClient(client.id)}
-                          >
-                            <Trash size={16} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            
-            {filteredClients.length === 0 && (
-              <div className="text-center py-16">
-                <h3 className="text-xl text-gray-400 mb-2">Aucun client trouvé</h3>
-                <p className="text-gray-500">Modifiez vos critères de recherche ou ajoutez de nouveaux clients</p>
+          ) : (
+            <div className="space-y-6">
+              {/* Filtres et recherche */}
+              <div className="winshirt-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Input
+                    placeholder="Rechercher un client..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-winshirt-space-light border-winshirt-purple/30"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" className="border-winshirt-purple/30 text-white">
+                    <Filter size={16} className="mr-2" />
+                    Filtres
+                  </Button>
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddClient}>
+                    <UserPlus size={16} className="mr-2" />
+                    Ajouter un client
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
+              
+              {/* Liste des clients */}
+              <div className="winshirt-card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-winshirt-space-light">
+                      <TableRow>
+                        <TableHead className="text-white">Nom</TableHead>
+                        <TableHead className="text-white">Inscription</TableHead>
+                        <TableHead className="text-white">Contact</TableHead>
+                        <TableHead className="text-white">Localisation</TableHead>
+                        <TableHead className="text-white">
+                          <div className="flex items-center gap-1">
+                            <ShoppingBag size={14} />
+                            <span>Commandes</span>
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-white">
+                          <div className="flex items-center gap-1">
+                            <Award size={14} />
+                            <span>Loteries</span>
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-white text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredClients.map(client => (
+                        <TableRow key={client.id} className="border-b border-winshirt-purple/10">
+                          <TableCell className="font-medium text-white">
+                            {client.name}
+                          </TableCell>
+                          <TableCell className="text-gray-400">
+                            {formatDate(client.registrationDate)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-gray-300">{client.email}</div>
+                            <div className="text-gray-400">{client.phone}</div>
+                          </TableCell>
+                          <TableCell className="text-gray-400">
+                            {client.city}, {client.country}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-winshirt-purple-light font-semibold">{client.orderCount}</div>
+                            <div className="text-gray-400">{client.totalSpent.toFixed(2)} €</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-winshirt-blue-light">
+                              {client.participatedLotteries?.length || 0} participations
+                            </div>
+                            <div className="text-green-400">
+                              {client.wonLotteries?.length || 0} gagnées
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white h-8 w-8 p-0">
+                                <Eye size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-winshirt-blue hover:text-winshirt-blue-light h-8 w-8 p-0"
+                                onClick={() => handleEditClient(client)}
+                              >
+                                <Edit size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-red-500 hover:text-red-400 h-8 w-8 p-0"
+                                onClick={() => handleDeleteClient(client.id)}
+                              >
+                                <Trash size={16} />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      
+                      {filteredClients.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                            Aucun client trouvé
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
+      
+      <AdminNavigation />
     </>
   );
 };

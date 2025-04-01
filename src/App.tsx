@@ -21,6 +21,7 @@ import AdminProductsPage from "./pages/AdminProductsPage";
 import AdminLotteriesPage from "./pages/AdminLotteriesPage";
 import AdminClientsPage from "./pages/AdminClientsPage";
 import AdminCommandesPage from "./pages/AdminCommandesPage";
+import AdminSettingsPage from "./pages/AdminSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
               <Route path="/admin/clients" element={<AdminClientsPage />} />
               <Route path="/admin/commandes" element={<AdminCommandesPage />} />
+              <Route path="/admin/settings" element={<AdminSettingsPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>

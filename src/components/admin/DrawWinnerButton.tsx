@@ -22,11 +22,11 @@ const DrawWinnerButton: React.FC<DrawWinnerButtonProps> = ({ lottery, onDrawWinn
   const drawWinner = () => {
     if (!lottery.participants || lottery.participants.length === 0) {
       // Si pas de participants, on simule quelques participants aléatoires
-      const mockParticipants = [
-        { name: "Jean Dupont", email: "jean.dupont@example.com" },
-        { name: "Marie Martin", email: "marie.martin@example.com" },
-        { name: "Pierre Dubois", email: "pierre.dubois@example.com" },
-        { name: "Sophie Lefevre", email: "sophie.lefevre@example.com" }
+      const mockParticipants: Participant[] = [
+        { id: 1, name: "Jean Dupont", email: "jean.dupont@example.com" },
+        { id: 2, name: "Marie Martin", email: "marie.martin@example.com" },
+        { id: 3, name: "Pierre Dubois", email: "pierre.dubois@example.com" },
+        { id: 4, name: "Sophie Lefevre", email: "sophie.lefevre@example.com" }
       ];
       
       // Sélection aléatoire de l'un des participants simulés
