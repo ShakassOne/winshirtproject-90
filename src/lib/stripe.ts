@@ -3,6 +3,13 @@ import { toast } from './toast';
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51abcdefghijklmnopqrstuvwxyz'; // Remplacez par votre clé publique Stripe
 
+// Add a type declaration for the Stripe global object
+declare global {
+  interface Window {
+    Stripe?: (key: string) => any;
+  }
+}
+
 export const initiateStripeCheckout = async (
   items: Array<{ id: string | number; name: string; price: number; quantity: number }>
 ) => {
