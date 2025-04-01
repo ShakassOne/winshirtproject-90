@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus } from 'lucide-react';
+import { Package, Plus, Ticket } from 'lucide-react';
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import {
@@ -52,11 +52,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const productTypes = ['entrée de gamme', 'standard', 'premium'];
   const productCategories = ['T-shirt', 'Sweatshirt', 'Polo', 'Autre'];
   const sleeveTypes = ['Courtes', 'Longues'];
+  const ticketOptions = [1, 2, 3, 4, 5];
 
   // Use form watch to update the component when sizes change
   const watchedSizes = form.watch('sizes') || [];
   const watchedColors = form.watch('colors') || [];
   const watchedLotteries = form.watch('linkedLotteries') || [];
+  const watchedTickets = form.watch('tickets') || 1;
 
   if (!isCreating && !selectedProductId) {
     return (
@@ -242,6 +244,49 @@ const ProductForm: React.FC<ProductFormProps> = ({
           />
         </div>
         
+        {/* Nouveau champ: nombre de tickets */}
+        <FormField
+          control={form.control}
+          name="tickets"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white text-lg flex items-center gap-2">
+                <Ticket size={18} />
+                Nombre de tickets
+              </FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  // Si le nombre de tickets diminue, on réduit la sélection de loteries
+                  const currentLotteries = form.getValues('linkedLotteries') || [];
+                  if (currentLotteries.length > Number(value)) {
+                    form.setValue('linkedLotteries', currentLotteries.slice(0, Number(value)));
+                    form.trigger('linkedLotteries');
+                  }
+                }} 
+                defaultValue={field.value?.toString() || "1"}
+              >
+                <FormControl>
+                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12 max-w-xs">
+                    <SelectValue placeholder="Nombre de tickets" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
+                  {ticketOptions.map(option => (
+                    <SelectItem key={option} value={option.toString()}>
+                      {option} {option === 1 ? 'ticket' : 'tickets'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription className="text-gray-400 text-base">
+                Nombre de participations à des loteries offertes avec ce produit
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
         {/* Sizes */}
         <FormField
           control={form.control}
@@ -305,6 +350,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
           render={() => (
             <FormItem>
               <FormLabel className="text-white text-lg">Loteries associées</FormLabel>
+              <FormDescription className="text-gray-400 text-base mb-2">
+                {watchedTickets > 1 
+                  ? `Vous pouvez sélectionner jusqu'à ${watchedTickets} loteries différentes` 
+                  : "Sélectionnez une loterie à associer"}
+              </FormDescription>
               <div className="grid grid-cols-1 gap-2 mt-2">
                 {activeLotteries.map(lottery => {
                   const isSelected = watchedLotteries.includes(lottery.id.toString());

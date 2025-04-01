@@ -11,6 +11,7 @@ interface LotterySelectionProps {
   onToggleLottery: (lotteryId: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
+  maxSelections?: number;
 }
 
 const LotterySelection: React.FC<LotterySelectionProps> = ({
@@ -18,7 +19,8 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   selectedLotteries,
   onToggleLottery,
   onSelectAll,
-  onDeselectAll
+  onDeselectAll,
+  maxSelections = 1
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -31,7 +33,11 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   return (
     <div>
       <div className="flex justify-between mb-2">
-        <div className="text-white text-sm font-medium">Loteries associées</div>
+        <div className="text-white text-sm font-medium">
+          {maxSelections > 1 
+            ? `Loteries associées (${selectedLotteries.length}/${maxSelections})` 
+            : "Loteries associées"}
+        </div>
         <div className="space-x-2">
           <Button 
             type="button" 
@@ -67,17 +73,25 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
       <div className="grid grid-cols-1 gap-2 mt-2 max-h-[300px] overflow-y-auto pr-2">
         {filteredLotteries.map(lottery => {
           const isSelected = selectedLotteries.includes(lottery.id.toString());
+          const isDisabled = !isSelected && selectedLotteries.length >= maxSelections;
+          
           return (
             <div 
               key={lottery.id}
-              className={`p-3 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
-              onClick={() => onToggleLottery(lottery.id.toString())}
+              className={`p-3 rounded-lg flex items-center ${
+                isSelected 
+                  ? 'bg-winshirt-purple/30 cursor-pointer' 
+                  : isDisabled 
+                    ? 'bg-winshirt-space-light opacity-50 cursor-not-allowed' 
+                    : 'bg-winshirt-space-light cursor-pointer'
+              }`}
+              onClick={() => !isDisabled && onToggleLottery(lottery.id.toString())}
             >
               <div className="mr-3 flex items-center justify-center w-5 h-5">
                 {isSelected ? (
                   <Check size={16} className="text-winshirt-purple-light" />
                 ) : (
-                  <div className="w-4 h-4 border border-gray-400 rounded" />
+                  <div className={`w-4 h-4 border rounded ${isDisabled ? 'border-gray-600' : 'border-gray-400'}`} />
                 )}
               </div>
               <div>

@@ -5,6 +5,8 @@ import { ExtendedLottery } from '@/types/lottery';
 import LotterySelection from './LotterySelection';
 import ProductForm from './ProductForm';
 import { Form } from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface ProductFormProps {
   isCreating: boolean;
@@ -40,6 +42,7 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
   deselectAllLotteries
 }) => {
   const selectedLotteries = form.watch('linkedLotteries') || [];
+  const tickets = form.watch('tickets') || 1;
   
   // Si l'utilisateur n'est ni en train de créer ni en train d'éditer un produit
   if (!isCreating && !selectedProductId) {
@@ -77,6 +80,21 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
       {(isCreating || selectedProductId) && activeLotteries.length > 0 && (
         <div className="mt-8 p-4 border border-winshirt-purple/20 rounded-lg">
           <h3 className="text-lg font-medium text-white mb-4">Sélection avancée de loteries</h3>
+          
+          {tickets > 1 && (
+            <Alert className="mb-4 bg-blue-500/10 border-blue-500/30">
+              <AlertCircle className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-blue-100">
+                Ce produit offre {tickets} tickets. Vous pouvez sélectionner jusqu'à {tickets} loteries différentes.
+                {selectedLotteries.length < tickets && (
+                  <span className="block mt-1 text-sm text-blue-300">
+                    {tickets - selectedLotteries.length} sélection(s) restante(s)
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Form {...form}>
             <LotterySelection
               lotteries={activeLotteries}
@@ -84,6 +102,7 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
               onToggleLottery={toggleLottery}
               onSelectAll={selectAllLotteries || (() => {})}
               onDeselectAll={deselectAllLotteries || (() => {})}
+              maxSelections={tickets}
             />
           </Form>
         </div>

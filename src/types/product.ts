@@ -14,4 +14,5 @@ export interface ExtendedProduct {
   lotteryName?: string;
   lotteryImage?: string;
   popularity?: number;
+  tickets?: number; // Nombre de tickets (1-5) pour ce produit
 }

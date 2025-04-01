@@ -23,7 +23,8 @@ export const useProductForm = (
       sizes: [] as string[],
       colors: [] as string[],
       linkedLotteries: [] as string[],
-      image: ''
+      image: '',
+      tickets: 1 // Valeur par défaut: 1 ticket
     }
   });
   
@@ -38,7 +39,8 @@ export const useProductForm = (
       sizes: [],
       colors: [],
       linkedLotteries: [],
-      image: ''
+      image: '',
+      tickets: 1
     });
   };
   
@@ -74,7 +76,8 @@ export const useProductForm = (
       sizes: sizes,
       colors: colors,
       linkedLotteries: linkedLotteries,
-      image: product.image
+      image: product.image,
+      tickets: product.tickets || 1
     });
     
     // Force update of form fields to trigger rerender
@@ -119,7 +122,8 @@ export const useProductForm = (
       colors: colors,
       linkedLotteries: linkedLotteries,
       image: data.image || 'https://placehold.co/600x400/png',
-      popularity: Math.random() * 100 // Just for mock data
+      popularity: Math.random() * 100, // Just for mock data
+      tickets: parseInt(data.tickets, 10) || 1 // Ajouter le nombre de tickets
     };
     
     if (isCreating) {
@@ -206,6 +210,12 @@ export const useProductForm = (
     if (currentLotteries.includes(lotteryId)) {
       form.setValue('linkedLotteries', currentLotteries.filter(id => id !== lotteryId));
     } else {
+      // Vérifier si nous n'avons pas dépassé le nombre maximum de tickets
+      const tickets = form.getValues('tickets') || 1;
+      if (currentLotteries.length >= tickets) {
+        toast.warning(`Vous ne pouvez pas sélectionner plus de ${tickets} loterie(s) pour ce produit`);
+        return;
+      }
       form.setValue('linkedLotteries', [...currentLotteries, lotteryId]);
     }
     
@@ -215,7 +225,8 @@ export const useProductForm = (
 
   // Functions to select/deselect all lotteries
   const selectAllLotteries = () => {
-    const allLotteryIds = availableLotteries.map(lottery => lottery.id.toString());
+    const tickets = form.getValues('tickets') || 1;
+    const allLotteryIds = availableLotteries.slice(0, tickets).map(lottery => lottery.id.toString());
     form.setValue('linkedLotteries', allLotteryIds);
     form.trigger('linkedLotteries');
   };

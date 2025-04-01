@@ -10,7 +10,7 @@ import {
   CarouselPrevious
 } from '@/components/ui/carousel';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Users } from 'lucide-react';
+import { Calendar, Users, Ticket } from 'lucide-react';
 
 interface RotatingLotteryProps {
   lotteries: ExtendedLottery[];
@@ -103,9 +103,15 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
                         <span>Tirage le {formatDate(lottery.endDate)}</span>
                       </div>
                       
-                      <div className="mt-3 flex justify-end">
+                      <div className="mt-3 flex justify-between items-center">
                         <span className="text-sm bg-winshirt-purple/50 rounded-full px-4 py-1.5 font-medium">
                           Détails
+                        </span>
+                        
+                        {/* Tickets indicator */}
+                        <span className="flex items-center gap-1.5 text-winshirt-blue-light">
+                          <Ticket size={16} />
+                          <span className="text-xs">Jusqu'à 5 tickets disponibles</span>
                         </span>
                       </div>
                     </div>
