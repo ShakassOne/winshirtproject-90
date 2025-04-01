@@ -72,8 +72,8 @@ const HomePage: React.FC = () => {
             Découvrez nos loteries exclusives. Chaque achat vous rapproche d'un gain exceptionnel.
           </p>
           
-          {/* Rotating lottery display */}
-          <div className="max-w-4xl mx-auto">
+          {/* Rotating lottery display - full width container */}
+          <div className="w-full px-4 md:px-8 lg:px-12">
             <RotatingLottery lotteries={activeLotteries} />
           </div>
           
