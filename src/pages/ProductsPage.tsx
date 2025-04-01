@@ -7,6 +7,7 @@ import StarBackground from '../components/StarBackground';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminNavigation from '@/components/admin/AdminNavigation';
+import { ExtendedProduct } from '@/types/product';
 
 const ProductsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -17,7 +18,7 @@ const ProductsPage: React.FC = () => {
   const [selectedProductType, setSelectedProductType] = useState<string>('all');
   const [selectedSleeveType, setSelectedSleeveType] = useState<string>('all');
   const [selectedLotteryId, setSelectedLotteryId] = useState<string | null>(lotteryIdParam);
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
   const [lotteries, setLotteries] = useState(mockLotteries);
   
   // Set the selected lottery ID from URL parameters
@@ -96,9 +97,11 @@ const ProductsPage: React.FC = () => {
     const matchesQualityType = selectedType === 'all' || product.type === selectedType;
     
     // Filter by product type (T-shirt, Sweatshirt, Polo)
+    // Use optional chaining to handle the case where productType might not exist
     const matchesProductType = selectedProductType === 'all' || product.productType === selectedProductType;
     
     // Filter by sleeve type (Courtes, Longues)
+    // Use optional chaining to handle the case where sleeveType might not exist
     const matchesSleeveType = selectedSleeveType === 'all' || product.sleeveType === selectedSleeveType;
     
     // Filter by lottery if a lottery ID is selected
