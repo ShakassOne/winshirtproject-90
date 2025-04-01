@@ -1,49 +1,69 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { mockParticipations, mockLotteries, mockProducts } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AccountPage: React.FC = () => {
-  // Mock user data
-  const user = {
-    name: "Jean Dupont",
-    email: "jean.dupont@example.com",
-    joined: "15/08/2023",
-  };
+  const { user } = useAuth();
   
-  // Prepare participation data with related info
-  const participationsWithDetails = mockParticipations.map(participation => {
-    const lottery = mockLotteries.find(l => l.id === participation.lotteryId);
-    const product = mockProducts.find(p => p.id === participation.productId);
-    
-    return {
-      ...participation,
-      lottery,
-      product,
-    };
-  });
+  // Filtrer les participations pour afficher uniquement celles de l'utilisateur connecté
+  const [userParticipations, setUserParticipations] = useState<any[]>([]);
+  const [userOrders, setUserOrders] = useState<any[]>([]);
   
-  // Mock orders
-  const orders = [
-    {
-      id: "ORD-12345",
-      date: "2023-10-15",
-      status: "Livrée",
-      total: 29.99,
-      items: 1
-    },
-    {
-      id: "ORD-67890",
-      date: "2023-11-02",
-      status: "En cours",
-      total: 62.98,
-      items: 2
+  useEffect(() => {
+    if (user) {
+      // Dans un système réel, ces données viendraient d'une API
+      // Pour l'instant, nous simulons des données spécifiques à l'utilisateur
+      
+      // Simulation: l'utilisateur admin a accès à toutes les participations
+      // Les nouveaux utilisateurs n'ont aucune participation jusqu'à leur premier achat
+      if (user.email === 'admin@winshirt.com') {
+        // L'admin voit toutes les participations
+        const adminParticipations = mockParticipations.map(participation => {
+          const lottery = mockLotteries.find(l => l.id === participation.lotteryId);
+          const product = mockProducts.find(p => p.id === participation.productId);
+          
+          return {
+            ...participation,
+            lottery,
+            product,
+          };
+        });
+        setUserParticipations(adminParticipations);
+        
+        // Ordres fictifs pour l'admin
+        setUserOrders([
+          {
+            id: "ORD-12345",
+            date: "2023-10-15",
+            status: "Livrée",
+            total: 29.99,
+            items: 1
+          },
+          {
+            id: "ORD-67890",
+            date: "2023-11-02",
+            status: "En cours",
+            total: 62.98,
+            items: 2
+          }
+        ]);
+      } else {
+        // Les nouveaux utilisateurs n'ont aucune participation ni commande
+        setUserParticipations([]);
+        setUserOrders([]);
+      }
     }
-  ];
+  }, [user]);
+  
+  if (!user) {
+    return <div className="pt-32 pb-16 text-center">Chargement...</div>;
+  }
   
   return (
     <>
@@ -54,7 +74,7 @@ const AccountPage: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-white">{user.name}</h1>
-              <p className="text-gray-300">Membre depuis {user.joined}</p>
+              <p className="text-gray-300">Membre depuis {new Date().toLocaleDateString('fr-FR')}</p>
             </div>
             <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark">
               Modifier mon profil
@@ -79,9 +99,9 @@ const AccountPage: React.FC = () => {
               <div className="space-y-6">
                 <h2 className="text-2xl font-semibold text-white">Vos tickets de loterie</h2>
                 
-                {participationsWithDetails.length > 0 ? (
+                {userParticipations.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {participationsWithDetails.map((participation) => (
+                    {userParticipations.map((participation) => (
                       <Card key={participation.id} className="winshirt-card">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg text-white">
@@ -140,9 +160,9 @@ const AccountPage: React.FC = () => {
               <div className="space-y-6">
                 <h2 className="text-2xl font-semibold text-white">Historique des commandes</h2>
                 
-                {orders.length > 0 ? (
+                {userOrders.length > 0 ? (
                   <div className="space-y-4">
-                    {orders.map((order) => (
+                    {userOrders.map((order) => (
                       <Card key={order.id} className="winshirt-card">
                         <CardContent className="p-6">
                           <div className="flex flex-col md:flex-row justify-between gap-4">
