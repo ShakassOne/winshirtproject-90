@@ -20,7 +20,7 @@ const formSchema = z.object({
   targetParticipants: z.number().min(2, {
     message: "Le nombre de participants doit être supérieur à 1.",
   }),
-  status: z.string(),
+  status: z.enum(["active", "completed", "relaunched"]),
   image: z.string().url({
     message: "Veuillez entrer une URL valide.",
   }),
@@ -43,7 +43,7 @@ export const useLotteryForm = (
       description: "",
       value: 1,
       targetParticipants: 5,
-      status: 'active',
+      status: 'active' as const,
       image: "",
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default: 7 days from now
       linkedProducts: [],
@@ -82,15 +82,15 @@ export const useLotteryForm = (
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     if (isCreating) {
-      // Fix: Ensure all required properties are explicitly set and not optional
+      // Create a new lottery with the correct type
       const newLottery: ExtendedLottery = {
         id: Date.now(),
-        title: data.title,           // Explicitly set required properties 
+        title: data.title,
         description: data.description,
         value: Number(data.value),
         targetParticipants: Number(data.targetParticipants),
         currentParticipants: 0,
-        status: data.status,
+        status: data.status, // This is now type-safe
         image: data.image,
         linkedProducts: data.linkedProducts?.map(Number) || [],
         participants: [],
@@ -106,9 +106,13 @@ export const useLotteryForm = (
           lottery.id === selectedLotteryId
             ? {
                 ...lottery,
-                ...data,
+                title: data.title,
+                description: data.description,
                 value: Number(data.value),
                 targetParticipants: Number(data.targetParticipants),
+                status: data.status, // This is now type-safe
+                image: data.image,
+                endDate: data.endDate,
                 linkedProducts: data.linkedProducts?.map(Number) || [],
               }
             : lottery

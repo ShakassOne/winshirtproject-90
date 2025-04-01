@@ -6,7 +6,7 @@ export interface ExtendedLottery {
   value: number;
   targetParticipants: number;
   currentParticipants: number;
-  status: "active" | "completed" | "relaunched";
+  status: "active" | "completed" | "relaunched" | "cancelled";
   image: string;
   linkedProducts?: number[];
   participants?: Participant[];
