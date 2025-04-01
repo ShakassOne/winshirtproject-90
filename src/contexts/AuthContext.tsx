@@ -9,6 +9,7 @@ interface User {
   email: string;
   role: 'user' | 'admin';
   registrationDate?: string;
+  provider?: 'email' | 'facebook' | 'google';
 }
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => void;
+  loginWithSocialMedia: (provider: 'facebook' | 'google') => void;
   register: (name: string, email: string, password: string) => void;
   logout: () => void;
   getAllUsers: () => User[];
@@ -46,7 +48,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: 'Admin',
           email: 'admin@winshirt.com',
           role: 'admin',
-          registrationDate: new Date().toISOString()
+          registrationDate: new Date().toISOString(),
+          provider: 'email'
         }
       ];
       localStorage.setItem('winshirt_users', JSON.stringify(initialUsers));
@@ -73,7 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: 'Admin',
         email: 'admin@winshirt.com',
         role: 'admin',
-        registrationDate: new Date().toISOString()
+        registrationDate: new Date().toISOString(),
+        provider: 'email'
       };
       setUser(adminUser);
       localStorage.setItem('winshirt_user', JSON.stringify(adminUser));
@@ -104,6 +108,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.error("Email ou mot de passe incorrect");
   };
 
+  const loginWithSocialMedia = (provider: 'facebook' | 'google') => {
+    // Simuler une connexion avec un réseau social
+    // Dans une vraie application, on utiliserait les SDK de Facebook ou Google
+    
+    const providerName = provider === 'facebook' ? 'Facebook' : 'Google';
+    
+    // Générer un email aléatoire basé sur le provider (pour la simulation)
+    const randomId = Math.floor(Math.random() * 10000);
+    const email = `user${randomId}@${provider === 'facebook' ? 'facebook' : 'gmail'}.com`;
+    const name = `Utilisateur ${providerName} ${randomId}`;
+    
+    // Vérifier si l'utilisateur existe déjà
+    const registeredUsers = localStorage.getItem('winshirt_users');
+    let users: User[] = [];
+    
+    if (registeredUsers) {
+      try {
+        users = JSON.parse(registeredUsers);
+        const existingUser = users.find(u => u.email === email);
+        
+        if (existingUser) {
+          // L'utilisateur existe déjà, connectez-le
+          setUser(existingUser);
+          localStorage.setItem('winshirt_user', JSON.stringify(existingUser));
+          toast.success(`Connexion réussie avec ${providerName}!`);
+          navigate('/account');
+          return;
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des utilisateurs:", error);
+      }
+    }
+    
+    // Créer un nouvel utilisateur
+    const newUser: User = {
+      id: users.length + 2, // +2 car id 1 est réservé pour l'admin
+      name,
+      email,
+      role: 'user',
+      registrationDate: new Date().toISOString(),
+      provider: provider === 'facebook' ? 'facebook' : 'google'
+    };
+    
+    users.push(newUser);
+    localStorage.setItem('winshirt_users', JSON.stringify(users));
+    
+    // Connecter l'utilisateur
+    setUser(newUser);
+    localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+    
+    // Simuler l'envoi d'un e-mail de confirmation
+    simulateSendEmail(
+      newUser.email, 
+      `Bienvenue sur WinShirt - Connexion avec ${providerName}`, 
+      `Bonjour ${newUser.name},\n\nMerci de vous être inscrit sur WinShirt avec ${providerName}. Votre compte a été créé avec succès.\n\nBien cordialement,\nL'équipe WinShirt`
+    );
+    
+    toast.success(`Inscription réussie avec ${providerName}!`);
+    navigate('/account');
+  };
+
   const register = (name: string, email: string, password: string) => {
     // Vérifier si l'utilisateur existe déjà
     const registeredUsers = localStorage.getItem('winshirt_users');
@@ -127,7 +192,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name,
       email,
       role: 'user',
-      registrationDate: new Date().toISOString()
+      registrationDate: new Date().toISOString(),
+      provider: 'email'
     };
     
     users.push(newUser);
@@ -162,6 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
         login, 
+        loginWithSocialMedia,
         register, 
         logout,
         getAllUsers
