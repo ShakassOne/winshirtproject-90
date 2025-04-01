@@ -1,11 +1,13 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Trash, Plus, Minus } from 'lucide-react';
+import { Trash, Plus, Minus, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
+import { initiateStripeCheckout } from '@/lib/stripe';
 
 // Mocked cart items for demonstration
 const initialCartItems = [
@@ -36,6 +38,7 @@ const initialCartItems = [
 const CartPage: React.FC = () => {
   const [cartItems, setCartItems] = useState(initialCartItems);
   const [promoCode, setPromoCode] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const handleRemoveItem = (id: number) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== id));
@@ -70,9 +73,37 @@ const CartPage: React.FC = () => {
   const shippingCost = subtotal > 50 ? 0 : 5.99;
   const total = subtotal + shippingCost;
   
-  const handleCheckout = () => {
-    toast.success("Redirection vers le paiement...");
-    // Dans une application réelle, vous redirigeriez vers la page de paiement
+  const handleCheckout = async () => {
+    if (cartItems.length === 0) {
+      toast.error("Votre panier est vide");
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      // Format items for Stripe
+      const checkoutItems = cartItems.map(item => ({
+        id: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }));
+      
+      // Initiate Stripe checkout
+      const result = await initiateStripeCheckout(checkoutItems);
+      
+      if (!result.success) {
+        throw new Error("Échec de l'initialisation du paiement");
+      }
+      
+      // Dans une application réelle, la redirection se ferait dans la fonction initiateStripeCheckout
+    } catch (error) {
+      console.error("Erreur lors du paiement:", error);
+      toast.error("Une erreur s'est produite lors du paiement");
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   return (
@@ -202,8 +233,22 @@ const CartPage: React.FC = () => {
                     <Button 
                       className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
                       onClick={handleCheckout}
+                      disabled={isProcessing}
                     >
-                      Payer
+                      {isProcessing ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Traitement...
+                        </span>
+                      ) : (
+                        <>
+                          <CreditCard className="mr-2 h-5 w-5" />
+                          Payer avec Stripe
+                        </>
+                      )}
                     </Button>
                     
                     <Link to="/products">
