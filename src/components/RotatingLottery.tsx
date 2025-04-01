@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Lottery } from './LotteryCard';
 import { 
@@ -9,7 +9,8 @@ import {
   CarouselNext,
   CarouselPrevious
 } from '@/components/ui/carousel';
-import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Calendar, Users } from 'lucide-react';
 
 interface RotatingLotteryProps {
   lotteries: Lottery[];
@@ -17,6 +18,22 @@ interface RotatingLotteryProps {
 
 const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Format date function
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "À définir";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  // Calculate progress percentage
+  const getProgressPercent = (current: number, target: number) => {
+    return Math.min((current / target) * 100, 100);
+  };
 
   // If no lotteries, display a message
   if (!lotteries || lotteries.length === 0) {
@@ -48,7 +65,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
               <Link to={`/lotteries#${lottery.id}`} className="block">
                 <div className={`h-full rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 carousel-card ${index === activeIndex ? 'active' : ''}`}>
                   <div className="relative aspect-[3/4] overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div>
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10"></div>
                     <img 
                       src={lottery.image} 
                       alt={lottery.title}
@@ -58,12 +75,35 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
                       {lottery.value.toFixed(2)} €
                     </div>
                     
+                    {/* Lottery details overlay */}
                     <div className="absolute bottom-0 left-0 w-full p-4 text-white z-20">
                       <h3 className="text-lg font-semibold">{lottery.title}</h3>
-                      <div className="mt-2 flex justify-between items-center">
-                        <span className="text-sm text-winshirt-blue-light">
-                          {lottery.currentParticipants} / {lottery.targetParticipants}
-                        </span>
+                      <p className="text-sm text-gray-200 mt-1 line-clamp-2">{lottery.description}</p>
+                      
+                      {/* Progress section */}
+                      <div className="mt-3 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-winshirt-blue-light flex items-center gap-1">
+                            <Users size={12} />
+                            {lottery.currentParticipants} participants
+                          </span>
+                          <span className="text-gray-400">
+                            Objectif: {lottery.targetParticipants}
+                          </span>
+                        </div>
+                        <Progress 
+                          value={getProgressPercent(lottery.currentParticipants, lottery.targetParticipants)} 
+                          className="h-2 bg-winshirt-space-light"
+                        />
+                      </div>
+                      
+                      {/* Date section */}
+                      <div className="mt-3 flex items-center gap-2 text-winshirt-purple-light text-sm">
+                        <Calendar size={14} />
+                        <span>Tirage le {formatDate(lottery.endDate)}</span>
+                      </div>
+                      
+                      <div className="mt-2 flex justify-end">
                         <span className="text-xs bg-winshirt-purple/50 rounded-full px-3 py-1">
                           Détails
                         </span>
