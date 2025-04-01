@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,10 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Link, useNavigate } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { login, register, isAuthenticated } = useAuth();
+  
+  // Si déjà connecté, rediriger vers la page du compte
+  if (isAuthenticated) {
+    navigate('/account');
+  }
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -29,9 +37,7 @@ const LoginPage: React.FC = () => {
       return;
     }
     
-    // Simulate successful login
-    toast.success("Connexion réussie!");
-    navigate('/account');
+    login(loginEmail, loginPassword);
   };
   
   const handleRegister = (e: React.FormEvent) => {
@@ -47,9 +53,7 @@ const LoginPage: React.FC = () => {
       return;
     }
     
-    // Simulate successful registration
-    toast.success("Inscription réussie! Vous pouvez maintenant vous connecter.");
-    navigate('/account');
+    register(registerName, registerEmail, registerPassword);
   };
   
   return (
@@ -105,6 +109,11 @@ const LoginPage: React.FC = () => {
                         onChange={(e) => setLoginPassword(e.target.value)}
                         className="bg-winshirt-space-light border-winshirt-purple/30"
                       />
+                    </div>
+                    <div className="text-sm text-amber-400 mt-2">
+                      <p>Pour tester en tant qu'admin:</p>
+                      <p>Email: admin@winshirt.com</p>
+                      <p>Mot de passe: admin123</p>
                     </div>
                     <Button type="submit" className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark">
                       Se connecter

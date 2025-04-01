@@ -3,10 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { AuthProvider } from "./contexts/AuthContext";
 
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
@@ -22,37 +23,69 @@ import AdminLotteriesPage from "./pages/AdminLotteriesPage";
 import AdminClientsPage from "./pages/AdminClientsPage";
 import AdminCommandesPage from "./pages/AdminCommandesPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <BrowserRouter>
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/products/:id" element={<ProductDetailPage />} />
-              <Route path="/lotteries" element={<LotteriesPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/account" element={<AccountPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/how-it-works" element={<HowItWorksPage />} />
-              <Route path="/admin/products" element={<AdminProductsPage />} />
-              <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
-              <Route path="/admin/clients" element={<AdminClientsPage />} />
-              <Route path="/admin/commandes" element={<AdminCommandesPage />} />
-              <Route path="/admin/settings" element={<AdminSettingsPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/products/:id" element={<ProductDetailPage />} />
+                <Route path="/lotteries" element={<LotteriesPage />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/how-it-works" element={<HowItWorksPage />} />
+                
+                {/* Routes protégées */}
+                <Route path="/account" element={
+                  <ProtectedRoute>
+                    <AccountPage />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Routes Admin protégées */}
+                <Route path="/admin/products" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminProductsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/lotteries" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminLotteriesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/clients" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminClientsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/commandes" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminCommandesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/settings" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminSettingsPage />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

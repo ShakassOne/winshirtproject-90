@@ -1,15 +1,23 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, User, Menu, X } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, isAdmin, user, logout } = useAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -50,6 +58,14 @@ const Navbar: React.FC = () => {
               >
                 Comment ça marche
               </Link>
+              {isAdmin && (
+                <Link 
+                  to="/admin/lotteries" 
+                  className={`nav-link text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
+                >
+                  Administration
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -63,16 +79,31 @@ const Navbar: React.FC = () => {
                 </span>
               </Button>
             </Link>
-            <Link to="/account">
-              <Button variant="ghost" size="icon" className="text-white hover:text-winshirt-blue-light">
-                <User className="h-5 w-5" />
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full">
-                Connexion
-              </Button>
-            </Link>
+            
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-2">
+                <Link to="/account">
+                  <Button variant="ghost" className="text-white hover:text-winshirt-blue-light flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    <span className="max-w-[100px] truncate">{user?.name || 'Mon compte'}</span>
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleLogout}
+                  className="text-white hover:text-red-400"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
+            ) : (
+              <Link to="/login">
+                <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full">
+                  Connexion
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -119,6 +150,15 @@ const Navbar: React.FC = () => {
             >
               Comment ça marche
             </Link>
+            {isAdmin && (
+              <Link 
+                to="/admin/lotteries" 
+                className={`nav-link text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Administration
+              </Link>
+            )}
             <div className="flex space-x-4 pt-2">
               <Link to="/cart" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button variant="ghost" size="icon" className="relative text-white hover:text-winshirt-blue-light">
@@ -128,16 +168,34 @@ const Navbar: React.FC = () => {
                   </span>
                 </Button>
               </Link>
-              <Link to="/account" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="ghost" size="icon" className="text-white hover:text-winshirt-blue-light">
-                  <User className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full">
-                  Connexion
-                </Button>
-              </Link>
+              
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-2">
+                  <Link to="/account" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="text-white hover:text-winshirt-blue-light flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      <span className="max-w-[100px] truncate">{user?.name || 'Mon compte'}</span>
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-white hover:text-red-400"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                </div>
+              ) : (
+                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full">
+                    Connexion
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         )}
