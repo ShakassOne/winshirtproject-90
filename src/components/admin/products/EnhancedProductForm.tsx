@@ -4,6 +4,7 @@ import { UseFormReturn } from "react-hook-form";
 import { ExtendedLottery } from '@/types/lottery';
 import LotterySelection from './LotterySelection';
 import ProductForm from './ProductForm';
+import { Form } from "@/components/ui/form";
 
 interface ProductFormProps {
   isCreating: boolean;
@@ -76,13 +77,15 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
       {(isCreating || selectedProductId) && activeLotteries.length > 0 && (
         <div className="mt-8 p-4 border border-winshirt-purple/20 rounded-lg">
           <h3 className="text-lg font-medium text-white mb-4">Sélection avancée de loteries</h3>
-          <LotterySelection
-            lotteries={activeLotteries}
-            selectedLotteries={selectedLotteries}
-            onToggleLottery={toggleLottery}
-            onSelectAll={selectAllLotteries || (() => {})}
-            onDeselectAll={deselectAllLotteries || (() => {})}
-          />
+          <Form {...form}>
+            <LotterySelection
+              lotteries={activeLotteries}
+              selectedLotteries={selectedLotteries}
+              onToggleLottery={toggleLottery}
+              onSelectAll={selectAllLotteries || (() => {})}
+              onDeselectAll={deselectAllLotteries || (() => {})}
+            />
+          </Form>
         </div>
       )}
     </div>
