@@ -64,8 +64,8 @@ const AdminNavigation: React.FC = () => {
               isActive(item.path) && `bg-${item.color}/30`
             )}
           >
-            <item.icon size={26} className={`text-${item.color}`} />
-            <span className="text-sm font-medium">{item.name}</span>
+            <item.icon size={30} className={`text-${item.color}`} />
+            <span className="text-base font-medium">{item.name}</span>
           </Button>
         </Link>
       ))}
@@ -76,20 +76,20 @@ const AdminNavigation: React.FC = () => {
   const DesktopMenu = () => (
     <div className={cn(
       "bg-winshirt-space border border-winshirt-purple/20 rounded-full shadow-lg transition-all duration-300",
-      isExpanded ? "px-6 py-4" : "px-3 py-2"
+      isExpanded ? "px-8 py-5" : "px-4 py-3"
     )}>
       {/* Toggle expand button */}
       <Button 
         variant="ghost" 
         size="sm"
-        className="rounded-full absolute -top-12 left-1/2 transform -translate-x-1/2 bg-winshirt-space border border-winshirt-purple/20 text-white hover:bg-winshirt-purple/20 h-10 w-10"
+        className="rounded-full absolute -top-14 left-1/2 transform -translate-x-1/2 bg-winshirt-space border border-winshirt-purple/20 text-white hover:bg-winshirt-purple/20 h-12 w-12"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {isExpanded ? <ChevronUp size={22} /> : <Menu size={22} />}
+        {isExpanded ? <ChevronUp size={26} /> : <Menu size={26} />}
       </Button>
 
       <div className={cn(
-        "flex flex-wrap justify-center gap-3",
+        "flex flex-wrap justify-center gap-4",
         isExpanded ? "flex-col md:flex-row" : "flex-row"
       )}>
         {navigationItems.map((item) => (
@@ -97,11 +97,11 @@ const AdminNavigation: React.FC = () => {
             <Button 
               variant="ghost" 
               className={cn(
-                "rounded-full hover:bg-" + item.color + "/20 text-white text-lg h-12 px-5",
+                "rounded-full hover:bg-" + item.color + "/20 text-white text-xl h-14 px-6",
                 isActive(item.path) && "bg-" + item.color + "/30"
               )}
             >
-              <item.icon size={24} className="mr-2" />
+              <item.icon size={28} className="mr-3" />
               {item.name}
             </Button>
           </Link>
@@ -111,7 +111,7 @@ const AdminNavigation: React.FC = () => {
   );
 
   return (
-    <div className="fixed z-50 bottom-10 left-1/2 transform -translate-x-1/2">
+    <div className="fixed z-40 bottom-10 left-1/2 transform -translate-x-1/2">
       {/* Menu mobile (drawer) */}
       <div className="md:hidden">
         <Drawer>
@@ -119,9 +119,9 @@ const AdminNavigation: React.FC = () => {
             <Button 
               variant="outline" 
               size="icon"
-              className="rounded-full bg-winshirt-space border border-winshirt-purple/30 text-white hover:bg-winshirt-purple/20 h-14 w-14"
+              className="rounded-full bg-winshirt-space border border-winshirt-purple/30 text-white hover:bg-winshirt-purple/20 h-16 w-16"
             >
-              <Menu size={28} />
+              <Menu size={32} />
             </Button>
           </DrawerTrigger>
           <DrawerContent className="bg-winshirt-space border-t border-winshirt-purple/20">

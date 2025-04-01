@@ -5,7 +5,6 @@ import { ExtendedLottery } from '@/types/lottery';
 import LotterySelection from './LotterySelection';
 import ProductForm from './ProductForm';
 
-// Types d'importation pour les accessoires ProductForm existants
 interface ProductFormProps {
   isCreating: boolean;
   selectedProductId: number | null;
@@ -66,8 +65,8 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
             lotteries={activeLotteries}
             selectedLotteries={selectedLotteries}
             onToggleLottery={toggleLottery}
-            onSelectAll={selectAllLotteries ? selectAllLotteries : () => {}}
-            onDeselectAll={deselectAllLotteries ? deselectAllLotteries : () => {}}
+            onSelectAll={selectAllLotteries || (() => {})}
+            onDeselectAll={deselectAllLotteries || (() => {})}
           />
         </div>
       )}

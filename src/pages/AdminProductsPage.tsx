@@ -95,7 +95,7 @@ const AdminProductsPage: React.FC = () => {
     <>
       <StarBackground />
       
-      <section className="pt-32 pb-16">
+      <section className="pt-32 pb-32">
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Product list */}

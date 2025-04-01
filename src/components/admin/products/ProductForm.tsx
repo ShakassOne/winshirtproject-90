@@ -66,9 +66,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
         <p className="text-gray-400 mb-6">Sélectionnez un produit à modifier ou créez-en un nouveau</p>
         <Button 
           onClick={onCreateProduct}
-          className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+          className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-lg px-6 py-3 h-auto"
         >
-          <Plus size={16} className="mr-1" /> Créer un produit
+          <Plus size={20} className="mr-2" /> Créer un produit
         </Button>
       </div>
     );
@@ -83,12 +83,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white">Nom du produit</FormLabel>
+                <FormLabel className="text-white text-lg">Nom du produit</FormLabel>
                 <FormControl>
                   <Input 
                     placeholder="T-shirt Space Invader" 
                     {...field}
-                    className="bg-winshirt-space-light border-winshirt-purple/30"
+                    className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
                   />
                 </FormControl>
                 <FormMessage />
@@ -101,14 +101,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white">Prix (€)</FormLabel>
+                <FormLabel className="text-white text-lg">Prix (€)</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
                     step="0.01" 
                     placeholder="29.99" 
                     {...field}
-                    className="bg-winshirt-space-light border-winshirt-purple/30"
+                    className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
                   />
                 </FormControl>
                 <FormMessage />
@@ -122,12 +122,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Description</FormLabel>
+              <FormLabel className="text-white text-lg">Description</FormLabel>
               <FormControl>
                 <Textarea 
                   placeholder="Description du produit..." 
                   {...field}
-                  className="bg-winshirt-space-light border-winshirt-purple/30 min-h-[100px]"
+                  className="bg-winshirt-space-light border-winshirt-purple/30 min-h-[100px] text-lg"
                 />
               </FormControl>
               <FormMessage />
@@ -140,15 +140,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
           name="image"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">URL de l'image</FormLabel>
+              <FormLabel className="text-white text-lg">URL de l'image</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="https://example.com/image.jpg" 
                   {...field}
-                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                  className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
                 />
               </FormControl>
-              <FormDescription className="text-gray-400">
+              <FormDescription className="text-gray-400 text-base">
                 Entrez l'URL de l'image du produit
               </FormDescription>
               <FormMessage />
@@ -162,17 +162,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white">Gamme de produit</FormLabel>
+                <FormLabel className="text-white text-lg">Gamme de produit</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
                       <SelectValue placeholder="Sélectionner une gamme" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
                     {productTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -190,17 +190,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="productType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white">Type de produit</FormLabel>
+                <FormLabel className="text-white text-lg">Type de produit</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
                       <SelectValue placeholder="Sélectionner un type" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
                     {productCategories.map(type => (
                       <SelectItem key={type} value={type}>
                         {type}
@@ -218,17 +218,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="sleeveType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white">Type de manches</FormLabel>
+                <FormLabel className="text-white text-lg">Type de manches</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
                       <SelectValue placeholder="Sélectionner un type" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
                     {sleeveTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         {type}
@@ -248,7 +248,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           name="sizes"
           render={() => (
             <FormItem>
-              <FormLabel className="text-white">Tailles disponibles</FormLabel>
+              <FormLabel className="text-white text-lg">Tailles disponibles</FormLabel>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mt-2">
                 {availableSizes.map(size => {
                   const isSelected = watchedSizes.includes(size);
@@ -257,7 +257,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       key={size}
                       type="button"
                       variant={isSelected ? "default" : "outline"}
-                      className={isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"}
+                      className={`${isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"} text-lg h-12`}
                       onClick={() => isSelected ? removeSize(size) : addSize(size)}
                     >
                       {size}
@@ -276,7 +276,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           name="colors"
           render={() => (
             <FormItem>
-              <FormLabel className="text-white">Couleurs disponibles</FormLabel>
+              <FormLabel className="text-white text-lg">Couleurs disponibles</FormLabel>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                 {availableColors.map(color => {
                   const isSelected = watchedColors.includes(color);
@@ -285,7 +285,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       key={color}
                       type="button"
                       variant={isSelected ? "default" : "outline"}
-                      className={isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"}
+                      className={`${isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"} text-lg h-12`}
                       onClick={() => isSelected ? removeColor(color) : addColor(color)}
                     >
                       {color}
@@ -304,32 +304,32 @@ const ProductForm: React.FC<ProductFormProps> = ({
           name="linkedLotteries"
           render={() => (
             <FormItem>
-              <FormLabel className="text-white">Loteries associées</FormLabel>
+              <FormLabel className="text-white text-lg">Loteries associées</FormLabel>
               <div className="grid grid-cols-1 gap-2 mt-2">
                 {activeLotteries.map(lottery => {
                   const isSelected = watchedLotteries.includes(lottery.id.toString());
                   return (
                     <div 
                       key={lottery.id}
-                      className={`p-3 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
+                      className={`p-4 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
                       onClick={() => toggleLottery(lottery.id.toString())}
                     >
                       <input 
                         type="checkbox" 
                         checked={isSelected}
                         onChange={() => {}}
-                        className="mr-3"
+                        className="mr-4 h-5 w-5"
                       />
                       <div>
-                        <h4 className="font-medium text-white">{lottery.title}</h4>
-                        <p className="text-sm text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
+                        <h4 className="font-medium text-white text-lg">{lottery.title}</h4>
+                        <p className="text-base text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
                       </div>
                     </div>
                   );
                 })}
                 
                 {activeLotteries.length === 0 && (
-                  <p className="text-gray-400">Aucune loterie active disponible</p>
+                  <p className="text-gray-400 text-lg">Aucune loterie active disponible</p>
                 )}
               </div>
               <FormMessage />
@@ -337,18 +337,18 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
-        <div className="flex justify-end space-x-2 pt-4">
+        <div className="flex justify-end space-x-3 pt-4">
           <Button 
             type="button" 
             variant="outline" 
             onClick={onCancel}
-            className="border-winshirt-purple/30 text-white"
+            className="border-winshirt-purple/30 text-white text-lg px-6 py-3 h-auto"
           >
             Annuler
           </Button>
           <Button 
             type="submit"
-            className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+            className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-lg px-6 py-3 h-auto"
           >
             {isCreating ? "Créer le produit" : "Mettre à jour"}
           </Button>
