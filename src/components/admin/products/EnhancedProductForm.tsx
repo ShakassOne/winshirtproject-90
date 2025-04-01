@@ -66,8 +66,8 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
             lotteries={activeLotteries}
             selectedLotteries={selectedLotteries}
             onToggleLottery={toggleLottery}
-            onSelectAll={selectAllLotteries}
-            onDeselectAll={deselectAllLotteries}
+            onSelectAll={selectAllLotteries ? selectAllLotteries : () => {}}
+            onDeselectAll={deselectAllLotteries ? deselectAllLotteries : () => {}}
           />
         </div>
       )}
