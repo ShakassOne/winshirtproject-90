@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries } from '@/data/mockData';
@@ -167,6 +166,20 @@ const AdminClientsPage: React.FC = () => {
     setShowForm(true);
   };
   
+  // Send welcome email simulation
+  const sendWelcomeEmail = (client: Client) => {
+    // This is a simulation of sending an email
+    console.info(`[SIMULATION EMAIL] À: ${client.email}, Sujet: Bienvenue sur WinShirt`);
+    console.info(`[SIMULATION EMAIL] Corps du message: Bonjour ${client.name},
+
+Merci de vous être inscrit sur WinShirt. Votre compte a été créé avec succès.
+
+Bien cordialement,
+L'équipe WinShirt`);
+
+    // In a real application, you would call an API to send the email
+  };
+  
   const handleSaveClient = (clientData: Client) => {
     let updatedClients: Client[];
     
@@ -188,11 +201,21 @@ const AdminClientsPage: React.FC = () => {
         wonLotteries: []
       };
       updatedClients = [...clients, newClient];
+      
+      // Send welcome email for new clients
+      sendWelcomeEmail(newClient);
+      
       toast.success("Client ajouté avec succès");
     }
     
+    // Update clients state
     setClients(updatedClients);
+    setFilteredClients(updatedClients); // Update filtered clients too
+    
+    // Save to localStorage
     localStorage.setItem('clients', JSON.stringify(updatedClients));
+    
+    // Close form
     setShowForm(false);
     setEditingClient(null);
   };
