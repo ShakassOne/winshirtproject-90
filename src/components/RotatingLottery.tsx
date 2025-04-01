@@ -42,13 +42,13 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
             >
               <Link to={`/lotteries#${lottery.id}`}>
                 <div className="w-full h-full pb-6">
-                  <Card className="bg-winshirt-space-light rounded-2xl overflow-hidden border border-winshirt-purple/30 hover:shadow-[0_0_20px_rgba(155,135,245,0.3)] transition-all duration-300 hover:-translate-y-1">
+                  <Card className="rounded-3xl overflow-hidden border border-winshirt-purple/30 bg-winshirt-space-light hover:shadow-[0_0_20px_rgba(155,135,245,0.3)] transition-all duration-300 hover:-translate-y-1">
                     <CardContent className="p-0">
                       <div className="relative">
                         <img 
                           src={lottery.image} 
                           alt={lottery.title}
-                          className="w-full h-56 object-cover" // Increased height for larger thumbnails
+                          className="w-full h-60 object-cover" 
                         />
                         <div className="absolute top-0 right-0 bg-winshirt-blue-dark/80 text-white px-3 py-1 rounded-bl-lg">
                           Valeur: {lottery.value.toFixed(2)} €
@@ -73,8 +73,8 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="left-2 lg:-left-10" />
-        <CarouselNext className="right-2 lg:-right-10" />
+        <CarouselPrevious className="left-2 lg:-left-10 rounded-full" />
+        <CarouselNext className="right-2 lg:-right-10 rounded-full" />
       </Carousel>
     </div>
   );
