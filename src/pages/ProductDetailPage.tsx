@@ -11,6 +11,13 @@ import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
 import { ExtendedProduct } from '@/types/product';
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious
+} from "@/components/ui/carousel";
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -150,6 +157,12 @@ const ProductDetailPage: React.FC = () => {
   // Récupérer les loteries actives
   const activeLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
   
+  // Préparer les images pour le carrousel
+  const productImages = [product.image];
+  if (product.secondaryImage) {
+    productImages.push(product.secondaryImage);
+  }
+  
   return (
     <>
       <StarBackground />
@@ -158,22 +171,29 @@ const ProductDetailPage: React.FC = () => {
         <div className="container mx-auto px-4 md:px-8">
           <div className="winshirt-card overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
-              {/* Product Image */}
+              {/* Product Image Carousel */}
               <div className="rounded-lg overflow-hidden">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="w-full h-auto object-cover"
-                />
-                
-                {/* Image secondaire si présente */}
-                {product.secondaryImage && (
-                  <img 
-                    src={product.secondaryImage} 
-                    alt={`${product.name} - vue alternative`} 
-                    className="w-full h-auto object-cover mt-4"
-                  />
-                )}
+                <Carousel className="w-full">
+                  <CarouselContent>
+                    {productImages.map((image, index) => (
+                      <CarouselItem key={index}>
+                        <div className="flex aspect-square items-center justify-center p-1">
+                          <img 
+                            src={image} 
+                            alt={`${product.name} - vue ${index + 1}`} 
+                            className="w-full h-auto object-cover rounded-lg"
+                          />
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  {productImages.length > 1 && (
+                    <>
+                      <CarouselPrevious className="left-2" />
+                      <CarouselNext className="right-2" />
+                    </>
+                  )}
+                </Carousel>
               </div>
               
               {/* Product Details */}
