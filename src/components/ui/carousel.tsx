@@ -205,9 +205,9 @@ const CarouselPrevious = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        "absolute h-8 w-8 rounded-full",
+        "absolute h-8 w-8 rounded-full bg-winshirt-space-light border-winshirt-purple/30",
         orientation === "horizontal"
-          ? "top-1/2 -translate-y-1/2 left-4" // Changed position to be within carousel
+          ? "top-1/2 -translate-y-1/2" // Keeping this default positioning
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
         className
       )}
@@ -234,9 +234,9 @@ const CarouselNext = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        "absolute h-8 w-8 rounded-full",
+        "absolute h-8 w-8 rounded-full bg-winshirt-space-light border-winshirt-purple/30",
         orientation === "horizontal"
-          ? "top-1/2 -translate-y-1/2 right-4" // Changed position to be within carousel
+          ? "top-1/2 -translate-y-1/2" // Keeping this default positioning 
           : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
         className
       )}

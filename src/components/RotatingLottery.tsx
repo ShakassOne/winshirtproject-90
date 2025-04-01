@@ -26,55 +26,57 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
   }
 
   return (
-    <Carousel
-      opts={{
-        align: "center",
-        loop: true,
-      }}
-      className="w-full max-w-4xl mx-auto"
-    >
-      <CarouselContent className="-ml-2 md:-ml-4">
-        {lotteries.map((lottery) => (
-          <CarouselItem 
-            key={lottery.id} 
-            className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3"
-          >
-            <Link to={`/lotteries#${lottery.id}`}>
-              <div className="w-full h-full pb-6">
-                <Card className="bg-winshirt-space-light rounded-2xl overflow-hidden border border-winshirt-purple/30 hover:shadow-[0_0_20px_rgba(155,135,245,0.3)] transition-all duration-300 hover:-translate-y-1">
-                  <CardContent className="p-0">
-                    <div className="relative">
-                      <img 
-                        src={lottery.image} 
-                        alt={lottery.title}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute top-0 right-0 bg-winshirt-blue-dark/80 text-white px-3 py-1 rounded-bl-lg">
-                        Valeur: {lottery.value.toFixed(2)} €
+    <div className="w-[80%] mx-auto relative">
+      <Carousel
+        opts={{
+          align: "center",
+          loop: true,
+        }}
+        className="w-full"
+      >
+        <CarouselContent className="-ml-4">
+          {lotteries.map((lottery) => (
+            <CarouselItem 
+              key={lottery.id} 
+              className="pl-4 md:basis-1/2 lg:basis-1/3"
+            >
+              <Link to={`/lotteries#${lottery.id}`}>
+                <div className="w-full h-full pb-6">
+                  <Card className="bg-winshirt-space-light rounded-2xl overflow-hidden border border-winshirt-purple/30 hover:shadow-[0_0_20px_rgba(155,135,245,0.3)] transition-all duration-300 hover:-translate-y-1">
+                    <CardContent className="p-0">
+                      <div className="relative">
+                        <img 
+                          src={lottery.image} 
+                          alt={lottery.title}
+                          className="w-full h-56 object-cover" // Increased height for larger thumbnails
+                        />
+                        <div className="absolute top-0 right-0 bg-winshirt-blue-dark/80 text-white px-3 py-1 rounded-bl-lg">
+                          Valeur: {lottery.value.toFixed(2)} €
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-4 flex-grow">
-                      <h3 className="text-lg font-semibold text-white mb-2">{lottery.title}</h3>
-                      <p className="text-sm text-gray-300 line-clamp-2">{lottery.description}</p>
-                      <div className="mt-3 flex justify-between items-center text-sm">
-                        <span className="text-winshirt-blue-light">
-                          {lottery.currentParticipants} / {lottery.targetParticipants}
-                        </span>
-                        <span className="bg-winshirt-purple/30 rounded-full px-3 py-1 text-winshirt-purple-light">
-                          Cliquez pour voir
-                        </span>
+                      <div className="p-4 flex-grow">
+                        <h3 className="text-lg font-semibold text-white mb-2">{lottery.title}</h3>
+                        <p className="text-sm text-gray-300 line-clamp-2">{lottery.description}</p>
+                        <div className="mt-3 flex justify-between items-center text-sm">
+                          <span className="text-winshirt-blue-light">
+                            {lottery.currentParticipants} / {lottery.targetParticipants}
+                          </span>
+                          <span className="bg-winshirt-purple/30 rounded-full px-3 py-1 text-winshirt-purple-light">
+                            Cliquez pour voir
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </Link>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious className="left-0 lg:-left-12" />
-      <CarouselNext className="right-0 lg:-right-12" />
-    </Carousel>
+                    </CardContent>
+                  </Card>
+                </div>
+              </Link>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious className="left-2 lg:-left-10" />
+        <CarouselNext className="right-2 lg:-right-10" />
+      </Carousel>
+    </div>
   );
 };
 
