@@ -2,7 +2,7 @@
 import React from 'react';
 import { Form } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
-import { Product } from '@/components/ProductCard';
+import { ExtendedProduct } from '@/types/product';
 import ProductSelection from './ProductSelection';
 import EmptyFormState from './form/EmptyFormState';
 import BasicLotteryInfo from './form/BasicLotteryInfo';
@@ -14,7 +14,7 @@ interface LotteryFormProps {
   selectedLotteryId: number | null;
   form: UseFormReturn<any>;
   lotteryStatuses: string[];
-  products: Product[];
+  products: ExtendedProduct[];
   onSubmit: (data: any) => void;
   onCancel: () => void;
   onCreateClick: () => void;

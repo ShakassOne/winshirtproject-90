@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
-import { Product } from '@/components/ProductCard';
+import { ExtendedProduct } from '@/types/product';
 
 export const useLotteryForm = (
   lotteries: ExtendedLottery[],
   setLotteries: React.Dispatch<React.SetStateAction<ExtendedLottery[]>>,
-  products: Product[]
+  products: ExtendedProduct[]
 ) => {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedLotteryId, setSelectedLotteryId] = useState<number | null>(null);

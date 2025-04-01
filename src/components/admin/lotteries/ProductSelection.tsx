@@ -4,10 +4,10 @@ import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormLabel } from '@/components/ui/form';
-import { Product } from '@/components/ProductCard';
+import { ExtendedProduct } from '@/types/product';
 
 interface ProductSelectionProps {
-  products: Product[];
+  products: ExtendedProduct[];
   selectedProducts: string[];
   onToggleProduct: (productId: string) => void;
   onSelectAll: () => void;

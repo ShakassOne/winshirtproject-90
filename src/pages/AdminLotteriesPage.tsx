@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries, mockProducts } from '@/data/mockData';
 import { ExtendedLottery } from '@/types/lottery';
-import { Product } from '@/components/ProductCard';
+import { ExtendedProduct } from '@/types/product';
 import LotteryList from '@/components/admin/lotteries/LotteryList';
 import LotteryForm from '@/components/admin/lotteries/LotteryForm';
 import { useLotteryForm } from '@/hooks/useLotteryForm';
@@ -14,7 +13,7 @@ import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const AdminLotteriesPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts);
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   
   // Charger les produits depuis localStorage au montage
