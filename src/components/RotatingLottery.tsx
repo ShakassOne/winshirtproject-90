@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Lottery } from './LotteryCard';
 import { Link } from 'react-router-dom';
+import { GripVertical } from 'lucide-react';
 
 interface RotatingLotteryProps {
   lotteries: Lottery[];
@@ -9,14 +10,21 @@ interface RotatingLotteryProps {
 
 const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [currentTranslate, setCurrentTranslate] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   
+  // Auto-rotation
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % lotteries.length);
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [lotteries.length]);
+    if (!isDragging) {
+      const interval = setInterval(() => {
+        setActiveIndex((prev) => (prev + 1) % lotteries.length);
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [lotteries.length, isDragging]);
   
   const getPositionStyle = (index: number) => {
     if (lotteries.length <= 1) return {};
@@ -77,8 +85,70 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     };
   };
   
+  // Touch and drag handlers
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    
+    // Get the starting position
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    setStartX(clientX);
+    
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('touchmove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchend', handleDragEnd);
+  };
+  
+  const handleDragMove = (e: MouseEvent | TouchEvent) => {
+    if (!isDragging) return;
+    
+    // Prevent default behavior to avoid scrolling while dragging
+    e.preventDefault();
+    
+    // Get the current position
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const diff = clientX - startX;
+    
+    setCurrentTranslate(diff);
+  };
+  
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    
+    // Clean up event listeners
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('touchmove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.removeEventListener('touchend', handleDragEnd);
+    
+    // Determine if we should move to the next or previous item
+    if (Math.abs(currentTranslate) > 50) {
+      // If dragged more than 50px, change the active index
+      if (currentTranslate > 0) {
+        // Dragged right, show previous
+        setActiveIndex((prev) => (prev - 1 + lotteries.length) % lotteries.length);
+      } else {
+        // Dragged left, show next
+        setActiveIndex((prev) => (prev + 1) % lotteries.length);
+      }
+    }
+    
+    // Reset current translate
+    setCurrentTranslate(0);
+  };
+  
   return (
-    <div className="spinning-lottery h-96 w-full">
+    <div 
+      className="spinning-lottery h-96 w-full relative"
+      ref={containerRef}
+      onMouseDown={handleDragStart}
+      onTouchStart={handleDragStart}
+    >
+      {/* Drag indicator */}
+      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-winshirt-purple/30 text-winshirt-purple-light rounded-full px-3 py-1 flex items-center text-sm z-20">
+        <GripVertical size={16} className="mr-1" /> Glisser pour naviguer
+      </div>
+      
       {lotteries.map((lottery, index) => (
         <Link
           key={lottery.id}
@@ -87,6 +157,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
           style={{
             width: '300px',
             height: '350px',
+            transition: isDragging ? 'none' : 'all 0.5s ease',
             ...getPositionStyle(index),
           }}
         >
