@@ -14,6 +14,8 @@ const ProductsPage: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedProductType, setSelectedProductType] = useState<string>('all');
+  const [selectedSleeveType, setSelectedSleeveType] = useState<string>('all');
   const [selectedLotteryId, setSelectedLotteryId] = useState<string | null>(lotteryIdParam);
   const [products, setProducts] = useState(mockProducts);
   const [lotteries, setLotteries] = useState(mockLotteries);
@@ -89,16 +91,26 @@ const ProductsPage: React.FC = () => {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'all' || (product.type || '') === selectedType;
+    
+    // Filter by quality type (entrée de gamme, standard, premium)
+    const matchesQualityType = selectedType === 'all' || product.type === selectedType;
+    
+    // Filter by product type (T-shirt, Sweatshirt, Polo)
+    const matchesProductType = selectedProductType === 'all' || product.productType === selectedProductType;
+    
+    // Filter by sleeve type (Courtes, Longues)
+    const matchesSleeveType = selectedSleeveType === 'all' || product.sleeveType === selectedSleeveType;
     
     // Filter by lottery if a lottery ID is selected
     const matchesLottery = !selectedLotteryId || 
       (product.linkedLotteries && product.linkedLotteries.includes(Number(selectedLotteryId)));
     
-    return matchesSearch && matchesType && matchesLottery;
+    return matchesSearch && matchesQualityType && matchesProductType && matchesSleeveType && matchesLottery;
   });
   
   const productTypes = ['entrée de gamme', 'standard', 'premium'];
+  const productCategories = ['T-shirt', 'Sweatshirt', 'Polo', 'Autre'];
+  const sleeveTypes = ['Courtes', 'Longues'];
   
   return (
     <>
@@ -128,8 +140,8 @@ const ProductsPage: React.FC = () => {
           
           {/* Filters */}
           <div className="winshirt-card p-6 mb-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-2">
                 <label className="block text-gray-400 mb-2">Rechercher</label>
                 <Input
                   placeholder="Rechercher un produit..."
@@ -139,19 +151,57 @@ const ProductsPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-400 mb-2">Filtrer par type</label>
+                <label className="block text-gray-400 mb-2">Gamme</label>
                 <Select
                   value={selectedType}
                   onValueChange={setSelectedType}
+                >
+                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                    <SelectValue placeholder="Toutes les gammes" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                    <SelectItem value="all">Toutes les gammes</SelectItem>
+                    {productTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-2">Type de produit</label>
+                <Select
+                  value={selectedProductType}
+                  onValueChange={setSelectedProductType}
                 >
                   <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
                     <SelectValue placeholder="Tous les types" />
                   </SelectTrigger>
                   <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
                     <SelectItem value="all">Tous les types</SelectItem>
-                    {productTypes.map(type => (
+                    {productCategories.map(type => (
                       <SelectItem key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-2">Type de manches</label>
+                <Select
+                  value={selectedSleeveType}
+                  onValueChange={setSelectedSleeveType}
+                >
+                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                    <SelectValue placeholder="Tous les types" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    {sleeveTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
                       </SelectItem>
                     ))}
                   </SelectContent>

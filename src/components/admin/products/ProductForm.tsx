@@ -50,6 +50,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
   const availableColors = ['Noir', 'Blanc', 'Bleu', 'Rouge', 'Vert', 'Gris', 'Jaune'];
   const productTypes = ['entrée de gamme', 'standard', 'premium'];
+  const productCategories = ['T-shirt', 'Sweatshirt', 'Polo', 'Autre'];
+  const sleeveTypes = ['Courtes', 'Longues'];
 
   if (!isCreating && !selectedProductId) {
     return (
@@ -149,33 +151,91 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
-        <FormField
-          control={form.control}
-          name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white">Type de produit</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                    <SelectValue placeholder="Sélectionner un type" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                  {productTypes.map(type => (
-                    <SelectItem key={type} value={type}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Gamme de produit</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                      <SelectValue placeholder="Sélectionner une gamme" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                    {productTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="productType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Type de produit</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                      <SelectValue placeholder="Sélectionner un type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                    {productCategories.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="sleeveType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Type de manches</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                      <SelectValue placeholder="Sélectionner un type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                    {sleeveTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
         {/* Sizes */}
         <div>

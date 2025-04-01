@@ -51,6 +51,25 @@ const AdminProductsPage: React.FC = () => {
     loadLotteries();
   }, []);
   
+  // Load products
+  useEffect(() => {
+    const loadProducts = () => {
+      const savedProducts = localStorage.getItem('products');
+      if (savedProducts) {
+        try {
+          const parsedProducts = JSON.parse(savedProducts);
+          if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+            setProducts(parsedProducts);
+          }
+        } catch (error) {
+          console.error("Error loading products from localStorage:", error);
+        }
+      }
+    };
+    
+    loadProducts();
+  }, []);
+  
   // Filter for active lotteries to assign to products
   const activeLotteries = lotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
   
