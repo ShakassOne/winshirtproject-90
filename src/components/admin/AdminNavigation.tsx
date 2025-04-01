@@ -53,19 +53,19 @@ const AdminNavigation: React.FC = () => {
 
   // Contenu pour affichage mobile (drawer)
   const MobileMenu = () => (
-    <div className="flex justify-center w-full py-4 px-2 space-x-4">
+    <div className="flex justify-center w-full py-6 px-3 space-x-5">
       {navigationItems.map((item) => (
         <Link key={item.path} to={item.path}>
           <Button 
             variant="ghost" 
             size="sm"
             className={cn(
-              "flex flex-col items-center space-y-1 h-auto rounded-lg px-2 py-2",
+              "flex flex-col items-center space-y-2 h-auto rounded-lg px-3 py-3",
               isActive(item.path) && `bg-${item.color}/30`
             )}
           >
-            <item.icon size={20} className={`text-${item.color}`} />
-            <span className="text-xs font-medium">{item.name}</span>
+            <item.icon size={26} className={`text-${item.color}`} />
+            <span className="text-sm font-medium">{item.name}</span>
           </Button>
         </Link>
       ))}
@@ -76,20 +76,20 @@ const AdminNavigation: React.FC = () => {
   const DesktopMenu = () => (
     <div className={cn(
       "bg-winshirt-space border border-winshirt-purple/20 rounded-full shadow-lg transition-all duration-300",
-      isExpanded ? "px-4 py-3" : "px-2 py-1"
+      isExpanded ? "px-6 py-4" : "px-3 py-2"
     )}>
       {/* Toggle expand button */}
       <Button 
         variant="ghost" 
         size="sm"
-        className="rounded-full absolute -top-10 left-1/2 transform -translate-x-1/2 bg-winshirt-space border border-winshirt-purple/20 text-white hover:bg-winshirt-purple/20"
+        className="rounded-full absolute -top-12 left-1/2 transform -translate-x-1/2 bg-winshirt-space border border-winshirt-purple/20 text-white hover:bg-winshirt-purple/20 h-10 w-10"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {isExpanded ? <ChevronUp size={18} /> : <Menu size={18} />}
+        {isExpanded ? <ChevronUp size={22} /> : <Menu size={22} />}
       </Button>
 
       <div className={cn(
-        "flex flex-wrap justify-center gap-2",
+        "flex flex-wrap justify-center gap-3",
         isExpanded ? "flex-col md:flex-row" : "flex-row"
       )}>
         {navigationItems.map((item) => (
@@ -97,11 +97,11 @@ const AdminNavigation: React.FC = () => {
             <Button 
               variant="ghost" 
               className={cn(
-                "rounded-full hover:bg-" + item.color + "/20 text-white",
+                "rounded-full hover:bg-" + item.color + "/20 text-white text-lg h-12 px-5",
                 isActive(item.path) && "bg-" + item.color + "/30"
               )}
             >
-              <item.icon size={20} className="mr-2" />
+              <item.icon size={24} className="mr-2" />
               {item.name}
             </Button>
           </Link>
@@ -111,7 +111,7 @@ const AdminNavigation: React.FC = () => {
   );
 
   return (
-    <div className="fixed z-50 bottom-8 left-1/2 transform -translate-x-1/2">
+    <div className="fixed z-50 bottom-10 left-1/2 transform -translate-x-1/2">
       {/* Menu mobile (drawer) */}
       <div className="md:hidden">
         <Drawer>
@@ -119,9 +119,9 @@ const AdminNavigation: React.FC = () => {
             <Button 
               variant="outline" 
               size="icon"
-              className="rounded-full bg-winshirt-space border border-winshirt-purple/30 text-white hover:bg-winshirt-purple/20"
+              className="rounded-full bg-winshirt-space border border-winshirt-purple/30 text-white hover:bg-winshirt-purple/20 h-14 w-14"
             >
-              <Menu size={20} />
+              <Menu size={28} />
             </Button>
           </DrawerTrigger>
           <DrawerContent className="bg-winshirt-space border-t border-winshirt-purple/20">
@@ -139,4 +139,3 @@ const AdminNavigation: React.FC = () => {
 };
 
 export default AdminNavigation;
-

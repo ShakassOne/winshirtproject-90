@@ -39,7 +39,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
   if (!lotteries || lotteries.length === 0) {
     return (
       <div className="h-96 w-full flex items-center justify-center">
-        <p className="text-gray-400">Aucune loterie disponible</p>
+        <p className="text-gray-400 text-xl">Aucune loterie disponible</p>
       </div>
     );
   }
@@ -71,20 +71,20 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
                       alt={lottery.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-3 right-3 bg-winshirt-blue-dark/80 text-white px-3 py-1 rounded-full text-sm z-20">
+                    <div className="absolute top-4 right-4 bg-winshirt-blue-dark/80 text-white px-4 py-1.5 rounded-full text-base font-medium z-20">
                       {lottery.value.toFixed(2)} €
                     </div>
                     
                     {/* Lottery details overlay */}
-                    <div className="absolute bottom-0 left-0 w-full p-4 text-white z-20">
-                      <h3 className="text-lg font-semibold">{lottery.title}</h3>
-                      <p className="text-sm text-gray-200 mt-1 line-clamp-2">{lottery.description}</p>
+                    <div className="absolute bottom-0 left-0 w-full p-5 text-white z-20">
+                      <h3 className="text-xl font-semibold">{lottery.title}</h3>
+                      <p className="text-base text-gray-200 mt-2 line-clamp-2">{lottery.description}</p>
                       
                       {/* Progress section */}
-                      <div className="mt-3 space-y-2">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-winshirt-blue-light flex items-center gap-1">
-                            <Users size={12} />
+                      <div className="mt-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-winshirt-blue-light flex items-center gap-1.5 font-medium">
+                            <Users size={16} />
                             {lottery.currentParticipants} participants
                           </span>
                           <span className="text-gray-400">
@@ -93,18 +93,18 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
                         </div>
                         <Progress 
                           value={getProgressPercent(lottery.currentParticipants, lottery.targetParticipants)} 
-                          className="h-2 bg-winshirt-space-light"
+                          className="h-2.5 bg-winshirt-space-light"
                         />
                       </div>
                       
                       {/* Date section */}
-                      <div className="mt-3 flex items-center gap-2 text-winshirt-purple-light text-sm">
-                        <Calendar size={14} />
+                      <div className="mt-4 flex items-center gap-2 text-winshirt-purple-light text-base">
+                        <Calendar size={18} />
                         <span>Tirage le {formatDate(lottery.endDate)}</span>
                       </div>
                       
-                      <div className="mt-2 flex justify-end">
-                        <span className="text-xs bg-winshirt-purple/50 rounded-full px-3 py-1">
+                      <div className="mt-3 flex justify-end">
+                        <span className="text-sm bg-winshirt-purple/50 rounded-full px-4 py-1.5 font-medium">
                           Détails
                         </span>
                       </div>
@@ -115,7 +115,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <div className="flex items-center justify-center mt-6 gap-2">
+        <div className="flex items-center justify-center mt-8 gap-3">
           {lotteries.map((_, index) => (
             <button
               key={index}
@@ -129,7 +129,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
                 }
                 setActiveIndex(index);
               }}
-              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all text-lg ${
                 activeIndex === index 
                 ? 'border-winshirt-purple bg-winshirt-purple/20 text-white' 
                 : 'border-gray-400/50 text-gray-400'
@@ -140,8 +140,8 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
             </button>
           ))}
         </div>
-        <CarouselPrevious className="left-1 lg:-left-12" />
-        <CarouselNext className="right-1 lg:-right-12" />
+        <CarouselPrevious className="left-1 lg:-left-12 h-12 w-12" />
+        <CarouselNext className="right-1 lg:-right-12 h-12 w-12" />
       </Carousel>
     </div>
   );
