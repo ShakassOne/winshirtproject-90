@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
@@ -7,29 +7,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 const Navbar: React.FC = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMenuHovered, setIsMenuHovered] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
-
-  // Fermer le menu lors du changement de route
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  // Bloquer le défilement lorsque le menu est ouvert
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [isMobileMenuOpen]);
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -41,101 +22,64 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md menu-gray border-b border-winshirt-purple/20">
-      <div className="container mx-auto py-6 px-4 md:px-8">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-winshirt-space/80 backdrop-blur-md border-b border-winshirt-purple/20">
+      <div className="container mx-auto py-4 px-4 md:px-8">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-12">
-            {/* Logo visible uniquement quand le menu est fermé */}
-            {!isMobileMenuOpen && (
-              <Link to="/" className="flex items-center">
-                <h1 className="text-3xl font-bold text-white">
-                  <span className="text-winshirt-purple-light">Win</span>
-                  <span className="text-winshirt-blue-light">Shirt</span>
-                </h1>
+          {/* Logo */}
+          <Link to="/" className="flex items-center">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              <span className="text-winshirt-purple-light">Win</span>
+              <span className="text-winshirt-blue-light">Shirt</span>
+            </h1>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <Link 
+              to="/" 
+              className={`nav-link ${isActive('/') ? 'active' : ''}`}
+            >
+              Accueil
+            </Link>
+            <Link 
+              to="/products" 
+              className={`nav-link ${isActive('/products') ? 'active' : ''}`}
+            >
+              Produits
+            </Link>
+            <Link 
+              to="/lotteries" 
+              className={`nav-link ${isActive('/lotteries') ? 'active' : ''}`}
+            >
+              Loteries
+            </Link>
+            <Link 
+              to="/how-it-works" 
+              className={`nav-link ${isActive('/how-it-works') ? 'active' : ''}`}
+            >
+              Comment ça marche
+            </Link>
+            {isAuthenticated && isAdmin && (
+              <Link 
+                to="/admin/lotteries" 
+                className={`nav-link text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
+              >
+                Administration
               </Link>
             )}
-          </div>
+          </nav>
 
-          {/* Menu burger button - toujours visible */}
-          <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn(
-                "text-white transition-all duration-300 z-50 hover:bg-transparent menu-burger",
-                isMenuHovered && !isMobileMenuOpen ? "scale-110" : "",
-                isMobileMenuOpen ? "rotate-0" : ""
-              )} 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              onMouseEnter={() => setIsMenuHovered(true)}
-              onMouseLeave={() => setIsMenuHovered(false)}
-            >
-              {isMobileMenuOpen ? 
-                <X className="h-8 w-8 animate-in fade-in rotate-in-90" /> : 
-                <Menu className="h-8 w-8 animate-in fade-in" />
-              }
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Menu plein écran avec animation de glissement et effet de flou */}
-      <div 
-        className={cn(
-          "fixed inset-0 bg-winshirt-space/70 backdrop-blur-md z-40 transition-transform duration-300 ease-in-out flex flex-col",
-          isMobileMenuOpen ? "translate-y-0" : "-translate-y-full"
-        )}
-      >
-        <div className="container mx-auto px-4 pt-28 pb-12 h-full flex flex-col">
-          <div className="flex-grow overflow-y-auto">
-            <nav className="grid gap-6 md:gap-8 text-center md:text-left">
-              <Link 
-                to="/" 
-                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-100`}
-              >
-                Accueil
-              </Link>
-              <Link 
-                to="/products" 
-                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/products') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-200`}
-              >
-                Produits
-              </Link>
-              <Link 
-                to="/lotteries" 
-                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/lotteries') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-300`}
-              >
-                Loteries
-              </Link>
-              <Link 
-                to="/how-it-works" 
-                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/how-it-works') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-400`}
-              >
-                Comment ça marche
-              </Link>
-              {isAuthenticated && isAdmin && (
-                <Link 
-                  to="/admin/lotteries" 
-                  className={`nav-link text-2xl md:text-3xl font-medium text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-500`}
-                >
-                  Administration
-                </Link>
-              )}
-            </nav>
-          </div>
-          
-          {/* Actions du footer pour le menu mobile */}
-          <div className="mt-auto pt-8 flex flex-col md:flex-row justify-center md:justify-between items-center gap-6 animate-in fade-in slide-in-from-bottom duration-300 delay-500">
-            <Link to="/cart" className="flex items-center gap-3 text-xl text-white hover:text-winshirt-blue-light">
-              <ShoppingCart className="h-6 w-6" />
-              <span>Panier</span>
+          {/* User actions */}
+          <div className="hidden md:flex items-center space-x-6">
+            <Link to="/cart" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light">
+              <ShoppingCart className="h-5 w-5" />
               <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">0</span>
             </Link>
             
             {isAuthenticated ? (
-              <div className="flex flex-col md:flex-row items-center gap-4">
-                <Link to="/account" className="flex items-center gap-3 text-xl text-white hover:text-winshirt-blue-light">
-                  <User className="h-6 w-6" />
+              <div className="flex items-center gap-4">
+                <Link to="/account" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light">
+                  <User className="h-5 w-5" />
                   <span>{user?.name || 'Mon compte'}</span>
                 </Link>
                 <Button 
@@ -143,19 +87,110 @@ const Navbar: React.FC = () => {
                   onClick={handleLogout}
                   className="text-white hover:text-red-400 flex items-center gap-2"
                 >
-                  <LogOut className="h-6 w-6" />
+                  <LogOut className="h-5 w-5" />
                   <span>Déconnexion</span>
                 </Button>
               </div>
             ) : (
               <Link to="/login">
-                <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full text-xl px-8 py-5">
+                <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full px-6 py-2">
                   Connexion
                 </Button>
               </Link>
             )}
           </div>
+
+          {/* Mobile menu button */}
+          <div className="flex md:hidden">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white" 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
         </div>
+
+        {/* Mobile menu dropdown */}
+        {isMenuOpen && (
+          <div className="md:hidden py-4 mt-4 border-t border-winshirt-purple/20">
+            <nav className="flex flex-col space-y-4 mb-6">
+              <Link 
+                to="/" 
+                className={`nav-link ${isActive('/') ? 'active' : ''}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Accueil
+              </Link>
+              <Link 
+                to="/products" 
+                className={`nav-link ${isActive('/products') ? 'active' : ''}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Produits
+              </Link>
+              <Link 
+                to="/lotteries" 
+                className={`nav-link ${isActive('/lotteries') ? 'active' : ''}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Loteries
+              </Link>
+              <Link 
+                to="/how-it-works" 
+                className={`nav-link ${isActive('/how-it-works') ? 'active' : ''}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Comment ça marche
+              </Link>
+              {isAuthenticated && isAdmin && (
+                <Link 
+                  to="/admin/lotteries" 
+                  className={`nav-link text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Administration
+                </Link>
+              )}
+            </nav>
+            
+            <div className="flex flex-col space-y-4">
+              <Link to="/cart" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light" onClick={() => setIsMenuOpen(false)}>
+                <ShoppingCart className="h-5 w-5" />
+                <span>Panier</span>
+                <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">0</span>
+              </Link>
+              
+              {isAuthenticated ? (
+                <div className="flex flex-col space-y-4">
+                  <Link to="/account" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light" onClick={() => setIsMenuOpen(false)}>
+                    <User className="h-5 w-5" />
+                    <span>{user?.name || 'Mon compte'}</span>
+                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="text-white hover:text-red-400 flex items-center gap-2 justify-start px-0"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span>Déconnexion</span>
+                  </Button>
+                </div>
+              ) : (
+                <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                  <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full w-full">
+                    Connexion
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
