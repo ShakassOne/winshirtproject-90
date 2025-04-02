@@ -78,7 +78,7 @@ const NotificationEmailsManager: React.FC = () => {
   };
   
   // Envoyer un email de test
-  const handleSendTestEmail = () => {
+  const handleSendTestEmail = async () => {
     if (emails.length === 0) {
       toast.error("Aucune adresse email pour recevoir le test");
       return;
@@ -86,18 +86,23 @@ const NotificationEmailsManager: React.FC = () => {
     
     setIsLoading(true);
     
-    // Utilisation du EmailService pour envoyer le mail
-    const success = EmailService.sendTestEmail(emails, testEmailSubject, testEmailContent);
-    
-    setTimeout(() => {
+    try {
+      // Utilisation du EmailService pour envoyer le mail
+      const success = await EmailService.sendTestEmail(emails, testEmailSubject, testEmailContent);
+      
       if (success) {
-        toast.success(`Email de test envoyé à ${emails.length} destinataire(s)`);
+        const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+        toast.success(`Email de test envoyé à ${emails.length} destinataire(s)${isSupabaseConfigured ? ' via Supabase' : ' (simulation)'}`);
       } else {
         toast.error("Erreur lors de l'envoi de l'email de test");
       }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de l'email:", error);
+      toast.error("Erreur lors de l'envoi de l'email de test");
+    } finally {
       setIsLoading(false);
       setIsTestDialogOpen(false);
-    }, 1500);
+    }
   };
   
   return (
