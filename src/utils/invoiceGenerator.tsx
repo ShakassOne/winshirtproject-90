@@ -1,4 +1,3 @@
-
 import { Order } from '@/types/order';
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 
@@ -177,16 +176,14 @@ export const InvoiceDownloadLink = ({ order }: { order: Order }) => (
     document={<InvoiceDocument order={order} />} 
     fileName={`facture-winshirt-${order.id}.pdf`}
   >
-    {({ loading }) => (
-      loading ? "Génération du PDF..." : "Télécharger la facture"
-    )}
+    Télécharger la facture
   </PDFDownloadLink>
 );
 
 // Fonction utilitaire pour afficher la facture dans un nouvel onglet
 export const generateInvoiceUrl = (order: Order): string => {
   // Dans une vraie application, cette fonction appellerait une API
-  // pour générer le PDF et renvoyer une URL, ou stockerait des PDFs pré-générés
+  // pour générer le PDF et renvoyer une URL, ou stocker des PDFs pré-générés
   // Pour cette démo, nous allons utiliser une URL fictive basée sur l'ID de commande
   return `/api/invoices/${order.id}`;
 };
