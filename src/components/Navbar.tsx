@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -44,7 +43,7 @@ const Navbar: React.FC = () => {
                 to="/products" 
                 className={`nav-link text-lg font-medium ${isActive('/products') ? 'active' : ''}`}
               >
-                T-shirts
+                Produits
               </Link>
               <Link 
                 to="/lotteries" 
@@ -134,7 +133,7 @@ const Navbar: React.FC = () => {
               className={`nav-link text-xl font-medium ${isActive('/products') ? 'active' : ''}`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              T-shirts
+              Produits
             </Link>
             <Link 
               to="/lotteries" 
