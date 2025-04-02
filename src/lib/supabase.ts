@@ -85,3 +85,124 @@ export const uploadImage = async (file: File, bucket: string = 'products'): Prom
   }
 };
 
+// Gestion des configurations du site
+export type SlideType = {
+  id: number;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  buttonLink: string;
+  backgroundImage: string;
+  textColor: string;
+  order: number;
+};
+
+export type HomeIntroConfig = {
+  slides: SlideType[];
+  transitionTime: number;
+  showButtons: boolean;
+  showIndicators: boolean;
+  autoPlay: boolean;
+};
+
+// Fonction pour récupérer la configuration de l'intro de la page d'accueil
+export const getHomeIntroConfig = async (): Promise<HomeIntroConfig | null> => {
+  try {
+    if (isSupabaseConfigured()) {
+      // Essayer de récupérer depuis Supabase
+      const { data, error } = await supabase
+        .from('configurations')
+        .select('*')
+        .eq('name', 'home_intro')
+        .single();
+      
+      if (error) {
+        console.error("Erreur lors de la récupération de la configuration:", error);
+        // Fallback au localStorage
+        return getHomeIntroConfigFromLocalStorage();
+      }
+      
+      return data?.value || getDefaultHomeIntroConfig();
+    } else {
+      // Fallback au localStorage si Supabase n'est pas configuré
+      return getHomeIntroConfigFromLocalStorage();
+    }
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la configuration:", error);
+    return getHomeIntroConfigFromLocalStorage();
+  }
+};
+
+// Fonction pour enregistrer la configuration de l'intro
+export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<boolean> => {
+  try {
+    // Sauvegarder dans localStorage pour fallback
+    localStorage.setItem('home_intro_config', JSON.stringify(config));
+    
+    if (isSupabaseConfigured()) {
+      // Essayer de sauvegarder dans Supabase
+      const { error } = await supabase
+        .from('configurations')
+        .upsert({ name: 'home_intro', value: config }, { onConflict: 'name' });
+      
+      if (error) {
+        console.error("Erreur lors de la sauvegarde de la configuration:", error);
+        return false;
+      }
+      
+      return true;
+    } else {
+      // Si Supabase n'est pas configuré, confirmer que localStorage a fonctionné
+      return true;
+    }
+  } catch (error) {
+    console.error("Erreur lors de la sauvegarde de la configuration:", error);
+    return false;
+  }
+};
+
+// Fonction helper pour récupérer depuis localStorage
+const getHomeIntroConfigFromLocalStorage = (): HomeIntroConfig => {
+  try {
+    const config = localStorage.getItem('home_intro_config');
+    if (config) {
+      return JSON.parse(config);
+    }
+  } catch (error) {
+    console.error("Erreur lors de la lecture du localStorage:", error);
+  }
+  
+  return getDefaultHomeIntroConfig();
+};
+
+// Configuration par défaut de l'intro
+export const getDefaultHomeIntroConfig = (): HomeIntroConfig => {
+  return {
+    slides: [
+      {
+        id: 1,
+        title: "Achetez des vêtements, Gagnez des cadeaux incroyables",
+        subtitle: "WinShirt révolutionne le shopping en ligne. Achetez nos vêtements de qualité et participez automatiquement à nos loteries exclusives pour gagner des prix exceptionnels.",
+        buttonText: "Voir les produits",
+        buttonLink: "/products",
+        backgroundImage: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+        textColor: "#FFFFFF",
+        order: 1
+      },
+      {
+        id: 2,
+        title: "Des loteries exclusives",
+        subtitle: "Participez à nos loteries et tentez de gagner des prix exceptionnels.",
+        buttonText: "Voir les loteries",
+        buttonLink: "/lotteries",
+        backgroundImage: "https://images.unsplash.com/photo-1493397212122-2b85dda8106b",
+        textColor: "#FFFFFF",
+        order: 2
+      }
+    ],
+    transitionTime: 5000,
+    showButtons: true,
+    showIndicators: true,
+    autoPlay: true
+  };
+};

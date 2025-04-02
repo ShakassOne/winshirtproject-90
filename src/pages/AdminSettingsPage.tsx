@@ -5,8 +5,9 @@ import AdminNavigation from '@/components/admin/AdminNavigation';
 import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
 import ShippingSettingsManager from '@/components/admin/settings/ShippingSettingsManager';
 import TestEmailButton from '@/components/admin/settings/TestEmailButton';
+import HomeIntroManager from '@/components/admin/settings/HomeIntroManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Bell, ShieldCheck, Database, Truck } from 'lucide-react';
+import { Settings, Bell, ShieldCheck, Database, Truck, Home } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AdminSettingsPage: React.FC = () => {
@@ -29,8 +30,12 @@ const AdminSettingsPage: React.FC = () => {
             />
           </div>
           
-          <Tabs defaultValue="notifications" className="w-full">
+          <Tabs defaultValue="home" className="w-full">
             <TabsList className="mb-8 bg-winshirt-space-light border border-winshirt-purple/20">
+              <TabsTrigger value="home" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
+                <Home className="h-4 w-4 mr-2" />
+                Page d'accueil
+              </TabsTrigger>
               <TabsTrigger value="notifications" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
@@ -52,6 +57,10 @@ const AdminSettingsPage: React.FC = () => {
                 Base de données
               </TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="home" className="space-y-6">
+              <HomeIntroManager />
+            </TabsContent>
             
             <TabsContent value="notifications" className="space-y-6">
               <NotificationEmailsManager />
