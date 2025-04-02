@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Order, DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
 import { Button } from '@/components/ui/button';
@@ -109,11 +108,7 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
   // Fonction pour formater une date
   const displayDate = (dateString?: string) => {
     if (!dateString) return "Non défini";
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return formatDate(dateString);
   };
   
   return (
