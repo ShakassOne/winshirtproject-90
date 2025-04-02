@@ -45,12 +45,15 @@ const Navbar: React.FC = () => {
       <div className="container mx-auto py-6 px-4 md:px-8">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-12">
-            <Link to="/" className="flex items-center">
-              <h1 className="text-3xl font-bold text-white">
-                <span className="text-winshirt-purple-light">Win</span>
-                <span className="text-winshirt-blue-light">Shirt</span>
-              </h1>
-            </Link>
+            {/* Le logo ne sera visible que lorsque le menu est fermé */}
+            {!isMobileMenuOpen && (
+              <Link to="/" className="flex items-center">
+                <h1 className="text-3xl font-bold text-white">
+                  <span className="text-winshirt-purple-light">Win</span>
+                  <span className="text-winshirt-blue-light">Shirt</span>
+                </h1>
+              </Link>
+            )}
           </div>
 
           {/* Menu burger button - always visible */}
@@ -59,7 +62,7 @@ const Navbar: React.FC = () => {
               variant="ghost" 
               size="icon" 
               className={cn(
-                "text-white transition-all duration-300 z-50 hover:bg-transparent",
+                "text-white transition-all duration-300 z-50 hover:bg-transparent menu-burger",
                 isMenuHovered && !isMobileMenuOpen ? "scale-110" : "",
                 isMobileMenuOpen ? "rotate-0" : ""
               )} 
@@ -76,10 +79,10 @@ const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Fullscreen Menu with slide animation */}
+      {/* Fullscreen Menu with slide animation et effet blur */}
       <div 
         className={cn(
-          "fixed inset-0 bg-winshirt-space z-40 transition-transform duration-300 ease-in-out",
+          "fixed inset-0 bg-winshirt-space/80 backdrop-blur-md z-40 transition-transform duration-300 ease-in-out",
           isMobileMenuOpen ? "translate-y-0" : "-translate-y-full"
         )}
       >

@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -125,6 +124,11 @@
   /* Désactiver le background au survol du menu burger */
   .menu-burger:hover {
     background-color: transparent !important;
+  }
+
+  /* Style pour le menu transparent avec effet de flou */
+  .menu-gray {
+    background-color: rgba(26, 31, 44, 0.5) !important;
   }
 
   /* Nouveau style de carousel */
