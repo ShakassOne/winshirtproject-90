@@ -1,14 +1,35 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuHovered, setIsMenuHovered] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
+
+  // Fermer le menu lors du changement de route
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Bloquer le défilement lorsque le menu est ouvert
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isMobileMenuOpen]);
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -31,40 +52,9 @@ const Navbar: React.FC = () => {
               </h1>
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-10">
-              <Link 
-                to="/" 
-                className={`nav-link text-lg font-medium ${isActive('/') ? 'active' : ''}`}
-              >
-                Accueil
-              </Link>
-              <Link 
-                to="/products" 
-                className={`nav-link text-lg font-medium ${isActive('/products') ? 'active' : ''}`}
-              >
-                Produits
-              </Link>
-              <Link 
-                to="/lotteries" 
-                className={`nav-link text-lg font-medium ${isActive('/lotteries') ? 'active' : ''}`}
-              >
-                Loteries
-              </Link>
-              <Link 
-                to="/how-it-works" 
-                className={`nav-link text-lg font-medium ${isActive('/how-it-works') ? 'active' : ''}`}
-              >
-                Comment ça marche
-              </Link>
-              {isAuthenticated && isAdmin && (
-                <Link 
-                  to="/admin/lotteries" 
-                  className={`nav-link text-lg font-medium text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
-                >
-                  Administration
-                </Link>
-              )}
+            {/* Desktop Navigation - Now hidden by default */}
+            <nav className="hidden">
+              {/* Menu items hidden by default */}
             </nav>
           </div>
 
@@ -105,99 +95,106 @@ const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          {/* Menu burger button - always visible */}
+          <div className="flex items-center">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-white" 
+              className={cn(
+                "text-white transition-all duration-300 z-50",
+                isMenuHovered && !isMobileMenuOpen ? "scale-110" : "",
+                isMobileMenuOpen ? "rotate-0" : ""
+              )} 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onMouseEnter={() => setIsMenuHovered(true)}
+              onMouseLeave={() => setIsMenuHovered(false)}
             >
-              {isMobileMenuOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
+              {isMobileMenuOpen ? 
+                <X className="h-8 w-8 animate-in fade-in rotate-in-90" /> : 
+                <Menu className="h-8 w-8 animate-in fade-in" />
+              }
             </Button>
           </div>
         </div>
+      </div>
 
-        {/* Mobile menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 flex flex-col space-y-6 py-6">
-            <Link 
-              to="/" 
-              className={`nav-link text-xl font-medium ${isActive('/') ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Accueil
-            </Link>
-            <Link 
-              to="/products" 
-              className={`nav-link text-xl font-medium ${isActive('/products') ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Produits
-            </Link>
-            <Link 
-              to="/lotteries" 
-              className={`nav-link text-xl font-medium ${isActive('/lotteries') ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Loteries
-            </Link>
-            <Link 
-              to="/how-it-works" 
-              className={`nav-link text-xl font-medium ${isActive('/how-it-works') ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Comment ça marche
-            </Link>
-            {isAuthenticated && isAdmin && (
+      {/* Fullscreen Menu with slide animation */}
+      <div 
+        className={cn(
+          "fixed inset-0 bg-winshirt-space z-40 transition-transform duration-300 ease-in-out",
+          isMobileMenuOpen ? "translate-y-0" : "-translate-y-full"
+        )}
+      >
+        <div className="container mx-auto px-4 pt-28 pb-12 h-full flex flex-col">
+          <div className="flex-grow overflow-y-auto">
+            <nav className="grid gap-6 md:gap-8 text-center md:text-left">
               <Link 
-                to="/admin/lotteries" 
-                className={`nav-link text-xl font-medium text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
-                onClick={() => setIsMobileMenuOpen(false)}
+                to="/" 
+                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-100`}
               >
-                Administration
+                Accueil
               </Link>
-            )}
-            <div className="flex space-x-6 pt-4">
-              <Link to="/cart" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="ghost" size="icon" className="relative text-white hover:text-winshirt-blue-light">
-                  <ShoppingCart className="h-8 w-8" />
-                  <span className="absolute -top-1 -right-1 bg-winshirt-blue-light text-white text-xs w-6 h-6 rounded-full flex items-center justify-center">
-                    0
-                  </span>
-                </Button>
+              <Link 
+                to="/products" 
+                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/products') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-200`}
+              >
+                Produits
               </Link>
-              
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-3">
-                  <Link to="/account" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="text-white hover:text-winshirt-blue-light flex items-center gap-3 text-lg">
-                      <User className="h-8 w-8" />
-                      <span className="max-w-[120px] truncate">{user?.name || 'Mon compte'}</span>
-                    </Button>
-                  </Link>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => {
-                      handleLogout();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="text-white hover:text-red-400"
-                  >
-                    <LogOut className="h-8 w-8" />
-                  </Button>
-                </div>
-              ) : (
-                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full text-lg px-8 py-6">
-                    Connexion
-                  </Button>
+              <Link 
+                to="/lotteries" 
+                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/lotteries') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-300`}
+              >
+                Loteries
+              </Link>
+              <Link 
+                to="/how-it-works" 
+                className={`nav-link text-2xl md:text-3xl font-medium ${isActive('/how-it-works') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-400`}
+              >
+                Comment ça marche
+              </Link>
+              {isAuthenticated && isAdmin && (
+                <Link 
+                  to="/admin/lotteries" 
+                  className={`nav-link text-2xl md:text-3xl font-medium text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''} animate-in fade-in slide-in-from-top duration-300 delay-500`}
+                >
+                  Administration
                 </Link>
               )}
-            </div>
+            </nav>
           </div>
-        )}
+          
+          {/* Footer actions for mobile menu */}
+          <div className="mt-auto pt-8 flex flex-col md:flex-row justify-center md:justify-between items-center gap-6 animate-in fade-in slide-in-from-bottom duration-300 delay-500">
+            <Link to="/cart" className="flex items-center gap-3 text-xl text-white hover:text-winshirt-blue-light">
+              <ShoppingCart className="h-6 w-6" />
+              <span>Panier</span>
+              <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">0</span>
+            </Link>
+            
+            {isAuthenticated ? (
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <Link to="/account" className="flex items-center gap-3 text-xl text-white hover:text-winshirt-blue-light">
+                  <User className="h-6 w-6" />
+                  <span>{user?.name || 'Mon compte'}</span>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  onClick={handleLogout}
+                  className="text-white hover:text-red-400 flex items-center gap-2"
+                >
+                  <LogOut className="h-6 w-6" />
+                  <span>Déconnexion</span>
+                </Button>
+              </div>
+            ) : (
+              <Link to="/login">
+                <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full text-xl px-8 py-5">
+                  Connexion
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
     </header>
   );

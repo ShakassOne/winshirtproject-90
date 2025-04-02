@@ -79,6 +79,17 @@
     border-radius: 50%;
     filter: drop-shadow(0 0 10px #9b87f5);
   }
+
+  /* Animation for burger menu icon */
+  @keyframes menu-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(90deg); }
+  }
+
+  @keyframes menu-rotate-reverse {
+    from { transform: rotate(90deg); }
+    to { transform: rotate(0deg); }
+  }
 }
 
 @layer components {
