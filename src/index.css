@@ -100,9 +100,14 @@
     @apply text-winshirt-blue-light font-semibold after:w-full;
   }
 
-  /* Effet glassmorphism */
+  /* Effet glassmorphism amélioré pour le menu flottant */
   .glass-effect {
-    @apply bg-winshirt-space/40 backdrop-blur-lg border border-winshirt-purple/30;
+    @apply bg-winshirt-space/40 backdrop-blur-lg border border-winshirt-purple/30 shadow-lg shadow-winshirt-purple/20;
+  }
+
+  /* Menu flottant */
+  .floating-menu {
+    @apply rounded-2xl shadow-xl shadow-winshirt-purple/10 transition-all duration-300 hover:shadow-2xl hover:shadow-winshirt-purple/20;
   }
 
   /* Reste des styles */
