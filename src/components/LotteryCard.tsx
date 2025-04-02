@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
-import { Gift, Calendar } from 'lucide-react';
+import { Gift, Calendar, Info } from 'lucide-react';
 
 export interface Lottery {
   id: number;
@@ -42,11 +42,11 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
 
   return (
     <Card className="winshirt-card winshirt-card-hover h-full flex flex-col overflow-hidden">
-      <div className="relative">
+      <Link to={`/lotteries/${lottery.id}`} className="relative block">
         <img 
           src={lottery.image} 
           alt={lottery.title} 
-          className="w-full h-60 object-cover"
+          className="w-full h-60 object-cover transition-transform duration-300 hover:scale-105"
         />
         <div className="absolute top-0 right-0 bg-winshirt-blue-dark/90 text-white px-3 py-1 rounded-bl-lg">
           Valeur: {lottery.value.toFixed(2)} €
@@ -72,9 +72,11 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
             {formatDate(lottery.endDate) || "À définir"}
           </div>
         </div>
-      </div>
+      </Link>
       <CardContent className="flex-grow p-4">
-        <h3 className="text-lg font-medium text-white mb-2">{lottery.title}</h3>
+        <Link to={`/lotteries/${lottery.id}`}>
+          <h3 className="text-lg font-medium text-white mb-2 hover:text-winshirt-blue-light transition-colors">{lottery.title}</h3>
+        </Link>
         <p className="text-sm text-gray-300 mb-4 line-clamp-2">{lottery.description}</p>
         
         {lottery.winner ? (
@@ -101,10 +103,17 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
           </div>
         )}
       </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Link to={`/products?lottery=${lottery.id}`} className="w-full">
-          <Button className="w-full bg-winshirt-blue hover:bg-winshirt-blue-dark">
-            Voir les produits associés
+      <CardFooter className="p-4 pt-0 flex gap-2 justify-between">
+        <Link to={`/lotteries/${lottery.id}`} className="flex-1">
+          <Button variant="outline" className="w-full border-winshirt-purple/30 hover:bg-winshirt-purple/20 flex items-center gap-2">
+            <Info size={16} />
+            Détails
+          </Button>
+        </Link>
+        <Link to={`/products?lottery=${lottery.id}`} className="flex-1">
+          <Button className="w-full bg-winshirt-blue hover:bg-winshirt-blue-dark flex items-center gap-2">
+            <Gift size={16} />
+            Participer
           </Button>
         </Link>
       </CardFooter>
