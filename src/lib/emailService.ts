@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
-import { simulateSendEmail } from "@/contexts/AuthContext";
+import { simulateSendEmail } from "@/utils/authUtils";
 
 interface EmailTemplate {
   subject: string;
