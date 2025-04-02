@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedProduct } from '@/types/product';
@@ -26,8 +25,8 @@ export const useProductForm = (
       image: '',
       secondaryImage: '',
       tickets: 1,
-      weight: '', // New field for weight
-      deliveryPrice: '' // New field for delivery price
+      weight: '', // Weight as string for the form
+      deliveryPrice: '' // Delivery price as string for the form
     }
   });
   
@@ -85,8 +84,8 @@ export const useProductForm = (
       image: product.image,
       secondaryImage: product.secondaryImage || '',
       tickets: product.tickets || 1,
-      weight: product.weight || '', // Set weight field
-      deliveryPrice: product.deliveryPrice || '' // Set delivery price field
+      weight: product.weight ? product.weight.toString() : '', // Convert weight to string
+      deliveryPrice: product.deliveryPrice ? product.deliveryPrice.toString() : '' // Convert delivery price to string
     });
     
     // Force update of form fields to trigger rerender
@@ -134,8 +133,8 @@ export const useProductForm = (
       secondaryImage: data.secondaryImage || '',
       popularity: Math.random() * 100, // Just for mock data
       tickets: parseInt(data.tickets, 10) || 1,
-      weight: data.weight ? parseFloat(data.weight) : undefined, // Add weight
-      deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined // Add delivery price
+      weight: data.weight ? parseFloat(data.weight) : undefined, // Parse weight to number
+      deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined // Parse delivery price to number
     };
     
     if (isCreating) {

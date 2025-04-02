@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ShippingOptions } from '@/components/cart/ShippingOptions';
+import ShippingOptions from '@/components/cart/ShippingOptions'; // Fixed import
 import { toast } from '@/lib/toast';
 
 interface CartItem {
@@ -325,8 +325,12 @@ const CartPage: React.FC = () => {
                   />
                   
                   <ShippingOptions 
-                    selectedShipping={selectedShipping}
-                    onSelectShipping={calculateShippingCost}
+                    selectedMethod={selectedShipping || 'standard'}
+                    onChange={(method) => {
+                      setSelectedShipping(method);
+                      calculateShippingCost(method);
+                    }}
+                    subtotal={total}
                   />
                   
                   {selectedShipping && (
