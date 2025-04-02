@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus, Ticket, Image, Upload } from 'lucide-react';
+import { Package, Plus, Ticket, Image, Upload, Truck, Weight } from 'lucide-react';
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import {
@@ -100,6 +100,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Name field */}
           <FormField
             control={form.control}
             name="name"
@@ -118,6 +119,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             )}
           />
           
+          {/* Price field */}
           <FormField
             control={form.control}
             name="price"
@@ -139,6 +141,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           />
         </div>
         
+        {/* Description field */}
         <FormField
           control={form.control}
           name="description"
@@ -236,6 +239,70 @@ const ProductForm: React.FC<ProductFormProps> = ({
             </FormItem>
           )}
         />
+        
+        {/* New Delivery section */}
+        <div className="p-4 border border-winshirt-purple/30 rounded-lg space-y-4">
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+            <Truck size={18} /> Informations de livraison
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Weight field */}
+            <FormField
+              control={form.control}
+              name="weight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white text-lg flex items-center gap-2">
+                    <Weight size={16} /> Poids (g)
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="100" 
+                      {...field}
+                      value={field.value || ''}
+                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
+                      className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-gray-400 text-base">
+                    Poids du produit en grammes
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Delivery price field */}
+            <FormField
+              control={form.control}
+              name="deliveryPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white text-lg flex items-center gap-2">
+                    <Truck size={16} /> Frais de livraison (€)
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="4.99" 
+                      {...field}
+                      value={field.value || ''}
+                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
+                      className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-gray-400 text-base">
+                    Frais de livraison spécifiques à ce produit (laisser vide pour tarif standard)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField

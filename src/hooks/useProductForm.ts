@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedProduct } from '@/types/product';
@@ -23,8 +24,10 @@ export const useProductForm = (
       colors: [] as string[],
       linkedLotteries: [] as string[],
       image: '',
-      secondaryImage: '', // Ajout du champ pour l'image secondaire
-      tickets: 1 // Valeur par défaut: 1 ticket
+      secondaryImage: '',
+      tickets: 1,
+      weight: '', // New field for weight
+      deliveryPrice: '' // New field for delivery price
     }
   });
   
@@ -40,8 +43,10 @@ export const useProductForm = (
       colors: [],
       linkedLotteries: [],
       image: '',
-      secondaryImage: '', // Réinitialisation de l'image secondaire
-      tickets: 1
+      secondaryImage: '',
+      tickets: 1,
+      weight: '', // Reset weight field
+      deliveryPrice: '' // Reset delivery price field
     });
   };
   
@@ -78,8 +83,10 @@ export const useProductForm = (
       colors: colors,
       linkedLotteries: linkedLotteries,
       image: product.image,
-      secondaryImage: product.secondaryImage || '', // Ajout de l'image secondaire
-      tickets: product.tickets || 1
+      secondaryImage: product.secondaryImage || '',
+      tickets: product.tickets || 1,
+      weight: product.weight || '', // Set weight field
+      deliveryPrice: product.deliveryPrice || '' // Set delivery price field
     });
     
     // Force update of form fields to trigger rerender
@@ -124,9 +131,11 @@ export const useProductForm = (
       colors: colors,
       linkedLotteries: linkedLotteries,
       image: data.image || 'https://placehold.co/600x400/png',
-      secondaryImage: data.secondaryImage || '', // Ajout de l'image secondaire
+      secondaryImage: data.secondaryImage || '',
       popularity: Math.random() * 100, // Just for mock data
-      tickets: parseInt(data.tickets, 10) || 1
+      tickets: parseInt(data.tickets, 10) || 1,
+      weight: data.weight ? parseFloat(data.weight) : undefined, // Add weight
+      deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined // Add delivery price
     };
     
     if (isCreating) {

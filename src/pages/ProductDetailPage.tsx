@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { ShoppingCart, Ticket } from 'lucide-react';
+import { ShoppingCart, Ticket, Truck, Weight } from 'lucide-react';
 import { mockProducts, mockLotteries } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
@@ -200,9 +199,27 @@ const ProductDetailPage: React.FC = () => {
               <div className="space-y-6">
                 <div>
                   <h1 className="text-3xl font-bold text-white mb-2">{product.name}</h1>
-                  <p className="text-2xl text-winshirt-purple-light">{product.price.toFixed(2)} €</p>
+                  <div className="flex items-center gap-4">
+                    <p className="text-2xl text-winshirt-purple-light">{product.price.toFixed(2)} €</p>
+                    
+                    {/* Display delivery price if available */}
+                    {product.deliveryPrice && (
+                      <div className="flex items-center text-gray-300">
+                        <Truck size={16} className="mr-1" />
+                        <span>Livraison: {product.deliveryPrice.toFixed(2)} €</span>
+                      </div>
+                    )}
+                    
+                    {/* Display weight if available */}
+                    {product.weight && (
+                      <div className="flex items-center text-gray-300">
+                        <Weight size={16} className="mr-1" />
+                        <span>{product.weight}g</span>
+                      </div>
+                    )}
+                  </div>
                   
-                  {/* Nombre de tickets */}
+                  {/* Tickets info */}
                   {(product.tickets && product.tickets > 1) ? (
                     <div className="mt-2 bg-blue-500/10 border border-blue-500/30 rounded-md p-2 flex items-center">
                       <Ticket className="text-blue-400 mr-2" size={18} />
@@ -221,6 +238,29 @@ const ProductDetailPage: React.FC = () => {
                 </div>
                 
                 <p className="text-gray-300">{product.description}</p>
+                
+                {/* Delivery info section */}
+                {(product.weight || product.deliveryPrice) && (
+                  <div className="p-3 bg-gray-800/50 rounded-lg">
+                    <h3 className="font-semibold text-white flex items-center mb-2">
+                      <Truck size={18} className="mr-2" /> Informations de livraison
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
+                      {product.weight && (
+                        <div className="flex items-center">
+                          <Weight size={14} className="mr-1" /> 
+                          <span>Poids: {product.weight}g</span>
+                        </div>
+                      )}
+                      {product.deliveryPrice && (
+                        <div className="flex items-center">
+                          <Truck size={14} className="mr-1" /> 
+                          <span>Frais: {product.deliveryPrice.toFixed(2)} €</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Size Selection */}
                 <div className="space-y-2">

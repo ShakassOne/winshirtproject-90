@@ -17,6 +17,8 @@ export interface ExtendedProduct {
   popularity?: number;
   tickets?: number; // Nombre de tickets (1-5) pour ce produit
   deliveryInfo?: DeliveryInfo; // Information de livraison spécifique au produit
+  deliveryPrice?: number; // Prix de livraison spécifique
+  weight?: number; // Poids en grammes
 }
 
 export interface DeliveryInfo {
