@@ -45,7 +45,7 @@ const Navbar: React.FC = () => {
       <div className="container mx-auto py-6 px-4 md:px-8">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-12">
-            {/* Le logo ne sera visible que lorsque le menu est fermé */}
+            {/* Logo visible uniquement quand le menu est fermé */}
             {!isMobileMenuOpen && (
               <Link to="/" className="flex items-center">
                 <h1 className="text-3xl font-bold text-white">
@@ -56,7 +56,7 @@ const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Menu burger button - always visible */}
+          {/* Menu burger button - toujours visible */}
           <div className="flex items-center">
             <Button 
               variant="ghost" 
@@ -79,10 +79,10 @@ const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Fullscreen Menu with slide animation et effet blur */}
+      {/* Menu plein écran avec animation de glissement et effet de flou */}
       <div 
         className={cn(
-          "fixed inset-0 bg-winshirt-space/80 backdrop-blur-md z-40 transition-transform duration-300 ease-in-out",
+          "fixed inset-0 bg-winshirt-space/70 backdrop-blur-md z-40 transition-transform duration-300 ease-in-out flex flex-col",
           isMobileMenuOpen ? "translate-y-0" : "-translate-y-full"
         )}
       >
@@ -124,7 +124,7 @@ const Navbar: React.FC = () => {
             </nav>
           </div>
           
-          {/* Footer actions for mobile menu */}
+          {/* Actions du footer pour le menu mobile */}
           <div className="mt-auto pt-8 flex flex-col md:flex-row justify-center md:justify-between items-center gap-6 animate-in fade-in slide-in-from-bottom duration-300 delay-500">
             <Link to="/cart" className="flex items-center gap-3 text-xl text-white hover:text-winshirt-blue-light">
               <ShoppingCart className="h-6 w-6" />
