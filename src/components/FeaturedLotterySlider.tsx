@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Calendar, Users } from 'lucide-react';
+import { ArrowRight, Calendar, Users, Clock } from 'lucide-react';
 import { ExtendedLottery } from '@/types/lottery';
 import { Progress } from '@/components/ui/progress';
 
@@ -13,6 +13,9 @@ interface FeaturedLotterySliderProps {
 const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({ 
+    days: 0, hours: 0, minutes: 0, seconds: 0 
+  });
   const navigate = useNavigate();
   
   const featuredLotteries = lotteries.filter(lottery => lottery.featured);
@@ -29,6 +32,19 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
       month: '2-digit',
       year: 'numeric'
     });
+  };
+
+  // Calculate time remaining for countdown
+  const getTimeRemaining = (endDate?: string | null) => {
+    if (!endDate) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    
+    const total = new Date(endDate).getTime() - new Date().getTime();
+    const seconds = Math.floor((total / 1000) % 60);
+    const minutes = Math.floor((total / 1000 / 60) % 60);
+    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(total / (1000 * 60 * 60 * 24));
+    
+    return { days, hours, minutes, seconds };
   };
 
   // Calculate progress percentage
@@ -64,7 +80,27 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
     return () => clearInterval(interval);
   }, [currentIndex, isTransitioning, featuredLotteries.length]);
 
+  // Update countdown timer
+  useEffect(() => {
+    const currentLottery = featuredLotteries[currentIndex];
+    if (!currentLottery?.endDate) return;
+    
+    const updateCountdown = () => {
+      setCountdown(getTimeRemaining(currentLottery.endDate));
+    };
+    
+    updateCountdown(); // Initial calculation
+    
+    const countdownInterval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(countdownInterval);
+  }, [currentIndex, featuredLotteries]);
+
   const currentLottery = featuredLotteries[currentIndex];
+
+  // Format number with leading zero
+  const formatNumber = (num: number): string => {
+    return num < 10 ? `0${num}` : `${num}`;
+  };
 
   return (
     <div className="relative w-full h-screen bg-gradient-to-b from-winshirt-space to-winshirt-space-dark overflow-hidden">
@@ -100,6 +136,34 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
               <span>Tirage le {formatDate(currentLottery.endDate)}</span>
             </div>
           </div>
+          
+          {/* Countdown timer */}
+          {currentLottery.endDate && new Date(currentLottery.endDate) > new Date() && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 text-winshirt-purple-light mb-2">
+                <Clock size={20} />
+                <span className="font-medium">Temps restant avant le tirage:</span>
+              </div>
+              <div className="flex gap-4">
+                <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
+                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.days)}</div>
+                  <div className="text-xs text-winshirt-purple-light">JOURS</div>
+                </div>
+                <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
+                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.hours)}</div>
+                  <div className="text-xs text-winshirt-purple-light">HEURES</div>
+                </div>
+                <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
+                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.minutes)}</div>
+                  <div className="text-xs text-winshirt-purple-light">MINUTES</div>
+                </div>
+                <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
+                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.seconds)}</div>
+                  <div className="text-xs text-winshirt-purple-light">SECONDES</div>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Progress bar */}
           <div className="mb-8 max-w-md">
