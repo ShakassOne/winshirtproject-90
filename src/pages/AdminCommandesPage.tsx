@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { Order, OrderStatus, DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
@@ -845,3 +846,23 @@ const AdminCommandesPage: React.FC = () => {
                         </TableRow>
                       )}
                     </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {invoiceOrder && (
+            <InvoiceModal 
+              order={invoiceOrder} 
+              isOpen={!!invoiceOrder} 
+              onClose={() => setInvoiceOrder(null)}
+            />
+          )}
+        </div>
+      </section>
+    </>
+  );
+};
+
+export default AdminCommandesPage;
