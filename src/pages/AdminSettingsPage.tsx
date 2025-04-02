@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
@@ -10,8 +10,23 @@ import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSearchParams } from 'react-router-dom';
 
 const AdminSettingsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'home';
+  
+  // Gérer le changement d'onglet
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+    window.scrollTo(0, 0);
+  };
+
+  // Effet initial pour s'assurer que la page commence en haut
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  
   return (
     <>
       <StarBackground />
@@ -31,7 +46,7 @@ const AdminSettingsPage: React.FC = () => {
             />
           </div>
           
-          <Tabs defaultValue="home" className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full" onValueChange={handleTabChange}>
             <TabsList className="mb-8 bg-winshirt-space-light border border-winshirt-purple/20">
               <TabsTrigger value="home" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <Home className="h-4 w-4 mr-2" />
