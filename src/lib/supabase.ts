@@ -46,9 +46,28 @@ export const supabase = createClient(
   }
 );
 
-// Fonction pour gérer l'upload d'images
+// Configuration pour le serveur FTP
+export const ftpConfig = {
+  // Ces valeurs seront remplies lors de la mise en production
+  enabled: false, // À activer quand on se connectera à winshirt.fr
+  uploadEndpoint: '/api/upload', // Endpoint de l'API pour l'upload FTP
+  baseUrl: 'https://winshirt.fr/images', // URL de base pour les images sur FTP
+};
+
+// Fonction pour déterminer si on utilise FTP ou Supabase
+export const shouldUseFTP = (): boolean => {
+  return ftpConfig.enabled;
+};
+
+// Fonction pour gérer l'upload d'images (Supabase ou FTP)
 export const uploadImage = async (file: File, bucket: string = 'products'): Promise<string | null> => {
   try {
+    // Si FTP est activé, utiliser l'upload FTP
+    if (shouldUseFTP()) {
+      return await uploadImageToFTP(file, bucket);
+    }
+    
+    // Sinon, utiliser Supabase Storage
     // Vérifier si les identifiants Supabase sont disponibles
     if (!isSupabaseConfigured()) {
       console.error("Erreur: Impossible d'uploader l'image - identifiants Supabase manquants");
@@ -69,7 +88,7 @@ export const uploadImage = async (file: File, bucket: string = 'products'): Prom
       });
 
     if (error) {
-      console.error('Erreur lors de l\'upload:', error);
+      console.error('Erreur lors de l\'upload vers Supabase:', error);
       return null;
     }
 
@@ -81,6 +100,37 @@ export const uploadImage = async (file: File, bucket: string = 'products'): Prom
     return urlData.publicUrl;
   } catch (error) {
     console.error('Erreur lors de l\'upload:', error);
+    return null;
+  }
+};
+
+// Fonction pour uploader une image vers le serveur FTP via une API
+export const uploadImageToFTP = async (file: File, folder: string = 'products'): Promise<string | null> => {
+  try {
+    // Créer un FormData pour l'upload
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+
+    // Envoyer la requête au serveur
+    const response = await fetch(ftpConfig.uploadEndpoint, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Erreur lors de l'upload FTP: ${errorText}`);
+      return null;
+    }
+
+    // Récupérer l'URL de l'image uploadée
+    const result = await response.json();
+    
+    // Renvoyer l'URL complète
+    return `${ftpConfig.baseUrl}/${folder}/${result.filename}`;
+  } catch (error) {
+    console.error('Erreur lors de l\'upload FTP:', error);
     return null;
   }
 };

@@ -1,13 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
 import ShippingSettingsManager from '@/components/admin/settings/ShippingSettingsManager';
 import TestEmailButton from '@/components/admin/settings/TestEmailButton';
 import HomeIntroManager from '@/components/admin/settings/HomeIntroManager';
+import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Bell, ShieldCheck, Database, Truck, Home } from 'lucide-react';
+import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AdminSettingsPage: React.FC = () => {
@@ -36,6 +37,10 @@ const AdminSettingsPage: React.FC = () => {
                 <Home className="h-4 w-4 mr-2" />
                 Page d'accueil
               </TabsTrigger>
+              <TabsTrigger value="uploads" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
+                <Upload className="h-4 w-4 mr-2" />
+                Gestion uploads
+              </TabsTrigger>
               <TabsTrigger value="notifications" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
@@ -60,6 +65,10 @@ const AdminSettingsPage: React.FC = () => {
             
             <TabsContent value="home" className="space-y-6">
               <HomeIntroManager />
+            </TabsContent>
+            
+            <TabsContent value="uploads" className="space-y-6">
+              <FtpSettingsManager />
             </TabsContent>
             
             <TabsContent value="notifications" className="space-y-6">
