@@ -25,6 +25,7 @@ import {
 import { toast } from '@/lib/toast';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import ClientForm from '@/components/admin/clients/ClientForm';
+import ClientDetail from '@/components/admin/clients/ClientDetail';
 
 // Exemple de clients pour démo
 const mockClients: Client[] = [
@@ -99,7 +100,9 @@ const AdminClientsPage: React.FC = () => {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [viewingClient, setViewingClient] = useState<Client | null>(null);
   
   // Charger les clients depuis localStorage
   useEffect(() => {
@@ -156,14 +159,22 @@ const AdminClientsPage: React.FC = () => {
     }
   };
   
+  const handleViewClient = (client: Client) => {
+    setViewingClient(client);
+    setShowDetail(true);
+    setShowForm(false);
+  };
+  
   const handleEditClient = (client: Client) => {
     setEditingClient(client);
     setShowForm(true);
+    setShowDetail(false);
   };
   
   const handleAddClient = () => {
     setEditingClient(null);
     setShowForm(true);
+    setShowDetail(false);
   };
   
   // Send welcome email simulation
@@ -253,6 +264,16 @@ L'équipe WinShirt`);
                 }} 
               />
             </div>
+          ) : showDetail ? (
+            <div className="max-w-5xl mx-auto">
+              <ClientDetail 
+                client={viewingClient!} 
+                onClose={() => {
+                  setShowDetail(false);
+                  setViewingClient(null);
+                }} 
+              />
+            </div>
           ) : (
             <div className="space-y-6">
               {/* Filtres et recherche */}
@@ -334,7 +355,12 @@ L'équipe WinShirt`);
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white h-8 w-8 p-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-gray-400 hover:text-white h-8 w-8 p-0"
+                                onClick={() => handleViewClient(client)}
+                              >
                                 <Eye size={16} />
                               </Button>
                               <Button 
