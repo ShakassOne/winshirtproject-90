@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
 import { toast } from '@/lib/toast';
+import { uploadImage } from '@/lib/supabase';
 
 interface ProductFormProps {
   isCreating: boolean;
@@ -64,19 +66,29 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const primaryImageInputRef = useRef<HTMLInputElement>(null);
   const secondaryImageInputRef = useRef<HTMLInputElement>(null);
   
-  // Fonction pour simuler l'upload d'image (sera implémentée en production)
-  const handleImageUpload = (inputRef: React.RefObject<HTMLInputElement>, fieldName: string) => {
+  // Fonction pour télécharger l'image vers Supabase
+  const handleImageUpload = async (inputRef: React.RefObject<HTMLInputElement>, fieldName: string) => {
     const file = inputRef.current?.files?.[0];
     if (file) {
-      // En production, nous téléchargerions le fichier sur un serveur
-      // Pour l'instant, nous simulons avec un message et nous n'utilisons pas vraiment le fichier
-      toast.success(`Image "${file.name}" sélectionnée`);
+      // Afficher un toast de chargement
+      toast.loading(`Upload de l'image en cours...`);
       
-      // En production, nous obtiendrions l'URL de l'image téléchargée
-      // Pour l'instant, nous utilisons une URL de placeholder
-      const mockImageUrl = `https://placehold.co/600x400/png?text=${encodeURIComponent(file.name)}`;
-      form.setValue(fieldName, mockImageUrl);
-      form.trigger(fieldName);
+      try {
+        // Télécharger l'image vers Supabase Storage
+        const imageUrl = await uploadImage(file);
+        
+        if (imageUrl) {
+          // Mettre à jour le formulaire avec l'URL de l'image
+          form.setValue(fieldName, imageUrl);
+          form.trigger(fieldName);
+          toast.success(`Image téléchargée avec succès`);
+        } else {
+          toast.error(`Erreur lors du téléchargement de l'image`);
+        }
+      } catch (error) {
+        console.error("Erreur d'upload:", error);
+        toast.error(`Erreur lors du téléchargement: ${error}`);
+      }
     }
   };
 
@@ -192,6 +204,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   <Upload size={16} className="mr-2" /> Parcourir
                 </Button>
               </div>
+              {field.value && (
+                <div className="mt-2">
+                  <img 
+                    src={field.value} 
+                    alt="Aperçu" 
+                    className="h-24 object-contain rounded border border-winshirt-purple/30" 
+                  />
+                </div>
+              )}
               <FormDescription className="text-gray-400 text-base">
                 URL de l'image principale du produit
               </FormDescription>
@@ -232,6 +253,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   <Upload size={16} className="mr-2" /> Parcourir
                 </Button>
               </div>
+              {field.value && (
+                <div className="mt-2">
+                  <img 
+                    src={field.value} 
+                    alt="Aperçu secondaire" 
+                    className="h-24 object-contain rounded border border-winshirt-purple/30" 
+                  />
+                </div>
+              )}
               <FormDescription className="text-gray-400 text-base">
                 URL d'une image secondaire ou alternative du produit
               </FormDescription>
