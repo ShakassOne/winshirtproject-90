@@ -177,8 +177,9 @@ export const InvoiceDownloadLink = ({ order }: { order: Order }) => (
     document={<InvoiceDocument order={order} />} 
     fileName={`facture-winshirt-${order.id}.pdf`}
   >
-    {/* Correction: Using the proper render prop pattern expected by PDFDownloadLink */}
-    {({ loading }) => loading ? 'Génération du PDF...' : 'Télécharger la facture'}
+    {({ loading }) => (
+      loading ? "Génération du PDF..." : "Télécharger la facture"
+    )}
   </PDFDownloadLink>
 );
 
