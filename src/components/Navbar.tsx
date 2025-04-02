@@ -51,48 +51,6 @@ const Navbar: React.FC = () => {
                 <span className="text-winshirt-blue-light">Shirt</span>
               </h1>
             </Link>
-
-            {/* Desktop Navigation - Now hidden by default */}
-            <nav className="hidden">
-              {/* Menu items hidden by default */}
-            </nav>
-          </div>
-
-          {/* Right-side icons */}
-          <div className="hidden md:flex items-center space-x-6">
-            <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative text-white hover:text-winshirt-blue-light">
-                <ShoppingCart className="h-7 w-7" />
-                <span className="absolute -top-1 -right-1 bg-winshirt-blue-light text-white text-xs w-6 h-6 rounded-full flex items-center justify-center">
-                  0
-                </span>
-              </Button>
-            </Link>
-            
-            {isAuthenticated ? (
-              <div className="flex items-center space-x-3">
-                <Link to="/account">
-                  <Button variant="ghost" className="text-white hover:text-winshirt-blue-light flex items-center gap-3 text-lg">
-                    <User className="h-7 w-7" />
-                    <span className="max-w-[120px] truncate">{user?.name || 'Mon compte'}</span>
-                  </Button>
-                </Link>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handleLogout}
-                  className="text-white hover:text-red-400"
-                >
-                  <LogOut className="h-7 w-7" />
-                </Button>
-              </div>
-            ) : (
-              <Link to="/login">
-                <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full text-lg px-8 py-6">
-                  Connexion
-                </Button>
-              </Link>
-            )}
           </div>
 
           {/* Menu burger button - always visible */}
@@ -101,7 +59,7 @@ const Navbar: React.FC = () => {
               variant="ghost" 
               size="icon" 
               className={cn(
-                "text-white transition-all duration-300 z-50",
+                "text-white transition-all duration-300 z-50 hover:bg-transparent",
                 isMenuHovered && !isMobileMenuOpen ? "scale-110" : "",
                 isMobileMenuOpen ? "rotate-0" : ""
               )} 

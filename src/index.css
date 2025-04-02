@@ -117,6 +117,16 @@
     @apply hover:shadow-[0_0_30px_rgba(155,135,245,0.4)] transition-all duration-300 hover:-translate-y-1;
   }
 
+  /* Nouvel style pour le menu burger */
+  button[variant="ghost"]:hover {
+    background-color: transparent !important;
+  }
+
+  /* Désactiver le background au survol du menu burger */
+  .menu-burger:hover {
+    background-color: transparent !important;
+  }
+
   /* Nouveau style de carousel */
   .carousel-container {
     position: relative;
