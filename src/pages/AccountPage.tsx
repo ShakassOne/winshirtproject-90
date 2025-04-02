@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +9,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LotteryParticipation } from '@/types/lottery';
 import { Order } from '@/types/order';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Info } from 'lucide-react';
+import { CheckCircle2, Info, Eye, FileText } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import InvoiceModal from '@/components/admin/orders/InvoiceModal';
+import { generateAndStoreInvoiceUrl } from '@/utils/invoiceGenerator';
+import { toast } from '@/lib/toast';
 
 const AccountPage: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +21,8 @@ const AccountPage: React.FC = () => {
   // État pour les participations et commandes de l'utilisateur
   const [userParticipations, setUserParticipations] = useState<any[]>([]);
   const [userOrders, setUserOrders] = useState<Order[]>([]);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   
   useEffect(() => {
     if (user) {
@@ -78,6 +82,43 @@ const AccountPage: React.FC = () => {
   if (!user) {
     return <div className="pt-32 pb-16 text-center">Chargement...</div>;
   }
+  
+  const handleGenerateInvoice = (order: Order) => {
+    // Vérifier si la facture existe déjà
+    if (!order.invoiceUrl) {
+      // Générer et stocker l'URL de la facture
+      const updatedOrder = generateAndStoreInvoiceUrl(order);
+      
+      // Mettre à jour l'ordre dans la liste
+      const updatedOrders = userOrders.map(o => 
+        o.id === updatedOrder.id ? updatedOrder : o
+      );
+      
+      setUserOrders(updatedOrders);
+      
+      // Mettre à jour dans le localStorage
+      const ordersString = localStorage.getItem('orders');
+      if (ordersString) {
+        try {
+          const allOrders = JSON.parse(ordersString) as Order[];
+          const updatedAllOrders = allOrders.map(o => 
+            o.id === updatedOrder.id ? updatedOrder : o
+          );
+          localStorage.setItem('orders', JSON.stringify(updatedAllOrders));
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour des commandes:", error);
+        }
+      }
+      
+      // Ouvrir le modal avec l'ordre mis à jour
+      setInvoiceOrder(updatedOrder);
+    } else {
+      // Ouvrir directement le modal car la facture existe déjà
+      setInvoiceOrder(order);
+    }
+    
+    toast.success("Facture générée avec succès");
+  };
   
   return (
     <>
@@ -251,12 +292,25 @@ const AccountPage: React.FC = () => {
                                 </p>
                               </div>
                               
-                              <Button 
-                                variant="ghost" 
-                                className="text-winshirt-blue-light hover:bg-winshirt-blue/10 mt-2 md:mt-0"
-                              >
-                                Voir les détails
-                              </Button>
+                              <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
+                                <Button 
+                                  variant="ghost" 
+                                  className="text-winshirt-blue-light hover:bg-winshirt-blue/10"
+                                  onClick={() => setSelectedOrderDetails(order)}
+                                >
+                                  <Eye size={16} className="mr-2" />
+                                  Voir les détails
+                                </Button>
+                                
+                                <Button 
+                                  variant="ghost" 
+                                  className="text-winshirt-purple-light hover:bg-winshirt-purple/10"
+                                  onClick={() => handleGenerateInvoice(order)}
+                                >
+                                  <FileText size={16} className="mr-2" />
+                                  Facture
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -372,6 +426,110 @@ const AccountPage: React.FC = () => {
           </Tabs>
         </div>
       </section>
+      
+      {/* Modal de facture */}
+      {invoiceOrder && (
+        <InvoiceModal 
+          order={invoiceOrder}
+          isOpen={!!invoiceOrder}
+          onClose={() => setInvoiceOrder(null)}
+        />
+      )}
+      
+      {/* Détails de la commande - Nous pourrions créer un composant séparé pour cela plus tard */}
+      {selectedOrderDetails && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="winshirt-card p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-2xl font-bold text-white">Commande #{selectedOrderDetails.id}</h2>
+              <Button variant="ghost" className="text-gray-400" onClick={() => setSelectedOrderDetails(null)}>
+                ✕
+              </Button>
+            </div>
+            
+            <div className="grid gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-lg font-medium text-winshirt-purple-light mb-2">Informations</h3>
+                  <p className="text-gray-300">Date: {new Date(selectedOrderDetails.orderDate).toLocaleDateString('fr-FR')}</p>
+                  <p className="text-gray-300">Statut: <span className={`
+                    ${selectedOrderDetails.status === 'delivered' ? 'text-green-400' : 
+                      selectedOrderDetails.status === 'processing' ? 'text-blue-400' : 
+                      'text-purple-400'}
+                  `}>{selectedOrderDetails.status}</span></p>
+                  <p className="text-gray-300 mt-2">Méthode de paiement: {selectedOrderDetails.payment.method}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium text-winshirt-purple-light mb-2">Livraison</h3>
+                  <p className="text-white">{selectedOrderDetails.shipping.address}</p>
+                  <p className="text-white">{selectedOrderDetails.shipping.postalCode}, {selectedOrderDetails.shipping.city}</p>
+                  <p className="text-white">{selectedOrderDetails.shipping.country}</p>
+                  <p className="text-gray-300 mt-2">Méthode: {selectedOrderDetails.shipping.method}</p>
+                  {selectedOrderDetails.delivery?.trackingNumber && (
+                    <p className="text-winshirt-blue-light mt-1">
+                      Suivi: {selectedOrderDetails.delivery.trackingNumber}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium text-winshirt-purple-light mb-3">Articles</h3>
+                <div className="space-y-3">
+                  {selectedOrderDetails.items.map((item, index) => (
+                    <div key={index} className="flex justify-between border-b border-winshirt-purple/10 pb-3">
+                      <div className="flex gap-3">
+                        {item.productImage && (
+                          <div className="w-16 h-16 rounded overflow-hidden">
+                            <img src={item.productImage} alt={item.productName} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-white font-medium">{item.productName}</p>
+                          <p className="text-gray-400 text-sm">
+                            {item.size && `Taille: ${item.size}`} 
+                            {item.color && ` | Couleur: ${item.color}`}
+                          </p>
+                          <p className="text-gray-400 text-sm">Quantité: {item.quantity}</p>
+                        </div>
+                      </div>
+                      <p className="text-white font-medium">{(item.price * item.quantity).toFixed(2)} €</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-end">
+                <p className="text-gray-300">Sous-total: <span className="text-white">{selectedOrderDetails.subtotal.toFixed(2)} €</span></p>
+                <p className="text-gray-300">Frais de livraison: <span className="text-white">{selectedOrderDetails.shipping.cost.toFixed(2)} €</span></p>
+                <p className="text-winshirt-purple-light font-bold text-lg mt-1">Total: {selectedOrderDetails.total.toFixed(2)} €</p>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-4">
+                <Button
+                  variant="outline"
+                  className="border-winshirt-purple text-winshirt-purple-light"
+                  onClick={() => setSelectedOrderDetails(null)}
+                >
+                  Fermer
+                </Button>
+                
+                <Button 
+                  className="bg-winshirt-purple hover:bg-winshirt-purple-dark flex items-center gap-2"
+                  onClick={() => {
+                    handleGenerateInvoice(selectedOrderDetails);
+                    setSelectedOrderDetails(null);
+                  }}
+                >
+                  <FileText size={16} />
+                  Voir la facture
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { Order, OrderStatus, DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
@@ -28,7 +27,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import OrderDetails from '@/components/admin/orders/OrderDetails';
+import InvoiceModal from '@/components/admin/orders/InvoiceModal';
 import { toast } from '@/lib/toast';
+import { generateAndStoreInvoiceUrl } from '@/utils/invoiceGenerator';
 
 // Exemple de commandes pour démo
 const mockOrders: Order[] = [
@@ -297,6 +298,7 @@ const AdminCommandesPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   
   // Charger les commandes depuis localStorage
   useEffect(() => {
@@ -614,6 +616,37 @@ const AdminCommandesPage: React.FC = () => {
       year: 'numeric'
     });
   };
+
+  const handleGenerateInvoice = (order: Order) => {
+    // Vérifier si la facture existe déjà
+    if (!order.invoiceUrl) {
+      // Générer et stocker l'URL de la facture
+      const updatedOrder = generateAndStoreInvoiceUrl(order);
+      
+      // Mettre à jour l'ordre dans la liste
+      const updatedOrders = orders.map(o => 
+        o.id === updatedOrder.id ? updatedOrder : o
+      );
+      
+      setOrders(updatedOrders);
+      localStorage.setItem('orders', JSON.stringify(updatedOrders));
+      
+      // Mettre à jour également les ordres filtrés
+      const updatedFilteredOrders = filteredOrders.map(o =>
+        o.id === updatedOrder.id ? updatedOrder : o
+      );
+      
+      setFilteredOrders(updatedFilteredOrders);
+      
+      // Ouvrir le modal avec l'ordre mis à jour
+      setInvoiceOrder(updatedOrder);
+    } else {
+      // Ouvrir directement le modal car la facture existe déjà
+      setInvoiceOrder(order);
+    }
+    
+    toast.success("Facture générée avec succès");
+  };
   
   return (
     <>
@@ -791,7 +824,12 @@ const AdminCommandesPage: React.FC = () => {
                               >
                                 <Eye size={16} />
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white h-8 w-8 p-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-gray-400 hover:text-white h-8 w-8 p-0"
+                                onClick={() => handleGenerateInvoice(order)}
+                              >
                                 <FileText size={16} />
                               </Button>
                             </div>
@@ -806,18 +844,4 @@ const AdminCommandesPage: React.FC = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-      
-      <AdminNavigation />
-    </>
-  );
-};
-
-export default AdminCommandesPage;
+                    </TableBody
