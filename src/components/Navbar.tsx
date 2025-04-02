@@ -74,14 +74,7 @@ const Navbar: React.FC = () => {
               >
                 Comment ça marche
               </Link>
-              {isAuthenticated && isAdmin && (
-                <Link 
-                  to="/admin/lotteries" 
-                  className={`nav-link text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
-                >
-                  Administration
-                </Link>
-              )}
+              {/* Removed the admin link from here */}
             </nav>
             
             {/* User actions à droite sur desktop */}
@@ -147,15 +140,7 @@ const Navbar: React.FC = () => {
                   >
                     Comment ça marche
                   </Link>
-                  {isAuthenticated && isAdmin && (
-                    <Link 
-                      to="/admin/lotteries" 
-                      className={`nav-link text-center text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Administration
-                    </Link>
-                  )}
+                  {/* Removed the admin link from mobile menu */}
                 </nav>
                 
                 <div className="flex flex-col space-y-4 items-center">
