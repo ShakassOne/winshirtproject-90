@@ -93,13 +93,19 @@
 
 @layer components {
   .nav-link {
-    @apply text-white hover:text-winshirt-blue-light transition-colors text-lg;
+    @apply text-white hover:text-winshirt-blue-light transition-colors text-lg relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-winshirt-blue-light after:transition-all after:duration-300 hover:after:w-full;
   }
 
   .nav-link.active {
-    @apply text-winshirt-blue-light font-semibold;
+    @apply text-winshirt-blue-light font-semibold after:w-full;
   }
 
+  /* Effet glassmorphism */
+  .glass-effect {
+    @apply bg-winshirt-space/40 backdrop-blur-lg border border-winshirt-purple/30;
+  }
+
+  /* Reste des styles */
   .btn-primary {
     @apply bg-winshirt-purple text-white hover:bg-winshirt-purple-dark transition-colors rounded-full px-8 py-3 text-lg font-medium;
   }
