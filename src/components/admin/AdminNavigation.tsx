@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Package, Award, Users, ShoppingBag, Settings, Menu, X, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Drawer,
   DrawerContent,
@@ -13,6 +14,12 @@ import {
 const AdminNavigation: React.FC = () => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
+  const { isAuthenticated, isAdmin } = useAuth();
+
+  // Redirect if not authenticated or not admin
+  if (!isAuthenticated || !isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
 
   const isActive = (path: string) => {
     return location.pathname.includes(path);

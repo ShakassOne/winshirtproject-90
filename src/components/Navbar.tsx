@@ -58,7 +58,7 @@ const Navbar: React.FC = () => {
               >
                 Comment ça marche
               </Link>
-              {isAdmin && (
+              {isAuthenticated && isAdmin && (
                 <Link 
                   to="/admin/lotteries" 
                   className={`nav-link text-lg font-medium text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
@@ -150,7 +150,7 @@ const Navbar: React.FC = () => {
             >
               Comment ça marche
             </Link>
-            {isAdmin && (
+            {isAuthenticated && isAdmin && (
               <Link 
                 to="/admin/lotteries" 
                 className={`nav-link text-xl font-medium text-winshirt-purple-light ${location.pathname.includes('/admin') ? 'active' : ''}`}
