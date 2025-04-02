@@ -3,12 +3,24 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, X, Mail } from 'lucide-react';
+import { Plus, X, Mail, Send } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 const NotificationEmailsManager: React.FC = () => {
   const [emails, setEmails] = useState<string[]>(['admin@winshirt.com']);
   const [newEmail, setNewEmail] = useState<string>('');
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState<boolean>(false);
+  const [testEmailSubject, setTestEmailSubject] = useState<string>('Test de notification Winshirt');
+  const [testEmailContent, setTestEmailContent] = useState<string>('Ceci est un email de test pour vérifier le système de notification.');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   
   // Charger les emails de notification depuis localStorage
   useEffect(() => {
@@ -64,6 +76,27 @@ const NotificationEmailsManager: React.FC = () => {
     toast.success("Adresse email supprimée");
   };
   
+  // Envoyer un email de test
+  const handleSendTestEmail = () => {
+    if (emails.length === 0) {
+      toast.error("Aucune adresse email pour recevoir le test");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    // Simuler l'envoi d'email
+    setTimeout(() => {
+      console.log("Email de test envoyé à:", emails);
+      console.log("Sujet:", testEmailSubject);
+      console.log("Contenu:", testEmailContent);
+      
+      toast.success(`Email de test envoyé à ${emails.length} destinataire(s)`);
+      setIsLoading(false);
+      setIsTestDialogOpen(false);
+    }, 1500);
+  };
+  
   return (
     <Card className="winshirt-card">
       <CardHeader>
@@ -116,7 +149,80 @@ const NotificationEmailsManager: React.FC = () => {
             </p>
           )}
         </div>
+        
+        <div className="flex justify-end mt-4">
+          <Button 
+            onClick={() => setIsTestDialogOpen(true)}
+            variant="outline"
+            className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Envoyer un email de test
+          </Button>
+        </div>
       </CardContent>
+      
+      {/* Dialog pour l'email de test */}
+      <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
+        <DialogContent className="bg-winshirt-space border-winshirt-purple/30 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-winshirt-blue-light">
+              Envoyer un email de test
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Cet email sera envoyé à {emails.length} destinataire(s).
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-gray-300">Sujet</label>
+              <Input
+                value={testEmailSubject}
+                onChange={(e) => setTestEmailSubject(e.target.value)}
+                className="bg-winshirt-space-light border-winshirt-purple/30"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-gray-300">Contenu</label>
+              <textarea
+                value={testEmailContent}
+                onChange={(e) => setTestEmailContent(e.target.value)}
+                rows={5}
+                className="bg-winshirt-space-light border-winshirt-purple/30 p-2 rounded-md text-white"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsTestDialogOpen(false)}
+              className="border-winshirt-purple/30 text-winshirt-blue-light hover:bg-winshirt-purple/10"
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleSendTestEmail}
+              disabled={isLoading}
+              className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+            >
+              {isLoading ? (
+                <>
+                  <span className="animate-spin mr-2">&#9696;</span>
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

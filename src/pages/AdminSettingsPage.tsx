@@ -1,10 +1,10 @@
-
 import React from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
+import ShippingSettingsManager from '@/components/admin/settings/ShippingSettingsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Bell, ShieldCheck, Database } from 'lucide-react';
+import { Settings, Bell, ShieldCheck, Database, Truck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AdminSettingsPage: React.FC = () => {
@@ -26,6 +26,10 @@ const AdminSettingsPage: React.FC = () => {
               <TabsTrigger value="notifications" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
+              </TabsTrigger>
+              <TabsTrigger value="shipping" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
+                <Truck className="h-4 w-4 mr-2" />
+                Livraison
               </TabsTrigger>
               <TabsTrigger value="security" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <ShieldCheck className="h-4 w-4 mr-2" />
@@ -59,6 +63,10 @@ const AdminSettingsPage: React.FC = () => {
                   </p>
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="shipping" className="space-y-6">
+              <ShippingSettingsManager />
             </TabsContent>
             
             <TabsContent value="security" className="space-y-6">

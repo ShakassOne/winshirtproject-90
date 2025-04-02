@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Truck, Clock, CheckCircle } from 'lucide-react';
+import { AdminSettings } from '@/types/order';
 
 interface ShippingMethod {
   id: string;
@@ -24,16 +25,52 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
   selectedMethod,
   onChange,
   subtotal,
-  freeShippingThreshold = 50
+  freeShippingThreshold
 }) => {
-  const freeShipping = subtotal >= freeShippingThreshold;
+  // État local pour stocker les paramètres de livraison
+  const [shippingSettings, setShippingSettings] = useState<AdminSettings['deliverySettings'] | null>(null);
+  
+  // Charger les paramètres de livraison depuis localStorage
+  useEffect(() => {
+    const loadShippingSettings = () => {
+      try {
+        const storedSettings = localStorage.getItem('admin_shipping_settings');
+        if (storedSettings) {
+          const parsedSettings = JSON.parse(storedSettings);
+          setShippingSettings(parsedSettings);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des paramètres de livraison:", error);
+      }
+    };
+    
+    loadShippingSettings();
+    
+    // Écouter les changements dans le localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'admin_shipping_settings') {
+        loadShippingSettings();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
+  // Utiliser les paramètres configurés ou les valeurs par défaut
+  const threshold = freeShippingThreshold || shippingSettings?.freeShippingThreshold || 50;
+  const standardPrice = shippingSettings?.defaultShippingRates?.national?.standard || 5.99;
+  const expressPrice = shippingSettings?.defaultShippingRates?.national?.express || 9.99;
+  const relayPrice = 3.99; // Valeur par défaut si non configurée
+  
+  const freeShipping = subtotal >= threshold;
   
   const shippingMethods: ShippingMethod[] = [
     {
       id: 'standard',
       name: 'Livraison standard',
       description: 'Livraison en 3 à 5 jours ouvrables',
-      price: freeShipping ? 0 : 5.99,
+      price: freeShipping ? 0 : standardPrice,
       estimatedDays: '3-5 jours',
       icon: <Truck className="text-winshirt-purple h-5 w-5" />
     },
@@ -41,7 +78,7 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
       id: 'express',
       name: 'Livraison express',
       description: 'Livraison garantie en 24-48h',
-      price: 9.99,
+      price: expressPrice,
       estimatedDays: '1-2 jours',
       icon: <Clock className="text-winshirt-blue h-5 w-5" />
     },
@@ -49,7 +86,7 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
       id: 'relay',
       name: 'Point relais',
       description: 'Livraison en point relais',
-      price: freeShipping ? 0 : 3.99,
+      price: freeShipping ? 0 : relayPrice,
       estimatedDays: '3-4 jours',
       icon: <CheckCircle className="text-green-500 h-5 w-5" />
     }
