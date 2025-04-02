@@ -13,6 +13,7 @@ export interface ExtendedLottery {
   winner?: Participant | null;
   drawDate?: string | null;
   endDate?: string | null;
+  featured?: boolean; // New field to mark lotteries as featured
 }
 
 export interface Participant {

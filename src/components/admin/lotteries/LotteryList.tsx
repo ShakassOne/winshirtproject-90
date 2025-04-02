@@ -1,9 +1,10 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Award, Plus, Trash } from 'lucide-react';
+import { Award, Plus, Trash, Star } from 'lucide-react';
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import DrawWinnerButton from './DrawWinnerButton';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface LotteryListProps {
   lotteries: ExtendedLottery[];
@@ -12,6 +13,7 @@ interface LotteryListProps {
   onEditLottery: (lotteryId: number) => void;
   onDeleteLottery: (lotteryId: number) => void;
   onDrawWinner: (lotteryId: number, winner: Participant) => void;
+  onToggleFeatured: (lotteryId: number, featured: boolean) => void;
 }
 
 const LotteryList: React.FC<LotteryListProps> = ({
@@ -20,7 +22,8 @@ const LotteryList: React.FC<LotteryListProps> = ({
   onCreateLottery,
   onEditLottery,
   onDeleteLottery,
-  onDrawWinner
+  onDrawWinner,
+  onToggleFeatured
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -73,6 +76,21 @@ const LotteryList: React.FC<LotteryListProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center mr-2">
+                  <Checkbox 
+                    id={`featured-${lottery.id}`}
+                    checked={lottery.featured}
+                    onCheckedChange={(checked) => onToggleFeatured(lottery.id, checked === true)}
+                    className="mr-2 data-[state=checked]:bg-winshirt-purple data-[state=checked]:border-winshirt-purple"
+                  />
+                  <label 
+                    htmlFor={`featured-${lottery.id}`}
+                    className="text-sm text-gray-300 cursor-pointer flex items-center"
+                  >
+                    <Star size={16} className="mr-1 text-winshirt-purple-light" />
+                    En vedette
+                  </label>
+                </div>
                 <DrawWinnerButton 
                   lottery={lottery} 
                   onDrawWinner={onDrawWinner} 

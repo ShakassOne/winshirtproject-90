@@ -145,7 +145,8 @@ const AdminLotteriesPage: React.FC = () => {
     selectAllProducts,
     deselectAllProducts,
     handleDrawWinner,
-    checkLotteriesReadyForDraw
+    checkLotteriesReadyForDraw,
+    handleToggleFeatured
   } = useLotteryForm(lotteries, setLotteries, products);
 
   // Vérifier périodiquement si des loteries sont prêtes pour le tirage
@@ -199,6 +200,7 @@ const AdminLotteriesPage: React.FC = () => {
                 onEditLottery={handleEditLottery}
                 onDeleteLottery={handleDeleteLottery}
                 onDrawWinner={handleDrawWinner}
+                onToggleFeatured={handleToggleFeatured}
               />
             </div>
             

@@ -26,6 +26,7 @@ const formSchema = z.object({
   }),
   endDate: z.string().optional(),
   linkedProducts: z.array(z.string()).optional(),
+  featured: z.boolean().optional(),
 });
 
 export const useLotteryForm = (
@@ -47,6 +48,7 @@ export const useLotteryForm = (
       image: "",
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default: 7 days from now
       linkedProducts: [],
+      featured: false,
     },
   });
 
@@ -70,6 +72,7 @@ export const useLotteryForm = (
         image: lotteryToEdit.image,
         endDate: lotteryToEdit.endDate || undefined,
         linkedProducts: lotteryToEdit.linkedProducts?.map(String) || [],
+        featured: lotteryToEdit.featured || false,
       });
       
       // Debug: vérifier les données chargées dans le formulaire
@@ -105,7 +108,8 @@ export const useLotteryForm = (
         participants: [],
         winner: null,
         drawDate: null,
-        endDate: data.endDate
+        endDate: data.endDate,
+        featured: data.featured || false,
       };
       
       const updatedLotteries = [...lotteries, newLottery];
@@ -128,6 +132,7 @@ export const useLotteryForm = (
               image: data.image,
               endDate: data.endDate,
               linkedProducts: data.linkedProducts?.map(Number) || [],
+              featured: data.featured || false,
             }
           : lottery
       );
@@ -206,6 +211,22 @@ export const useLotteryForm = (
     return readyLotteries;
   }, [lotteries]);
 
+  const handleToggleFeatured = (lotteryId: number, featured: boolean) => {
+    const updatedLotteries = lotteries.map(lottery => 
+      lottery.id === lotteryId 
+        ? { ...lottery, featured } 
+        : lottery
+    );
+    
+    setLotteries(updatedLotteries);
+    localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+    
+    toast.success(featured 
+      ? "Loterie ajoutée aux vedettes !" 
+      : "Loterie retirée des vedettes !"
+    );
+  };
+
   return {
     isCreating,
     selectedLotteryId,
@@ -219,6 +240,7 @@ export const useLotteryForm = (
     selectAllProducts,
     deselectAllProducts,
     handleDrawWinner,
-    checkLotteriesReadyForDraw
+    checkLotteriesReadyForDraw,
+    handleToggleFeatured
   };
 };

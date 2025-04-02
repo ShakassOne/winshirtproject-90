@@ -6,6 +6,7 @@ import StarBackground from '../components/StarBackground';
 import { Button } from '@/components/ui/button';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ExtendedLottery } from '@/types/lottery';
+import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
@@ -48,6 +49,7 @@ const LotteriesPage: React.FC = () => {
         status: "active",
         image: "https://pixelprint.world/wp-content/uploads/2025/04/iPhone-16-Pro-couleurs.jpg",
         endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 jours à partir d'aujourd'hui
+        featured: true, // Set iPhone lottery as featured by default
       };
       
       return [...currentLotteries, iPhoneLottery];
@@ -93,11 +95,19 @@ const LotteriesPage: React.FC = () => {
     ? lotteries 
     : lotteries.filter(lottery => lottery.status === activeFilter);
   
+  // Check if there are any featured lotteries
+  const hasFeaturedLotteries = lotteries.some(lottery => lottery.featured);
+  
   return (
     <>
+      {/* Show featured lottery slider if there are any featured lotteries */}
+      {hasFeaturedLotteries && (
+        <FeaturedLotterySlider lotteries={lotteries} />
+      )}
+      
       <StarBackground />
       
-      <section className="pt-32 pb-24">
+      <section className={`${hasFeaturedLotteries ? 'pt-16' : 'pt-32'} pb-24`}>
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Nos Loteries
