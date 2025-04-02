@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import { mockLotteries, mockProducts } from '@/data/mockData';
 import { ExtendedLottery } from '@/types/lottery';
 import { ExtendedProduct } from '@/types/product';
 import LotteryList from '@/components/admin/lotteries/LotteryList';
@@ -11,6 +10,8 @@ import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Gift } from 'lucide-react';
 import AdminNavigation from '@/components/admin/AdminNavigation';
+import { fetchLotteries } from '@/api/lotteryApi';
+import { fetchProducts } from '@/api/productApi';
 
 const AdminLotteriesPage: React.FC = () => {
   // Création de deux loteries spéciales
@@ -60,76 +61,47 @@ const AdminLotteriesPage: React.FC = () => {
     }
   ];
 
-  // Chargement des loteries depuis localStorage ou fallback aux loteries spéciales + mockLotteries
-  const getInitialLotteries = () => {
-    try {
-      const storedLotteries = localStorage.getItem('lotteries');
-      if (storedLotteries) {
-        const parsedLotteries = JSON.parse(storedLotteries);
-        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-          // On vérifie si les loteries spéciales sont déjà présentes
-          const existingIds = parsedLotteries.map(lottery => lottery.id);
-          const missingSpecialLotteries = specialLotteries.filter(
-            lottery => !existingIds.includes(lottery.id)
-          );
-          
-          // On ajoute uniquement les loteries spéciales manquantes
-          if (missingSpecialLotteries.length > 0) {
-            const mergedLotteries = [...parsedLotteries, ...missingSpecialLotteries];
-            localStorage.setItem('lotteries', JSON.stringify(mergedLotteries));
-            return mergedLotteries;
-          }
-          
-          return parsedLotteries;
-        }
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des loteries:", error);
-    }
-    
-    // Fusionner les loteries spéciales avec les loteries mock si rien n'est trouvé
-    const initialLotteries = [...specialLotteries, ...mockLotteries];
-    localStorage.setItem('lotteries', JSON.stringify(initialLotteries));
-    return initialLotteries;
-  };
-
-  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(getInitialLotteries());
-  const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts);
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [products, setProducts] = useState<ExtendedProduct[]>([]);
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Mettre à jour le localStorage ET déclencher un événement quand les loteries changent
+  // Chargement des données depuis Supabase
   useEffect(() => {
-    localStorage.setItem('lotteries', JSON.stringify(lotteries));
-    
-    // Déclencher un événement personnalisé pour notifier les autres composants
-    window.dispatchEvent(new Event('storageUpdate'));
-    
-    // Dispatch un StorageEvent pour que d'autres onglets puissent écouter
-    try {
-      const storageEvent = new StorageEvent('storage', {
-        key: 'lotteries',
-        newValue: JSON.stringify(lotteries),
-        url: window.location.href
-      });
-      window.dispatchEvent(storageEvent);
-    } catch (error) {
-      console.error("Erreur lors de la création de l'événement storage:", error);
-    }
-  }, [lotteries]);
-  
-  // Charger les produits depuis localStorage au montage
-  useEffect(() => {
-    const savedProducts = localStorage.getItem('products');
-    if (savedProducts) {
+    const loadData = async () => {
+      setIsLoading(true);
       try {
-        const parsedProducts = JSON.parse(savedProducts);
-        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-          setProducts(parsedProducts);
+        // Récupérer les loteries depuis Supabase
+        const fetchedLotteries = await fetchLotteries();
+        
+        // Si aucune loterie n'est trouvée, ajouter les loteries spéciales
+        let lotteriesData = fetchedLotteries;
+        if (fetchedLotteries.length === 0) {
+          lotteriesData = specialLotteries;
+          // Sauvegarder les loteries spéciales dans Supabase
+          for (const lottery of specialLotteries) {
+            await fetch('/api/lotteries', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(lottery)
+            });
+          }
         }
+        
+        setLotteries(lotteriesData);
+        
+        // Récupérer les produits depuis Supabase
+        const fetchedProducts = await fetchProducts();
+        setProducts(fetchedProducts);
       } catch (error) {
-        console.error("Erreur lors du chargement des produits:", error);
+        console.error("Erreur lors du chargement des données:", error);
+        toast.error("Erreur lors du chargement des données");
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    
+    loadData();
   }, []);
   
   const {
@@ -169,9 +141,20 @@ const AdminLotteriesPage: React.FC = () => {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [lotteries]);
+  }, [lotteries, checkLotteriesReadyForDraw]);
   
   const lotteriesReadyForDraw = checkLotteriesReadyForDraw();
+
+  if (isLoading) {
+    return (
+      <>
+        <StarBackground />
+        <div className="pt-32 pb-24 flex justify-center items-center">
+          <div className="text-white text-xl">Chargement des loteries...</div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

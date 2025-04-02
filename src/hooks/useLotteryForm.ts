@@ -6,6 +6,13 @@ import * as z from "zod";
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
+import { 
+  createLottery, 
+  updateLottery, 
+  deleteLottery, 
+  toggleLotteryFeatured, 
+  updateLotteryWinner 
+} from '@/api/lotteryApi';
 
 const formSchema = z.object({
   title: z.string().min(2, {
@@ -84,19 +91,22 @@ export const useLotteryForm = (
     }
   };
 
-  const handleDeleteLottery = (lotteryId: number) => {
-    setLotteries(prev => prev.filter(lottery => lottery.id !== lotteryId));
-    setSelectedLotteryId(null);
-    toast.success("Loterie supprimée avec succès !");
+  const handleDeleteLottery = async (lotteryId: number) => {
+    const success = await deleteLottery(lotteryId);
+    
+    if (success) {
+      setLotteries(prev => prev.filter(lottery => lottery.id !== lotteryId));
+      setSelectedLotteryId(null);
+      toast.success("Loterie supprimée avec succès !");
+    }
   };
 
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
     console.log("Données du formulaire soumises:", data); // Debug: afficher les données envoyées
     
     if (isCreating) {
-      // Create a new lottery with the correct type
-      const newLottery: ExtendedLottery = {
-        id: Date.now(),
+      // Créer une nouvelle loterie
+      const newLotteryData: Omit<ExtendedLottery, 'id'> = {
         title: data.title,
         description: data.description,
         value: Number(data.value),
@@ -112,42 +122,42 @@ export const useLotteryForm = (
         featured: data.featured || false,
       };
       
-      const updatedLotteries = [...lotteries, newLottery];
-      setLotteries(updatedLotteries);
-      toast.success("Loterie créée avec succès !");
+      const createdLottery = await createLottery(newLotteryData);
       
-      // Stocker également directement dans localStorage pour assurer la cohérence
-      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      if (createdLottery) {
+        setLotteries(prev => [...prev, createdLottery]);
+        toast.success("Loterie créée avec succès !");
+      }
     } else if (selectedLotteryId) {
-      // Mettre à jour la loterie sélectionnée avec les nouvelles valeurs
-      const updatedLotteries = lotteries.map(lottery =>
-        lottery.id === selectedLotteryId
-          ? {
-              ...lottery,
-              title: data.title,
-              description: data.description,
-              value: Number(data.value),
-              targetParticipants: Number(data.targetParticipants),
-              status: data.status,
-              image: data.image,
-              endDate: data.endDate,
-              linkedProducts: data.linkedProducts?.map(Number) || [],
-              featured: data.featured || false,
-            }
-          : lottery
-      );
+      // Trouver la loterie existante pour conserver ses propriétés non modifiables par le formulaire
+      const existingLottery = lotteries.find(l => l.id === selectedLotteryId);
       
-      // Debug: afficher la loterie avant et après la mise à jour
-      console.log("Loterie avant mise à jour:", lotteries.find(l => l.id === selectedLotteryId));
-      console.log("Nouvelles données d'image:", data.image);
-      console.log("Loterie après mise à jour:", updatedLotteries.find(l => l.id === selectedLotteryId));
-      
-      setLotteries(updatedLotteries);
-      toast.success("Loterie modifiée avec succès !");
-      
-      // Stocker également directement dans localStorage pour assurer la cohérence
-      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      if (existingLottery) {
+        // Préparer les données pour la mise à jour
+        const updatedLotteryData: ExtendedLottery = {
+          ...existingLottery,
+          title: data.title,
+          description: data.description,
+          value: Number(data.value),
+          targetParticipants: Number(data.targetParticipants),
+          status: data.status,
+          image: data.image,
+          endDate: data.endDate,
+          linkedProducts: data.linkedProducts?.map(Number) || [],
+          featured: data.featured || false,
+        };
+        
+        const updatedLottery = await updateLottery(updatedLotteryData);
+        
+        if (updatedLottery) {
+          setLotteries(prev => prev.map(lottery => 
+            lottery.id === selectedLotteryId ? updatedLottery : lottery
+          ));
+          toast.success("Loterie modifiée avec succès !");
+        }
+      }
     }
+    
     setIsCreating(false);
     setSelectedLotteryId(null);
     form.reset();
@@ -182,24 +192,24 @@ export const useLotteryForm = (
     form.setValue('linkedProducts', []);
   };
 
-  const handleDrawWinner = (lotteryId: number, winner: Participant) => {
-    const updatedLotteries = lotteries.map(lottery => 
-      lottery.id === lotteryId 
-        ? { 
-            ...lottery, 
-            winner: winner,
-            drawDate: new Date().toISOString(),
-            status: 'completed' as const // Changer le statut en "completed"
-          } 
-        : lottery
-    );
+  const handleDrawWinner = async (lotteryId: number, winner: Participant) => {
+    const success = await updateLotteryWinner(lotteryId, winner);
     
-    setLotteries(updatedLotteries);
-    
-    // Mettre également à jour le localStorage après le tirage au sort
-    localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-    
-    toast.success(`Le gagnant de la loterie est ${winner.name} !`);
+    if (success) {
+      const updatedLotteries = lotteries.map(lottery => 
+        lottery.id === lotteryId 
+          ? { 
+              ...lottery, 
+              winner: winner,
+              drawDate: new Date().toISOString(),
+              status: 'completed' as const
+            } 
+          : lottery
+      );
+      
+      setLotteries(updatedLotteries);
+      toast.success(`Le gagnant de la loterie est ${winner.name} !`);
+    }
   };
 
   const checkLotteriesReadyForDraw = useCallback(() => {
@@ -211,20 +221,23 @@ export const useLotteryForm = (
     return readyLotteries;
   }, [lotteries]);
 
-  const handleToggleFeatured = (lotteryId: number, featured: boolean) => {
-    const updatedLotteries = lotteries.map(lottery => 
-      lottery.id === lotteryId 
-        ? { ...lottery, featured } 
-        : lottery
-    );
+  const handleToggleFeatured = async (lotteryId: number, featured: boolean) => {
+    const success = await toggleLotteryFeatured(lotteryId, featured);
     
-    setLotteries(updatedLotteries);
-    localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-    
-    toast.success(featured 
-      ? "Loterie ajoutée aux vedettes !" 
-      : "Loterie retirée des vedettes !"
-    );
+    if (success) {
+      const updatedLotteries = lotteries.map(lottery => 
+        lottery.id === lotteryId 
+          ? { ...lottery, featured } 
+          : lottery
+      );
+      
+      setLotteries(updatedLotteries);
+      
+      toast.success(featured 
+        ? "Loterie ajoutée aux vedettes !" 
+        : "Loterie retirée des vedettes !"
+      );
+    }
   };
 
   return {

@@ -7,28 +7,13 @@ import { Button } from '@/components/ui/button';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ExtendedLottery } from '@/types/lottery';
 import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
+import { fetchLotteries } from '@/api/lotteryApi';
+import { toast } from '@/lib/toast';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
-  
-  // Fonction pour charger les loteries depuis localStorage ou fallback aux mocks
-  const getInitialLotteries = () => {
-    try {
-      const storedLotteries = localStorage.getItem('lotteries');
-      if (storedLotteries) {
-        const parsedLotteries = JSON.parse(storedLotteries);
-        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-          return parsedLotteries;
-        }
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des loteries:", error);
-    }
-    
-    // Fallback aux loteries mock si rien n'est trouvé dans localStorage
-    return mockLotteries;
-  };
+  const [isLoading, setIsLoading] = useState(true);
   
   // Ajouter la loterie iPhone si elle n'existe pas déjà
   const addIPhoneLottery = (currentLotteries: ExtendedLottery[]): ExtendedLottery[] => {
@@ -40,7 +25,7 @@ const LotteriesPage: React.FC = () => {
     if (!iPhoneLotteryExists) {
       // Créer une nouvelle loterie iPhone
       const iPhoneLottery: ExtendedLottery = {
-        id: Math.max(...currentLotteries.map(l => l.id)) + 1, // ID unique
+        id: Math.max(...currentLotteries.map(l => l.id), 0) + 1, // ID unique
         title: "iPhone 16 Pro",
         description: "Gagnez le tout nouveau iPhone 16 Pro avec ses nouvelles couleurs exclusives et ses fonctionnalités révolutionnaires.",
         value: 1299,
@@ -52,6 +37,15 @@ const LotteriesPage: React.FC = () => {
         featured: true, // Set iPhone lottery as featured by default
       };
       
+      // Essayer d'ajouter la loterie à Supabase (en arrière-plan)
+      fetch('/api/lotteries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(iPhoneLottery)
+      }).catch(error => {
+        console.error("Erreur lors de l'ajout de la loterie iPhone:", error);
+      });
+      
       return [...currentLotteries, iPhoneLottery];
     }
     
@@ -60,34 +54,44 @@ const LotteriesPage: React.FC = () => {
   
   // Charger les loteries au montage du composant
   useEffect(() => {
-    let loadedLotteries = getInitialLotteries();
-    
-    // Ajouter la loterie iPhone si nécessaire
-    loadedLotteries = addIPhoneLottery(loadedLotteries);
-    
-    // Mettre à jour l'état et localStorage
-    setLotteries(loadedLotteries);
-    localStorage.setItem('lotteries', JSON.stringify(loadedLotteries));
-    
-    // Ajouter un écouteur d'événement pour détecter les changements dans localStorage
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'lotteries') {
-        let updatedLotteries = getInitialLotteries();
-        updatedLotteries = addIPhoneLottery(updatedLotteries);
-        setLotteries(updatedLotteries);
+    const loadLotteries = async () => {
+      setIsLoading(true);
+      try {
+        let loadedLotteries = await fetchLotteries();
+        
+        // Fallback to mock data if no lotteries in Supabase
+        if (loadedLotteries.length === 0) {
+          loadedLotteries = mockLotteries;
+        }
+        
+        // Ajouter la loterie iPhone si nécessaire
+        loadedLotteries = addIPhoneLottery(loadedLotteries);
+        
+        setLotteries(loadedLotteries);
+      } catch (error) {
+        console.error('Erreur lors du chargement des loteries:', error);
+        toast.error("Erreur lors du chargement des loteries");
+        
+        // Fallback to mock data
+        let loadedLotteries = mockLotteries;
+        loadedLotteries = addIPhoneLottery(loadedLotteries);
+        setLotteries(loadedLotteries);
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('storageUpdate', () => {
-      let updatedLotteries = getInitialLotteries();
-      updatedLotteries = addIPhoneLottery(updatedLotteries);
-      setLotteries(updatedLotteries);
-    });
+    loadLotteries();
+    
+    // Mettre en place un écouteur pour les mises à jour
+    const handleStorageUpdate = () => {
+      loadLotteries();
+    };
+    
+    window.addEventListener('storageUpdate', handleStorageUpdate);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('storageUpdate', () => {});
+      window.removeEventListener('storageUpdate', handleStorageUpdate);
     };
   }, []);
   
@@ -97,6 +101,17 @@ const LotteriesPage: React.FC = () => {
   
   // Check if there are any featured lotteries
   const hasFeaturedLotteries = lotteries.some(lottery => lottery.featured);
+  
+  if (isLoading) {
+    return (
+      <>
+        <StarBackground />
+        <div className="pt-32 pb-24 flex justify-center items-center">
+          <div className="text-white text-xl">Chargement des loteries...</div>
+        </div>
+      </>
+    );
+  }
   
   return (
     <>
