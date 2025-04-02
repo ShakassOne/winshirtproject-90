@@ -68,13 +68,13 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
 
   return (
     <div className="relative w-full h-screen bg-gradient-to-b from-winshirt-space to-winshirt-space-dark overflow-hidden">
-      {/* Background image with overlay */}
+      {/* Background image with overlay - Reduced opacity from 30% to 60% */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-winshirt-space/60 to-winshirt-space z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-winshirt-space/40 to-winshirt-space z-10"></div>
         <img 
           src={currentLottery.image} 
           alt={currentLottery.title}
-          className="w-full h-full object-cover opacity-30 scale-110 transition-transform duration-[1.5s] ease-in-out"
+          className="w-full h-full object-cover opacity-60 scale-110 transition-transform duration-[1.5s] ease-in-out"
           style={{ transform: `scale(${isTransitioning ? 1.15 : 1.1})` }}
         />
       </div>

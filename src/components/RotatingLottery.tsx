@@ -65,7 +65,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
               <Link to={`/lotteries#${lottery.id}`} className="block">
                 <div className={`h-full rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 carousel-card ${index === activeIndex ? 'active' : ''}`}>
                   <div className="relative aspect-[3/4] overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10"></div>
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70 z-10"></div>
                     <img 
                       src={lottery.image} 
                       alt={lottery.title}
