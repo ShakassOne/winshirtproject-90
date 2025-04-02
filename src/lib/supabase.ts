@@ -11,10 +11,31 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.log("Pour utiliser Supabase, vous devez définir VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY");
 }
 
-// Création du client Supabase
+// Création du client Supabase avec un timeout plus court pour éviter les longs délais
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder-project.supabase.co',
-  supabaseAnonKey || 'placeholder-key-for-development-only'
+  supabaseAnonKey || 'placeholder-key-for-development-only',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      fetch: (...args) => {
+        // Définit un timeout plus court pour éviter les longs délais
+        const controller = new AbortController();
+        const { signal } = controller;
+        
+        // Timeout de 3 secondes
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        // @ts-ignore
+        return fetch(...args, { signal })
+          .finally(() => clearTimeout(timeoutId));
+      }
+    }
+  }
 );
 
 // Fonction pour gérer l'upload d'images

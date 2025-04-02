@@ -16,7 +16,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, isAdmin } = useAuth();
 
   if (!isAuthenticated) {
-    toast.error("Vous devez être connecté pour accéder à cette page");
+    // Only show toast for admin routes
+    if (adminOnly) {
+      toast.error("Vous devez être connecté pour accéder à cette page");
+    }
     return <Navigate to="/login" replace />;
   }
 

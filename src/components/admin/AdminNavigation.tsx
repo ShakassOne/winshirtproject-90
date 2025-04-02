@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Link, useLocation, Navigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Package, Award, Users, ShoppingBag, Settings, Menu, X, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -16,9 +15,9 @@ const AdminNavigation: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { isAuthenticated, isAdmin } = useAuth();
 
-  // Redirect if not authenticated or not admin
+  // If not authenticated or not admin, don't render the navigation
   if (!isAuthenticated || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return null;
   }
 
   const isActive = (path: string) => {

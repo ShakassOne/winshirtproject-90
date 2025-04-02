@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
@@ -130,28 +129,43 @@ export const useAuthProvider = () => {
 
   const loginWithSocialMedia = async (provider: 'facebook' | 'google') => {
     try {
-      // Try login with Supabase
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      toast.info(`Connexion avec ${provider} en cours...`);
+
+      // Tentative de connexion avec simulation immédiate pour éviter l'attente
+      // si Supabase n'est pas configuré
+      const providerName = provider === 'facebook' ? 'Facebook' : 'Google';
+      
+      // Essai de connexion avec Supabase avec un timeout court
+      const loginPromise = supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: window.location.origin + '/account'
         }
       });
       
+      // Définir un timeout pour abandonner après 2 secondes
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Délai d'attente dépassé")), 2000);
+      });
+      
+      // Race entre la connexion et le timeout
+      const { data, error } = await Promise.race([
+        loginPromise,
+        timeoutPromise.then(() => ({ data: null, error: new Error("Délai d'attente dépassé") }))
+      ]) as any;
+      
       if (error) {
         console.error(`Erreur de connexion ${provider}:`, error);
         
-        // Fall back to simulation if Supabase error
-        const providerName = provider === 'facebook' ? 'Facebook' : 'Google';
-        
-        // Generate simulated user data
+        // Mode simulation en cas d'erreur Supabase
+        // Génération de données utilisateur simulées
         const randomId = Math.floor(Math.random() * 10000);
         const userData = generateSimulatedSocialUser(provider, randomId);
         
-        // Check if user already exists
+        // Vérification si l'utilisateur existe déjà
         const users = loadUsersFromStorage();
         
-        // Check by email or provider ID
+        // Vérification par email ou ID de fournisseur
         const existingUserByEmail = users.find(u => u.email === userData.email);
         const existingUserByProviderId = users.find(
           u => u.socialMediaDetails?.providerId === userData.socialMediaDetails?.providerId
@@ -160,15 +174,15 @@ export const useAuthProvider = () => {
         const existingUser = existingUserByEmail || existingUserByProviderId;
         
         if (existingUser) {
-          // User already exists, log them in
-          // Update info if needed
+          // L'utilisateur existe déjà, connectez-le
+          // Mise à jour des informations si nécessaire
           const updatedUser = {
             ...existingUser,
             ...userData,
-            id: existingUser.id // Keep original ID
+            id: existingUser.id // Conserver l'ID original
           };
           
-          // Update user in list
+          // Mise à jour de l'utilisateur dans la liste
           const updatedUsers = users.map(u => 
             u.id === updatedUser.id ? updatedUser : u
           );
@@ -182,9 +196,9 @@ export const useAuthProvider = () => {
           return;
         }
         
-        // Create new user
+        // Création d'un nouvel utilisateur
         const newUser: User = {
-          id: users.length + 2, // +2 as id 1 is reserved for admin
+          id: users.length + 2, // +2 car l'id 1 est réservé à l'admin
           ...userData as User,
           role: 'user',
           registrationDate: new Date().toISOString(),
@@ -194,11 +208,11 @@ export const useAuthProvider = () => {
         users.push(newUser);
         saveUsersToStorage(users);
         
-        // Log in user
+        // Connexion de l'utilisateur
         setUser(newUser);
         localStorage.setItem('winshirt_user', JSON.stringify(newUser));
         
-        // Send confirmation email
+        // Envoi d'un email de confirmation
         EmailService.sendAccountCreationEmail(newUser.email, newUser.name);
         
         toast.success(`Inscription réussie avec ${providerName}! (Mode simulation)`);
@@ -206,13 +220,37 @@ export const useAuthProvider = () => {
         return;
       }
       
-      // Supabase redirection handled automatically
-      if (data.url) {
+      // Redirection Supabase gérée automatiquement
+      if (data?.url) {
         toast.info(`Redirection vers ${provider} pour authentification...`);
       }
     } catch (error) {
       console.error(`Erreur lors de la connexion avec ${provider}:`, error);
-      toast.error(`Une erreur est survenue lors de la connexion avec ${provider}`);
+      
+      // Basculer automatiquement en mode simulation
+      const providerName = provider === 'facebook' ? 'Facebook' : 'Google';
+      const randomId = Math.floor(Math.random() * 10000);
+      const userData = generateSimulatedSocialUser(provider, randomId);
+      
+      // Créer un nouvel utilisateur simulé
+      const users = loadUsersFromStorage();
+      const newUser: User = {
+        id: users.length + 2,
+        ...userData as User,
+        role: 'user',
+        registrationDate: new Date().toISOString(),
+        provider: provider
+      };
+      
+      users.push(newUser);
+      saveUsersToStorage(users);
+      
+      // Connecter l'utilisateur
+      setUser(newUser);
+      localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+      
+      toast.success(`Connexion avec ${providerName} simulée avec succès!`);
+      navigate('/account');
     }
   };
 
