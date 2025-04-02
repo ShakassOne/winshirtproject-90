@@ -11,13 +11,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.log("Pour utiliser Supabase, vous devez définir VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY");
 }
 
-// Création du client Supabase avec une URL et clé par défaut pour développement
+// Création du client Supabase
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder-project.supabase.co',
   supabaseAnonKey || 'placeholder-key-for-development-only'
 );
 
-// Fonction modifiée pour gérer l'absence de connexion à Supabase
+// Fonction pour gérer l'upload d'images
 export const uploadImage = async (file: File, bucket: string = 'products'): Promise<string | null> => {
   try {
     // Vérifier si les identifiants Supabase sont disponibles
@@ -54,4 +54,9 @@ export const uploadImage = async (file: File, bucket: string = 'products'): Prom
     console.error('Erreur lors de l\'upload:', error);
     return null;
   }
+};
+
+// Vérifie si Supabase est correctement configuré
+export const isSupabaseConfigured = (): boolean => {
+  return !!(supabaseUrl && supabaseAnonKey);
 };

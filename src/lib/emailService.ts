@@ -69,15 +69,12 @@ export class EmailService {
   
   static async sendEmail(to: string, subject: string, body: string): Promise<boolean> {
     try {
-      // Check if Supabase is properly configured
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
+      // Check if Supabase is properly configured and connected
+      if (!supabase || !supabase.functions) {
         console.log(`[EMAIL SIMULATION] To: ${to}, Subject: ${subject}`);
         console.log(`[EMAIL SIMULATION] Body: ${body}`);
         
-        // Fall back to simulation if Supabase is not configured
+        // Fall back to simulation if Supabase is not configured or connected
         const result = simulateSendEmail(to, subject, body);
         return result;
       }
@@ -98,6 +95,7 @@ export class EmailService {
       }
       
       console.log('Email sent successfully via Supabase:', data);
+      toast.success("Email envoyé avec succès");
       return true;
     } catch (error) {
       console.error("Error sending email:", error);
