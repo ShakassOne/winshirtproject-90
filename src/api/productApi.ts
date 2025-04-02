@@ -1,10 +1,33 @@
 
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 
+// Helper function to save products to localStorage
+const saveProductsToLocalStorage = (products: ExtendedProduct[]) => {
+  try {
+    localStorage.setItem('products', JSON.stringify(products));
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde dans localStorage:', error);
+  }
+};
+
+// Function to get last ID from localStorage products
+const getNextProductId = (products: ExtendedProduct[]): number => {
+  if (products.length === 0) return 1;
+  const maxId = Math.max(...products.map(product => product.id));
+  return maxId + 1;
+};
+
 // Fonction pour récupérer tous les produits
 export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
+  // Vérifier si Supabase est configuré
+  if (!isSupabaseConfigured()) {
+    console.log('Supabase n\'est pas configuré. Utilisation du localStorage uniquement.');
+    const storedProducts = localStorage.getItem('products');
+    return storedProducts ? JSON.parse(storedProducts) : [];
+  }
+
   try {
     const { data, error } = await supabase
       .from('products')
@@ -34,10 +57,13 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
       };
     });
     
+    // Sauvegarder dans localStorage comme fallback
+    saveProductsToLocalStorage(products);
+    
     return products;
   } catch (error) {
     console.error('Erreur lors de la récupération des produits:', error);
-    toast.error("Erreur lors du chargement des produits");
+    toast.error("Erreur de connexion: utilisation des données locales");
     
     // Fallback au localStorage en cas d'erreur
     const storedProducts = localStorage.getItem('products');
@@ -54,6 +80,30 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
 
 // Fonction pour créer un nouveau produit
 export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promise<ExtendedProduct | null> => {
+  // Si Supabase n'est pas configuré, utiliser localStorage
+  if (!isSupabaseConfigured()) {
+    try {
+      const storedProducts = localStorage.getItem('products');
+      const products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+      
+      const newId = getNextProductId(products);
+      const newProduct: ExtendedProduct = {
+        ...product,
+        id: newId
+      };
+      
+      products.push(newProduct);
+      saveProductsToLocalStorage(products);
+      
+      toast.success("Produit créé avec succès (stockage local)");
+      return newProduct;
+    } catch (error) {
+      console.error('Erreur lors de la création du produit en local:', error);
+      toast.error("Erreur lors de la création du produit");
+      return null;
+    }
+  }
+
   try {
     const { data, error } = await supabase
       .from('products')
@@ -99,16 +149,59 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       deliveryPrice: data.delivery_price
     };
     
+    // Mettre à jour le localStorage pour la cohérence
+    const products = await fetchProducts();
+    products.push(createdProduct);
+    saveProductsToLocalStorage(products);
+    
     return createdProduct;
   } catch (error) {
     console.error('Erreur lors de la création du produit:', error);
-    toast.error("Erreur lors de la création du produit");
-    return null;
+    toast.error("Erreur de connexion: sauvegardé localement");
+    
+    // Fallback au localStorage
+    try {
+      const storedProducts = localStorage.getItem('products');
+      const products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+      
+      const newId = getNextProductId(products);
+      const newProduct: ExtendedProduct = {
+        ...product,
+        id: newId
+      };
+      
+      products.push(newProduct);
+      saveProductsToLocalStorage(products);
+      
+      return newProduct;
+    } catch (localError) {
+      console.error('Erreur lors du fallback local:', localError);
+      toast.error("Erreur lors de la création du produit");
+      return null;
+    }
   }
 };
 
 // Fonction pour mettre à jour un produit existant
 export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
+  // Si Supabase n'est pas configuré, utiliser localStorage
+  if (!isSupabaseConfigured()) {
+    try {
+      const storedProducts = localStorage.getItem('products');
+      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+      
+      products = products.map(p => p.id === product.id ? product : p);
+      saveProductsToLocalStorage(products);
+      
+      toast.success("Produit mis à jour avec succès (stockage local)");
+      return product;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du produit en local:', error);
+      toast.error("Erreur lors de la mise à jour du produit");
+      return null;
+    }
+  }
+
   try {
     const { data, error } = await supabase
       .from('products')
@@ -155,16 +248,53 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       deliveryPrice: data.delivery_price
     };
     
+    // Mettre à jour le localStorage pour la cohérence
+    const products = await fetchProducts();
+    const updatedProducts = products.map(p => p.id === product.id ? updatedProduct : p);
+    saveProductsToLocalStorage(updatedProducts);
+    
     return updatedProduct;
   } catch (error) {
     console.error('Erreur lors de la mise à jour du produit:', error);
-    toast.error("Erreur lors de la mise à jour du produit");
-    return null;
+    toast.error("Erreur de connexion: sauvegardé localement");
+    
+    // Fallback au localStorage
+    try {
+      const storedProducts = localStorage.getItem('products');
+      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+      
+      products = products.map(p => p.id === product.id ? product : p);
+      saveProductsToLocalStorage(products);
+      
+      return product;
+    } catch (localError) {
+      console.error('Erreur lors du fallback local:', localError);
+      toast.error("Erreur lors de la mise à jour du produit");
+      return null;
+    }
   }
 };
 
 // Fonction pour supprimer un produit
 export const deleteProduct = async (productId: number): Promise<boolean> => {
+  // Si Supabase n'est pas configuré, utiliser localStorage
+  if (!isSupabaseConfigured()) {
+    try {
+      const storedProducts = localStorage.getItem('products');
+      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+      
+      products = products.filter(p => p.id !== productId);
+      saveProductsToLocalStorage(products);
+      
+      toast.success("Produit supprimé avec succès (stockage local)");
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression du produit en local:', error);
+      toast.error("Erreur lors de la suppression du produit");
+      return false;
+    }
+  }
+
   try {
     const { error } = await supabase
       .from('products')
@@ -173,10 +303,37 @@ export const deleteProduct = async (productId: number): Promise<boolean> => {
     
     if (error) throw error;
     
+    // Mettre à jour le localStorage pour la cohérence
+    const storedProducts = localStorage.getItem('products');
+    if (storedProducts) {
+      try {
+        let products: ExtendedProduct[] = JSON.parse(storedProducts);
+        products = products.filter(p => p.id !== productId);
+        saveProductsToLocalStorage(products);
+      } catch (e) {
+        console.error('Erreur lors de la mise à jour du localStorage:', e);
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error('Erreur lors de la suppression du produit:', error);
-    toast.error("Erreur lors de la suppression du produit");
-    return false;
+    toast.error("Erreur de connexion: supprimé localement");
+    
+    // Fallback au localStorage
+    try {
+      const storedProducts = localStorage.getItem('products');
+      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+      
+      products = products.filter(p => p.id !== productId);
+      saveProductsToLocalStorage(products);
+      
+      return true;
+    } catch (localError) {
+      console.error('Erreur lors du fallback local:', localError);
+      toast.error("Erreur lors de la suppression du produit");
+      return false;
+    }
   }
 };
+

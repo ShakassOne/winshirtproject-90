@@ -7,9 +7,17 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Vérification de la présence des variables d'environnement
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("⚠️ Les variables d'environnement Supabase ne sont pas définies!");
+  console.warn("⚠️ Les variables d'environnement Supabase ne sont pas définies!");
   console.log("Pour utiliser Supabase, vous devez définir VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY");
 }
+
+// Fonction pour vérifier si Supabase est correctement configuré
+export const isSupabaseConfigured = (): boolean => {
+  return !!(supabaseUrl && 
+           supabaseAnonKey && 
+           supabaseUrl !== 'https://placeholder-project.supabase.co' && 
+           supabaseAnonKey !== 'placeholder-key-for-development-only');
+};
 
 // Création du client Supabase avec un timeout plus court pour éviter les longs délais
 export const supabase = createClient(
@@ -27,8 +35,8 @@ export const supabase = createClient(
         const controller = new AbortController();
         const { signal } = controller;
         
-        // Timeout de 3 secondes
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // Timeout de 5 secondes
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
         
         // @ts-ignore
         return fetch(...args, { signal })
@@ -42,7 +50,7 @@ export const supabase = createClient(
 export const uploadImage = async (file: File, bucket: string = 'products'): Promise<string | null> => {
   try {
     // Vérifier si les identifiants Supabase sont disponibles
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!isSupabaseConfigured()) {
       console.error("Erreur: Impossible d'uploader l'image - identifiants Supabase manquants");
       return null;
     }
@@ -77,7 +85,3 @@ export const uploadImage = async (file: File, bucket: string = 'products'): Prom
   }
 };
 
-// Vérifie si Supabase est correctement configuré
-export const isSupabaseConfigured = (): boolean => {
-  return !!(supabaseUrl && supabaseAnonKey);
-};
