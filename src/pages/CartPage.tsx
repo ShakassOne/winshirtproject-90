@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import ShippingOptions from '@/components/cart/ShippingOptions'; // Fixed import
+import ShippingOptions from '@/components/cart/ShippingOptions'; // Correct import statement
 import { toast } from '@/lib/toast';
 
 interface CartItem {
