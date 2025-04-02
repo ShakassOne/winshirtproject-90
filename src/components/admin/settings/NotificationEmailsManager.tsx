@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, X, Mail, Send } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { EmailService } from '@/lib/emailService';
 import { 
   Dialog, 
   DialogContent, 
@@ -85,13 +86,15 @@ const NotificationEmailsManager: React.FC = () => {
     
     setIsLoading(true);
     
-    // Simuler l'envoi d'email
+    // Utilisation du EmailService pour envoyer le mail
+    const success = EmailService.sendTestEmail(emails, testEmailSubject, testEmailContent);
+    
     setTimeout(() => {
-      console.log("Email de test envoyé à:", emails);
-      console.log("Sujet:", testEmailSubject);
-      console.log("Contenu:", testEmailContent);
-      
-      toast.success(`Email de test envoyé à ${emails.length} destinataire(s)`);
+      if (success) {
+        toast.success(`Email de test envoyé à ${emails.length} destinataire(s)`);
+      } else {
+        toast.error("Erreur lors de l'envoi de l'email de test");
+      }
       setIsLoading(false);
       setIsTestDialogOpen(false);
     }, 1500);

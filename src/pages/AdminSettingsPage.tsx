@@ -1,8 +1,10 @@
+
 import React from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
 import ShippingSettingsManager from '@/components/admin/settings/ShippingSettingsManager';
+import TestEmailButton from '@/components/admin/settings/TestEmailButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Bell, ShieldCheck, Database, Truck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,9 +19,15 @@ const AdminSettingsPage: React.FC = () => {
           <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Paramètres d'administration
           </h1>
-          <p className="text-gray-400 text-center mb-8">
+          <p className="text-gray-400 text-center mb-4">
             Configurez les paramètres de votre boutique et gérez les notifications
           </p>
+          
+          <div className="mb-6 text-center">
+            <TestEmailButton 
+              className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+            />
+          </div>
           
           <Tabs defaultValue="notifications" className="w-full">
             <TabsList className="mb-8 bg-winshirt-space-light border border-winshirt-purple/20">

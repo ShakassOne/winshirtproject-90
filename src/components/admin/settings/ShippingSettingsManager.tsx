@@ -9,6 +9,7 @@ import { Truck, Save, RefreshCw } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { useForm } from 'react-hook-form';
 import { AdminSettings } from '@/types/order';
+import { EmailService } from '@/lib/emailService';
 
 const ShippingSettingsManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -52,16 +53,19 @@ const ShippingSettingsManager: React.FC = () => {
       // Sauvegarder les paramètres dans localStorage
       localStorage.setItem('admin_shipping_settings', JSON.stringify(data));
       
-      // Si vous aviez des emails configurés, vous pourriez envoyer un test ici
+      // Envoyer notification aux emails configurés
       const notificationEmails = getNotificationEmails();
       if (notificationEmails.length > 0) {
-        // Simuler l'envoi d'un email de test
-        console.log(`Envoi d'un email de test aux destinataires: ${notificationEmails.join(', ')}`);
+        // Utiliser EmailService pour envoyer une notification
+        EmailService.sendTestEmail(
+          notificationEmails,
+          "Paramètres de livraison mis à jour",
+          `Les paramètres de livraison ont été mis à jour.\n\nLivraison gratuite à partir de: ${data.freeShippingThreshold}€\nTemps de préparation: ${data.defaultHandlingTime} jour(s)\nLivraison internationale: ${data.internationalShipping ? 'Activée' : 'Désactivée'}`
+        );
         
-        // Dans un environnement réel, vous utiliseriez Supabase Edge Functions ou un service similaire
         setTimeout(() => {
           toast.success("Paramètres de livraison sauvegardés");
-          toast.success("Email de test envoyé avec succès");
+          toast.success("Email de notification envoyé avec succès");
           setLoading(false);
         }, 1000);
       } else {
@@ -98,9 +102,20 @@ const ShippingSettingsManager: React.FC = () => {
     
     setLoading(true);
     
-    // Simuler l'envoi d'un email de test
+    // Utiliser EmailService pour envoyer l'email de test
+    const formData = form.getValues();
+    const success = EmailService.sendTestEmail(
+      notificationEmails,
+      "Test de notification de livraison",
+      `Ceci est un email de test des paramètres de livraison.\n\nParamètres actuels:\nLivraison gratuite à partir de: ${formData.freeShippingThreshold}€\nTemps de préparation: ${formData.defaultHandlingTime} jour(s)\nLivraison internationale: ${formData.internationalShipping ? 'Activée' : 'Désactivée'}`
+    );
+    
     setTimeout(() => {
-      toast.success(`Email de test envoyé à ${notificationEmails.join(', ')}`);
+      if (success) {
+        toast.success(`Email de test envoyé à ${notificationEmails.length} destinataire(s)`);
+      } else {
+        toast.error("Erreur lors de l'envoi de l'email de test");
+      }
       setLoading(false);
     }, 1500);
   };

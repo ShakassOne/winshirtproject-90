@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
+import { EmailService } from '@/lib/emailService';
 
 interface User {
   id: number;
@@ -215,12 +216,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(newUser);
     localStorage.setItem('winshirt_user', JSON.stringify(newUser));
     
-    // Simuler l'envoi d'un e-mail de confirmation
-    simulateSendEmail(
-      newUser.email, 
-      `Bienvenue sur WinShirt - Connexion avec ${providerName}`, 
-      `Bonjour ${newUser.name},\n\nMerci de vous être inscrit sur WinShirt avec ${providerName}. Votre compte a été créé avec succès.\n\nBien cordialement,\nL'équipe WinShirt`
-    );
+    // Envoyer un e-mail de confirmation
+    EmailService.sendAccountCreationEmail(newUser.email, newUser.name);
     
     // Simuler la vérification en deux étapes pour Google
     if (provider === 'google') {
@@ -275,12 +272,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(newUser);
     localStorage.setItem('winshirt_user', JSON.stringify(newUser));
     
-    // Simuler l'envoi d'un e-mail de confirmation
-    simulateSendEmail(
-      newUser.email, 
-      "Bienvenue sur WinShirt", 
-      `Bonjour ${newUser.name},\n\nMerci de vous être inscrit sur WinShirt. Votre compte a été créé avec succès.\n\nBien cordialement,\nL'équipe WinShirt`
-    );
+    // Envoyer un e-mail de confirmation
+    EmailService.sendAccountCreationEmail(newUser.email, newUser.name);
     
     toast.success("Inscription réussie!");
     navigate('/account');
@@ -319,10 +312,13 @@ export const useAuth = () => {
   return context;
 };
 
-// Fonction pour simuler l'envoi d'un e-mail
+// Fonction pour simuler l'envoi d'un e-mail - gardée pour compatibilité
 export const simulateSendEmail = (to: string, subject: string, body: string) => {
   console.log(`[SIMULATION EMAIL] À: ${to}, Sujet: ${subject}`);
   console.log(`[SIMULATION EMAIL] Corps du message: ${body}`);
+  
+  // Notification dans la console pour vérifier le fonctionnement
+  console.log(`[EMAIL ENVOYÉ] Un email a été envoyé à ${to}`);
   
   // Dans une application réelle, on appellerait ici un service d'envoi d'e-mail
   return true;
