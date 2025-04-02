@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LotteryCard from '../components/LotteryCard';
@@ -6,7 +5,10 @@ import ProductCard from '../components/ProductCard';
 import RotatingLottery from '../components/RotatingLottery';
 import StarBackground from '../components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
+import StatsSection from '@/components/home/StatsSection';
+import WinnersCarousel from '@/components/home/WinnersCarousel';
 import { mockLotteries, mockProducts } from '../data/mockData';
+import { mockWinners } from '@/data/mockWinners';
 import { ExtendedLottery } from '@/types/lottery';
 
 const HomePage: React.FC = () => {
@@ -217,6 +219,23 @@ const HomePage: React.FC = () => {
               </button>
             </Link>
           </div>
+        </div>
+      </section>
+      
+      {/* Stats Section - NOUVELLE SECTION */}
+      <StatsSection />
+      
+      {/* Winners Carousel - NOUVELLE SECTION */}
+      <section className="py-20 relative bg-winshirt-space/20">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue text-center">
+            Nos heureux gagnants
+          </h2>
+          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+            Découvrez les gagnants de nos précédentes loteries et les lots exceptionnels qu'ils ont remportés.
+          </p>
+          
+          <WinnersCarousel winners={mockWinners} />
         </div>
       </section>
     </>
