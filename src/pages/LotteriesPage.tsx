@@ -61,7 +61,7 @@ const LotteriesPage: React.FC = () => {
         
         // Fallback to mock data if no lotteries in Supabase
         if (loadedLotteries.length === 0) {
-          loadedLotteries = mockLotteries;
+          loadedLotteries = mockLotteries as ExtendedLottery[];
         }
         
         // Ajouter la loterie iPhone si nécessaire
@@ -73,7 +73,7 @@ const LotteriesPage: React.FC = () => {
         toast.error("Erreur lors du chargement des loteries");
         
         // Fallback to mock data
-        let loadedLotteries = mockLotteries;
+        let loadedLotteries = mockLotteries as ExtendedLottery[];
         loadedLotteries = addIPhoneLottery(loadedLotteries);
         setLotteries(loadedLotteries);
       } finally {

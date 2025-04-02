@@ -5,23 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Gift, Calendar, Info } from 'lucide-react';
-
-export interface Lottery {
-  id: number;
-  title: string;
-  image: string;
-  value: number;
-  description: string;
-  currentParticipants: number;
-  targetParticipants: number;
-  status: 'active' | 'completed' | 'relaunched' | 'cancelled';
-  winner?: { name: string, email: string } | null;
-  drawDate?: string | null;
-  endDate?: string | null;
-}
+import { ExtendedLottery } from '@/types/lottery';
 
 interface LotteryCardProps {
-  lottery: Lottery;
+  lottery: ExtendedLottery;
 }
 
 const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
