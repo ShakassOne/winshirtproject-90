@@ -4,22 +4,43 @@ import { useSearchParams } from 'react-router-dom';
 import { mockProducts, mockLotteries } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 import StarBackground from '../components/StarBackground';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminNavigation from '@/components/admin/AdminNavigation';
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedProduct, ProductFilters } from '@/types/product';
+import AdvancedFilters from '@/components/product/AdvancedFilters';
 
 const ProductsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const lotteryIdParam = searchParams.get('lottery');
   
+  // Filtres basiques
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedProductType, setSelectedProductType] = useState<string>('all');
   const [selectedSleeveType, setSelectedSleeveType] = useState<string>('all');
+  
+  // Filtres avancés
+  const [selectedGender, setSelectedGender] = useState<string>('all');
+  const [selectedMaterial, setSelectedMaterial] = useState<string>('all');
+  const [selectedFit, setSelectedFit] = useState<string>('all');
+  const [selectedBrand, setSelectedBrand] = useState<string>('all');
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  
   const [selectedLotteryId, setSelectedLotteryId] = useState<string | null>(lotteryIdParam);
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
   const [lotteries, setLotteries] = useState(mockLotteries);
+  
+  // Extraire tous les filtres disponibles des produits
+  const [availableFilters, setAvailableFilters] = useState<ProductFilters>({
+    productTypes: ['T-shirt', 'Sweatshirt', 'Polo', 'Casquette', 'Autre'],
+    sleeveTypes: ['Courtes', 'Longues', 'Sans manches'],
+    genders: ['homme', 'femme', 'enfant', 'unisexe'],
+    materials: ['coton', 'polyester', 'bio', 'technique'],
+    fits: ['regular', 'ajusté', 'oversize'],
+    brands: ['WinShirt', 'Premium', 'Eco'],
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+    colors: ['Noir', 'Blanc', 'Bleu', 'Rouge', 'Vert', 'Jaune', 'Orange', 'Gris', 'Violet']
+  });
   
   // Set the selected lottery ID from URL parameters
   useEffect(() => {
@@ -38,6 +59,30 @@ const ProductsPage: React.FC = () => {
           const parsedProducts = JSON.parse(savedProducts);
           if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
             setProducts(parsedProducts);
+            
+            // Extraire tous les filtres disponibles des produits réels
+            const filters: ProductFilters = {
+              productTypes: [...new Set(parsedProducts.map(p => p.productType).filter(Boolean))],
+              sleeveTypes: [...new Set(parsedProducts.map(p => p.sleeveType).filter(Boolean))],
+              genders: [...new Set(parsedProducts.map(p => p.gender).filter(Boolean))],
+              materials: [...new Set(parsedProducts.map(p => p.material).filter(Boolean))],
+              fits: [...new Set(parsedProducts.map(p => p.fit).filter(Boolean))],
+              brands: [...new Set(parsedProducts.map(p => p.brand).filter(Boolean))],
+              sizes: [...new Set([].concat(...parsedProducts.map(p => p.sizes || [])))],
+              colors: [...new Set([].concat(...parsedProducts.map(p => p.colors || [])))],
+            };
+            
+            // Fusionner avec les valeurs par défaut
+            setAvailableFilters({
+              productTypes: [...availableFilters.productTypes, ...filters.productTypes].filter(Boolean),
+              sleeveTypes: [...availableFilters.sleeveTypes, ...filters.sleeveTypes].filter(Boolean),
+              genders: [...availableFilters.genders, ...filters.genders].filter(Boolean),
+              materials: [...availableFilters.materials, ...filters.materials].filter(Boolean),
+              fits: [...availableFilters.fits, ...filters.fits].filter(Boolean),
+              brands: [...availableFilters.brands, ...filters.brands].filter(Boolean),
+              sizes: [...availableFilters.sizes, ...filters.sizes].filter(Boolean),
+              colors: [...availableFilters.colors, ...filters.colors].filter(Boolean),
+            });
           }
         } catch (error) {
           console.error("Erreur lors du chargement des produits:", error);
@@ -68,59 +113,47 @@ const ProductsPage: React.FC = () => {
     };
   }, []);
   
-  // Debug des données
-  useEffect(() => {
-    if (selectedLotteryId) {
-      console.log("Lottery ID sélectionné:", selectedLotteryId);
-      console.log("Produits disponibles:", products);
-      
-      // Trouver les produits liés à cette loterie
-      const linkedProducts = products.filter(product => 
-        product.linkedLotteries && 
-        product.linkedLotteries.includes(Number(selectedLotteryId))
-      );
-      
-      console.log("Produits liés à cette loterie:", linkedProducts);
-    }
-  }, [selectedLotteryId, products]);
-  
   // Get the lottery details if a lottery ID is selected
   const selectedLottery = selectedLotteryId 
     ? lotteries.find(lottery => lottery.id.toString() === selectedLotteryId)
     : null;
   
   const filteredProducts = products.filter(product => {
+    // Filtres de base
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Filter by quality type (entrée de gamme, standard, premium)
     const matchesQualityType = selectedType === 'all' || product.type === selectedType;
-    
-    // Filter by product type (T-shirt, Sweatshirt, Polo)
-    // Use optional chaining to handle the case where productType might not exist
     const matchesProductType = selectedProductType === 'all' || product.productType === selectedProductType;
-    
-    // Filter by sleeve type (Courtes, Longues)
-    // Use optional chaining to handle the case where sleeveType might not exist
     const matchesSleeveType = selectedSleeveType === 'all' || product.sleeveType === selectedSleeveType;
+    
+    // Filtres avancés 
+    const matchesGender = selectedGender === 'all' || product.gender === selectedGender;
+    const matchesMaterial = selectedMaterial === 'all' || product.material === selectedMaterial;
+    const matchesFit = selectedFit === 'all' || product.fit === selectedFit;
+    const matchesBrand = selectedBrand === 'all' || product.brand === selectedBrand;
+    
+    // Filtres multi-sélection (tailles et couleurs)
+    const matchesSizes = selectedSizes.length === 0 || 
+      (product.sizes && selectedSizes.some(size => product.sizes.includes(size)));
+    
+    const matchesColors = selectedColors.length === 0 || 
+      (product.colors && selectedColors.some(color => product.colors.includes(color)));
     
     // Filter by lottery if a lottery ID is selected
     const matchesLottery = !selectedLotteryId || 
       (product.linkedLotteries && product.linkedLotteries.includes(Number(selectedLotteryId)));
     
-    return matchesSearch && matchesQualityType && matchesProductType && matchesSleeveType && matchesLottery;
+    return matchesSearch && matchesQualityType && matchesProductType && matchesSleeveType && 
+           matchesGender && matchesMaterial && matchesFit && matchesBrand && 
+           matchesSizes && matchesColors && matchesLottery;
   });
-  
-  const productTypes = ['entrée de gamme', 'standard', 'premium'];
-  const productCategories = ['T-shirt', 'Sweatshirt', 'Polo', 'Autre'];
-  const sleeveTypes = ['Courtes', 'Longues'];
   
   return (
     <>
       <StarBackground />
       
       {/* Admin Navigation */}
-      <AdminNavigation />
+      <AdminNavigationHandler />
       
       <section className="pt-32 pb-16">
         <div className="container mx-auto px-4">
@@ -141,77 +174,30 @@ const ProductsPage: React.FC = () => {
             Découvrez notre collection de vêtements tendance qui vous permettent de participer à nos loteries exclusives.
           </p>
           
-          {/* Filters */}
-          <div className="winshirt-card p-6 mb-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="lg:col-span-2">
-                <label className="block text-gray-400 mb-2">Rechercher</label>
-                <Input
-                  placeholder="Rechercher un produit..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-winshirt-space-light border-winshirt-purple/30"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-400 mb-2">Gamme</label>
-                <Select
-                  value={selectedType}
-                  onValueChange={setSelectedType}
-                >
-                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                    <SelectValue placeholder="Toutes les gammes" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                    <SelectItem value="all">Toutes les gammes</SelectItem>
-                    {productTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-gray-400 mb-2">Type de produit</label>
-                <Select
-                  value={selectedProductType}
-                  onValueChange={setSelectedProductType}
-                >
-                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                    <SelectValue placeholder="Tous les types" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                    <SelectItem value="all">Tous les types</SelectItem>
-                    {productCategories.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-gray-400 mb-2">Type de manches</label>
-                <Select
-                  value={selectedSleeveType}
-                  onValueChange={setSelectedSleeveType}
-                >
-                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                    <SelectValue placeholder="Tous les types" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                    <SelectItem value="all">Tous les types</SelectItem>
-                    {sleeveTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
+          {/* Advanced Filters */}
+          <AdvancedFilters 
+            availableFilters={availableFilters}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedType={selectedType}
+            setSelectedType={setSelectedType}
+            selectedProductType={selectedProductType}
+            setSelectedProductType={setSelectedProductType}
+            selectedSleeveType={selectedSleeveType}
+            setSelectedSleeveType={setSelectedSleeveType}
+            selectedGender={selectedGender}
+            setSelectedGender={setSelectedGender}
+            selectedMaterial={selectedMaterial}
+            setSelectedMaterial={setSelectedMaterial}
+            selectedFit={selectedFit}
+            setSelectedFit={setSelectedFit}
+            selectedBrand={selectedBrand}
+            setSelectedBrand={setSelectedBrand}
+            selectedSizes={selectedSizes}
+            setSelectedSizes={setSelectedSizes}
+            selectedColors={selectedColors}
+            setSelectedColors={setSelectedColors}
+          />
           
           {/* Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">

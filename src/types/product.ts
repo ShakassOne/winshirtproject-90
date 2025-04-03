@@ -27,6 +27,15 @@ export interface ExtendedProduct {
   defaultVisualId?: number | null; // ID du visuel par défaut
   defaultVisualSettings?: ProductVisualSettings; // Paramètres du visuel par défaut
   visualCategoryId?: number | null; // ID de la catégorie de visuels associée
+  
+  // Nouveaux filtres avancés
+  gender?: 'homme' | 'femme' | 'enfant' | 'unisexe'; // Genre
+  material?: string; // Matière: coton, polyester, bio, technique
+  fit?: 'regular' | 'ajusté' | 'oversize'; // Coupe
+  brand?: string; // Marque
+  
+  // Zones d'impression
+  printAreas?: PrintArea[]; // Zones d'impression disponibles
 }
 
 export interface DeliveryInfo {
@@ -39,4 +48,31 @@ export interface DeliveryInfo {
   handlingTime?: number; // Temps de préparation en jours
   freeShipping?: boolean; // Si le produit bénéficie de la livraison gratuite
   shippingRestrictions?: string[]; // Pays où la livraison n'est pas possible
+}
+
+// Nouvelle interface pour les zones d'impression
+export interface PrintArea {
+  id: number;
+  name: string; // Nom de la zone (ex: "Pocket", "Front", "Back")
+  format: 'pocket' | 'a4' | 'a3' | 'custom'; // Format prédéfini
+  position: 'front' | 'back'; // Recto ou verso
+  bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }; // Coordonnées et dimensions de la zone
+  allowCustomPosition?: boolean; // Si le client peut repositionner dans la zone
+}
+
+// Interface pour les filtres disponibles
+export interface ProductFilters {
+  productTypes: string[]; // T-shirt, Sweatshirt, etc.
+  sleeveTypes: string[]; // Manches courtes, longues, etc.
+  genders: string[]; // Homme, femme, enfant
+  materials: string[]; // Coton, polyester, etc.
+  fits: string[]; // Regular, ajusté, etc.
+  brands: string[]; // Marques
+  sizes: string[]; // XS, S, M, L, XL, etc.
+  colors: string[]; // Couleurs disponibles
 }

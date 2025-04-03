@@ -56,10 +56,10 @@ const LotteriesPage: React.FC = () => {
     const loadLotteries = async () => {
       setIsLoading(true);
       try {
+        // Récupérer toutes les loteries disponibles
         let loadedLotteries = await fetchLotteries();
         
         // S'assurer que toutes les loteries de l'admin sont également disponibles ici
-        // Même si elles ont un statut spécial
         if (loadedLotteries.length === 0) {
           loadedLotteries = mockLotteries as ExtendedLottery[];
         }
@@ -67,8 +67,8 @@ const LotteriesPage: React.FC = () => {
         // Ajouter la loterie iPhone si nécessaire
         loadedLotteries = addIPhoneLottery(loadedLotteries);
         
-        // S'assurer que les 10 loteries sont visibles
-        // En vérifiant spécifiquement les loteries spéciales d'AdminLotteriesPage
+        // S'assurer que TOUTES les loteries sont visibles
+        // En vérifiant les loteries spéciales d'AdminLotteriesPage
         const specialLotteriesIds = [1001, 1002]; // IDs des loteries spéciales
         
         // Ajouter les loteries spéciales si elles n'existent pas déjà
@@ -97,6 +97,27 @@ const LotteriesPage: React.FC = () => {
           }
         });
         
+        // Récupérer toutes les loteries du localStorage également
+        try {
+          const storedLotteries = localStorage.getItem('lotteries');
+          if (storedLotteries) {
+            const parsedLotteries = JSON.parse(storedLotteries);
+            
+            // S'assurer que toutes les loteries du localStorage sont présentes
+            if (Array.isArray(parsedLotteries)) {
+              parsedLotteries.forEach(storedLottery => {
+                // Vérifier si la loterie existe déjà dans loadedLotteries
+                const exists = loadedLotteries.some(l => l.id === storedLottery.id);
+                if (!exists) {
+                  loadedLotteries.push(storedLottery);
+                }
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Erreur lors de la récupération des loteries du localStorage:", err);
+        }
+        
         setLotteries(loadedLotteries);
       } catch (error) {
         console.error('Erreur lors du chargement des loteries:', error);
@@ -105,6 +126,23 @@ const LotteriesPage: React.FC = () => {
         // Fallback to mock data
         let loadedLotteries = mockLotteries as ExtendedLottery[];
         loadedLotteries = addIPhoneLottery(loadedLotteries);
+        
+        // Récupérer toutes les loteries du localStorage également
+        try {
+          const storedLotteries = localStorage.getItem('lotteries');
+          if (storedLotteries) {
+            const parsedLotteries = JSON.parse(storedLotteries);
+            if (Array.isArray(parsedLotteries)) {
+              // Combiner avec les loteries mockées
+              loadedLotteries = [...loadedLotteries, ...parsedLotteries.filter(storedLottery => 
+                !loadedLotteries.some(l => l.id === storedLottery.id)
+              )];
+            }
+          }
+        } catch (err) {
+          console.error("Erreur lors de la récupération des loteries du localStorage:", err);
+        }
+        
         setLotteries(loadedLotteries);
       } finally {
         setIsLoading(false);
@@ -125,7 +163,8 @@ const LotteriesPage: React.FC = () => {
     };
   }, []);
   
-  const filteredLotteries = activeFilter === 'all' 
+  // Assurez-vous de convertir les valeurs en nombre pour éviter les erreurs "Expected number, received string"
+  const safeFilteredLotteries = activeFilter === 'all' 
     ? lotteries 
     : lotteries.filter(lottery => lottery.status === activeFilter);
   
@@ -195,12 +234,12 @@ const LotteriesPage: React.FC = () => {
           
           {/* Lotteries Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {filteredLotteries.map(lottery => (
+            {safeFilteredLotteries.map(lottery => (
               <LotteryCard key={lottery.id} lottery={lottery} />
             ))}
           </div>
           
-          {filteredLotteries.length === 0 && (
+          {safeFilteredLotteries.length === 0 && (
             <div className="text-center py-16">
               <h3 className="text-xl text-gray-400 mb-2">Aucune loterie trouvée</h3>
               <p className="text-gray-500">Il n'y a actuellement aucune loterie correspondant à ce filtre</p>
