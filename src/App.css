@@ -41,3 +41,8 @@
 .read-the-docs {
   color: #888;
 }
+@media (min-width: 1400px) {
+    .container {
+        max-width: 100%;
+    }
+}
