@@ -4,6 +4,7 @@ import StarBackground from '@/components/StarBackground';
 import { mockLotteries, mockProducts } from '@/data/mockData';
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
+import { VisualCategory } from '@/types/visual';
 import { useProductForm } from '@/hooks/useProductForm';
 import ProductList from '@/components/admin/products/ProductList';
 import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
@@ -15,6 +16,26 @@ import { toast } from '@/lib/toast';
 const AdminProductsPage: React.FC = () => {
   const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
+  const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
+  
+  // Load visual categories on mount
+  useEffect(() => {
+    const loadVisualCategories = () => {
+      const storedCategories = localStorage.getItem('visualCategories');
+      if (storedCategories) {
+        try {
+          const parsedCategories = JSON.parse(storedCategories);
+          if (Array.isArray(parsedCategories)) {
+            setVisualCategories(parsedCategories);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des catégories de visuels:", error);
+        }
+      }
+    };
+    
+    loadVisualCategories();
+  }, []);
   
   // Load lotteries from both storage types on mount
   useEffect(() => {
@@ -199,6 +220,7 @@ const AdminProductsPage: React.FC = () => {
                   selectedProductId={selectedProductId}
                   form={form}
                   activeLotteries={activeLotteries}
+                  visualCategories={visualCategories}
                   onCancel={handleCancel}
                   onSubmit={onSubmit}
                   onCreateProduct={handleCreateProduct}

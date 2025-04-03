@@ -26,6 +26,7 @@ export interface ExtendedProduct {
   allowCustomization?: boolean; // Si le produit permet la personnalisation visuelle
   defaultVisualId?: number | null; // ID du visuel par défaut
   defaultVisualSettings?: ProductVisualSettings; // Paramètres du visuel par défaut
+  visualCategoryId?: number | null; // ID de la catégorie de visuels associée
 }
 
 export interface DeliveryInfo {

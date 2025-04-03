@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedProduct } from '@/types/product';
@@ -36,7 +37,9 @@ export const useProductForm = (
         position: { x: 50, y: 50 },
         size: { width: 200, height: 200 },
         opacity: 0.8
-      }
+      },
+      // Rajout de la catégorie de visuel
+      visualCategoryId: null
     }
   });
   
@@ -63,7 +66,8 @@ export const useProductForm = (
         position: { x: 50, y: 50 },
         size: { width: 200, height: 200 },
         opacity: 0.8
-      }
+      },
+      visualCategoryId: null
     });
   };
   
@@ -111,7 +115,8 @@ export const useProductForm = (
         position: { x: 50, y: 50 },
         size: { width: 200, height: 200 },
         opacity: 0.8
-      }
+      },
+      visualCategoryId: product.visualCategoryId || null
     });
     
     // Force update of form fields to trigger rerender
@@ -165,7 +170,8 @@ export const useProductForm = (
           // Nouveaux champs pour les visuels
           allowCustomization: data.allowCustomization,
           defaultVisualId: data.defaultVisualId,
-          defaultVisualSettings: data.defaultVisualSettings
+          defaultVisualSettings: data.defaultVisualSettings,
+          visualCategoryId: data.visualCategoryId
         };
         
         // Créer le produit dans Supabase
@@ -173,6 +179,11 @@ export const useProductForm = (
         
         if (createdProduct) {
           setProducts(prev => [...prev, createdProduct]);
+          
+          // Force update local storage to ensure consistency
+          const updatedProducts = [...prev, createdProduct];
+          localStorage.setItem('products', JSON.stringify(updatedProducts));
+          
           toast.success("Produit créé avec succès");
         }
       } else if (selectedProductId) {
@@ -197,14 +208,21 @@ export const useProductForm = (
           // Nouveaux champs pour les visuels
           allowCustomization: data.allowCustomization,
           defaultVisualId: data.defaultVisualId,
-          defaultVisualSettings: data.defaultVisualSettings
+          defaultVisualSettings: data.defaultVisualSettings,
+          visualCategoryId: data.visualCategoryId
         };
         
         // Mettre à jour le produit dans Supabase
         const updatedProduct = await updateProduct(productToUpdate);
         
         if (updatedProduct) {
-          setProducts(prev => prev.map(p => p.id === selectedProductId ? updatedProduct : p));
+          // Update the products state
+          const updatedProducts = products.map(p => p.id === selectedProductId ? updatedProduct : p);
+          setProducts(updatedProducts);
+          
+          // Force update local storage to ensure consistency
+          localStorage.setItem('products', JSON.stringify(updatedProducts));
+          
           toast.success("Produit mis à jour avec succès");
         }
       }

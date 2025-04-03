@@ -53,7 +53,11 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
         popularity: item.popularity,
         tickets: item.tickets || 1,
         weight: item.weight,
-        deliveryPrice: item.delivery_price
+        deliveryPrice: item.delivery_price,
+        allowCustomization: item.allow_customization,
+        defaultVisualId: item.default_visual_id,
+        defaultVisualSettings: item.default_visual_settings,
+        visualCategoryId: item.visual_category_id
       };
     });
     
@@ -122,7 +126,11 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
         popularity: product.popularity || Math.random() * 100,
         tickets: product.tickets || 1,
         weight: product.weight,
-        delivery_price: product.deliveryPrice
+        delivery_price: product.deliveryPrice,
+        allow_customization: product.allowCustomization,
+        default_visual_id: product.defaultVisualId,
+        default_visual_settings: product.defaultVisualSettings,
+        visual_category_id: product.visualCategoryId
       })
       .select()
       .single();
@@ -146,7 +154,11 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       popularity: data.popularity || Math.random() * 100,
       tickets: data.tickets || 1,
       weight: data.weight,
-      deliveryPrice: data.delivery_price
+      deliveryPrice: data.delivery_price,
+      allowCustomization: data.allow_customization,
+      defaultVisualId: data.default_visual_id,
+      defaultVisualSettings: data.default_visual_settings,
+      visualCategoryId: data.visual_category_id
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -220,7 +232,11 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
         popularity: product.popularity,
         tickets: product.tickets || 1,
         weight: product.weight,
-        delivery_price: product.deliveryPrice
+        delivery_price: product.deliveryPrice,
+        allow_customization: product.allowCustomization,
+        default_visual_id: product.defaultVisualId,
+        default_visual_settings: product.defaultVisualSettings,
+        visual_category_id: product.visualCategoryId
       })
       .eq('id', product.id)
       .select()
@@ -245,7 +261,11 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       popularity: data.popularity,
       tickets: data.tickets || 1,
       weight: data.weight,
-      deliveryPrice: data.delivery_price
+      deliveryPrice: data.delivery_price,
+      allowCustomization: data.allow_customization,
+      defaultVisualId: data.default_visual_id,
+      defaultVisualSettings: data.default_visual_settings,
+      visualCategoryId: data.visual_category_id
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -336,4 +356,3 @@ export const deleteProduct = async (productId: number): Promise<boolean> => {
     }
   }
 };
-

@@ -2,6 +2,7 @@
 import React from 'react';
 import { UseFormReturn } from "react-hook-form";
 import { ExtendedLottery } from '@/types/lottery';
+import { VisualCategory } from '@/types/visual';
 import LotterySelection from './LotterySelection';
 import ProductForm from './ProductForm';
 import { Form } from "@/components/ui/form";
@@ -13,6 +14,7 @@ interface ProductFormProps {
   selectedProductId: number | null;
   form: UseFormReturn<any>;
   activeLotteries: ExtendedLottery[];
+  visualCategories: VisualCategory[];
   onCancel: () => void;
   onSubmit: (data: any) => void;
   onCreateProduct: () => void;
@@ -30,6 +32,7 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
   selectedProductId,
   form,
   activeLotteries,
+  visualCategories,
   onCancel,
   onSubmit,
   onCreateProduct,
@@ -66,6 +69,7 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
         selectedProductId={selectedProductId}
         form={form}
         activeLotteries={activeLotteries}
+        visualCategories={visualCategories}
         onCancel={onCancel}
         onSubmit={onSubmit}
         onCreateProduct={onCreateProduct}

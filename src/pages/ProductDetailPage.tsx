@@ -11,6 +11,7 @@ import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
 import { ExtendedProduct } from '@/types/product';
 import { useAuth } from '@/contexts/AuthContext';
+import { VisualCategory, Visual } from '@/types/visual';
 import { 
   Carousel,
   CarouselContent,
@@ -24,7 +25,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VisualSelector from '@/components/product/VisualSelector';
 import VisualPositioner from '@/components/product/VisualPositioner';
 import { useVisualSelector } from '@/hooks/useVisualSelector';
-import { Visual } from '@/types/visual';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +32,8 @@ const ProductDetailPage: React.FC = () => {
   const { user } = useAuth();
   const [product, setProduct] = useState<ExtendedProduct | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
+  const [categoryVisuals, setCategoryVisuals] = useState<Visual[]>([]);
   
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
@@ -64,6 +66,11 @@ const ProductDetailPage: React.FC = () => {
             // Initialiser le tableau des loteries sélectionnées
             setSelectedLotteries(Array(foundProduct.tickets || 1).fill(''));
             setLoading(false);
+            
+            // Charger les catégories visuelles et les visuels associés
+            if (foundProduct.visualCategoryId) {
+              loadVisualsByCategory(foundProduct.visualCategoryId);
+            }
             return;
           }
         } catch (error) {
@@ -77,10 +84,49 @@ const ProductDetailPage: React.FC = () => {
       // Initialiser le tableau des loteries sélectionnées
       setSelectedLotteries(Array(mockProduct?.tickets || 1).fill(''));
       setLoading(false);
+      
+      if (mockProduct && mockProduct.visualCategoryId) {
+        loadVisualsByCategory(mockProduct.visualCategoryId);
+      }
     };
     
     loadProduct();
   }, [id]);
+  
+  // Charger les catégories de visuels
+  useEffect(() => {
+    const loadVisualCategories = () => {
+      const storedCategories = localStorage.getItem('visualCategories');
+      if (storedCategories) {
+        try {
+          const parsedCategories = JSON.parse(storedCategories);
+          if (Array.isArray(parsedCategories)) {
+            setVisualCategories(parsedCategories);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des catégories de visuels:", error);
+        }
+      }
+    };
+    
+    loadVisualCategories();
+  }, []);
+  
+  // Charger les visuels d'une catégorie spécifique
+  const loadVisualsByCategory = (categoryId: number) => {
+    const storedVisuals = localStorage.getItem('visuals');
+    if (storedVisuals) {
+      try {
+        const parsedVisuals = JSON.parse(storedVisuals) as Visual[];
+        const filteredVisuals = parsedVisuals.filter(visual => 
+          visual.categoryId === categoryId
+        );
+        setCategoryVisuals(filteredVisuals);
+      } catch (error) {
+        console.error("Erreur lors du chargement des visuels:", error);
+      }
+    }
+  };
   
   // Mise à jour d'une loterie spécifique dans le tableau des loteries sélectionnées
   const handleLotteryChange = (lotteryId: string, index: number) => {
@@ -185,6 +231,9 @@ const ProductDetailPage: React.FC = () => {
     productImages.push(product.secondaryImage);
   }
   
+  // Vérifier si la personnalisation est permise
+  const canCustomize = product.allowCustomization !== false && product.visualCategoryId && categoryVisuals.length > 0;
+  
   return (
     <>
       <StarBackground />
@@ -195,36 +244,61 @@ const ProductDetailPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
               {/* Product Image Carousel with Visual Overlay */}
               <div className="rounded-lg overflow-hidden">
-                <Tabs defaultValue="preview" className="w-full">
-                  <TabsList className="w-full grid grid-cols-2 mb-4">
-                    <TabsTrigger value="preview">Aperçu</TabsTrigger>
-                    <TabsTrigger value="customize">Personnaliser</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="preview" className="mt-0">
-                    <VisualPositioner
-                      productImage={product.image}
-                      visual={selectedVisual}
-                      visualSettings={visualSettings}
-                      onUpdateSettings={handleUpdateSettings}
-                      readOnly={true}
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="customize" className="mt-0 space-y-6">
-                    <VisualPositioner
-                      productImage={product.image}
-                      visual={selectedVisual}
-                      visualSettings={visualSettings}
-                      onUpdateSettings={handleUpdateSettings}
-                    />
+                {canCustomize ? (
+                  <Tabs defaultValue="preview" className="w-full">
+                    <TabsList className="w-full grid grid-cols-2 mb-4">
+                      <TabsTrigger value="preview">Aperçu</TabsTrigger>
+                      <TabsTrigger value="customize">Personnaliser</TabsTrigger>
+                    </TabsList>
                     
-                    <VisualSelector
-                      selectedVisualId={selectedVisual?.id || null}
-                      onSelectVisual={handleSelectVisual}
-                    />
-                  </TabsContent>
-                </Tabs>
+                    <TabsContent value="preview" className="mt-0">
+                      <VisualPositioner
+                        productImage={product.image}
+                        visual={selectedVisual}
+                        visualSettings={visualSettings}
+                        onUpdateSettings={handleUpdateSettings}
+                        readOnly={true}
+                      />
+                    </TabsContent>
+                    
+                    <TabsContent value="customize" className="mt-0 space-y-6">
+                      <VisualPositioner
+                        productImage={product.image}
+                        visual={selectedVisual}
+                        visualSettings={visualSettings}
+                        onUpdateSettings={handleUpdateSettings}
+                      />
+                      
+                      <VisualSelector
+                        selectedVisualId={selectedVisual?.id || null}
+                        onSelectVisual={handleSelectVisual}
+                        categoryId={product.visualCategoryId}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  <Carousel className="w-full">
+                    <CarouselContent>
+                      {productImages.map((image, index) => (
+                        <CarouselItem key={index}>
+                          <div className="flex items-center justify-center p-1">
+                            <img 
+                              src={image} 
+                              alt={`${product.name} ${index === 0 ? 'principale' : 'secondaire'}`} 
+                              className="rounded-lg max-h-[500px] object-contain w-full"
+                            />
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    {productImages.length > 1 && (
+                      <>
+                        <CarouselPrevious className="text-white" />
+                        <CarouselNext className="text-white" />
+                      </>
+                    )}
+                  </Carousel>
+                )}
               </div>
               
               {/* Product Details */}
@@ -269,11 +343,13 @@ const ProductDetailPage: React.FC = () => {
                   )}
                   
                   {/* Information sur la personnalisation */}
-                  <div className="mt-2 bg-winshirt-purple/10 border border-winshirt-purple/30 rounded-md p-2">
-                    <p className="text-gray-200">
-                      Personnalisez votre {product.name} avec un visuel dans l'onglet "Personnaliser".
-                    </p>
-                  </div>
+                  {canCustomize && (
+                    <div className="mt-2 bg-winshirt-purple/10 border border-winshirt-purple/30 rounded-md p-2">
+                      <p className="text-gray-200">
+                        Personnalisez votre {product.name} avec un visuel dans l'onglet "Personnaliser".
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 <p className="text-gray-300">{product.description}</p>

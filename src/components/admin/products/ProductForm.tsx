@@ -1,10 +1,10 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus, Ticket, Image, Upload, Truck, Weight } from 'lucide-react';
+import { Package, Plus, Ticket, Image, Upload, Truck, Weight, Palette } from 'lucide-react';
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import {
@@ -19,12 +19,15 @@ import {
 import { UseFormReturn } from "react-hook-form";
 import { toast } from '@/lib/toast';
 import { uploadImage } from '@/lib/supabase';
+import { Switch } from '@/components/ui/switch';
+import { VisualCategory } from '@/types/visual';
 
 interface ProductFormProps {
   isCreating: boolean;
   selectedProductId: number | null;
   form: UseFormReturn<any>;
   activeLotteries: ExtendedLottery[];
+  visualCategories: VisualCategory[];
   onCancel: () => void;
   onSubmit: (data: any) => void;
   onCreateProduct: () => void;
@@ -40,6 +43,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   selectedProductId,
   form,
   activeLotteries,
+  visualCategories,
   onCancel,
   onSubmit,
   onCreateProduct,
@@ -61,6 +65,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const watchedColors = form.watch('colors') || [];
   const watchedLotteries = form.watch('linkedLotteries') || [];
   const watchedTickets = form.watch('tickets') || 1;
+  const watchedAllowCustomization = form.watch('allowCustomization');
+  const watchedVisualCategoryId = form.watch('visualCategoryId');
   
   // Ajout des refs pour les inputs de type file
   const primaryImageInputRef = useRef<HTMLInputElement>(null);
@@ -172,6 +178,64 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
+        {/* Visual Category Selection - NEW */}
+        <FormField
+          control={form.control}
+          name="visualCategoryId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white text-lg flex items-center gap-2">
+                <Palette size={18} /> Catégorie de visuels
+              </FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value?.toString() || ""}
+              >
+                <FormControl>
+                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
+                    <SelectValue placeholder="Sélectionner une catégorie de visuels" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
+                  <SelectItem value="">Aucune catégorie</SelectItem>
+                  {visualCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription className="text-gray-400 text-base">
+                Sélectionnez la catégorie de visuels disponibles pour ce produit
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        {/* Allow Customization - NEW */}
+        <FormField
+          control={form.control}
+          name="allowCustomization"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between p-4 border border-winshirt-purple/20 rounded-md">
+              <div className="space-y-0.5">
+                <FormLabel className="text-white text-lg">Personnalisation</FormLabel>
+                <FormDescription className="text-gray-400">
+                  Autoriser les clients à personnaliser ce produit avec des visuels
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="data-[state=checked]:bg-winshirt-purple"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
         {/* Image principale avec bouton parcourir */}
         <FormField
           control={form.control}
@@ -431,15 +495,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 Nombre de tickets
               </FormLabel>
               <Select 
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  // Si le nombre de tickets diminue, on réduit la sélection de loteries
-                  const currentLotteries = form.getValues('linkedLotteries') || [];
-                  if (currentLotteries.length > Number(value)) {
-                    form.setValue('linkedLotteries', currentLotteries.slice(0, Number(value)));
-                    form.trigger('linkedLotteries');
-                  }
-                }} 
+                onValueChange={(value) => field.onChange(value)}
                 defaultValue={field.value?.toString() || "1"}
               >
                 <FormControl>
@@ -528,8 +584,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <FormLabel className="text-white text-lg">Loteries associées</FormLabel>
               <FormDescription className="text-gray-400 text-base mb-2">
                 {watchedTickets > 1 
-                  ? `Vous pouvez sélectionner jusqu'à ${watchedTickets} loteries différentes` 
-                  : "Sélectionnez une loterie à associer"}
+                  ? `Les clients pourront sélectionner jusqu'à ${watchedTickets} loteries sur votre sélection` 
+                  : "Les clients pourront sélectionner 1 loterie sur votre sélection"}
               </FormDescription>
               <div className="grid grid-cols-1 gap-2 mt-2">
                 {activeLotteries.map(lottery => {
