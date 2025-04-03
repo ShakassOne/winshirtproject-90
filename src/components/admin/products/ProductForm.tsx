@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import {
   Form,
@@ -14,15 +15,33 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { X } from "lucide-react";
 import { isLightColor } from '@/lib/utils';
-import LotterySelection from './LotterySelection';
-import PrintAreaManager from './PrintAreaManager';
-
-// Ajout des onglets pour la zone d'impression avec visualisation du produit et des filtres avancés
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PrintAreaVisualizer from "./PrintAreaVisualizer";
 import AdvancedFiltersForm from "./AdvancedFiltersForm";
+
+interface LotterySelectionProps {
+  lotteries: any[];
+  selectedLotteries: string[];
+  onToggleLottery: (lotteryId: string) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
+}
+
+interface PrintAreaManagerProps {
+  printAreas: any[];
+  selectedAreaId: number | null;
+  onSelectArea: (id: number) => void;
+  onAddArea: (printArea: any) => void;
+  onUpdateArea: (id: number, updatedData: any) => void;
+  onRemoveArea: (id: number) => void;
+}
+
+// Import components
+import LotterySelection from './LotterySelection';
+import PrintAreaManager from './PrintAreaManager';
 
 interface ProductFormProps {
   isCreating: boolean;
@@ -45,7 +64,7 @@ interface ProductFormProps {
   removePrintArea?: (id: number) => void;
 }
 
-const ProductForm = ({
+const ProductForm: React.FC<ProductFormProps> = ({
   isCreating,
   selectedProductId,
   form,
@@ -59,11 +78,11 @@ const ProductForm = ({
   addColor,
   removeColor,
   toggleLottery,
-  selectAllLotteries,
-  deselectAllLotteries,
-  addPrintArea,
-  updatePrintArea,
-  removePrintArea
+  selectAllLotteries = () => {},
+  deselectAllLotteries = () => {},
+  addPrintArea = () => {},
+  updatePrintArea = () => {},
+  removePrintArea = () => {}
 }) => {
   const [newSize, setNewSize] = useState('');
   const [newColor, setNewColor] = useState('');
@@ -84,6 +103,26 @@ const ProductForm = ({
       setColorPickerValue('#000000');
     }
   }, [newColor, addColor]);
+
+  const handlePrintAreaSelect = (id: number) => {
+    setSelectedPrintAreaId(id);
+  };
+
+  // Fonction pour modifier la position d'une zone d'impression
+  const handleUpdatePrintAreaPosition = (id: number, x: number, y: number) => {
+    if (updatePrintArea) {
+      const currentArea = form.getValues().printAreas?.find((area: any) => area.id === id);
+      if (currentArea) {
+        updatePrintArea(id, {
+          bounds: {
+            ...currentArea.bounds,
+            x,
+            y
+          }
+        });
+      }
+    }
+  };
 
   return (
     <Form {...form}>
@@ -170,30 +209,25 @@ const ProductForm = ({
                 )}
               />
 
-              {/* Type de manches */}
+              {/* Personnalisation - Déplacé depuis l'onglet Options */}
               <FormField
                 control={form.control}
-                name="sleeveType"
+                name="allowCustomization"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type de manches</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                          <SelectValue placeholder="Type de manches" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                        <SelectItem value="Courtes">Courtes</SelectItem>
-                        <SelectItem value="Longues">Longues</SelectItem>
-                        <SelectItem value="Sans manches">Sans manches</SelectItem>
-                        <SelectItem value="N/A">Non applicable</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-winshirt-purple"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Autoriser la personnalisation</FormLabel>
+                      <FormDescription>
+                        Permet aux clients de personnaliser ce produit avec des visuels
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />
@@ -445,66 +479,6 @@ const ProductForm = ({
                 </Button>
               </div>
             </div>
-            
-            {/* Personnalisation */}
-            <FormField
-              control={form.control}
-              name="allowCustomization"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className="data-[state=checked]:bg-winshirt-purple"
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Autoriser la personnalisation</FormLabel>
-                    <FormDescription>
-                      Permet aux clients de personnaliser ce produit avec des visuels
-                    </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {/* Catégorie de visuels (seulement si la personnalisation est autorisée) */}
-            {form.watch('allowCustomization') && (
-              <FormField
-                control={form.control}
-                name="visualCategoryId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Catégorie de visuels</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(Number(value))}
-                      defaultValue={field.value?.toString()}
-                      value={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                          <SelectValue placeholder="Sélectionnez une catégorie" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                        {visualCategories.map((category) => (
-                          <SelectItem
-                            key={category.id}
-                            value={category.id.toString()}
-                          >
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Catégorie de visuels par défaut pour ce produit
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-            )}
           </TabsContent>
           
           <TabsContent value="loteries" className="space-y-6">
@@ -512,8 +486,8 @@ const ProductForm = ({
               lotteries={activeLotteries}
               selectedLotteries={form.watch('linkedLotteries') || []}
               onToggleLottery={toggleLottery}
-              onSelectAll={selectAllLotteries || (() => {})}
-              onDeselectAll={deselectAllLotteries || (() => {})}
+              onSelectAll={selectAllLotteries}
+              onDeselectAll={deselectAllLotteries}
             />
           </TabsContent>
           
@@ -526,7 +500,8 @@ const ProductForm = ({
                   productSecondaryImage={form.watch('secondaryImage')}
                   printAreas={form.watch('printAreas') || []}
                   selectedAreaId={selectedPrintAreaId}
-                  onSelectPrintArea={(id) => setSelectedPrintAreaId(id)}
+                  onSelectPrintArea={handlePrintAreaSelect}
+                  onUpdateAreaPosition={handleUpdatePrintAreaPosition}
                 />
               </div>
               
@@ -537,13 +512,43 @@ const ProductForm = ({
                   onUpdateArea={updatePrintArea}
                   onRemoveArea={removePrintArea}
                   selectedAreaId={selectedPrintAreaId}
-                  onSelectArea={(id) => setSelectedPrintAreaId(id)}
+                  onSelectArea={handlePrintAreaSelect}
                 />
               </div>
             </div>
           </TabsContent>
           
           <TabsContent value="filters" className="space-y-6">
+            {/* Ajout du type de manches ici */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <FormField
+                control={form.control}
+                name="sleeveType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type de manches</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                          <SelectValue placeholder="Type de manches" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                        <SelectItem value="Courtes">Courtes</SelectItem>
+                        <SelectItem value="Longues">Longues</SelectItem>
+                        <SelectItem value="Sans manches">Sans manches</SelectItem>
+                        <SelectItem value="N/A">Non applicable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <AdvancedFiltersForm form={form} />
           </TabsContent>
         </Tabs>
