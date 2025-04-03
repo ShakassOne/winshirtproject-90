@@ -12,7 +12,7 @@ const productFormSchema = z.object({
     message: "Le nom du produit doit comporter au moins 2 caractères.",
   }),
   description: z.string().optional(),
-  price: z.number(),
+  price: z.coerce.number(),
   image: z.string().optional(),
   secondaryImage: z.string().optional(),
   sizes: z.array(z.string()).optional(),
@@ -22,12 +22,26 @@ const productFormSchema = z.object({
   sleeveType: z.string().optional(),
   linkedLotteries: z.array(z.string()).optional(),
   tickets: z.coerce.number().min(1).max(5).default(1),
-  weight: z.number().optional(),
-  deliveryPrice: z.number().optional(),
+  weight: z.coerce.number().optional(),
+  deliveryPrice: z.coerce.number().optional(),
   allowCustomization: z.boolean().default(false),
   defaultVisualId: z.number().nullable().optional(),
   defaultVisualSettings: z.any().optional(),
   visualCategoryId: z.number().nullable().optional(),
+  // Ajout des champs pour les zones d'impression
+  printAreas: z.array(z.object({
+    id: z.number(),
+    name: z.string(),
+    format: z.enum(['pocket', 'a4', 'a3', 'custom']),
+    position: z.enum(['front', 'back']),
+    bounds: z.object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number()
+    }),
+    allowCustomPosition: z.boolean().optional()
+  })).optional(),
 });
 
 export const useProductForm = (
@@ -59,6 +73,7 @@ export const useProductForm = (
       defaultVisualId: null,
       defaultVisualSettings: null,
       visualCategoryId: null,
+      printAreas: [],
     },
   });
 
@@ -90,6 +105,14 @@ export const useProductForm = (
       defaultVisualId: product.defaultVisualId,
       defaultVisualSettings: product.defaultVisualSettings,
       visualCategoryId: product.visualCategoryId,
+      printAreas: product.printAreas || [],
+    });
+    
+    console.log("Loaded product for editing:", {
+      id: product.id,
+      price: product.price,
+      tickets: product.tickets,
+      linkedLotteries: product.linkedLotteries?.map(String)
     });
   };
 
@@ -105,11 +128,24 @@ export const useProductForm = (
 
   const onSubmit = async (data: any) => {
     try {
+      console.log("Form data submitted:", data);
+      
+      // Ensure all numeric values are actually numbers
+      const price = Number(data.price);
+      const tickets = Number(data.tickets);
+      const weight = data.weight ? Number(data.weight) : 0;
+      const deliveryPrice = data.deliveryPrice ? Number(data.deliveryPrice) : 0;
+      
+      if (isNaN(price) || isNaN(tickets) || isNaN(weight) || isNaN(deliveryPrice)) {
+        toast.error("Erreur de conversion des valeurs numériques");
+        return;
+      }
+      
       const newProduct: ExtendedProduct = {
         id: isCreating ? Date.now() : selectedProductId || Date.now(),
         name: data.name,
         description: data.description || '',
-        price: parseFloat(data.price),
+        price: price,
         image: data.image || '',
         secondaryImage: data.secondaryImage || '',
         sizes: data.sizes || [],
@@ -119,9 +155,9 @@ export const useProductForm = (
         sleeveType: data.sleeveType || 'Courtes',
         linkedLotteries: data.linkedLotteries ? data.linkedLotteries.map(Number) : [],
         popularity: 0,
-        tickets: Number(data.tickets) || 1,
-        weight: data.weight || 0,
-        deliveryPrice: data.deliveryPrice || 0,
+        tickets: tickets,
+        weight: weight,
+        deliveryPrice: deliveryPrice,
         allowCustomization: data.allowCustomization || false,
         defaultVisualId: data.defaultVisualId || null,
         defaultVisualSettings: data.defaultVisualSettings || null,
@@ -129,6 +165,7 @@ export const useProductForm = (
         // Sinon on la met à null
         visualCategoryId: data.allowCustomization ? 
           (data.visualCategoryId || 1) : null,
+        printAreas: data.printAreas || [],
       };
 
       if (isCreating) {
@@ -209,6 +246,39 @@ export const useProductForm = (
   const deselectAllLotteries = () => {
     form.setValue("linkedLotteries", []);
   };
+  
+  // Fonction pour ajouter une zone d'impression
+  const addPrintArea = (printArea: any) => {
+    const currentPrintAreas = form.getValues().printAreas || [];
+    
+    // Générer un ID unique pour la nouvelle zone d'impression
+    const newId = currentPrintAreas.length > 0
+      ? Math.max(...currentPrintAreas.map(area => area.id)) + 1
+      : 1;
+      
+    const newPrintArea = {
+      ...printArea,
+      id: newId
+    };
+    
+    form.setValue("printAreas", [...currentPrintAreas, newPrintArea]);
+  };
+  
+  // Fonction pour mettre à jour une zone d'impression existante
+  const updatePrintArea = (id: number, updatedData: any) => {
+    const currentPrintAreas = form.getValues().printAreas || [];
+    const updatedPrintAreas = currentPrintAreas.map(area => 
+      area.id === id ? { ...area, ...updatedData } : area
+    );
+    
+    form.setValue("printAreas", updatedPrintAreas);
+  };
+  
+  // Fonction pour supprimer une zone d'impression
+  const removePrintArea = (id: number) => {
+    const currentPrintAreas = form.getValues().printAreas || [];
+    form.setValue("printAreas", currentPrintAreas.filter(area => area.id !== id));
+  };
 
   return {
     isCreating,
@@ -225,6 +295,9 @@ export const useProductForm = (
     removeColor,
     toggleLottery,
     selectAllLotteries,
-    deselectAllLotteries
+    deselectAllLotteries,
+    addPrintArea,
+    updatePrintArea,
+    removePrintArea
   };
 };

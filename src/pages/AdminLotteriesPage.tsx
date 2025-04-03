@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -10,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Gift } from 'lucide-react';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
+import AdminNavigationHandler from '@/components/AdminNavigationHandler';
 
 const AdminLotteriesPage: React.FC = () => {
   // Création de deux loteries spéciales
@@ -64,35 +66,142 @@ const AdminLotteriesPage: React.FC = () => {
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   const [isLoading, setIsLoading] = useState(true);
   
-  // Chargement des données depuis Supabase
+  // Function to sync lotteries to storage
+  const syncLotteriesToStorage = (lotteriesData: ExtendedLottery[]) => {
+    try {
+      localStorage.setItem('lotteries', JSON.stringify(lotteriesData));
+      sessionStorage.setItem('lotteries', JSON.stringify(lotteriesData));
+      
+      // Dispatch an event to notify other components that lotteries have been updated
+      window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
+        detail: { lotteries: lotteriesData } 
+      }));
+      
+      console.log("Admin: Synced lotteries to storage:", lotteriesData.length);
+    } catch (err) {
+      console.error("Admin: Error syncing lotteries to storage:", err);
+    }
+  };
+  
+  // Chargement des données depuis toutes les sources
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Récupérer les loteries depuis Supabase
-        const fetchedLotteries = await fetchLotteries();
+        // Combine lotteries from all sources to ensure consistency
+        let allLotteries: ExtendedLottery[] = [];
         
-        // Si aucune loterie n'est trouvée, ajouter les loteries spéciales
-        let lotteriesData = fetchedLotteries;
-        if (fetchedLotteries.length === 0) {
-          lotteriesData = specialLotteries;
-          // Sauvegarder les loteries spéciales dans Supabase
-          for (const lottery of specialLotteries) {
-            await fetch('/api/lotteries', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(lottery)
-            });
+        // 1. Check localStorage
+        try {
+          const storedLotteries = localStorage.getItem('lotteries');
+          if (storedLotteries) {
+            const parsedLotteries = JSON.parse(storedLotteries);
+            if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+              allLotteries = [...allLotteries, ...parsedLotteries];
+              console.log("Admin: Loaded from localStorage:", parsedLotteries.length);
+            }
           }
+        } catch (err) {
+          console.error("Admin: Error loading lotteries from localStorage:", err);
         }
         
-        setLotteries(lotteriesData);
+        // 2. Check sessionStorage
+        try {
+          const sessionLotteries = sessionStorage.getItem('lotteries');
+          if (sessionLotteries) {
+            const parsedLotteries = JSON.parse(sessionLotteries);
+            if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+              // Add only lotteries that aren't already in the array
+              parsedLotteries.forEach(lottery => {
+                if (!allLotteries.some(l => l.id === lottery.id)) {
+                  allLotteries.push(lottery);
+                }
+              });
+              console.log("Admin: Added from sessionStorage:", parsedLotteries.length);
+            }
+          }
+        } catch (err) {
+          console.error("Admin: Error loading lotteries from sessionStorage:", err);
+        }
         
-        // Récupérer les produits depuis Supabase
+        // 3. Try API
+        try {
+          const apiLotteries = await fetchLotteries();
+          if (apiLotteries && apiLotteries.length > 0) {
+            // Add only lotteries that aren't already in the array
+            apiLotteries.forEach(lottery => {
+              if (!allLotteries.some(l => l.id === lottery.id)) {
+                allLotteries.push(lottery);
+              }
+            });
+            console.log("Admin: Added from API:", apiLotteries.length);
+          }
+        } catch (err) {
+          console.error("Admin: Error fetching lotteries from API:", err);
+        }
+        
+        // 4. If no lotteries found, add special ones
+        if (allLotteries.length === 0) {
+          allLotteries = [...specialLotteries];
+          console.log("Admin: Using special lotteries:", specialLotteries.length);
+        } else {
+          // Make sure special lotteries are included
+          specialLotteries.forEach(specialLottery => {
+            if (!allLotteries.some(l => l.id === specialLottery.id)) {
+              allLotteries.push(specialLottery);
+              console.log(`Admin: Added special lottery ${specialLottery.id}`);
+            }
+          });
+        }
+        
+        // 5. Check for iPhone lottery
+        const iPhoneLotteryExists = allLotteries.some(
+          lottery => lottery.title.toLowerCase().includes('iphone')
+        );
+        
+        if (!iPhoneLotteryExists) {
+          // Create iPhone lottery
+          const iPhoneLottery: ExtendedLottery = {
+            id: Math.max(...allLotteries.map(l => l.id), 0) + 1,
+            title: "iPhone 16 Pro",
+            description: "Gagnez le tout nouveau iPhone 16 Pro avec ses nouvelles couleurs exclusives et ses fonctionnalités révolutionnaires.",
+            value: 1299,
+            targetParticipants: 30,
+            currentParticipants: 12,
+            status: "active",
+            image: "https://pixelprint.world/wp-content/uploads/2025/04/iPhone-16-Pro-couleurs.jpg",
+            endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+            featured: true,
+          };
+          
+          allLotteries.push(iPhoneLottery);
+          console.log("Admin: Added iPhone lottery");
+        }
+        
+        // Sync lotteries to storage
+        syncLotteriesToStorage(allLotteries);
+        setLotteries(allLotteries);
+        
+        // Récupérer les produits
         const fetchedProducts = await fetchProducts();
-        setProducts(fetchedProducts);
+        if (fetchedProducts && fetchedProducts.length > 0) {
+          setProducts(fetchedProducts);
+        } else {
+          // Load from localStorage if API fails
+          try {
+            const storedProducts = localStorage.getItem('products');
+            if (storedProducts) {
+              const parsedProducts = JSON.parse(storedProducts);
+              if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+                setProducts(parsedProducts);
+              }
+            }
+          } catch (err) {
+            console.error("Admin: Error loading products from localStorage:", err);
+          }
+        }
       } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
+        console.error("Admin: Erreur lors du chargement des données:", error);
         toast.error("Erreur lors du chargement des données");
       } finally {
         setIsLoading(false);
@@ -100,6 +209,17 @@ const AdminLotteriesPage: React.FC = () => {
     };
     
     loadData();
+    
+    // Listen for lottery updates
+    const handleLotteryUpdate = () => {
+      loadData();
+    };
+    
+    window.addEventListener('lotteriesUpdated', handleLotteryUpdate);
+    
+    return () => {
+      window.removeEventListener('lotteriesUpdated', handleLotteryUpdate);
+    };
   }, []);
   
   const {
@@ -157,6 +277,7 @@ const AdminLotteriesPage: React.FC = () => {
   return (
     <>
       <StarBackground />
+      <AdminNavigationHandler />
       
       <section className="pt-32 pb-24">
         <div className="container mx-auto px-4 md:px-8">

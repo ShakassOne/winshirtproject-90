@@ -21,10 +21,10 @@ const formSchema = z.object({
   description: z.string().min(10, {
     message: "La description doit comporter au moins 10 caractères.",
   }),
-  value: z.number().min(1, {
+  value: z.coerce.number().min(1, {
     message: "La valeur doit être supérieure à 0.",
   }),
-  targetParticipants: z.number().min(2, {
+  targetParticipants: z.coerce.number().min(2, {
     message: "Le nombre de participants doit être supérieur à 1.",
   }),
   status: z.enum(["active", "completed", "relaunched", "cancelled"]),
@@ -86,6 +86,7 @@ export const useLotteryForm = (
       console.log("Données chargées pour édition:", {
         id: lotteryId,
         image: lotteryToEdit.image,
+        value: lotteryToEdit.value,
         formValue: form.getValues()
       });
     }
@@ -104,13 +105,22 @@ export const useLotteryForm = (
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     console.log("Données du formulaire soumises:", data); // Debug: afficher les données envoyées
     
+    // Ensure numeric values
+    const valueAsNumber = Number(data.value);
+    const targetParticipantsAsNumber = Number(data.targetParticipants);
+    
+    if (isNaN(valueAsNumber) || isNaN(targetParticipantsAsNumber)) {
+      toast.error("Erreur de conversion des valeurs numériques");
+      return;
+    }
+    
     if (isCreating) {
       // Créer une nouvelle loterie
       const newLotteryData: Omit<ExtendedLottery, 'id'> = {
         title: data.title,
         description: data.description,
-        value: Number(data.value),
-        targetParticipants: Number(data.targetParticipants),
+        value: valueAsNumber,
+        targetParticipants: targetParticipantsAsNumber,
         currentParticipants: 0,
         status: data.status,
         image: data.image,
@@ -126,6 +136,21 @@ export const useLotteryForm = (
       
       if (createdLottery) {
         setLotteries(prev => [...prev, createdLottery]);
+        
+        // Sync with storage
+        const updatedLotteries = [...lotteries, createdLottery];
+        try {
+          localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+          sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+          
+          // Dispatch an event to notify other components that lotteries have been updated
+          window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
+            detail: { lotteries: updatedLotteries } 
+          }));
+        } catch (err) {
+          console.error("Error syncing updated lotteries to storage:", err);
+        }
+        
         toast.success("Loterie créée avec succès !");
       }
     } else if (selectedLotteryId) {
@@ -138,8 +163,8 @@ export const useLotteryForm = (
           ...existingLottery,
           title: data.title,
           description: data.description,
-          value: Number(data.value),
-          targetParticipants: Number(data.targetParticipants),
+          value: valueAsNumber,
+          targetParticipants: targetParticipantsAsNumber,
           status: data.status,
           image: data.image,
           endDate: data.endDate,
@@ -150,9 +175,25 @@ export const useLotteryForm = (
         const updatedLottery = await updateLottery(updatedLotteryData);
         
         if (updatedLottery) {
-          setLotteries(prev => prev.map(lottery => 
+          const updatedLotteries = lotteries.map(lottery => 
             lottery.id === selectedLotteryId ? updatedLottery : lottery
-          ));
+          );
+          
+          setLotteries(updatedLotteries);
+          
+          // Sync with storage
+          try {
+            localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+            sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+            
+            // Dispatch an event to notify other components that lotteries have been updated
+            window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
+              detail: { lotteries: updatedLotteries } 
+            }));
+          } catch (err) {
+            console.error("Error syncing updated lotteries to storage:", err);
+          }
+          
           toast.success("Loterie modifiée avec succès !");
         }
       }
@@ -208,6 +249,20 @@ export const useLotteryForm = (
       );
       
       setLotteries(updatedLotteries);
+      
+      // Sync with storage
+      try {
+        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        
+        // Dispatch an event to notify other components that lotteries have been updated
+        window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
+          detail: { lotteries: updatedLotteries } 
+        }));
+      } catch (err) {
+        console.error("Error syncing updated lotteries to storage:", err);
+      }
+      
       toast.success(`Le gagnant de la loterie est ${winner.name} !`);
     }
   };
@@ -233,10 +288,22 @@ export const useLotteryForm = (
       
       setLotteries(updatedLotteries);
       
-      toast.success(featured 
-        ? "Loterie ajoutée aux vedettes !" 
-        : "Loterie retirée des vedettes !"
-      );
+      // Sync with storage
+      try {
+        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        
+        // Dispatch an event to notify other components that lotteries have been updated
+        window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
+          detail: { lotteries: updatedLotteries } 
+        }));
+      } catch (err) {
+        console.error("Error syncing updated lotteries to storage:", err);
+      }
+      
+      toast.success(featured ? 
+        "Loterie mise en avant avec succès !" : 
+        "Loterie retirée des mises en avant avec succès !");
     }
   };
 
