@@ -22,6 +22,9 @@ interface ProductFormProps {
   toggleLottery: (lotteryId: string) => void;
   selectAllLotteries?: () => void;
   deselectAllLotteries?: () => void;
+  addPrintArea?: (printArea: any) => void;
+  updatePrintArea?: (id: number, updatedData: any) => void;
+  removePrintArea?: (id: number) => void;
 }
 
 const EnhancedProductForm: React.FC<ProductFormProps> = ({
@@ -37,7 +40,12 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
   removeSize,
   addColor,
   removeColor,
-  toggleLottery
+  toggleLottery,
+  selectAllLotteries,
+  deselectAllLotteries,
+  addPrintArea,
+  updatePrintArea,
+  removePrintArea
 }) => {
   // Si l'utilisateur n'est ni en train de créer ni en train d'éditer un produit
   if (!isCreating && !selectedProductId) {
@@ -70,6 +78,11 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
         addColor={addColor}
         removeColor={removeColor}
         toggleLottery={toggleLottery}
+        selectAllLotteries={selectAllLotteries}
+        deselectAllLotteries={deselectAllLotteries}
+        addPrintArea={addPrintArea}
+        updatePrintArea={updatePrintArea}
+        removePrintArea={removePrintArea}
       />
     </div>
   );

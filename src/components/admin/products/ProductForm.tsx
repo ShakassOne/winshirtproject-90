@@ -509,11 +509,11 @@ const ProductForm = ({
           
           <TabsContent value="loteries" className="space-y-6">
             <LotterySelection
-              activeLotteries={activeLotteries}
+              lotteries={activeLotteries}
               selectedLotteries={form.watch('linkedLotteries') || []}
-              toggleLottery={toggleLottery}
-              selectAllLotteries={selectAllLotteries}
-              deselectAllLotteries={deselectAllLotteries}
+              onToggleLottery={toggleLottery}
+              onSelectAll={selectAllLotteries || (() => {})}
+              onDeselectAll={deselectAllLotteries || (() => {})}
             />
           </TabsContent>
           

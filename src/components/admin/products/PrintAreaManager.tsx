@@ -8,16 +8,20 @@ import { PrintArea } from '@/types/product';
 
 interface PrintAreaManagerProps {
   printAreas: PrintArea[];
-  onAdd: (printArea: PrintArea) => void;
-  onRemove: (id: number) => void;
-  onUpdate: (id: number, updates: Partial<PrintArea>) => void;
+  onAddArea?: (printArea: PrintArea) => void;
+  onRemoveArea?: (id: number) => void;
+  onUpdateArea?: (id: number, updates: Partial<PrintArea>) => void;
+  selectedAreaId?: number | null;
+  onSelectArea?: (id: number) => void;
 }
 
 const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({ 
   printAreas,
-  onAdd,
-  onRemove,
-  onUpdate
+  onAddArea,
+  onRemoveArea,
+  onUpdateArea,
+  selectedAreaId,
+  onSelectArea
 }) => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newArea, setNewArea] = useState<Omit<PrintArea, 'id'>>({
@@ -29,9 +33,9 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
   });
   
   const handleAdd = () => {
-    if (!newArea.name) return;
+    if (!newArea.name || !onAddArea) return;
     
-    onAdd({
+    onAddArea({
       ...newArea,
       id: Date.now()
     });
@@ -57,10 +61,13 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
   };
   
   const handleUpdate = (id: number, field: string, value: any) => {
-    onUpdate(id, { [field]: value });
+    if (!onUpdateArea) return;
+    onUpdateArea(id, { [field]: value });
   };
   
   const handleFormatChange = (id: number, format: 'pocket' | 'a4' | 'a3' | 'custom') => {
+    if (!onUpdateArea) return;
+    
     // Définir les dimensions en fonction du format
     let newBounds = { x: 0, y: 0, width: 0, height: 0 };
     
@@ -81,7 +88,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
         break;
     }
     
-    onUpdate(id, { 
+    onUpdateArea(id, { 
       format,
       bounds: newBounds
     });
@@ -106,11 +113,18 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
       )}
       
       {printAreas.map(area => (
-        <div key={area.id} className="border border-gray-700 rounded-md p-4 space-y-3">
+        <div 
+          key={area.id} 
+          className={`border ${selectedAreaId === area.id ? 'border-winshirt-purple' : 'border-gray-700'} rounded-md p-4 space-y-3`}
+          onClick={() => onSelectArea && onSelectArea(area.id)}
+        >
           <div className="flex justify-between items-center">
             <h4 className="font-medium">{area.name}</h4>
             <Button 
-              onClick={() => onRemove(area.id)} 
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveArea && onRemoveArea(area.id);
+              }}
               variant="ghost" 
               size="sm"
               className="text-red-400 hover:text-red-300 h-8 px-2"
@@ -126,6 +140,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
                 value={area.name}
                 onChange={(e) => handleUpdate(area.id, 'name', e.target.value)}
                 className="bg-winshirt-space-light border-winshirt-purple/30"
+                onClick={(e) => e.stopPropagation()}
               />
             </div>
             
@@ -135,7 +150,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
                 value={area.format}
                 onValueChange={(value: 'pocket' | 'a4' | 'a3' | 'custom') => handleFormatChange(area.id, value)}
               >
-                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30" onClick={(e) => e.stopPropagation()}>
                   <SelectValue placeholder="Choisir un format" />
                 </SelectTrigger>
                 <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
@@ -153,7 +168,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
                 value={area.position}
                 onValueChange={(value: 'front' | 'back') => handleUpdate(area.id, 'position', value)}
               >
-                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30" onClick={(e) => e.stopPropagation()}>
                   <SelectValue placeholder="Position" />
                 </SelectTrigger>
                 <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
@@ -168,7 +183,10 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
                 type="checkbox"
                 id={`custom-position-${area.id}`}
                 checked={!!area.allowCustomPosition}
-                onChange={(e) => handleUpdate(area.id, 'allowCustomPosition', e.target.checked)}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleUpdate(area.id, 'allowCustomPosition', e.target.checked);
+                }}
                 className="mr-2"
               />
               <label htmlFor={`custom-position-${area.id}`} className="text-sm">
@@ -186,6 +204,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
                   value={area.bounds.width}
                   onChange={(e) => handleUpdate(area.id, 'bounds', { ...area.bounds, width: Number(e.target.value) })}
                   className="bg-winshirt-space-light border-winshirt-purple/30"
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
               <div>
@@ -195,6 +214,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
                   value={area.bounds.height}
                   onChange={(e) => handleUpdate(area.id, 'bounds', { ...area.bounds, height: Number(e.target.value) })}
                   className="bg-winshirt-space-light border-winshirt-purple/30"
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             </div>
