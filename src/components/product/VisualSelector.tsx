@@ -27,17 +27,24 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     setCategories(allCategories);
     
     if (allCategories.length > 0) {
-      // If we have a categoryId, use that; otherwise use the first category
+      // Si nous avons une categoryId, utiliser celle-là; sinon utiliser la première catégorie
       if (categoryId) {
-        setActiveCategory(categoryId.toString());
-        const categoryVisuals = getVisualsByCategoryId(categoryId);
+        const categoryIdStr = categoryId.toString();
+        setActiveCategory(categoryIdStr);
+        
+        // Utiliser le bon getter en fonction de la situation
+        const categoryVisuals = getVisualsByCategoryId 
+          ? getVisualsByCategoryId(categoryId) 
+          : getVisualsByCategory(categoryId);
+          
         setVisuals(categoryVisuals);
-      } else {
-        setActiveCategory(allCategories[0]?.id.toString() || "1");
-        setVisuals(getVisualsByCategory(allCategories[0]?.id || 1));
+      } else if (allCategories[0]) {
+        const firstCatId = allCategories[0].id.toString();
+        setActiveCategory(firstCatId);
+        setVisuals(getVisualsByCategory(allCategories[0].id));
       }
     }
-  }, [categoryId]);
+  }, [categoryId, getCategories, getVisualsByCategory, getVisualsByCategoryId]);
   
   const handleCategoryChange = (categoryId: string) => {
     setActiveCategory(categoryId);
@@ -84,27 +91,33 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
           <TabsContent key={category.id} value={category.id.toString()} className="mt-0">
             <ScrollArea className="h-64">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
-                {getVisualsByCategory(category.id).map((visual) => (
-                  <div 
-                    key={visual.id}
-                    onClick={() => handleSelectVisual(visual)}
-                    className={`
-                      cursor-pointer border rounded-md overflow-hidden hover:shadow-md transition-all
-                      ${selectedVisualId === visual.id 
-                        ? 'border-winshirt-purple shadow-lg scale-105' 
-                        : 'border-gray-700/30'}
-                    `}
-                  >
-                    <img 
-                      src={visual.image} 
-                      alt={visual.name} 
-                      className="w-full aspect-square object-contain bg-gray-800/50"
-                    />
-                    <div className="p-2 text-center">
-                      <p className="text-xs truncate">{visual.name}</p>
+                {visuals.length > 0 ? (
+                  visuals.map((visual) => (
+                    <div 
+                      key={visual.id}
+                      onClick={() => handleSelectVisual(visual)}
+                      className={`
+                        cursor-pointer border rounded-md overflow-hidden hover:shadow-md transition-all
+                        ${selectedVisualId === visual.id 
+                          ? 'border-winshirt-purple shadow-lg scale-105' 
+                          : 'border-gray-700/30'}
+                      `}
+                    >
+                      <img 
+                        src={visual.image} 
+                        alt={visual.name} 
+                        className="w-full aspect-square object-contain bg-gray-800/50"
+                      />
+                      <div className="p-2 text-center">
+                        <p className="text-xs truncate">{visual.name}</p>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="col-span-3 p-8 text-center">
+                    <p className="text-gray-400">Aucun visuel disponible dans cette catégorie</p>
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </TabsContent>

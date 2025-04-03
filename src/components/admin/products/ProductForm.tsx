@@ -1,9 +1,10 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus, Ticket, Image, Upload, Truck, Weight, Palette } from 'lucide-react';
+import { Package, Plus, Ticket, Image, Upload, Truck, Weight } from 'lucide-react';
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import {
@@ -65,7 +66,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const watchedLotteries = form.watch('linkedLotteries') || [];
   const watchedTickets = form.watch('tickets') || 1;
   const watchedAllowCustomization = form.watch('allowCustomization');
-  const watchedVisualCategoryId = form.watch('visualCategoryId');
   
   // Ajout des refs pour les inputs de type file
   const primaryImageInputRef = useRef<HTMLInputElement>(null);
@@ -178,41 +178,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
-        {/* Visual Category Selection */}
-        <FormField
-          control={form.control}
-          name="visualCategoryId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white text-lg flex items-center gap-2">
-                <Palette size={18} /> Catégorie de visuels
-              </FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(value !== "null" ? Number(value) : null)}
-                value={field.value?.toString() || "null"}
-              >
-                <FormControl>
-                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
-                    <SelectValue placeholder="Sélectionner une catégorie de visuels" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
-                  <SelectItem value="null">Aucune catégorie</SelectItem>
-                  {visualCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormDescription className="text-gray-400 text-base">
-                Sélectionnez la catégorie de visuels disponibles pour ce produit
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
         {/* Allow Customization */}
         <FormField
           control={form.control}
@@ -228,7 +193,18 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <FormControl>
                 <Switch
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked);
+                    // Si on désactive la personnalisation, on réinitialise la catégorie de visuel
+                    if (!checked) {
+                      form.setValue("visualCategoryId", null);
+                    } else {
+                      // Si on active la personnalisation et qu'il y a des catégories, on sélectionne la première
+                      if (visualCategories.length > 0) {
+                        form.setValue("visualCategoryId", visualCategories[0].id);
+                      }
+                    }
+                  }}
                   className="data-[state=checked]:bg-winshirt-purple"
                 />
               </FormControl>
@@ -617,14 +593,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     <div 
                       key={lottery.id}
                       className={`p-4 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
-                      onClick={() => {
-                        const linkedLotteries = form.getValues().linkedLotteries || [];
-                        if (linkedLotteries.includes(lottery.id.toString())) {
-                          form.setValue("linkedLotteries", linkedLotteries.filter((id: string) => id !== lottery.id.toString()));
-                        } else {
-                          form.setValue("linkedLotteries", [...linkedLotteries, lottery.id.toString()]);
-                        }
-                      }}
+                      onClick={() => toggleLottery(lottery.id.toString())}
                     >
                       <input 
                         type="checkbox" 

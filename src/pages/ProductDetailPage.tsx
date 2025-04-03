@@ -65,11 +65,6 @@ const ProductDetailPage: React.FC = () => {
             // Initialiser le tableau des loteries sélectionnées
             setSelectedLotteries(Array(foundProduct.tickets || 1).fill(''));
             setLoading(false);
-            
-            // Charger les catégories visuelles et les visuels associés
-            if (foundProduct.visualCategoryId) {
-              loadVisualsByCategory(foundProduct.visualCategoryId);
-            }
             return;
           }
         } catch (error) {
@@ -83,10 +78,6 @@ const ProductDetailPage: React.FC = () => {
       // Initialiser le tableau des loteries sélectionnées
       setSelectedLotteries(Array(mockProduct?.tickets || 1).fill(''));
       setLoading(false);
-      
-      if (mockProduct && mockProduct.visualCategoryId) {
-        loadVisualsByCategory(mockProduct.visualCategoryId);
-      }
     };
     
     loadProduct();
@@ -110,22 +101,6 @@ const ProductDetailPage: React.FC = () => {
     
     loadVisualCategories();
   }, []);
-  
-  // Charger les visuels d'une catégorie spécifique
-  const loadVisualsByCategory = (categoryId: number) => {
-    const storedVisuals = localStorage.getItem('visuals');
-    if (storedVisuals) {
-      try {
-        const parsedVisuals = JSON.parse(storedVisuals) as Visual[];
-        const filteredVisuals = parsedVisuals.filter(visual => 
-          visual.categoryId === categoryId
-        );
-        setCategoryVisuals(filteredVisuals);
-      } catch (error) {
-        console.error("Erreur lors du chargement des visuels:", error);
-      }
-    }
-  };
   
   // Mise à jour d'une loterie spécifique dans le tableau des loteries sélectionnées
   const handleLotteryChange = (lotteryId: string, index: number) => {
@@ -230,8 +205,8 @@ const ProductDetailPage: React.FC = () => {
     productImages.push(product.secondaryImage);
   }
   
-  // Vérifier si la personnalisation est permise
-  const canCustomize = product.allowCustomization !== false && product.visualCategoryId && categoryVisuals.length > 0;
+  // Vérifier si la personnalisation est permise - simplifié pour utiliser juste le flag allowCustomization
+  const canCustomize = product.allowCustomization === true;
   
   return (
     <>
@@ -271,7 +246,7 @@ const ProductDetailPage: React.FC = () => {
                       <VisualSelector
                         selectedVisualId={selectedVisual?.id || null}
                         onSelectVisual={handleSelectVisual}
-                        categoryId={product.visualCategoryId || null}
+                        categoryId={1} 
                       />
                     </TabsContent>
                   </Tabs>

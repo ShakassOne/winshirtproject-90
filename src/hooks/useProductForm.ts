@@ -125,7 +125,10 @@ export const useProductForm = (
         allowCustomization: data.allowCustomization || false,
         defaultVisualId: data.defaultVisualId || null,
         defaultVisualSettings: data.defaultVisualSettings || null,
-        visualCategoryId: data.visualCategoryId ? Number(data.visualCategoryId) : null,
+        // Si on autorise la personnalisation, on garde la catégorie visuelle
+        // Sinon on la met à null
+        visualCategoryId: data.allowCustomization ? 
+          (data.visualCategoryId || 1) : null,
       };
 
       if (isCreating) {
@@ -170,25 +173,29 @@ export const useProductForm = (
   };
 
   const addSize = (size: string) => {
-    form.setValue("sizes", [...form.getValues().sizes, size]);
+    const currentSizes = form.getValues().sizes || [];
+    form.setValue("sizes", [...currentSizes, size]);
   };
 
   const removeSize = (size: string) => {
-    form.setValue("sizes", form.getValues().sizes.filter((s: string) => s !== size));
+    const currentSizes = form.getValues().sizes || [];
+    form.setValue("sizes", currentSizes.filter(s => s !== size));
   };
 
   const addColor = (color: string) => {
-    form.setValue("colors", [...form.getValues().colors, color]);
+    const currentColors = form.getValues().colors || [];
+    form.setValue("colors", [...currentColors, color]);
   };
 
   const removeColor = (color: string) => {
-    form.setValue("colors", form.getValues().colors.filter((c: string) => c !== color));
+    const currentColors = form.getValues().colors || [];
+    form.setValue("colors", currentColors.filter(c => c !== color));
   };
   
   const toggleLottery = (lotteryId: string) => {
     const linkedLotteries = form.getValues().linkedLotteries || [];
     if (linkedLotteries.includes(lotteryId)) {
-      form.setValue("linkedLotteries", linkedLotteries.filter((id: string) => id !== lotteryId));
+      form.setValue("linkedLotteries", linkedLotteries.filter(id => id !== lotteryId));
     } else {
       form.setValue("linkedLotteries", [...linkedLotteries, lotteryId]);
     }

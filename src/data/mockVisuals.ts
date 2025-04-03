@@ -1,138 +1,68 @@
 
 import { Visual, VisualCategory } from '@/types/visual';
 
-export const mockVisualCategories: VisualCategory[] = [
-  {
-    id: 1,
-    name: "Jeux Vidéo",
-    description: "Designs inspirés de jeux vidéo populaires",
-    slug: "jeux-video"
-  },
-  {
-    id: 2,
-    name: "Films & Séries",
-    description: "Visuels basés sur des films et séries cultes",
-    slug: "films-series"
-  },
-  {
-    id: 3,
-    name: "Musique",
-    description: "Designs inspirés de la musique et des artistes",
-    slug: "musique"
-  },
-  {
-    id: 4,
-    name: "Humour",
-    description: "Designs amusants et citations drôles",
-    slug: "humour"
-  },
-  {
-    id: 5,
-    name: "Animaux",
-    description: "Designs avec des animaux",
-    slug: "animaux"
-  }
-];
-
-export const mockVisuals: Visual[] = [
-  {
-    id: 1,
-    name: "Retro Gaming Controller",
-    description: "Manette de jeu rétro classique",
-    image: "https://placehold.co/400x400/333/FFF?text=Controller",
-    categoryId: 1,
-    categoryName: "Jeux Vidéo"
-  },
-  {
-    id: 2,
-    name: "Space Invaders",
-    description: "Les envahisseurs classiques",
-    image: "https://placehold.co/400x400/333/FFF?text=Invaders",
-    categoryId: 1,
-    categoryName: "Jeux Vidéo"
-  },
-  {
-    id: 3,
-    name: "Sci-Fi Robot",
-    description: "Robot de science-fiction",
-    image: "https://placehold.co/400x400/333/FFF?text=Robot",
-    categoryId: 2,
-    categoryName: "Films & Séries"
-  },
-  {
-    id: 4,
-    name: "Guitar Silhouette",
-    description: "Silhouette de guitare électrique",
-    image: "https://placehold.co/400x400/333/FFF?text=Guitar",
-    categoryId: 3,
-    categoryName: "Musique"
-  },
-  {
-    id: 5,
-    name: "Audio Waves",
-    description: "Ondes audio visuelles",
-    image: "https://placehold.co/400x400/333/FFF?text=Waves",
-    categoryId: 3,
-    categoryName: "Musique"
-  },
-  {
-    id: 6,
-    name: "Coffee Addict",
-    description: "Pour les accros au café",
-    image: "https://placehold.co/400x400/333/FFF?text=Coffee",
-    categoryId: 4,
-    categoryName: "Humour"
-  },
-  {
-    id: 7,
-    name: "Cat Silhouette",
-    description: "Silhouette de chat",
-    image: "https://placehold.co/400x400/333/FFF?text=Cat",
-    categoryId: 5,
-    categoryName: "Animaux"
-  }
-];
-
-// Hook pour récupérer les visuels (simule une API)
+/**
+ * Custom hook to access mockup visuals data
+ */
 export const useVisuals = () => {
-  const getAllVisuals = () => {
-    // Ajouter categoryName à chaque visuel en joignant les données
-    return mockVisuals.map(visual => {
-      const category = mockVisualCategories.find(c => c.id === visual.categoryId);
-      return {
-        ...visual,
-        categoryName: category?.name || 'Sans catégorie'
-      };
-    });
-  };
-
-  const getVisualsByCategory = (categoryId: number) => {
-    return getAllVisuals().filter(visual => visual.categoryId === categoryId);
+  /**
+   * Get all visuals from the localStorage or fallback to empty array
+   */
+  const getAllVisuals = (): Visual[] => {
+    try {
+      const storedVisuals = localStorage.getItem('visuals');
+      if (storedVisuals) {
+        return JSON.parse(storedVisuals);
+      }
+    } catch (error) {
+      console.error('Error loading visuals:', error);
+    }
+    return [];
   };
   
-  // Add the missing method
-  const getVisualsByCategoryId = (categoryId: number) => {
+  /**
+   * Get visuals filtered by category ID
+   */
+  const getVisualsByCategory = (categoryId: number): Visual[] => {
+    const allVisuals = getAllVisuals();
+    return allVisuals.filter(visual => visual.categoryId === categoryId);
+  };
+
+  /**
+   * Same as getVisualsByCategory but with a different name for compatibility
+   */
+  const getVisualsByCategoryId = (categoryId: number): Visual[] => {
     return getVisualsByCategory(categoryId);
   };
 
-  const getVisualById = (visualId: number) => {
-    return getAllVisuals().find(visual => visual.id === visualId);
+  /**
+   * Get a specific visual by ID
+   */
+  const getVisualById = (visualId: number): Visual | null => {
+    const allVisuals = getAllVisuals();
+    return allVisuals.find(visual => visual.id === visualId) || null;
   };
-
-  const getCategories = () => {
-    return mockVisualCategories;
+  
+  /**
+   * Get all visual categories from localStorage or fallback to empty array
+   */
+  const getCategories = (): VisualCategory[] => {
+    try {
+      const storedCategories = localStorage.getItem('visualCategories');
+      if (storedCategories) {
+        return JSON.parse(storedCategories);
+      }
+    } catch (error) {
+      console.error('Error loading visual categories:', error);
+    }
+    return [];
   };
-
-  const getCategoryById = (categoryId: number) => {
-    return mockVisualCategories.find(category => category.id === categoryId);
-  };
-
+  
   return {
     getAllVisuals,
     getVisualsByCategory,
-    getVisualsByCategoryId,
     getVisualById,
     getCategories,
-    getCategoryById
+    getVisualsByCategoryId
   };
 };
