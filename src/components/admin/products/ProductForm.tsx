@@ -96,6 +96,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
       }
     }
   };
+  
+  // Fonctions pour gérer la sélection des loteries
+  const handleSelectAllLotteries = () => {
+    const allLotteryIds = activeLotteries.map(lottery => lottery.id.toString());
+    form.setValue('linkedLotteries', allLotteryIds);
+  };
+  
+  const handleDeselectAllLotteries = () => {
+    form.setValue('linkedLotteries', []);
+  };
 
   if (!isCreating && !selectedProductId) {
     return (
@@ -193,18 +203,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <FormControl>
                 <Switch
                   checked={field.value}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked);
-                    // Si on désactive la personnalisation, on réinitialise la catégorie de visuel
-                    if (!checked) {
-                      form.setValue("visualCategoryId", null);
-                    } else {
-                      // Si on active la personnalisation et qu'il y a des catégories, on sélectionne la première
-                      if (visualCategories.length > 0) {
-                        form.setValue("visualCategoryId", visualCategories[0].id);
-                      }
-                    }
-                  }}
+                  onCheckedChange={field.onChange}
                   className="data-[state=checked]:bg-winshirt-purple"
                 />
               </FormControl>
@@ -297,101 +296,38 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 <div className="mt-2">
                   <img 
                     src={field.value} 
-                    alt="Aperçu secondaire" 
+                    alt="Aperçu" 
                     className="h-24 object-contain rounded border border-winshirt-purple/30" 
                   />
                 </div>
               )}
               <FormDescription className="text-gray-400 text-base">
-                URL d'une image secondaire ou alternative du produit
+                URL de l'image secondaire du produit (optionnelle)
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         
-        {/* Delivery section */}
-        <div className="p-4 border border-winshirt-purple/30 rounded-lg space-y-4">
-          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Truck size={18} /> Informations de livraison
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Weight field */}
-            <FormField
-              control={form.control}
-              name="weight"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white text-lg flex items-center gap-2">
-                    <Weight size={16} /> Poids (g)
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="100" 
-                      {...field}
-                      value={field.value || ''}
-                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
-                      className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-gray-400 text-base">
-                    Poids du produit en grammes
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Delivery price field */}
-            <FormField
-              control={form.control}
-              name="deliveryPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white text-lg flex items-center gap-2">
-                    <Truck size={16} /> Frais de livraison (€)
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01"
-                      placeholder="4.99" 
-                      {...field}
-                      value={field.value || ''}
-                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
-                      className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-gray-400 text-base">
-                    Frais de livraison spécifiques à ce produit (laisser vide pour tarif standard)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-        
-        {/* Product attributes */}
+        {/* Product type */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white text-lg">Gamme de produit</FormLabel>
+                <FormLabel className="text-white text-lg">Type de produit</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
-                      <SelectValue placeholder="Sélectionner une gamme" />
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 h-12">
+                      <SelectValue placeholder="Sélectionnez un type" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
+                  <SelectContent className="bg-winshirt-space-light border-winshirt-purple/30">
                     {productTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -406,23 +342,24 @@ const ProductForm: React.FC<ProductFormProps> = ({
           
           <FormField
             control={form.control}
-            name="productType"
+            name="category"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white text-lg">Type de produit</FormLabel>
+                <FormLabel className="text-white text-lg">Catégorie</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
-                      <SelectValue placeholder="Sélectionner un type" />
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 h-12">
+                      <SelectValue placeholder="Sélectionnez une catégorie" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
-                    {productCategories.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
+                  <SelectContent className="bg-winshirt-space-light border-winshirt-purple/30">
+                    {productCategories.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -441,13 +378,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
-                      <SelectValue placeholder="Sélectionner un type" />
+                    <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 h-12">
+                      <SelectValue placeholder="Type de manches" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
+                  <SelectContent className="bg-winshirt-space-light border-winshirt-purple/30">
                     {sleeveTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         {type}
@@ -461,63 +399,35 @@ const ProductForm: React.FC<ProductFormProps> = ({
           />
         </div>
         
-        {/* Tickets field */}
-        <FormField
-          control={form.control}
-          name="tickets"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white text-lg flex items-center gap-2">
-                <Ticket size={18} />
-                Nombre de tickets
-              </FormLabel>
-              <Select 
-                onValueChange={(value) => field.onChange(Number(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12 max-w-xs">
-                    <SelectValue placeholder="Nombre de tickets" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
-                  {ticketOptions.map(option => (
-                    <SelectItem key={option} value={option.toString()}>
-                      {option} {option === 1 ? 'ticket' : 'tickets'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormDescription className="text-gray-400 text-base">
-                Nombre de participations à des loteries offertes avec ce produit
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
         {/* Sizes */}
         <FormField
           control={form.control}
           name="sizes"
-          render={() => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel className="text-white text-lg">Tailles disponibles</FormLabel>
-              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mt-2">
-                {availableSizes.map(size => {
-                  const isSelected = watchedSizes.includes(size);
-                  return (
-                    <Button
-                      key={size}
-                      type="button"
-                      variant={isSelected ? "default" : "outline"}
-                      className={`${isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"} text-lg h-12`}
-                      onClick={() => isSelected ? removeSize(size) : addSize(size)}
-                    >
-                      {size}
-                    </Button>
-                  );
-                })}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {availableSizes.map(size => (
+                  <Button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      if (watchedSizes.includes(size)) {
+                        removeSize(size);
+                      } else {
+                        addSize(size);
+                      }
+                    }}
+                    variant={watchedSizes.includes(size) ? "default" : "outline"}
+                    className={
+                      watchedSizes.includes(size)
+                        ? "bg-winshirt-blue hover:bg-winshirt-blue-dark"
+                        : "border-winshirt-blue-light/30 text-white"
+                    }
+                  >
+                    {size}
+                  </Button>
+                ))}
               </div>
               <FormMessage />
             </FormItem>
@@ -528,24 +438,68 @@ const ProductForm: React.FC<ProductFormProps> = ({
         <FormField
           control={form.control}
           name="colors"
-          render={() => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel className="text-white text-lg">Couleurs disponibles</FormLabel>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                {availableColors.map(color => {
-                  const isSelected = watchedColors.includes(color);
-                  return (
-                    <Button
-                      key={color}
-                      type="button"
-                      variant={isSelected ? "default" : "outline"}
-                      className={`${isSelected ? "bg-winshirt-purple hover:bg-winshirt-purple-dark" : "border-winshirt-purple/30 text-white"} text-lg h-12`}
-                      onClick={() => isSelected ? removeColor(color) : addColor(color)}
-                    >
-                      {color}
-                    </Button>
-                  );
-                })}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {availableColors.map(color => (
+                  <Button
+                    key={color}
+                    type="button"
+                    onClick={() => {
+                      if (watchedColors.includes(color)) {
+                        removeColor(color);
+                      } else {
+                        addColor(color);
+                      }
+                    }}
+                    variant={watchedColors.includes(color) ? "default" : "outline"}
+                    className={
+                      watchedColors.includes(color)
+                        ? "bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                        : "border-winshirt-purple-light/30 text-white"
+                    }
+                  >
+                    {color}
+                  </Button>
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Tickets */}
+        <FormField
+          control={form.control}
+          name="tickets"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-white text-lg">Tickets de loterie</FormLabel>
+              <FormDescription className="text-gray-400 text-base">
+                Nombre de tickets de loterie offerts à l'achat de ce produit
+              </FormDescription>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {ticketOptions.map(number => (
+                  <Button
+                    key={number}
+                    type="button"
+                    onClick={() => {
+                      // Convertir explicitement en nombre
+                      const numValue = Number(number);
+                      form.setValue('tickets', numValue);
+                    }}
+                    variant={watchedTickets === number ? "default" : "outline"}
+                    className={
+                      watchedTickets === number
+                        ? "bg-winshirt-blue hover:bg-winshirt-blue-dark flex items-center gap-2"
+                        : "border-winshirt-blue-light/30 text-white flex items-center gap-2"
+                    }
+                  >
+                    <Ticket size={16} />
+                    {number}
+                  </Button>
+                ))}
               </div>
               <FormMessage />
             </FormItem>
@@ -556,83 +510,151 @@ const ProductForm: React.FC<ProductFormProps> = ({
         <FormField
           control={form.control}
           name="linkedLotteries"
-          render={() => (
+          render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white text-lg">Loteries associées</FormLabel>
-              <FormDescription className="text-gray-400 text-base mb-2">
-                {watchedTickets > 1 
-                  ? `Les clients pourront sélectionner jusqu'à ${watchedTickets} loteries sur votre sélection` 
-                  : "Les clients pourront sélectionner 1 loterie sur votre sélection"}
-              </FormDescription>
-              
-              <div className="flex justify-between mb-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => form.setValue("linkedLotteries", activeLotteries.map(l => l.id.toString()))}
-                  className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/20"
-                >
-                  Tout sélectionner
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => form.setValue("linkedLotteries", [])}
-                  className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                >
-                  Tout désélectionner
-                </Button>
+              <div className="flex items-center justify-between mb-2">
+                <FormLabel className="text-white text-lg">Loteries associées</FormLabel>
+                <div className="space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAllLotteries}
+                    className="border-winshirt-blue/30 text-winshirt-blue-light hover:bg-winshirt-blue/20"
+                  >
+                    Tout sélectionner
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeselectAllLotteries}
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  >
+                    Tout désélectionner
+                  </Button>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 gap-2 mt-2">
-                {activeLotteries.map(lottery => {
-                  const isSelected = watchedLotteries.includes(lottery.id.toString());
-                  return (
-                    <div 
-                      key={lottery.id}
-                      className={`p-4 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
-                      onClick={() => toggleLottery(lottery.id.toString())}
-                    >
-                      <input 
-                        type="checkbox" 
-                        checked={isSelected}
-                        onChange={() => {}}
-                        className="mr-4 h-5 w-5"
-                      />
-                      <div>
-                        <h4 className="font-medium text-white text-lg">{lottery.title}</h4>
-                        <p className="text-base text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-[300px] overflow-y-auto pr-2">
+                {activeLotteries.map(lottery => (
+                  <div 
+                    key={lottery.id}
+                    className={`p-3 rounded-lg cursor-pointer flex items-center ${
+                      watchedLotteries.includes(lottery.id.toString()) 
+                        ? 'bg-winshirt-blue/30' 
+                        : 'bg-winshirt-space-light'
+                    }`}
+                    onClick={() => toggleLottery(lottery.id.toString())}
+                  >
+                    <div className="mr-3 flex items-center justify-center w-5 h-5">
+                      {watchedLotteries.includes(lottery.id.toString()) ? (
+                        <div className="w-4 h-4 bg-winshirt-blue-light rounded-full" />
+                      ) : (
+                        <div className="w-4 h-4 border border-gray-400 rounded-full" />
+                      )}
+                    </div>
+                    <div className="flex items-center flex-grow truncate">
+                      <div className="truncate">
+                        <h4 className="font-medium text-white truncate">{lottery.title}</h4>
+                        <p className="text-sm text-gray-400 truncate">
+                          Valeur: {lottery.value.toFixed(2)} €
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-                
-                {activeLotteries.length === 0 && (
-                  <p className="text-gray-400 text-lg">Aucune loterie active disponible</p>
-                )}
+                  </div>
+                ))}
               </div>
               <FormMessage />
             </FormItem>
           )}
         />
         
-        {/* Form actions */}
-        <div className="flex justify-end space-x-3 pt-4">
+        {/* Stock & Weight */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+            control={form.control}
+            name="stock"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white text-lg flex items-center gap-2">
+                  <Package size={18} /> Stock disponible
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    placeholder="100" 
+                    {...field}
+                    className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="weight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white text-lg flex items-center gap-2">
+                  <Weight size={18} /> Poids (g)
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    step="1"
+                    placeholder="250" 
+                    {...field}
+                    className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="shippingTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white text-lg flex items-center gap-2">
+                  <Truck size={18} /> Délai d'expédition (jours)
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="1"
+                    step="1"
+                    placeholder="3" 
+                    {...field}
+                    className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        {/* Submit and Cancel buttons */}
+        <div className="flex justify-end gap-4 pt-4">
           <Button 
             type="button" 
             variant="outline" 
             onClick={onCancel}
-            className="border-winshirt-purple/30 text-white text-lg px-6 py-3 h-auto"
+            className="border-winshirt-purple/50 text-white hover:bg-winshirt-purple/20"
           >
             Annuler
           </Button>
           <Button 
             type="submit"
-            className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-lg px-6 py-3 h-auto"
+            className="bg-winshirt-purple hover:bg-winshirt-purple-dark px-8"
           >
-            {isCreating ? "Créer le produit" : "Mettre à jour"}
+            {isCreating ? "Créer" : "Mettre à jour"}
           </Button>
         </div>
       </form>

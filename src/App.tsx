@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { AuthProvider } from "./contexts/AuthContext";
+import AdminNavigationHandler from "./components/AdminNavigationHandler";
 
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
@@ -25,7 +26,7 @@ import AdminLotteriesPage from "./pages/AdminLotteriesPage";
 import AdminClientsPage from "./pages/AdminClientsPage";
 import AdminCommandesPage from "./pages/AdminCommandesPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
-import AdminVisualsPage from "./pages/AdminVisualsPage"; // Nouvelle page
+import AdminVisualsPage from "./pages/AdminVisualsPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,7 @@ const App = () => (
               </Routes>
             </main>
             <Footer />
+            <AdminNavigationHandler />
           </div>
         </AuthProvider>
       </BrowserRouter>

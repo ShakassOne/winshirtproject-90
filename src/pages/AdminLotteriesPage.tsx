@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -9,7 +8,6 @@ import { useLotteryForm } from '@/hooks/useLotteryForm';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Gift } from 'lucide-react';
-import AdminNavigation from '@/components/admin/AdminNavigation';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 
@@ -212,8 +210,6 @@ const AdminLotteriesPage: React.FC = () => {
           </div>
         </div>
       </section>
-
-      <AdminNavigation />
     </>
   );
 };
