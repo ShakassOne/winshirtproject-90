@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVisuals } from '@/data/mockVisuals';
 import { Visual, VisualCategory } from '@/types/visual';
+import CustomVisualUploader from './CustomVisualUploader';
 
 interface VisualSelectorProps {
   selectedVisualId: number | null;
@@ -20,6 +21,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [categories, setCategories] = useState<VisualCategory[]>([]);
   const [visuals, setVisuals] = useState<Visual[]>([]);
+  const [uploadedVisual, setUploadedVisual] = useState<{ file: File; previewUrl: string } | null>(null);
   
   // Initialize categories and select the first one or the specified one
   useEffect(() => {
@@ -52,10 +54,33 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   };
   
   const handleSelectVisual = (visual: Visual) => {
+    // Réinitialiser le visuel uploadé si un visuel prédéfini est sélectionné
+    setUploadedVisual(null);
     onSelectVisual(visual);
   };
   
   const handleRemoveVisual = () => {
+    setUploadedVisual(null);
+    onSelectVisual(null);
+  };
+
+  const handleVisualUpload = (file: File, previewUrl: string) => {
+    // Créer un visuel personnalisé basé sur le fichier uploadé
+    const customVisual: Visual = {
+      id: -Date.now(), // ID négatif pour distinguer les visuels personnalisés
+      name: file.name,
+      description: 'Visuel personnalisé',
+      image: previewUrl,
+      categoryId: -1, // Catégorie spéciale pour les uploads
+      categoryName: 'Uploads personnalisés'
+    };
+    
+    setUploadedVisual({ file, previewUrl });
+    onSelectVisual(customVisual);
+  };
+
+  const handleVisualRemove = () => {
+    setUploadedVisual(null);
     onSelectVisual(null);
   };
 
@@ -70,9 +95,15 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
 
   return (
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
-      <h3 className="text-lg font-medium p-4 border-b border-winshirt-purple/30">
-        Choisissez un visuel
-      </h3>
+      <div className="flex justify-between items-center p-4 border-b border-winshirt-purple/30">
+        <h3 className="text-lg font-medium">Choisissez un visuel</h3>
+        <CustomVisualUploader
+          onVisualUpload={handleVisualUpload}
+          onVisualRemove={handleVisualRemove}
+          uploadedVisual={uploadedVisual}
+          allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
+        />
+      </div>
       
       <Tabs value={activeCategory} onValueChange={handleCategoryChange} className="w-full">
         <TabsList className="grid grid-flow-col auto-cols-fr bg-winshirt-space-light border-b border-winshirt-purple/30">

@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, X, FileType2 } from 'lucide-react';
+import { Upload, X, FileType2, Image } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 interface CustomVisualUploaderProps {
@@ -10,6 +10,7 @@ interface CustomVisualUploaderProps {
   allowedFileTypes?: string[];
   maxFileSizeMB?: number;
   uploadedVisual?: { file: File; previewUrl: string } | null;
+  buttonStyle?: 'full' | 'compact';
 }
 
 const CustomVisualUploader: React.FC<CustomVisualUploaderProps> = ({
@@ -17,7 +18,8 @@ const CustomVisualUploader: React.FC<CustomVisualUploaderProps> = ({
   onVisualRemove,
   allowedFileTypes = ['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai'],
   maxFileSizeMB = 10,
-  uploadedVisual = null
+  uploadedVisual = null,
+  buttonStyle = 'full'
 }) => {
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,6 +90,30 @@ const CustomVisualUploader: React.FC<CustomVisualUploaderProps> = ({
   const getFileExtension = (filename: string) => {
     return filename.split('.').pop()?.toUpperCase() || '';
   };
+
+  // Si on est en mode compact, on n'affiche qu'un bouton
+  if (buttonStyle === 'compact') {
+    return (
+      <div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept={allowedFileTypes.join(',')}
+          className="hidden"
+        />
+        <Button 
+          onClick={handleButtonClick}
+          variant="outline" 
+          size="sm"
+          className="border-winshirt-purple text-winshirt-purple-light hover:bg-winshirt-purple/20 flex items-center gap-2"
+        >
+          <Image size={16} />
+          <span>Upload</span>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

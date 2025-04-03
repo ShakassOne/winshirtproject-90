@@ -42,6 +42,11 @@ const productFormSchema = z.object({
     }),
     allowCustomPosition: z.boolean().optional()
   })).optional(),
+  // Nouveaux champs pour les filtres avancés
+  gender: z.enum(['homme', 'femme', 'enfant', 'unisexe']).optional(),
+  material: z.string().optional(),
+  fit: z.enum(['regular', 'ajusté', 'oversize']).optional(),
+  brand: z.string().optional(),
 });
 
 export const useProductForm = (
@@ -74,6 +79,10 @@ export const useProductForm = (
       defaultVisualSettings: null,
       visualCategoryId: null,
       printAreas: [],
+      gender: undefined,
+      material: "",
+      fit: undefined,
+      brand: "",
     },
   });
 
@@ -106,13 +115,21 @@ export const useProductForm = (
       defaultVisualSettings: product.defaultVisualSettings,
       visualCategoryId: product.visualCategoryId,
       printAreas: product.printAreas || [],
+      gender: product.gender,
+      material: product.material,
+      fit: product.fit,
+      brand: product.brand,
     });
     
     console.log("Loaded product for editing:", {
       id: product.id,
       price: product.price,
       tickets: product.tickets,
-      linkedLotteries: product.linkedLotteries?.map(String)
+      linkedLotteries: product.linkedLotteries?.map(String),
+      gender: product.gender,
+      material: product.material,
+      fit: product.fit,
+      brand: product.brand,
     });
   };
 
