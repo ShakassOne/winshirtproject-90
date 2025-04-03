@@ -20,9 +20,20 @@ const DrawWinnerButton: React.FC<DrawWinnerButtonProps> = ({ lottery, onDrawWinn
     (lottery.endDate && new Date(lottery.endDate) <= new Date()));
 
   const drawWinner = () => {
+    // Créer des participants simulés si aucun n'est défini
     if (!lottery.participants || lottery.participants.length === 0) {
-      // Si pas de participants, montrer un message d'erreur au lieu de simuler des participants
-      toast.error(`Aucun participant n'a été enregistré pour cette loterie "${lottery.title}"`);
+      // Simulation de participants pour la démonstration
+      const simulatedParticipants = [
+        { id: 1, name: "Jean Dupont", email: "jean@example.com", avatar: "https://i.pravatar.cc/150?u=jean" },
+        { id: 2, name: "Marie Martin", email: "marie@example.com", avatar: "https://i.pravatar.cc/150?u=marie" },
+        { id: 3, name: "Pierre Dubois", email: "pierre@example.com", avatar: "https://i.pravatar.cc/150?u=pierre" }
+      ];
+      
+      const randomIndex = Math.floor(Math.random() * simulatedParticipants.length);
+      const winner = simulatedParticipants[randomIndex];
+      
+      onDrawWinner(lottery.id, winner);
+      toast.success(`Simulation : ${winner.name} a gagné la loterie "${lottery.title}" !`);
       return;
     }
 

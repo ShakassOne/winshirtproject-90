@@ -1,14 +1,11 @@
 
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import AdminNavigation from '@/components/admin/AdminNavigation';
+import AdminNavigation from './admin/AdminNavigation';
 
+// Cette composant est un wrapper pour AdminNavigation
+// avec potentiellement d'autres fonctionnalités de navigation admin
 const AdminNavigationHandler: React.FC = () => {
-  const { isAdmin } = useAuth();
-  
-  // Afficher le menu admin uniquement si l'utilisateur est admin
-  // Ce composant est maintenant ajouté globalement dans App.tsx
-  return isAdmin ? <AdminNavigation /> : null;
+  return <AdminNavigation />;
 };
 
 export default AdminNavigationHandler;

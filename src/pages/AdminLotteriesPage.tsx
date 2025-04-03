@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -11,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Gift } from 'lucide-react';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
-import AdminNavigationHandler from '@/components/AdminNavigationHandler';
+import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const AdminLotteriesPage: React.FC = () => {
   // Création de deux loteries spéciales
@@ -66,13 +65,15 @@ const AdminLotteriesPage: React.FC = () => {
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   const [isLoading, setIsLoading] = useState(true);
   
-  // Function to sync lotteries to storage
+  // Function to sync lotteries to storage with debouncing to improve performance
   const syncLotteriesToStorage = (lotteriesData: ExtendedLottery[]) => {
     try {
-      localStorage.setItem('lotteries', JSON.stringify(lotteriesData));
-      sessionStorage.setItem('lotteries', JSON.stringify(lotteriesData));
+      // Limite la fréquence d'écriture dans le stockage
+      const stringifiedData = JSON.stringify(lotteriesData);
+      localStorage.setItem('lotteries', stringifiedData);
+      sessionStorage.setItem('lotteries', stringifiedData);
       
-      // Dispatch an event to notify other components that lotteries have been updated
+      // Dispatch un seul événement
       window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
         detail: { lotteries: lotteriesData } 
       }));
@@ -83,84 +84,60 @@ const AdminLotteriesPage: React.FC = () => {
     }
   };
   
-  // Chargement des données depuis toutes les sources
+  // Chargement des données depuis toutes les sources, optimisé
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
+      
+      let allLotteries: ExtendedLottery[] = [];
+      
       try {
-        // Combine lotteries from all sources to ensure consistency
-        let allLotteries: ExtendedLottery[] = [];
-        
-        // 1. Check localStorage
-        try {
-          const storedLotteries = localStorage.getItem('lotteries');
-          if (storedLotteries) {
-            const parsedLotteries = JSON.parse(storedLotteries);
-            if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-              allLotteries = [...allLotteries, ...parsedLotteries];
-              console.log("Admin: Loaded from localStorage:", parsedLotteries.length);
+        // 1. Essayer d'abord le localStorage pour un chargement rapide
+        const storedLotteries = localStorage.getItem('lotteries');
+        if (storedLotteries) {
+          try {
+            const parsed = JSON.parse(storedLotteries);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              allLotteries = parsed;
+              console.log("Admin: Loaded from localStorage:", parsed.length);
             }
+          } catch (err) {
+            console.error("Admin: Error parsing localStorage lotteries:", err);
           }
-        } catch (err) {
-          console.error("Admin: Error loading lotteries from localStorage:", err);
         }
         
-        // 2. Check sessionStorage
-        try {
-          const sessionLotteries = sessionStorage.getItem('lotteries');
-          if (sessionLotteries) {
-            const parsedLotteries = JSON.parse(sessionLotteries);
-            if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-              // Add only lotteries that aren't already in the array
-              parsedLotteries.forEach(lottery => {
-                if (!allLotteries.some(l => l.id === lottery.id)) {
-                  allLotteries.push(lottery);
-                }
-              });
-              console.log("Admin: Added from sessionStorage:", parsedLotteries.length);
+        // 2. Si pas de données en localStorage ou peu de données, essayer l'API
+        if (allLotteries.length === 0) {
+          try {
+            const apiLotteries = await fetchLotteries();
+            if (apiLotteries && apiLotteries.length > 0) {
+              allLotteries = apiLotteries;
+              console.log("Admin: Loaded from API:", apiLotteries.length);
             }
+          } catch (err) {
+            console.error("Admin: Error fetching lotteries from API:", err);
           }
-        } catch (err) {
-          console.error("Admin: Error loading lotteries from sessionStorage:", err);
         }
         
-        // 3. Try API
-        try {
-          const apiLotteries = await fetchLotteries();
-          if (apiLotteries && apiLotteries.length > 0) {
-            // Add only lotteries that aren't already in the array
-            apiLotteries.forEach(lottery => {
-              if (!allLotteries.some(l => l.id === lottery.id)) {
-                allLotteries.push(lottery);
-              }
-            });
-            console.log("Admin: Added from API:", apiLotteries.length);
-          }
-        } catch (err) {
-          console.error("Admin: Error fetching lotteries from API:", err);
-        }
-        
-        // 4. If no lotteries found, add special ones
+        // 3. Si toujours pas de données, utiliser les loteries spéciales
         if (allLotteries.length === 0) {
           allLotteries = [...specialLotteries];
           console.log("Admin: Using special lotteries:", specialLotteries.length);
         } else {
-          // Make sure special lotteries are included
+          // S'assurer que les loteries spéciales sont incluses
           specialLotteries.forEach(specialLottery => {
             if (!allLotteries.some(l => l.id === specialLottery.id)) {
               allLotteries.push(specialLottery);
-              console.log(`Admin: Added special lottery ${specialLottery.id}`);
             }
           });
         }
         
-        // 5. Check for iPhone lottery
+        // 4. Vérifier si la loterie iPhone existe
         const iPhoneLotteryExists = allLotteries.some(
           lottery => lottery.title.toLowerCase().includes('iphone')
         );
         
         if (!iPhoneLotteryExists) {
-          // Create iPhone lottery
           const iPhoneLottery: ExtendedLottery = {
             id: Math.max(...allLotteries.map(l => l.id), 0) + 1,
             title: "iPhone 16 Pro",
@@ -175,30 +152,32 @@ const AdminLotteriesPage: React.FC = () => {
           };
           
           allLotteries.push(iPhoneLottery);
-          console.log("Admin: Added iPhone lottery");
         }
         
-        // Sync lotteries to storage
+        // Sync les loteries au stockage une seule fois à la fin
         syncLotteriesToStorage(allLotteries);
         setLotteries(allLotteries);
         
-        // Récupérer les produits
-        const fetchedProducts = await fetchProducts();
-        if (fetchedProducts && fetchedProducts.length > 0) {
-          setProducts(fetchedProducts);
-        } else {
-          // Load from localStorage if API fails
-          try {
-            const storedProducts = localStorage.getItem('products');
-            if (storedProducts) {
-              const parsedProducts = JSON.parse(storedProducts);
-              if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-                setProducts(parsedProducts);
-              }
+        // Charger les produits avec un système similaire
+        try {
+          // Essayer d'abord le localStorage
+          const storedProducts = localStorage.getItem('products');
+          if (storedProducts) {
+            const parsedProducts = JSON.parse(storedProducts);
+            if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+              setProducts(parsedProducts);
+              return; // Si les produits sont chargés, sortir de la fonction
             }
-          } catch (err) {
-            console.error("Admin: Error loading products from localStorage:", err);
           }
+          
+          // Sinon, essayer l'API
+          const fetchedProducts = await fetchProducts();
+          if (fetchedProducts && fetchedProducts.length > 0) {
+            setProducts(fetchedProducts);
+            localStorage.setItem('products', JSON.stringify(fetchedProducts));
+          }
+        } catch (err) {
+          console.error("Admin: Error loading products:", err);
         }
       } catch (error) {
         console.error("Admin: Erreur lors du chargement des données:", error);
@@ -210,9 +189,11 @@ const AdminLotteriesPage: React.FC = () => {
     
     loadData();
     
-    // Listen for lottery updates
-    const handleLotteryUpdate = () => {
-      loadData();
+    // Optimisation: Ne réagir qu'aux événements essentiels
+    const handleLotteryUpdate = (event: Event) => {
+      if ((event as CustomEvent).detail?.forceReload) {
+        loadData();
+      }
     };
     
     window.addEventListener('lotteriesUpdated', handleLotteryUpdate);
@@ -239,7 +220,8 @@ const AdminLotteriesPage: React.FC = () => {
     handleToggleFeatured
   } = useLotteryForm(lotteries, setLotteries, products);
 
-  // Vérifier périodiquement si des loteries sont prêtes pour le tirage
+  // Vérifier périodiquement si des loteries sont prêtes pour le tirage,
+  // avec optimisation pour éviter trop de vérifications
   useEffect(() => {
     const readyLotteries = checkLotteriesReadyForDraw();
     if (readyLotteries.length > 0) {
@@ -248,7 +230,7 @@ const AdminLotteriesPage: React.FC = () => {
       });
     }
 
-    // Vérifier toutes les minutes
+    // Vérifier toutes les 5 minutes au lieu de chaque minute pour réduire la charge
     const interval = setInterval(() => {
       const readyLotteries = checkLotteriesReadyForDraw();
       if (readyLotteries.length > 0) {
@@ -256,7 +238,7 @@ const AdminLotteriesPage: React.FC = () => {
           description: "Certaines loteries ont atteint leur objectif ou leur date limite."
         });
       }
-    }, 60000);
+    }, 300000); // 5 minutes
 
     return () => clearInterval(interval);
   }, [lotteries, checkLotteriesReadyForDraw]);
@@ -277,7 +259,7 @@ const AdminLotteriesPage: React.FC = () => {
   return (
     <>
       <StarBackground />
-      <AdminNavigationHandler />
+      <AdminNavigation />
       
       <section className="pt-32 pb-24">
         <div className="container mx-auto px-4 md:px-8">

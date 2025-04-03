@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { mockLotteries } from '@/data/mockData';
@@ -103,51 +104,66 @@ const AdminClientsPage: React.FC = () => {
   const [showDetail, setShowDetail] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Ajout d'un state de chargement
   
-  // Charger les clients depuis localStorage
+  // Charger les clients depuis localStorage avec optimisation
   useEffect(() => {
-    const savedClients = localStorage.getItem('clients');
-    if (savedClients) {
+    const loadClients = () => {
+      setIsLoading(true);
       try {
-        const parsedClients = JSON.parse(savedClients);
-        if (Array.isArray(parsedClients) && parsedClients.length > 0) {
-          setClients(parsedClients);
-          setFilteredClients(parsedClients);
+        const savedClients = localStorage.getItem('clients');
+        if (savedClients) {
+          const parsedClients = JSON.parse(savedClients);
+          if (Array.isArray(parsedClients) && parsedClients.length > 0) {
+            setClients(parsedClients);
+            setFilteredClients(parsedClients);
+          } else {
+            // Fallback aux mockClients
+            setClients(mockClients);
+            setFilteredClients(mockClients);
+            localStorage.setItem('clients', JSON.stringify(mockClients));
+          }
         } else {
-          // Si pas de clients en localStorage, utiliser les mockClients
+          // Fallback aux mockClients
           setClients(mockClients);
           setFilteredClients(mockClients);
           localStorage.setItem('clients', JSON.stringify(mockClients));
         }
       } catch (error) {
         console.error("Erreur lors du chargement des clients:", error);
-        // Utiliser les mockClients en cas d'erreur
         setClients(mockClients);
         setFilteredClients(mockClients);
-        localStorage.setItem('clients', JSON.stringify(mockClients));
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      // Si pas de clients en localStorage, utiliser les mockClients
-      setClients(mockClients);
-      setFilteredClients(mockClients);
-      localStorage.setItem('clients', JSON.stringify(mockClients));
-    }
+    };
+    
+    loadClients();
   }, []);
   
-  // Filtrer les clients selon le terme de recherche
+  // Filtrer les clients selon le terme de recherche avec debounce
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredClients(clients);
-    } else {
-      const term = searchTerm.toLowerCase();
-      const filtered = clients.filter(client => 
-        client.name.toLowerCase().includes(term) || 
-        client.email.toLowerCase().includes(term) ||
-        (client.phone && client.phone.includes(term)) ||
-        (client.city && client.city.toLowerCase().includes(term))
-      );
-      setFilteredClients(filtered);
-    }
+    const filterClients = () => {
+      if (searchTerm.trim() === '') {
+        setFilteredClients(clients);
+      } else {
+        const term = searchTerm.toLowerCase();
+        const filtered = clients.filter(client => 
+          client.name.toLowerCase().includes(term) || 
+          client.email.toLowerCase().includes(term) ||
+          (client.phone && client.phone.includes(term)) ||
+          (client.city && client.city.toLowerCase().includes(term))
+        );
+        setFilteredClients(filtered);
+      }
+    };
+    
+    // Utiliser un debounce pour améliorer les performances lors de la recherche
+    const timeoutId = setTimeout(filterClients, 300);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [searchTerm, clients]);
   
   const handleDeleteClient = (clientId: number) => {
@@ -239,6 +255,18 @@ L'équipe WinShirt`);
       year: 'numeric'
     });
   };
+  
+  if (isLoading) {
+    return (
+      <>
+        <StarBackground />
+        <div className="pt-32 pb-16 flex justify-center items-center">
+          <div className="text-white text-xl">Chargement des clients...</div>
+        </div>
+        <AdminNavigation />
+      </>
+    );
+  }
   
   return (
     <>
