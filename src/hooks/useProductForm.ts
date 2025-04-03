@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedProduct } from '@/types/product';
@@ -277,12 +276,7 @@ export const useProductForm = (
     if (currentLotteries.includes(lotteryId)) {
       form.setValue('linkedLotteries', currentLotteries.filter(id => id !== lotteryId));
     } else {
-      // Vérifier si nous n'avons pas dépassé le nombre maximum de tickets
-      const tickets = form.getValues('tickets') || 1;
-      if (currentLotteries.length >= tickets) {
-        toast.warning(`Vous ne pouvez pas sélectionner plus de ${tickets} loterie(s) pour ce produit`);
-        return;
-      }
+      // Dans l'interface admin, nous ne limitons pas le nombre de loteries
       form.setValue('linkedLotteries', [...currentLotteries, lotteryId]);
     }
     
@@ -292,8 +286,8 @@ export const useProductForm = (
 
   // Functions to select/deselect all lotteries
   const selectAllLotteries = () => {
-    const tickets = form.getValues('tickets') || 1;
-    const allLotteryIds = availableLotteries.slice(0, tickets).map(lottery => lottery.id.toString());
+    // Dans l'admin, on permet de sélectionner toutes les loteries disponibles
+    const allLotteryIds = availableLotteries.map(lottery => lottery.id.toString());
     form.setValue('linkedLotteries', allLotteryIds);
     form.trigger('linkedLotteries');
   };

@@ -12,6 +12,7 @@ interface LotterySelectionProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   maxSelections?: number;
+  enforceMaxSelection?: boolean; // Nouveau prop pour activer/désactiver la limite
 }
 
 const LotterySelection: React.FC<LotterySelectionProps> = ({
@@ -20,7 +21,8 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   onToggleLottery,
   onSelectAll,
   onDeselectAll,
-  maxSelections = 1
+  maxSelections = 1,
+  enforceMaxSelection = false // Par défaut, pas de limite en admin
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -34,7 +36,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     <div>
       <div className="flex justify-between mb-2">
         <div className="text-white text-sm font-medium">
-          {maxSelections > 1 
+          {enforceMaxSelection && maxSelections > 1 
             ? `Loteries associées (${selectedLotteries.length}/${maxSelections})` 
             : "Loteries associées"}
         </div>
@@ -73,7 +75,8 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
       <div className="grid grid-cols-1 gap-2 mt-2 max-h-[300px] overflow-y-auto pr-2">
         {filteredLotteries.map(lottery => {
           const isSelected = selectedLotteries.includes(lottery.id.toString());
-          const isDisabled = !isSelected && selectedLotteries.length >= maxSelections;
+          // N'appliquer la limite que si enforceMaxSelection est vrai
+          const isDisabled = enforceMaxSelection && !isSelected && selectedLotteries.length >= maxSelections;
           
           return (
             <div 
