@@ -1,149 +1,107 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Package, Award, Users, ShoppingBag, Settings, Menu, X, ChevronUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+import { 
+  ShoppingBag, 
+  Users, 
+  Ticket, 
+  Settings,
+  ShoppingCart,
+  ImagePlus
+} from 'lucide-react';
 
 const AdminNavigation: React.FC = () => {
   const location = useLocation();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const { isAuthenticated, isAdmin } = useAuth();
-
-  // If not authenticated or not admin, don't render the navigation
-  if (!isAuthenticated || !isAdmin) {
-    return null;
-  }
-
-  const isActive = (path: string) => {
-    return location.pathname.includes(path);
-  };
-
-  const navigationItems = [
-    {
-      name: "Produits",
-      icon: Package,
-      path: "/admin/products",
-      color: "winshirt-purple"
-    },
-    {
-      name: "Loteries",
-      icon: Award,
-      path: "/admin/lotteries",
-      color: "winshirt-blue"
-    },
-    {
-      name: "Clients",
-      icon: Users,
-      path: "/admin/clients",
-      color: "green-600"
-    },
-    {
-      name: "Commandes",
-      icon: ShoppingBag,
-      path: "/admin/commandes",
-      color: "orange-500"
-    },
-    {
-      name: "Paramètres",
-      icon: Settings,
-      path: "/admin/settings",
-      color: "gray-500"
-    }
-  ];
-
-  // Contenu pour affichage mobile (drawer)
-  const MobileMenu = () => (
-    <div className="flex flex-col w-full h-full py-8 px-4">
-      <h2 className="text-2xl font-bold text-center mb-8 text-white">
-        Administration
-      </h2>
-      <div className="grid grid-cols-2 gap-4">
-        {navigationItems.map((item) => (
-          <Link key={item.path} to={item.path}>
-            <Button 
-              variant="ghost" 
-              size="lg"
-              className={cn(
-                "flex flex-col items-center justify-center space-y-3 h-32 w-full rounded-lg p-4",
-                isActive(item.path) ? `bg-${item.color}/30` : "hover:bg-gray-800"
-              )}
-            >
-              <item.icon size={36} className={`text-${item.color}`} />
-              <span className="text-base font-medium text-center">{item.name}</span>
-            </Button>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Contenu pour affichage desktop
-  const DesktopMenu = () => (
-    <div className={cn(
-      "bg-winshirt-space border border-winshirt-purple/20 rounded-full shadow-lg transition-all duration-300",
-      isExpanded ? "px-8 py-5" : "px-4 py-3"
-    )}>
-      {/* Toggle expand button */}
-      <Button 
-        variant="ghost" 
-        size="sm"
-        className="rounded-full absolute -top-14 left-1/2 transform -translate-x-1/2 bg-winshirt-space border border-winshirt-purple/20 text-white hover:bg-winshirt-purple/20 h-12 w-12"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        {isExpanded ? <ChevronUp size={26} /> : <Menu size={26} />}
-      </Button>
-
-      <div className={cn(
-        "flex flex-wrap justify-center gap-4",
-        isExpanded ? "flex-col md:flex-row" : "flex-row"
-      )}>
-        {navigationItems.map((item) => (
-          <Link key={item.path} to={item.path}>
-            <Button 
-              variant="ghost" 
-              className={cn(
-                "rounded-full hover:bg-" + item.color + "/20 text-white text-xl h-14 px-6",
-                isActive(item.path) && "bg-" + item.color + "/30"
-              )}
-            >
-              <item.icon size={28} className="mr-3" />
-              {item.name}
-            </Button>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-
+  const path = location.pathname;
+  
+  const isActive = (route: string) => path.includes(route);
+  
   return (
-    <div className="fixed z-40 bottom-10 left-1/2 transform -translate-x-1/2">
-      {/* Menu mobile (drawer) */}
-      <div className="md:hidden">
-        <Drawer>
-          <DrawerTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="rounded-full bg-winshirt-space border border-winshirt-purple/30 text-white hover:bg-winshirt-purple/20 h-16 w-16"
-            >
-              <Menu size={32} />
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent className="bg-winshirt-space border-t border-winshirt-purple/20 h-[85vh] max-h-[85vh]">
-            <MobileMenu />
-          </DrawerContent>
-        </Drawer>
-      </div>
-
-      {/* Menu desktop */}
-      <div className="hidden md:block">
-        <DesktopMenu />
+    <div className="fixed bottom-0 left-0 right-0 z-40 mb-4 flex justify-center">
+      <div className="flex space-x-1 p-1 rounded-full bg-winshirt-space/70 backdrop-blur-lg border border-winshirt-purple/30 shadow-lg">
+        <Link
+          to="/admin/products"
+          className={`
+            rounded-full p-3 flex items-center justify-center
+            ${isActive('/admin/products') 
+              ? 'bg-winshirt-purple text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
+            transition-all duration-200
+          `}
+          title="Produits"
+        >
+          <ShoppingBag size={20} />
+        </Link>
+        
+        <Link
+          to="/admin/visuals"
+          className={`
+            rounded-full p-3 flex items-center justify-center
+            ${isActive('/admin/visuals') 
+              ? 'bg-winshirt-purple text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
+            transition-all duration-200
+          `}
+          title="Visuels"
+        >
+          <ImagePlus size={20} />
+        </Link>
+        
+        <Link
+          to="/admin/lotteries"
+          className={`
+            rounded-full p-3 flex items-center justify-center
+            ${isActive('/admin/lotteries') 
+              ? 'bg-winshirt-purple text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
+            transition-all duration-200
+          `}
+          title="Loteries"
+        >
+          <Ticket size={20} />
+        </Link>
+        
+        <Link
+          to="/admin/commandes"
+          className={`
+            rounded-full p-3 flex items-center justify-center
+            ${isActive('/admin/commandes') 
+              ? 'bg-winshirt-purple text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
+            transition-all duration-200
+          `}
+          title="Commandes"
+        >
+          <ShoppingCart size={20} />
+        </Link>
+        
+        <Link
+          to="/admin/clients"
+          className={`
+            rounded-full p-3 flex items-center justify-center
+            ${isActive('/admin/clients') 
+              ? 'bg-winshirt-purple text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
+            transition-all duration-200
+          `}
+          title="Clients"
+        >
+          <Users size={20} />
+        </Link>
+        
+        <Link
+          to="/admin/settings"
+          className={`
+            rounded-full p-3 flex items-center justify-center
+            ${isActive('/admin/settings') 
+              ? 'bg-winshirt-purple text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
+            transition-all duration-200
+          `}
+          title="Paramètres"
+        >
+          <Settings size={20} />
+        </Link>
       </div>
     </div>
   );

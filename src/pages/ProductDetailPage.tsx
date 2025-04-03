@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,13 @@ import {
   CarouselPrevious
 } from "@/components/ui/carousel";
 
+// Nouveaux imports pour la sélection de visuels
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VisualSelector from '@/components/product/VisualSelector';
+import VisualPositioner from '@/components/product/VisualPositioner';
+import { useVisualSelector } from '@/hooks/useVisualSelector';
+import { Visual } from '@/types/visual';
+
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -29,6 +37,14 @@ const ProductDetailPage: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState<string>('');
   // Tableau de loteries sélectionnées pour gérer plusieurs tickets
   const [selectedLotteries, setSelectedLotteries] = useState<string[]>([]);
+  
+  // Nouveau state pour le visuel sélectionné
+  const { 
+    selectedVisual, 
+    visualSettings, 
+    handleSelectVisual, 
+    handleUpdateSettings 
+  } = useVisualSelector();
   
   // Charger le produit
   useEffect(() => {
@@ -127,7 +143,7 @@ const ProductDetailPage: React.FC = () => {
       };
     });
     
-    // Ajouter le produit au panier avec toutes les loteries sélectionnées
+    // Ajouter le produit au panier avec toutes les loteries sélectionnées et le visuel si présent
     const cartItem = {
       id: Date.now(), // ID unique pour cet élément du panier
       productId: product.id,
@@ -139,7 +155,14 @@ const ProductDetailPage: React.FC = () => {
       image: product.image,
       secondaryImage: product.secondaryImage, // Inclure l'image secondaire si présente
       tickets: product.tickets || 1,
-      selectedLotteries: selectedLotteriesInfo // Tableau des loteries sélectionnées
+      selectedLotteries: selectedLotteriesInfo, // Tableau des loteries sélectionnées
+      // Ajouter les informations du visuel sélectionné
+      visualDesign: selectedVisual ? {
+        visualId: selectedVisual.id,
+        visualName: selectedVisual.name,
+        visualImage: selectedVisual.image,
+        settings: visualSettings
+      } : null
     };
     
     cart.push(cartItem);
@@ -170,29 +193,38 @@ const ProductDetailPage: React.FC = () => {
         <div className="container mx-auto px-4 md:px-8">
           <div className="winshirt-card overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
-              {/* Product Image Carousel */}
+              {/* Product Image Carousel with Visual Overlay */}
               <div className="rounded-lg overflow-hidden">
-                <Carousel className="w-full">
-                  <CarouselContent>
-                    {productImages.map((image, index) => (
-                      <CarouselItem key={index}>
-                        <div className="flex aspect-square items-center justify-center p-1">
-                          <img 
-                            src={image} 
-                            alt={`${product.name} - vue ${index + 1}`} 
-                            className="w-full h-auto object-cover rounded-lg"
-                          />
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  {productImages.length > 1 && (
-                    <>
-                      <CarouselPrevious className="left-2" />
-                      <CarouselNext className="right-2" />
-                    </>
-                  )}
-                </Carousel>
+                <Tabs defaultValue="preview" className="w-full">
+                  <TabsList className="w-full grid grid-cols-2 mb-4">
+                    <TabsTrigger value="preview">Aperçu</TabsTrigger>
+                    <TabsTrigger value="customize">Personnaliser</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="preview" className="mt-0">
+                    <VisualPositioner
+                      productImage={product.image}
+                      visual={selectedVisual}
+                      visualSettings={visualSettings}
+                      onUpdateSettings={handleUpdateSettings}
+                      readOnly={true}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="customize" className="mt-0 space-y-6">
+                    <VisualPositioner
+                      productImage={product.image}
+                      visual={selectedVisual}
+                      visualSettings={visualSettings}
+                      onUpdateSettings={handleUpdateSettings}
+                    />
+                    
+                    <VisualSelector
+                      selectedVisualId={selectedVisual?.id || null}
+                      onSelectVisual={handleSelectVisual}
+                    />
+                  </TabsContent>
+                </Tabs>
               </div>
               
               {/* Product Details */}
@@ -235,6 +267,13 @@ const ProductDetailPage: React.FC = () => {
                       </p>
                     </div>
                   )}
+                  
+                  {/* Information sur la personnalisation */}
+                  <div className="mt-2 bg-winshirt-purple/10 border border-winshirt-purple/30 rounded-md p-2">
+                    <p className="text-gray-200">
+                      Personnalisez votre {product.name} avec un visuel dans l'onglet "Personnaliser".
+                    </p>
+                  </div>
                 </div>
                 
                 <p className="text-gray-300">{product.description}</p>

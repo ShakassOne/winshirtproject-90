@@ -25,6 +25,7 @@ import AdminLotteriesPage from "./pages/AdminLotteriesPage";
 import AdminClientsPage from "./pages/AdminClientsPage";
 import AdminCommandesPage from "./pages/AdminCommandesPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
+import AdminVisualsPage from "./pages/AdminVisualsPage"; // Nouvelle page
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -87,6 +88,11 @@ const App = () => (
                 <Route path="/admin/commandes" element={
                   <ProtectedRoute adminOnly>
                     <AdminCommandesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/visuals" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminVisualsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/settings" element={

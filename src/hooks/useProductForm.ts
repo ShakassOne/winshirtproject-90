@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/api/productApi';
+import { Visual, ProductVisualSettings } from '@/types/visual';
 
 export const useProductForm = (
   products: ExtendedProduct[],
@@ -28,7 +29,15 @@ export const useProductForm = (
       secondaryImage: '',
       tickets: 1,
       weight: '', // Weight as string for the form
-      deliveryPrice: '' // Delivery price as string for the form
+      deliveryPrice: '', // Delivery price as string for the form
+      // Nouveaux champs pour les visuels
+      allowCustomization: true,
+      defaultVisualId: null,
+      defaultVisualSettings: {
+        position: { x: 50, y: 50 },
+        size: { width: 200, height: 200 },
+        opacity: 0.8
+      }
     }
   });
   
@@ -47,7 +56,15 @@ export const useProductForm = (
       secondaryImage: '',
       tickets: 1,
       weight: '',
-      deliveryPrice: ''
+      deliveryPrice: '',
+      // Nouveaux champs pour les visuels
+      allowCustomization: true,
+      defaultVisualId: null,
+      defaultVisualSettings: {
+        position: { x: 50, y: 50 },
+        size: { width: 200, height: 200 },
+        opacity: 0.8
+      }
     });
   };
   
@@ -87,7 +104,15 @@ export const useProductForm = (
       secondaryImage: product.secondaryImage || '',
       tickets: product.tickets || 1,
       weight: product.weight ? product.weight.toString() : '',
-      deliveryPrice: product.deliveryPrice ? product.deliveryPrice.toString() : ''
+      deliveryPrice: product.deliveryPrice ? product.deliveryPrice.toString() : '',
+      // Nouveaux champs pour les visuels
+      allowCustomization: product.allowCustomization !== false,
+      defaultVisualId: product.defaultVisualId || null,
+      defaultVisualSettings: product.defaultVisualSettings || {
+        position: { x: 50, y: 50 },
+        size: { width: 200, height: 200 },
+        opacity: 0.8
+      }
     });
     
     // Force update of form fields to trigger rerender
@@ -137,7 +162,11 @@ export const useProductForm = (
           popularity: Math.random() * 100, // Just for mock data
           tickets: parseInt(data.tickets, 10) || 1,
           weight: data.weight ? parseFloat(data.weight) : undefined,
-          deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined
+          deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined,
+          // Nouveaux champs pour les visuels
+          allowCustomization: data.allowCustomization,
+          defaultVisualId: data.defaultVisualId,
+          defaultVisualSettings: data.defaultVisualSettings
         };
         
         // Créer le produit dans Supabase
@@ -165,7 +194,11 @@ export const useProductForm = (
           popularity: products.find(p => p.id === selectedProductId)?.popularity || Math.random() * 100,
           tickets: parseInt(data.tickets, 10) || 1,
           weight: data.weight ? parseFloat(data.weight) : undefined,
-          deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined
+          deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined,
+          // Nouveaux champs pour les visuels
+          allowCustomization: data.allowCustomization,
+          defaultVisualId: data.defaultVisualId,
+          defaultVisualSettings: data.defaultVisualSettings
         };
         
         // Mettre à jour le produit dans Supabase

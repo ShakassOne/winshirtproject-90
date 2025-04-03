@@ -1,4 +1,6 @@
 
+import { ProductVisualSettings } from './visual';
+
 export interface ExtendedProduct {
   id: number;
   name: string;
@@ -19,6 +21,11 @@ export interface ExtendedProduct {
   deliveryInfo?: DeliveryInfo; // Information de livraison spécifique au produit
   deliveryPrice?: number; // Prix de livraison spécifique
   weight?: number; // Poids en grammes
+  
+  // Nouveaux champs pour la gestion des visuels
+  allowCustomization?: boolean; // Si le produit permet la personnalisation visuelle
+  defaultVisualId?: number | null; // ID du visuel par défaut
+  defaultVisualSettings?: ProductVisualSettings; // Paramètres du visuel par défaut
 }
 
 export interface DeliveryInfo {
