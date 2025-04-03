@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -804,7 +803,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={editingPrintArea.bounds.x}
                         onChange={(e) => setEditingPrintArea({
                           ...editingPrintArea, 
-                          bounds: {...editingPrintArea.bounds, x: Number(e.target.value)}
+                          bounds: {
+                            x: Number(e.target.value),
+                            y: editingPrintArea.bounds.y,
+                            width: editingPrintArea.bounds.width,
+                            height: editingPrintArea.bounds.height
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
@@ -816,7 +820,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={editingPrintArea.bounds.y}
                         onChange={(e) => setEditingPrintArea({
                           ...editingPrintArea, 
-                          bounds: {...editingPrintArea.bounds, y: Number(e.target.value)}
+                          bounds: {
+                            x: editingPrintArea.bounds.x,
+                            y: Number(e.target.value),
+                            width: editingPrintArea.bounds.width,
+                            height: editingPrintArea.bounds.height
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
@@ -828,7 +837,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={editingPrintArea.bounds.width}
                         onChange={(e) => setEditingPrintArea({
                           ...editingPrintArea, 
-                          bounds: {...editingPrintArea.bounds, width: Number(e.target.value)}
+                          bounds: {
+                            x: editingPrintArea.bounds.x,
+                            y: editingPrintArea.bounds.y,
+                            width: Number(e.target.value),
+                            height: editingPrintArea.bounds.height
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
@@ -840,7 +854,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={editingPrintArea.bounds.height}
                         onChange={(e) => setEditingPrintArea({
                           ...editingPrintArea, 
-                          bounds: {...editingPrintArea.bounds, height: Number(e.target.value)}
+                          bounds: {
+                            x: editingPrintArea.bounds.x,
+                            y: editingPrintArea.bounds.y,
+                            width: editingPrintArea.bounds.width,
+                            height: Number(e.target.value)
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
@@ -949,7 +968,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={newPrintArea.bounds?.x || 0}
                         onChange={(e) => setNewPrintArea({
                           ...newPrintArea, 
-                          bounds: {...(newPrintArea.bounds || {}), x: Number(e.target.value)}
+                          bounds: {
+                            x: Number(e.target.value),
+                            y: newPrintArea.bounds?.y || 0,
+                            width: newPrintArea.bounds?.width || 100,
+                            height: newPrintArea.bounds?.height || 100
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
@@ -961,7 +985,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={newPrintArea.bounds?.y || 0}
                         onChange={(e) => setNewPrintArea({
                           ...newPrintArea, 
-                          bounds: {...(newPrintArea.bounds || {}), y: Number(e.target.value)}
+                          bounds: {
+                            x: newPrintArea.bounds?.x || 0,
+                            y: Number(e.target.value),
+                            width: newPrintArea.bounds?.width || 100,
+                            height: newPrintArea.bounds?.height || 100
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
@@ -973,7 +1002,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={newPrintArea.bounds?.width || 100}
                         onChange={(e) => setNewPrintArea({
                           ...newPrintArea, 
-                          bounds: {...(newPrintArea.bounds || {}), width: Number(e.target.value)}
+                          bounds: {
+                            x: newPrintArea.bounds?.x || 0,
+                            y: newPrintArea.bounds?.y || 0,
+                            width: Number(e.target.value),
+                            height: newPrintArea.bounds?.height || 100
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
@@ -985,7 +1019,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         value={newPrintArea.bounds?.height || 100}
                         onChange={(e) => setNewPrintArea({
                           ...newPrintArea, 
-                          bounds: {...(newPrintArea.bounds || {}), height: Number(e.target.value)}
+                          bounds: {
+                            x: newPrintArea.bounds?.x || 0,
+                            y: newPrintArea.bounds?.y || 0,
+                            width: newPrintArea.bounds?.width || 100,
+                            height: Number(e.target.value)
+                          }
                         })}
                         className="bg-winshirt-space border-winshirt-purple/30"
                       />
