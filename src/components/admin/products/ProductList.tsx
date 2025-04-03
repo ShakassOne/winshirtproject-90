@@ -8,7 +8,7 @@ interface ProductListProps {
   products: ExtendedProduct[];
   selectedProductId: number | null;
   onCreateProduct: () => void;
-  onEditProduct: (id: number) => void;
+  onEditProduct: (id: number) => void;  // This should accept a number, not a product
   onDeleteProduct: (id: number) => void;
 }
 

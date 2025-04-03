@@ -203,7 +203,7 @@ const AdminProductsPage: React.FC = () => {
                 products={products}
                 selectedProductId={selectedProductId}
                 onCreateProduct={handleCreateProduct}
-                onEditProduct={handleEditProduct}
+                onEditProduct={(id: number) => handleEditProduct(products.find(p => p.id === id)!)}
                 onDeleteProduct={handleDeleteProduct}
               />
             </div>

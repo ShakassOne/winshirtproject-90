@@ -109,6 +109,11 @@ export const useVisuals = () => {
   const getVisualsByCategory = (categoryId: number) => {
     return getAllVisuals().filter(visual => visual.categoryId === categoryId);
   };
+  
+  // Add the missing method
+  const getVisualsByCategoryId = (categoryId: number) => {
+    return getVisualsByCategory(categoryId);
+  };
 
   const getVisualById = (visualId: number) => {
     return getAllVisuals().find(visual => visual.id === visualId);
@@ -125,6 +130,7 @@ export const useVisuals = () => {
   return {
     getAllVisuals,
     getVisualsByCategory,
+    getVisualsByCategoryId,
     getVisualById,
     getCategories,
     getCategoryById
