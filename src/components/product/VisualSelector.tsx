@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVisuals } from '@/data/mockVisuals';
@@ -8,17 +8,41 @@ import { Visual, VisualCategory } from '@/types/visual';
 interface VisualSelectorProps {
   selectedVisualId: number | null;
   onSelectVisual: (visual: Visual | null) => void;
+  categoryId?: number | null;
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({
   selectedVisualId,
-  onSelectVisual
+  onSelectVisual,
+  categoryId
 }) => {
-  const { getCategories, getVisualsByCategory } = useVisuals();
-  const [activeCategory, setActiveCategory] = useState<string>(getCategories()[0]?.id.toString() || "1");
+  const { getCategories, getVisualsByCategory, getVisualsByCategoryId } = useVisuals();
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  const [categories, setCategories] = useState<VisualCategory[]>([]);
+  const [visuals, setVisuals] = useState<Visual[]>([]);
   
-  const categories = getCategories();
-  const visuals = getVisualsByCategory(Number(activeCategory));
+  // Initialize categories and select the first one or the specified one
+  useEffect(() => {
+    const allCategories = getCategories();
+    setCategories(allCategories);
+    
+    if (allCategories.length > 0) {
+      // If we have a categoryId, use that; otherwise use the first category
+      if (categoryId) {
+        setActiveCategory(categoryId.toString());
+        const categoryVisuals = getVisualsByCategoryId(categoryId);
+        setVisuals(categoryVisuals);
+      } else {
+        setActiveCategory(allCategories[0]?.id.toString() || "1");
+        setVisuals(getVisualsByCategory(allCategories[0]?.id || 1));
+      }
+    }
+  }, [categoryId]);
+  
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveCategory(categoryId);
+    setVisuals(getVisualsByCategory(Number(categoryId)));
+  };
   
   const handleSelectVisual = (visual: Visual) => {
     onSelectVisual(visual);
@@ -28,13 +52,22 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     onSelectVisual(null);
   };
 
+  // Make sure we have at least one category
+  if (categories.length === 0) {
+    return (
+      <div className="border border-winshirt-purple/30 rounded-lg p-4">
+        <p className="text-center text-gray-400">Aucune catégorie de visuels disponible</p>
+      </div>
+    );
+  }
+
   return (
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
       <h3 className="text-lg font-medium p-4 border-b border-winshirt-purple/30">
         Choisissez un visuel
       </h3>
       
-      <Tabs defaultValue={activeCategory} onValueChange={setActiveCategory} className="w-full">
+      <Tabs value={activeCategory} onValueChange={handleCategoryChange} className="w-full">
         <TabsList className="grid grid-flow-col auto-cols-fr bg-winshirt-space-light border-b border-winshirt-purple/30">
           {categories.map((category) => (
             <TabsTrigger 

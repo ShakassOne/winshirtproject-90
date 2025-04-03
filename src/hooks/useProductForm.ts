@@ -1,318 +1,205 @@
-
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { ExtendedProduct } from '@/types/product';
+import { ExtendedLottery } from '@/types/lottery';
 import { toast } from '@/lib/toast';
-import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/api/productApi';
-import { Visual, ProductVisualSettings } from '@/types/visual';
+
+const productFormSchema = z.object({
+  name: z.string().min(2, {
+    message: "Le nom du produit doit comporter au moins 2 caractères.",
+  }),
+  description: z.string().optional(),
+  price: z.number(),
+  image: z.string().optional(),
+  secondaryImage: z.string().optional(),
+  sizes: z.array(z.string()).optional(),
+  colors: z.array(z.string()).optional(),
+  type: z.string().optional(),
+  productType: z.string().optional(),
+  sleeveType: z.string().optional(),
+  linkedLotteries: z.array(z.string()).optional(),
+  tickets: z.number().min(1).max(5).default(1),
+  weight: z.number().optional(),
+  deliveryPrice: z.number().optional(),
+  allowCustomization: z.boolean().default(false),
+  defaultVisualId: z.number().nullable().optional(),
+  defaultVisualSettings: z.any().optional(),
+  visualCategoryId: z.number().nullable().optional(),
+});
 
 export const useProductForm = (
   products: ExtendedProduct[],
   setProducts: React.Dispatch<React.SetStateAction<ExtendedProduct[]>>,
-  availableLotteries: any[] = []
+  activeLotteries: ExtendedLottery[]
 ) => {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  
-  const form = useForm({
+
+  const form = useForm<z.infer<typeof productFormSchema>>({
+    resolver: zodResolver(productFormSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      price: '',
-      type: 'standard',
-      productType: '',
-      sleeveType: '',
-      sizes: [] as string[],
-      colors: [] as string[],
-      linkedLotteries: [] as string[],
-      image: '',
-      secondaryImage: '',
-      tickets: 1,
-      weight: '', // Weight as string for the form
-      deliveryPrice: '', // Delivery price as string for the form
-      // Nouveaux champs pour les visuels
-      allowCustomization: true,
-      defaultVisualId: null,
-      defaultVisualSettings: {
-        position: { x: 50, y: 50 },
-        size: { width: 200, height: 200 },
-        opacity: 0.8
-      },
-      // Rajout de la catégorie de visuel
-      visualCategoryId: null
-    }
-  });
-  
-  const resetForm = () => {
-    form.reset({
-      name: '',
-      description: '',
-      price: '',
-      type: 'standard',
-      productType: '',
-      sleeveType: '',
+      name: "",
+      description: "",
+      price: 0,
+      image: "",
+      secondaryImage: "",
       sizes: [],
       colors: [],
+      type: "",
+      productType: "",
+      sleeveType: "",
       linkedLotteries: [],
-      image: '',
-      secondaryImage: '',
       tickets: 1,
-      weight: '',
-      deliveryPrice: '',
-      // Nouveaux champs pour les visuels
-      allowCustomization: true,
+      weight: 0,
+      deliveryPrice: 0,
+      allowCustomization: false,
       defaultVisualId: null,
-      defaultVisualSettings: {
-        position: { x: 50, y: 50 },
-        size: { width: 200, height: 200 },
-        opacity: 0.8
-      },
-      visualCategoryId: null
-    });
-  };
-  
+      defaultVisualSettings: null,
+      visualCategoryId: null,
+    },
+  });
+
   const handleCreateProduct = () => {
     setIsCreating(true);
     setSelectedProductId(null);
-    resetForm();
+    form.reset();
   };
-  
-  const handleEditProduct = (productId: number) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    
+
+  const handleEditProduct = (product: ExtendedProduct) => {
     setIsCreating(false);
-    setSelectedProductId(productId);
-    
-    // Convert linkedLotteries to string array or use empty array if undefined
-    const linkedLotteries = product.linkedLotteries
-      ? product.linkedLotteries.map(id => id.toString())
-      : [];
-    
-    // Ensure sizes and colors are arrays
-    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
-    const colors = Array.isArray(product.colors) ? product.colors : [];
-    
+    setSelectedProductId(product.id);
     form.reset({
       name: product.name,
       description: product.description,
-      price: product.price.toString(),
-      type: product.type || 'standard',
-      productType: product.productType || '',
-      sleeveType: product.sleeveType || '',
-      sizes: sizes,
-      colors: colors,
-      linkedLotteries: linkedLotteries,
+      price: product.price,
       image: product.image,
-      secondaryImage: product.secondaryImage || '',
-      tickets: product.tickets || 1,
-      weight: product.weight ? product.weight.toString() : '',
-      deliveryPrice: product.deliveryPrice ? product.deliveryPrice.toString() : '',
-      // Nouveaux champs pour les visuels
-      allowCustomization: product.allowCustomization !== false,
-      defaultVisualId: product.defaultVisualId || null,
-      defaultVisualSettings: product.defaultVisualSettings || {
-        position: { x: 50, y: 50 },
-        size: { width: 200, height: 200 },
-        opacity: 0.8
-      },
-      visualCategoryId: product.visualCategoryId || null
+      secondaryImage: product.secondaryImage,
+      sizes: product.sizes,
+      colors: product.colors,
+      type: product.type,
+      productType: product.productType,
+      sleeveType: product.sleeveType,
+      linkedLotteries: product.linkedLotteries?.map(String),
+      tickets: product.tickets,
+      weight: product.weight,
+      deliveryPrice: product.deliveryPrice,
+      allowCustomization: product.allowCustomization,
+      defaultVisualId: product.defaultVisualId,
+      defaultVisualSettings: product.defaultVisualSettings,
+      visualCategoryId: product.visualCategoryId,
     });
-    
-    // Force update of form fields to trigger rerender
-    form.trigger();
   };
-  
-  const handleDeleteProduct = async (productId: number) => {
-    const success = await deleteProduct(productId);
-    
-    if (success) {
-      setProducts(prevProducts => {
-        return prevProducts.filter(p => p.id !== productId);
-      });
-      
+
+  const handleDeleteProduct = (productId: number) => {
+    const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?");
+    if (confirmDelete) {
+      const updatedProducts = products.filter(product => product.id !== productId);
+      setProducts(updatedProducts);
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
       toast.success("Produit supprimé avec succès");
-      
-      if (selectedProductId === productId) {
-        setSelectedProductId(null);
-        resetForm();
-      }
     }
   };
-  
+
   const onSubmit = async (data: any) => {
     try {
-      // Ensure all arrays are properly initialized
-      const sizes = Array.isArray(data.sizes) ? data.sizes : [];
-      const colors = Array.isArray(data.colors) ? data.colors : [];
-      const linkedLotteries = Array.isArray(data.linkedLotteries) 
-        ? data.linkedLotteries.map(Number) 
-        : [];
-      
+      const newProduct: ExtendedProduct = {
+        id: isCreating ? Date.now() : selectedProductId || Date.now(),
+        name: data.name,
+        description: data.description || '',
+        price: parseFloat(data.price),
+        image: data.image || '',
+        secondaryImage: data.secondaryImage || '',
+        sizes: data.sizes || [],
+        colors: data.colors || [],
+        type: data.type || 'standard',
+        productType: data.productType || 'T-shirt',
+        sleeveType: data.sleeveType || 'Courtes',
+        linkedLotteries: data.linkedLotteries ? data.linkedLotteries.map(Number) : [],
+        popularity: 0,
+        tickets: data.tickets || 1,
+        weight: data.weight || 0,
+        deliveryPrice: data.deliveryPrice || 0,
+        allowCustomization: data.allowCustomization || false,
+        defaultVisualId: data.defaultVisualId || null,
+        defaultVisualSettings: data.defaultVisualSettings || null,
+        visualCategoryId: data.visualCategoryId || null,
+      };
+
       if (isCreating) {
-        // Préparer les données du nouveau produit
-        const newProductData: Omit<ExtendedProduct, 'id'> = {
-          name: data.name,
-          description: data.description,
-          price: parseFloat(data.price),
-          type: data.type,
-          productType: data.productType,
-          sleeveType: data.sleeveType,
-          sizes: sizes,
-          colors: colors,
-          linkedLotteries: linkedLotteries,
-          image: data.image || 'https://placehold.co/600x400/png',
-          secondaryImage: data.secondaryImage || '',
-          popularity: Math.random() * 100, // Just for mock data
-          tickets: parseInt(data.tickets, 10) || 1,
-          weight: data.weight ? parseFloat(data.weight) : undefined,
-          deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined,
-          // Nouveaux champs pour les visuels
-          allowCustomization: data.allowCustomization,
-          defaultVisualId: data.defaultVisualId,
-          defaultVisualSettings: data.defaultVisualSettings,
-          visualCategoryId: data.visualCategoryId
-        };
-        
-        // Créer le produit dans Supabase
-        const createdProduct = await createProduct(newProductData);
-        
-        if (createdProduct) {
-          setProducts(prev => [...prev, createdProduct]);
-          
-          // Force update local storage to ensure consistency
-          const updatedProducts = [...prev, createdProduct];
+        setProducts(prevProducts => {
+          const updatedProducts = [...prevProducts, newProduct];
           localStorage.setItem('products', JSON.stringify(updatedProducts));
+          return updatedProducts;
+        });
+        toast.success("Produit créé avec succès");
+        setIsCreating(false);
+        form.reset();
+      } else {
+        const productIndex = products.findIndex(p => p.id === selectedProductId);
+        
+        if (productIndex !== -1) {
+          const updatedProducts = [...products];
+          updatedProducts[productIndex] = {
+            ...updatedProducts[productIndex],
+            ...newProduct
+          };
           
-          toast.success("Produit créé avec succès");
-        }
-      } else if (selectedProductId) {
-        // Préparer les données pour la mise à jour
-        const productToUpdate: ExtendedProduct = {
-          id: selectedProductId,
-          name: data.name,
-          description: data.description,
-          price: parseFloat(data.price),
-          type: data.type,
-          productType: data.productType,
-          sleeveType: data.sleeveType,
-          sizes: sizes,
-          colors: colors,
-          linkedLotteries: linkedLotteries,
-          image: data.image || 'https://placehold.co/600x400/png',
-          secondaryImage: data.secondaryImage || '',
-          popularity: products.find(p => p.id === selectedProductId)?.popularity || Math.random() * 100,
-          tickets: parseInt(data.tickets, 10) || 1,
-          weight: data.weight ? parseFloat(data.weight) : undefined,
-          deliveryPrice: data.deliveryPrice ? parseFloat(data.deliveryPrice) : undefined,
-          // Nouveaux champs pour les visuels
-          allowCustomization: data.allowCustomization,
-          defaultVisualId: data.defaultVisualId,
-          defaultVisualSettings: data.defaultVisualSettings,
-          visualCategoryId: data.visualCategoryId
-        };
-        
-        // Mettre à jour le produit dans Supabase
-        const updatedProduct = await updateProduct(productToUpdate);
-        
-        if (updatedProduct) {
-          // Update the products state
-          const updatedProducts = products.map(p => p.id === selectedProductId ? updatedProduct : p);
           setProducts(updatedProducts);
           
-          // Force update local storage to ensure consistency
           localStorage.setItem('products', JSON.stringify(updatedProducts));
           
           toast.success("Produit mis à jour avec succès");
+          setIsCreating(false);
+          setSelectedProductId(null);
+          form.reset();
         }
       }
-      
-      resetForm();
-      setIsCreating(false);
-      setSelectedProductId(null);
     } catch (error) {
-      console.error("Erreur lors de la soumission du formulaire:", error);
-      toast.error("Une erreur est survenue lors de l'enregistrement du produit");
+      console.error("Error submitting form:", error);
+      toast.error("Une erreur est survenue lors de la soumission du formulaire");
     }
   };
-  
-  // Charger les produits depuis Supabase au montage du composant
-  useEffect(() => {
-    const loadProducts = async () => {
-      const products = await fetchProducts();
-      if (products.length > 0) {
-        setProducts(products);
-      }
-    };
-    
-    loadProducts();
-  }, []);
-  
+
   const handleCancel = () => {
-    resetForm();
     setIsCreating(false);
     setSelectedProductId(null);
+    form.reset();
   };
-  
+
   const addSize = (size: string) => {
-    // Get current sizes
-    const currentSizes = form.getValues('sizes') || [];
-    
-    // Only add if not already included
-    if (!currentSizes.includes(size)) {
-      // Set new sizes array
-      form.setValue('sizes', [...currentSizes, size]);
-      
-      // Trigger validation to update UI
-      form.trigger('sizes');
-    }
+    form.setValue("sizes", [...form.getValues().sizes, size]);
   };
-  
+
   const removeSize = (size: string) => {
-    const currentSizes = form.getValues('sizes') || [];
-    form.setValue('sizes', currentSizes.filter(s => s !== size));
-    form.trigger('sizes');
+    form.setValue("sizes", form.getValues().sizes.filter((s: string) => s !== size));
   };
-  
+
   const addColor = (color: string) => {
-    const currentColors = form.getValues('colors') || [];
-    if (!currentColors.includes(color)) {
-      form.setValue('colors', [...currentColors, color]);
-      form.trigger('colors');
-    }
+    form.setValue("colors", [...form.getValues().colors, color]);
   };
-  
+
   const removeColor = (color: string) => {
-    const currentColors = form.getValues('colors') || [];
-    form.setValue('colors', currentColors.filter(c => c !== color));
-    form.trigger('colors');
+    form.setValue("colors", form.getValues().colors.filter((c: string) => c !== color));
   };
   
   const toggleLottery = (lotteryId: string) => {
-    const currentLotteries = form.getValues('linkedLotteries') || [];
-    
-    if (currentLotteries.includes(lotteryId)) {
-      form.setValue('linkedLotteries', currentLotteries.filter(id => id !== lotteryId));
+    const linkedLotteries = form.getValues().linkedLotteries || [];
+    if (linkedLotteries.includes(lotteryId)) {
+      form.setValue("linkedLotteries", linkedLotteries.filter((id: string) => id !== lotteryId));
     } else {
-      // Dans l'interface admin, nous ne limitons pas le nombre de loteries
-      form.setValue('linkedLotteries', [...currentLotteries, lotteryId]);
+      form.setValue("linkedLotteries", [...linkedLotteries, lotteryId]);
     }
-    
-    // Force rerender by updating form
-    form.trigger('linkedLotteries');
   };
-
-  // Functions to select/deselect all lotteries
+  
   const selectAllLotteries = () => {
-    // Dans l'admin, on permet de sélectionner toutes les loteries disponibles
-    const allLotteryIds = availableLotteries.map(lottery => lottery.id.toString());
-    form.setValue('linkedLotteries', allLotteryIds);
-    form.trigger('linkedLotteries');
+    const allLotteryIds = activeLotteries.map(lottery => lottery.id.toString());
+    form.setValue("linkedLotteries", allLotteryIds);
   };
   
   const deselectAllLotteries = () => {
-    form.setValue('linkedLotteries', []);
-    form.trigger('linkedLotteries');
+    form.setValue("linkedLotteries", []);
   };
 
   return {

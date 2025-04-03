@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -197,7 +196,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="bg-winshirt-space border-winshirt-purple/30 text-lg">
-                  <SelectItem value="">Aucune catégorie</SelectItem>
+                  <SelectItem value="null">Aucune catégorie</SelectItem>
                   {visualCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id.toString()}>
                       {category.name}

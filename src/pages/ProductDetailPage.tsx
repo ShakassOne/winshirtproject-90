@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -272,7 +271,7 @@ const ProductDetailPage: React.FC = () => {
                       <VisualSelector
                         selectedVisualId={selectedVisual?.id || null}
                         onSelectVisual={handleSelectVisual}
-                        categoryId={product.visualCategoryId}
+                        categoryId={product.visualCategoryId || null}
                       />
                     </TabsContent>
                   </Tabs>
