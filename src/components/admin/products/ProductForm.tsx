@@ -116,6 +116,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Basic product info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Name field */}
           <FormField
@@ -177,7 +178,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
-        {/* Visual Category Selection - NEW */}
+        {/* Visual Category Selection */}
         <FormField
           control={form.control}
           name="visualCategoryId"
@@ -187,8 +188,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 <Palette size={18} /> Catégorie de visuels
               </FormLabel>
               <Select
-                onValueChange={field.onChange}
-                value={field.value?.toString() || ""}
+                onValueChange={(value) => field.onChange(value !== "null" ? Number(value) : null)}
+                value={field.value?.toString() || "null"}
               >
                 <FormControl>
                   <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12">
@@ -212,7 +213,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
-        {/* Allow Customization - NEW */}
+        {/* Allow Customization */}
         <FormField
           control={form.control}
           name="allowCustomization"
@@ -235,7 +236,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
 
-        {/* Image principale avec bouton parcourir */}
+        {/* Image fields */}
         <FormField
           control={form.control}
           name="image"
@@ -333,7 +334,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
-        {/* New Delivery section */}
+        {/* Delivery section */}
         <div className="p-4 border border-winshirt-purple/30 rounded-lg space-y-4">
           <h3 className="text-xl font-semibold text-white flex items-center gap-2">
             <Truck size={18} /> Informations de livraison
@@ -397,6 +398,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           </div>
         </div>
         
+        {/* Product attributes */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
@@ -483,7 +485,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           />
         </div>
         
-        {/* Nouveau champ: nombre de tickets */}
+        {/* Tickets field */}
         <FormField
           control={form.control}
           name="tickets"
@@ -494,8 +496,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 Nombre de tickets
               </FormLabel>
               <Select 
-                onValueChange={(value) => field.onChange(value)}
-                defaultValue={field.value?.toString() || "1"}
+                onValueChange={(value) => field.onChange(Number(value))}
+                value={field.value?.toString()}
               >
                 <FormControl>
                   <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg h-12 max-w-xs">
@@ -586,6 +588,28 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   ? `Les clients pourront sélectionner jusqu'à ${watchedTickets} loteries sur votre sélection` 
                   : "Les clients pourront sélectionner 1 loterie sur votre sélection"}
               </FormDescription>
+              
+              <div className="flex justify-between mb-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => form.setValue("linkedLotteries", activeLotteries.map(l => l.id.toString()))}
+                  className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/20"
+                >
+                  Tout sélectionner
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => form.setValue("linkedLotteries", [])}
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                >
+                  Tout désélectionner
+                </Button>
+              </div>
+              
               <div className="grid grid-cols-1 gap-2 mt-2">
                 {activeLotteries.map(lottery => {
                   const isSelected = watchedLotteries.includes(lottery.id.toString());
@@ -593,7 +617,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     <div 
                       key={lottery.id}
                       className={`p-4 rounded-lg cursor-pointer flex items-center ${isSelected ? 'bg-winshirt-purple/30' : 'bg-winshirt-space-light'}`}
-                      onClick={() => toggleLottery(lottery.id.toString())}
+                      onClick={() => {
+                        const linkedLotteries = form.getValues().linkedLotteries || [];
+                        if (linkedLotteries.includes(lottery.id.toString())) {
+                          form.setValue("linkedLotteries", linkedLotteries.filter((id: string) => id !== lottery.id.toString()));
+                        } else {
+                          form.setValue("linkedLotteries", [...linkedLotteries, lottery.id.toString()]);
+                        }
+                      }}
                     >
                       <input 
                         type="checkbox" 
@@ -618,6 +649,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
         
+        {/* Form actions */}
         <div className="flex justify-end space-x-3 pt-4">
           <Button 
             type="button" 

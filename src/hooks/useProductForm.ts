@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,7 +21,7 @@ const productFormSchema = z.object({
   productType: z.string().optional(),
   sleeveType: z.string().optional(),
   linkedLotteries: z.array(z.string()).optional(),
-  tickets: z.number().min(1).max(5).default(1),
+  tickets: z.coerce.number().min(1).max(5).default(1),
   weight: z.number().optional(),
   deliveryPrice: z.number().optional(),
   allowCustomization: z.boolean().default(false),
@@ -118,13 +119,13 @@ export const useProductForm = (
         sleeveType: data.sleeveType || 'Courtes',
         linkedLotteries: data.linkedLotteries ? data.linkedLotteries.map(Number) : [],
         popularity: 0,
-        tickets: data.tickets || 1,
+        tickets: Number(data.tickets) || 1,
         weight: data.weight || 0,
         deliveryPrice: data.deliveryPrice || 0,
         allowCustomization: data.allowCustomization || false,
         defaultVisualId: data.defaultVisualId || null,
         defaultVisualSettings: data.defaultVisualSettings || null,
-        visualCategoryId: data.visualCategoryId || null,
+        visualCategoryId: data.visualCategoryId ? Number(data.visualCategoryId) : null,
       };
 
       if (isCreating) {

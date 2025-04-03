@@ -3,11 +3,8 @@ import React from 'react';
 import { UseFormReturn } from "react-hook-form";
 import { ExtendedLottery } from '@/types/lottery';
 import { VisualCategory } from '@/types/visual';
-import LotterySelection from './LotterySelection';
 import ProductForm from './ProductForm';
 import { Form } from "@/components/ui/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 interface ProductFormProps {
   isCreating: boolean;
@@ -40,13 +37,8 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
   removeSize,
   addColor,
   removeColor,
-  toggleLottery,
-  selectAllLotteries,
-  deselectAllLotteries
+  toggleLottery
 }) => {
-  const selectedLotteries = form.watch('linkedLotteries') || [];
-  const tickets = form.watch('tickets') || 1;
-  
   // Si l'utilisateur n'est ni en train de créer ni en train d'éditer un produit
   if (!isCreating && !selectedProductId) {
     return (
@@ -79,35 +71,6 @@ const EnhancedProductForm: React.FC<ProductFormProps> = ({
         removeColor={removeColor}
         toggleLottery={toggleLottery}
       />
-
-      {/* Only show advanced lottery selector if we're creating or editing */}
-      {(isCreating || selectedProductId) && activeLotteries.length > 0 && (
-        <div className="mt-8 p-4 border border-winshirt-purple/20 rounded-lg">
-          <h3 className="text-lg font-medium text-white mb-4">Sélection avancée de loteries</h3>
-          
-          <Alert className="mb-4 bg-blue-500/10 border-blue-500/30">
-            <AlertCircle className="h-4 w-4 text-blue-500" />
-            <AlertDescription className="text-blue-100">
-              Ce produit offre {tickets} ticket{tickets > 1 ? 's' : ''}. Les clients ne pourront sélectionner que {tickets} loterie{tickets > 1 ? 's' : ''} maximum lors de l'achat.
-              <span className="block mt-1 text-sm text-blue-300">
-                Vous pouvez sélectionner autant de loteries que vous le souhaitez pour ce produit.
-              </span>
-            </AlertDescription>
-          </Alert>
-          
-          <Form {...form}>
-            <LotterySelection
-              lotteries={activeLotteries}
-              selectedLotteries={selectedLotteries}
-              onToggleLottery={toggleLottery}
-              onSelectAll={selectAllLotteries || (() => {})}
-              onDeselectAll={deselectAllLotteries || (() => {})}
-              maxSelections={tickets}
-              enforceMaxSelection={false} // Ne pas appliquer la limite en admin
-            />
-          </Form>
-        </div>
-      )}
     </div>
   );
 };
