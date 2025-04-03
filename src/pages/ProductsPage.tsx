@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { mockProducts, mockLotteries } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 import StarBackground from '../components/StarBackground';
-import AdminNavigation from '@/components/admin/AdminNavigation';
+import AdminNavigationHandler from '@/components/AdminNavigationHandler';
 import { ExtendedProduct, ProductFilters } from '@/types/product';
 import AdvancedFilters from '@/components/product/AdvancedFilters';
 
