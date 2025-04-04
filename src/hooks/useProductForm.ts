@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -282,6 +283,7 @@ export const useProductForm = (
       ? Math.max(...currentPrintAreas.map(area => area.id)) + 1
       : 1;
       
+    // Ensure all required properties are defined as non-optional
     const newPrintArea: PrintArea = {
       id: newId,
       name: printArea.name,
@@ -296,6 +298,7 @@ export const useProductForm = (
       allowCustomPosition: printArea.allowCustomPosition ?? true
     };
     
+    // Ensure we have a properly typed array
     const updatedPrintAreas: PrintArea[] = [...currentPrintAreas, newPrintArea];
     form.setValue("printAreas", updatedPrintAreas);
   };
@@ -303,6 +306,8 @@ export const useProductForm = (
   // Fonction pour mettre à jour une zone d'impression existante
   const updatePrintArea = (id: number, updatedData: Partial<PrintArea>) => {
     const currentPrintAreas = form.getValues().printAreas || [];
+    
+    // Use a proper type assertion after mapping to ensure TypeScript knows this is a PrintArea[]
     const updatedPrintAreas = currentPrintAreas.map(area => 
       area.id === id ? { ...area, ...updatedData } : area
     ) as PrintArea[];
