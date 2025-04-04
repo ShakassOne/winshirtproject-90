@@ -10,11 +10,9 @@ import AdminNavigation from './admin/AdminNavigation';
  */
 const AdminNavigationHandler: React.FC = () => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="pointer-events-auto">
-        <AdminNavigation />
-      </div>
-    </div>
+    <>
+      <AdminNavigation />
+    </>
   );
 };
 

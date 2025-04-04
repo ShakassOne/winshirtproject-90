@@ -56,7 +56,7 @@ const AdminNavigation: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-winshirt-space border-t border-winshirt-purple/20 z-10">
+    <div className="fixed bottom-0 left-0 right-0 bg-winshirt-space border-t border-winshirt-purple/20 z-50">
       <div className="container mx-auto px-4 py-2 overflow-x-auto">
         <div className="flex space-x-2 justify-between md:justify-start">
           {navLinks.map((link) => (

@@ -2,255 +2,427 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash, Edit, Check, X } from "lucide-react";
 import { PrintArea } from '@/types/product';
 
 interface PrintAreaManagerProps {
   printAreas: PrintArea[];
-  onAddArea?: (printArea: Omit<PrintArea, 'id'>) => void;
-  onRemoveArea?: (id: number) => void;
-  onUpdateArea?: (id: number, updates: Partial<PrintArea>) => void;
-  selectedAreaId?: number | null;
-  onSelectArea?: (id: number) => void;
+  selectedAreaId: number | null;
+  onSelectArea: (id: number) => void;
+  onAddArea: (printArea: Omit<PrintArea, 'id'>) => void;
+  onUpdateArea: (id: number, updatedData: Partial<PrintArea>) => void;
+  onRemoveArea: (id: number) => void;
 }
 
-const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({ 
+const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
   printAreas,
-  onAddArea,
-  onRemoveArea,
-  onUpdateArea,
   selectedAreaId,
-  onSelectArea
+  onSelectArea,
+  onAddArea,
+  onUpdateArea,
+  onRemoveArea
 }) => {
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newArea, setNewArea] = useState<Omit<PrintArea, 'id'>>({
+  const defaultArea = {
     name: '',
-    position: 'front',
-    format: 'custom', // Toujours format personnalisé
-    bounds: { x: 0, y: 0, width: 200, height: 200 },
+    format: 'custom' as const,
+    position: 'front' as 'front' | 'back',
+    bounds: {
+      x: 50,
+      y: 50,
+      width: 150,
+      height: 150
+    },
     allowCustomPosition: true
-  });
-
-  // Vérifiez si un recto et un verso existent déjà
-  const hasFrontArea = printAreas.some(area => area.position === 'front');
-  const hasBackArea = printAreas.some(area => area.position === 'back');
-  
-  const handleAdd = () => {
-    if (!newArea.name || !onAddArea) return;
-    
-    onAddArea({
-      ...newArea,
-      format: 'custom' as const // Utiliser as const pour garantir le type littéral
-    });
-    setIsAddingNew(false);
-    setNewArea({
-      name: '',
-      position: 'front',
-      format: 'custom',
-      bounds: { x: 0, y: 0, width: 200, height: 200 },
-      allowCustomPosition: true
-    });
   };
   
-  const handleCancel = () => {
-    setIsAddingNew(false);
-    setNewArea({
-      name: '',
-      position: 'front',
-      format: 'custom',
-      bounds: { x: 0, y: 0, width: 200, height: 200 },
-      allowCustomPosition: true
-    });
+  const [newArea, setNewArea] = useState<Omit<PrintArea, 'id'>>(defaultArea);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingArea, setEditingArea] = useState<PrintArea | null>(null);
+  
+  const handleAddArea = () => {
+    if (!newArea.name.trim()) return;
+    
+    onAddArea(newArea);
+    setNewArea(defaultArea);
   };
   
-  const handleUpdate = (id: number, field: string, value: any) => {
-    if (!onUpdateArea) return;
-    
-    if (field === 'bounds') {
-      onUpdateArea(id, { bounds: value });
-    } else {
-      onUpdateArea(id, { [field]: value });
+  const handleUpdateArea = () => {
+    if (editingArea && editingArea.id !== undefined) {
+      onUpdateArea(editingArea.id, editingArea);
+      setIsEditing(false);
+      setEditingArea(null);
     }
   };
+  
+  const handleSelectForEdit = (area: PrintArea) => {
+    setEditingArea({...area});
+    setIsEditing(true);
+  };
+  
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditingArea(null);
+  };
+  
+  const updateEditingAreaValue = (field: string, value: any) => {
+    if (!editingArea) return;
+    
+    if (field.includes('.')) {
+      // Handle nested fields like 'bounds.x'
+      const [parent, child] = field.split('.');
+      setEditingArea({
+        ...editingArea,
+        [parent]: {
+          ...editingArea[parent as keyof PrintArea],
+          [child]: value
+        }
+      });
+    } else {
+      setEditingArea({
+        ...editingArea,
+        [field]: value
+      });
+    }
+  };
+  
+  const updateNewAreaValue = (field: string, value: any) => {
+    if (field.includes('.')) {
+      // Handle nested fields like 'bounds.x'
+      const [parent, child] = field.split('.');
+      setNewArea({
+        ...newArea,
+        [parent]: {
+          ...newArea[parent as keyof typeof newArea],
+          [child]: value
+        }
+      });
+    } else {
+      setNewArea({
+        ...newArea,
+        [field]: value
+      });
+    }
+  };
+  
+  const frontAreas = printAreas.filter(area => area.position === 'front');
+  const backAreas = printAreas.filter(area => area.position === 'back');
   
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Zones d'impression</h3>
-      <p className="text-sm text-gray-400">
-        Définissez une zone d'impression pour le recto et une pour le verso du produit.
-      </p>
       
-      {printAreas.length === 0 && !isAddingNew && (
-        <div className="text-center p-4 border border-dashed border-gray-500 rounded-md">
-          <p className="text-gray-400 mb-2">Aucune zone d'impression définie</p>
-          <Button 
-            onClick={() => setIsAddingNew(true)}
-            variant="outline" 
-            className="border-winshirt-purple text-winshirt-purple"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Ajouter une zone
-          </Button>
+      {/* Liste des zones existantes */}
+      <div className="space-y-4">
+        {/* Zones Recto */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-400 mb-2">Recto</h4>
+          {frontAreas.length > 0 ? (
+            <div className="space-y-2">
+              {frontAreas.map(area => (
+                <Card 
+                  key={area.id} 
+                  className={`p-3 flex justify-between ${selectedAreaId === area.id ? 'border-winshirt-purple bg-winshirt-purple/10' : 'border-gray-700'}`}
+                  onClick={() => onSelectArea(area.id!)}
+                >
+                  <div>
+                    <p className="font-medium">{area.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {area.bounds.width}x{area.bounds.height} pixels
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectForEdit(area);
+                      }}
+                    >
+                      <Edit size={16} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-red-500 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveArea(area.id!);
+                      }}
+                    >
+                      <Trash size={16} />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Aucune zone d'impression recto définie</p>
+          )}
         </div>
-      )}
+        
+        {/* Zones Verso */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-400 mb-2">Verso</h4>
+          {backAreas.length > 0 ? (
+            <div className="space-y-2">
+              {backAreas.map(area => (
+                <Card 
+                  key={area.id} 
+                  className={`p-3 flex justify-between ${selectedAreaId === area.id ? 'border-winshirt-purple bg-winshirt-purple/10' : 'border-gray-700'}`}
+                  onClick={() => onSelectArea(area.id!)}
+                >
+                  <div>
+                    <p className="font-medium">{area.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {area.bounds.width}x{area.bounds.height} pixels
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectForEdit(area);
+                      }}
+                    >
+                      <Edit size={16} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-red-500 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveArea(area.id!);
+                      }}
+                    >
+                      <Trash size={16} />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Aucune zone d'impression verso définie</p>
+          )}
+        </div>
+      </div>
       
-      {printAreas.map(area => (
-        <div 
-          key={area.id} 
-          className={`border ${selectedAreaId === area.id ? 'border-winshirt-purple' : 'border-gray-700'} rounded-md p-4 space-y-3`}
-          onClick={() => onSelectArea && onSelectArea(area.id)}
-        >
-          <div className="flex justify-between items-center">
-            <h4 className="font-medium">{area.name}</h4>
-            <Button 
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemoveArea && onRemoveArea(area.id);
-              }}
-              variant="ghost" 
-              size="sm"
-              className="text-red-400 hover:text-red-300 h-8 px-2"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Nom de la zone</label>
-              <Input 
-                value={area.name}
-                onChange={(e) => handleUpdate(area.id, 'name', e.target.value)}
-                className="bg-winshirt-space-light border-winshirt-purple/30"
-                onClick={(e) => e.stopPropagation()}
+      {/* Formulaire d'édition */}
+      {isEditing ? (
+        <Card className="p-4 border-winshirt-purple">
+          <h4 className="font-medium mb-3">Modifier la zone d'impression</h4>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="edit-name">Nom</Label>
+                <Input
+                  id="edit-name"
+                  value={editingArea?.name || ''}
+                  onChange={(e) => updateEditingAreaValue('name', e.target.value)}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-position">Position</Label>
+                <Select
+                  value={editingArea?.position || 'front'}
+                  onValueChange={(value) => updateEditingAreaValue('position', value)}
+                >
+                  <SelectTrigger id="edit-position" className="bg-winshirt-space-light border-winshirt-purple/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                    <SelectItem value="front">Recto</SelectItem>
+                    <SelectItem value="back">Verso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="edit-x">Position X</Label>
+                <Input
+                  id="edit-x"
+                  type="number"
+                  value={editingArea?.bounds.x || 0}
+                  onChange={(e) => updateEditingAreaValue('bounds.x', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-y">Position Y</Label>
+                <Input
+                  id="edit-y"
+                  type="number"
+                  value={editingArea?.bounds.y || 0}
+                  onChange={(e) => updateEditingAreaValue('bounds.y', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="edit-width">Largeur</Label>
+                <Input
+                  id="edit-width"
+                  type="number"
+                  value={editingArea?.bounds.width || 0}
+                  onChange={(e) => updateEditingAreaValue('bounds.width', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-height">Hauteur</Label>
+                <Input
+                  id="edit-height"
+                  type="number"
+                  value={editingArea?.bounds.height || 0}
+                  onChange={(e) => updateEditingAreaValue('bounds.height', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2 mt-2">
+              <Label htmlFor="edit-customPosition" className="cursor-pointer">
+                Permettre le positionnement personnalisé
+              </Label>
+              <Switch
+                id="edit-customPosition"
+                checked={editingArea?.allowCustomPosition || false}
+                onCheckedChange={(checked) => updateEditingAreaValue('allowCustomPosition', checked)}
+                className="data-[state=checked]:bg-winshirt-purple"
               />
             </div>
             
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Position</label>
-              <Select 
-                value={area.position}
-                onValueChange={(value: 'front' | 'back') => handleUpdate(area.id, 'position', value)}
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelEdit}
+                className="border-winshirt-purple/30"
               >
-                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30" onClick={(e) => e.stopPropagation()}>
-                  <SelectValue placeholder="Position" />
-                </SelectTrigger>
-                <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                  <SelectItem value="front">Recto</SelectItem>
-                  <SelectItem value="back">Verso</SelectItem>
-                </SelectContent>
-              </Select>
+                <X size={16} className="mr-1" /> Annuler
+              </Button>
+              <Button
+                type="button"
+                onClick={handleUpdateArea}
+                className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+              >
+                <Check size={16} className="mr-1" /> Enregistrer
+              </Button>
             </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Largeur</label>
-              <Input 
-                type="number"
-                value={area.bounds.width}
-                onChange={(e) => handleUpdate(area.id, 'bounds', { ...area.bounds, width: Number(e.target.value) })}
-                className="bg-winshirt-space-light border-winshirt-purple/30"
-                onClick={(e) => e.stopPropagation()}
-              />
+        </Card>
+      ) : (
+        <Card className="p-4">
+          <h4 className="font-medium mb-3">Ajouter une zone d'impression</h4>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="name">Nom</Label>
+                <Input
+                  id="name"
+                  value={newArea.name}
+                  onChange={(e) => updateNewAreaValue('name', e.target.value)}
+                  placeholder="ex: Poitrine"
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+              <div>
+                <Label htmlFor="position">Position</Label>
+                <Select
+                  value={newArea.position}
+                  onValueChange={(value) => updateNewAreaValue('position', value)}
+                >
+                  <SelectTrigger id="position" className="bg-winshirt-space-light border-winshirt-purple/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                    <SelectItem value="front">Recto</SelectItem>
+                    <SelectItem value="back">Verso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Hauteur</label>
-              <Input 
-                type="number"
-                value={area.bounds.height}
-                onChange={(e) => handleUpdate(area.id, 'bounds', { ...area.bounds, height: Number(e.target.value) })}
-                className="bg-winshirt-space-light border-winshirt-purple/30"
-                onClick={(e) => e.stopPropagation()}
-              />
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="x">Position X</Label>
+                <Input
+                  id="x"
+                  type="number"
+                  value={newArea.bounds.x}
+                  onChange={(e) => updateNewAreaValue('bounds.x', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+              <div>
+                <Label htmlFor="y">Position Y</Label>
+                <Input
+                  id="y"
+                  type="number"
+                  value={newArea.bounds.y}
+                  onChange={(e) => updateNewAreaValue('bounds.y', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      ))}
-      
-      {/* Formulaire d'ajout */}
-      {isAddingNew && (
-        <div className="border border-gray-700 rounded-md p-4 space-y-3">
-          <h4 className="font-medium">Nouvelle zone d'impression</h4>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Nom de la zone</label>
-              <Input 
-                value={newArea.name}
-                onChange={(e) => setNewArea({...newArea, name: e.target.value})}
-                className="bg-winshirt-space-light border-winshirt-purple/30"
-                placeholder="ex: Recto, Verso..."
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="width">Largeur</Label>
+                <Input
+                  id="width"
+                  type="number"
+                  value={newArea.bounds.width}
+                  onChange={(e) => updateNewAreaValue('bounds.width', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+              <div>
+                <Label htmlFor="height">Hauteur</Label>
+                <Input
+                  id="height"
+                  type="number"
+                  value={newArea.bounds.height}
+                  onChange={(e) => updateNewAreaValue('bounds.height', Number(e.target.value))}
+                  className="bg-winshirt-space-light border-winshirt-purple/30"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2 mt-2">
+              <Label htmlFor="customPosition" className="cursor-pointer">
+                Permettre le positionnement personnalisé
+              </Label>
+              <Switch
+                id="customPosition"
+                checked={newArea.allowCustomPosition}
+                onCheckedChange={(checked) => updateNewAreaValue('allowCustomPosition', checked)}
+                className="data-[state=checked]:bg-winshirt-purple"
               />
             </div>
             
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Position</label>
-              <Select 
-                value={newArea.position}
-                onValueChange={(value: 'front' | 'back') => setNewArea({...newArea, position: value})}
-              >
-                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                  <SelectValue placeholder="Position" />
-                </SelectTrigger>
-                <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                  <SelectItem value="front" disabled={hasFrontArea}>Recto</SelectItem>
-                  <SelectItem value="back" disabled={hasBackArea}>Verso</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Largeur</label>
-              <Input 
-                type="number"
-                value={newArea.bounds.width}
-                onChange={(e) => setNewArea({...newArea, bounds: {...newArea.bounds, width: Number(e.target.value)}})}
-                className="bg-winshirt-space-light border-winshirt-purple/30"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Hauteur</label>
-              <Input 
-                type="number"
-                value={newArea.bounds.height}
-                onChange={(e) => setNewArea({...newArea, bounds: {...newArea.bounds, height: Number(e.target.value)}})}
-                className="bg-winshirt-space-light border-winshirt-purple/30"
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end gap-2 mt-3">
             <Button
-              variant="ghost"
-              onClick={handleCancel}
+              type="button"
+              onClick={handleAddArea}
+              className="bg-winshirt-purple hover:bg-winshirt-purple-dark mt-2 w-full"
+              disabled={!newArea.name.trim()}
             >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleAdd}
-              disabled={!newArea.name}
-              className="bg-winshirt-blue hover:bg-winshirt-blue-dark"
-            >
-              Ajouter
+              <Plus size={16} className="mr-1" /> Ajouter la zone
             </Button>
           </div>
-        </div>
-      )}
-      
-      {!isAddingNew && printAreas.length < 2 && (
-        <Button 
-          onClick={() => setIsAddingNew(true)}
-          variant="outline" 
-          className="mt-2 border-winshirt-purple text-winshirt-purple"
-          disabled={printAreas.length >= 2}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Ajouter une zone {printAreas.length === 1 ? (printAreas[0].position === 'front' ? "(Verso)" : "(Recto)") : ""}
-        </Button>
+        </Card>
       )}
     </div>
   );

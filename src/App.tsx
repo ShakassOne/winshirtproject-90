@@ -24,6 +24,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Toaster } from "@/components/ui/toaster";
+import AdminNavigationHandler from './components/AdminNavigationHandler';
 
 function App() {
   // Effect for setting theme colors
@@ -79,6 +80,7 @@ function App() {
         </main>
         <Footer />
         <Toaster />
+        <AdminNavigationHandler />
       </AuthProvider>
     </BrowserRouter>
   );

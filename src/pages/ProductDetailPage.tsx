@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VisualSelector from '@/components/product/VisualSelector';
 import VisualPositioner from '@/components/product/VisualPositioner';
 import { useVisualSelector } from '@/hooks/useVisualSelector';
+import { useVisuals } from '@/data/mockVisuals';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,8 +33,9 @@ const ProductDetailPage: React.FC = () => {
   const { user } = useAuth();
   const [product, setProduct] = useState<ExtendedProduct | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const { getCategories } = useVisuals();
   const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
-  const [categoryVisuals, setCategoryVisuals] = useState<Visual[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
@@ -47,10 +50,13 @@ const ProductDetailPage: React.FC = () => {
     selectedVisual, 
     visualSettings, 
     handleSelectVisual, 
-    handleUpdateSettings 
+    handleUpdateSettings,
+    activePosition,
+    setPosition
   } = useVisualSelector(
     product?.defaultVisualId || null,
-    product?.defaultVisualSettings || undefined
+    product?.defaultVisualSettings || undefined,
+    product?.printAreas
   );
   
   // Charger le produit
@@ -68,6 +74,10 @@ const ProductDetailPage: React.FC = () => {
           
           if (foundProduct) {
             setProduct(foundProduct);
+            // Définir la catégorie par défaut si elle existe
+            if (foundProduct.visualCategoryId) {
+              setSelectedCategoryId(foundProduct.visualCategoryId);
+            }
             // Initialiser le tableau des loteries sélectionnées
             setSelectedLotteries(Array(foundProduct.tickets || 1).fill(''));
             
@@ -86,6 +96,9 @@ const ProductDetailPage: React.FC = () => {
       
       // Fallback aux données mock
       const mockProduct = mockProducts.find(p => p.id === Number(id)) as ExtendedProduct;
+      if (mockProduct?.visualCategoryId) {
+        setSelectedCategoryId(mockProduct.visualCategoryId);
+      }
       setProduct(mockProduct);
       // Initialiser le tableau des loteries sélectionnées
       setSelectedLotteries(Array(mockProduct?.tickets || 1).fill(''));
@@ -98,21 +111,27 @@ const ProductDetailPage: React.FC = () => {
   // Charger les catégories de visuels
   useEffect(() => {
     const loadVisualCategories = () => {
-      const storedCategories = localStorage.getItem('visualCategories');
-      if (storedCategories) {
-        try {
-          const parsedCategories = JSON.parse(storedCategories);
-          if (Array.isArray(parsedCategories)) {
-            setVisualCategories(parsedCategories);
+      // Charger depuis useVisuals hook
+      setVisualCategories(getCategories());
+      
+      // Fallback aux données localStorage si nécessaire
+      if (visualCategories.length === 0) {
+        const storedCategories = localStorage.getItem('visualCategories');
+        if (storedCategories) {
+          try {
+            const parsedCategories = JSON.parse(storedCategories);
+            if (Array.isArray(parsedCategories)) {
+              setVisualCategories(parsedCategories);
+            }
+          } catch (error) {
+            console.error("Erreur lors du chargement des catégories de visuels:", error);
           }
-        } catch (error) {
-          console.error("Erreur lors du chargement des catégories de visuels:", error);
         }
       }
     };
     
     loadVisualCategories();
-  }, []);
+  }, [getCategories]);
   
   // Mise à jour d'une loterie spécifique dans le tableau des loteries sélectionnées
   const handleLotteryChange = (lotteryId: string, index: number) => {
@@ -129,6 +148,16 @@ const ProductDetailPage: React.FC = () => {
         setSelectedPrintArea(selectedArea);
       }
     }
+  };
+  
+  // Gérer le changement de catégorie de visuels
+  const handleCategoryChange = (categoryId: number | null) => {
+    setSelectedCategoryId(categoryId);
+  };
+  
+  // Synchroniser le changement entre les onglets recto/verso avec le composant VisualPositioner
+  const handleTabChange = (position: 'front' | 'back') => {
+    setPosition(position);
   };
   
   if (loading) {
@@ -254,6 +283,7 @@ const ProductDetailPage: React.FC = () => {
                     <TabsContent value="preview" className="mt-0">
                       <VisualPositioner
                         productImage={product.image}
+                        productSecondaryImage={product.secondaryImage}
                         visual={selectedVisual}
                         visualSettings={visualSettings}
                         onUpdateSettings={handleUpdateSettings}
@@ -264,247 +294,248 @@ const ProductDetailPage: React.FC = () => {
                     </TabsContent>
                     
                     <TabsContent value="customize" className="mt-0 space-y-6">
-                      {/* Zone de positionnement du visuel */}
-                      <VisualPositioner
-                        productImage={product.image}
-                        visual={selectedVisual}
-                        visualSettings={visualSettings}
-                        onUpdateSettings={handleUpdateSettings}
-                        printAreas={product.printAreas}
-                        selectedPrintArea={selectedPrintArea}
-                      />
+                      {/* Sélection de la catégorie de visuels */}
+                      <div className="space-y-2">
+                        <Label className="text-white">Catégorie de visuels</Label>
+                        <Select
+                          value={selectedCategoryId ? selectedCategoryId.toString() : ""}
+                          onValueChange={(value) => handleCategoryChange(value ? parseInt(value) : null)}
+                        >
+                          <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                            <SelectValue placeholder="Choisir une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                            {visualCategories.map((category) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       
-                      {/* Sélection de la zone d'impression si disponible */}
-                      {hasPrintAreas && (
-                        <div className="space-y-2">
-                          <Label className="text-white">Zone d'impression</Label>
-                          <Select
-                            value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
-                            onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
-                          >
-                            <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                              <SelectValue placeholder="Choisir une zone d'impression" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                              {product.printAreas?.map(area => (
-                                <SelectItem key={area.id} value={area.id.toString()}>
-                                  {area.name} ({area.position === 'front' ? 'Recto' : 'Verso'})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                      
-                      {/* Sélection du visuel */}
+                      {/* Sélecteur de visuel */}
                       <VisualSelector
                         selectedVisualId={selectedVisual?.id || null}
                         onSelectVisual={handleSelectVisual}
-                        categoryId={product.visualCategoryId || 1} 
+                        categoryId={selectedCategoryId}
                       />
+                      
+                      {/* Séparateur */}
+                      {selectedVisual && <div className="border-t border-winshirt-purple/20 my-6"></div>}
+                      
+                      {/* Zone de positionnement du visuel */}
+                      {selectedVisual && (
+                        <>
+                          <Tabs defaultValue={activePosition} onValueChange={(value) => handleTabChange(value as 'front' | 'back')} className="w-full">
+                            <TabsList className="grid grid-cols-2 w-full">
+                              <TabsTrigger value="front">Recto</TabsTrigger>
+                              <TabsTrigger value="back">Verso</TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="front" className="mt-0">
+                              <VisualPositioner
+                                productImage={product.image}
+                                productSecondaryImage={product.secondaryImage}
+                                visual={selectedVisual}
+                                visualSettings={visualSettings}
+                                onUpdateSettings={handleUpdateSettings}
+                                printAreas={product.printAreas?.filter(area => area.position === 'front')}
+                                selectedPrintArea={selectedPrintArea}
+                              />
+                            </TabsContent>
+                            
+                            <TabsContent value="back" className="mt-0">
+                              <VisualPositioner
+                                productImage={product.secondaryImage || product.image}
+                                visual={selectedVisual}
+                                visualSettings={visualSettings}
+                                onUpdateSettings={handleUpdateSettings}
+                                printAreas={product.printAreas?.filter(area => area.position === 'back')}
+                                selectedPrintArea={selectedPrintArea}
+                              />
+                            </TabsContent>
+                          </Tabs>
+                          
+                          {/* Sélection de la zone d'impression si disponible */}
+                          {hasPrintAreas && (
+                            <div className="space-y-2 mt-4">
+                              <Label className="text-white">Zone d'impression</Label>
+                              <Select
+                                value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
+                                onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
+                              >
+                                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                                  <SelectValue placeholder="Choisir une zone d'impression" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                                  {product.printAreas?.filter(area => area.position === activePosition).map(area => (
+                                    <SelectItem key={area.id} value={area.id.toString()}>
+                                      {area.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </TabsContent>
                   </Tabs>
                 ) : (
+                  // Si la personnalisation n'est pas autorisée, montrer le carrousel d'images simple
                   <Carousel className="w-full">
                     <CarouselContent>
                       {productImages.map((image, index) => (
                         <CarouselItem key={index}>
-                          <div className="flex items-center justify-center p-1">
-                            <img 
-                              src={image} 
-                              alt={`${product.name} ${index === 0 ? 'principale' : 'secondaire'}`} 
-                              className="rounded-lg max-h-[500px] object-contain w-full"
+                          <div className="flex justify-center items-center p-1">
+                            <img
+                              src={image}
+                              alt={`${product.name} - Image ${index + 1}`}
+                              className="max-h-96 object-contain"
                             />
                           </div>
                         </CarouselItem>
                       ))}
                     </CarouselContent>
-                    {productImages.length > 1 && (
-                      <>
-                        <CarouselPrevious className="text-white" />
-                        <CarouselNext className="text-white" />
-                      </>
-                    )}
+                    <CarouselPrevious className="text-winshirt-purple" />
+                    <CarouselNext className="text-winshirt-purple" />
                   </Carousel>
                 )}
               </div>
-              
-              {/* Product Details */}
+
+              {/* Product Info and Options */}
               <div className="space-y-6">
+                {/* Product Title and Price */}
                 <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">{product.name}</h1>
-                  <div className="flex items-center gap-4">
-                    <p className="text-2xl text-winshirt-purple-light">{product.price.toFixed(2)} €</p>
-                    
-                    {/* Display delivery price if available */}
-                    {product.deliveryPrice && (
-                      <div className="flex items-center text-gray-300">
-                        <Truck size={16} className="mr-1" />
-                        <span>Livraison: {product.deliveryPrice.toFixed(2)} €</span>
-                      </div>
-                    )}
-                    
-                    {/* Display weight if available */}
-                    {product.weight && (
-                      <div className="flex items-center text-gray-300">
-                        <Weight size={16} className="mr-1" />
-                        <span>{product.weight}g</span>
-                      </div>
+                  <h1 className="text-3xl font-bold text-white">{product.name}</h1>
+                  <div className="flex items-center mt-2">
+                    <span className="text-2xl font-bold text-winshirt-purple-light">{product.price.toFixed(2)} €</span>
+                    {product.tickets && product.tickets > 0 && (
+                      <span className="ml-2 bg-winshirt-purple text-white text-sm px-2 py-1 rounded-full flex items-center">
+                        <Ticket size={14} className="mr-1" />
+                        {product.tickets} {product.tickets > 1 ? 'tickets' : 'ticket'}
+                      </span>
                     )}
                   </div>
-                  
-                  {/* Tickets info */}
-                  {(product.tickets && product.tickets > 1) ? (
-                    <div className="mt-2 bg-blue-500/10 border border-blue-500/30 rounded-md p-2 flex items-center">
-                      <Ticket className="text-blue-400 mr-2" size={18} />
-                      <p className="text-blue-100">
-                        Ce produit vous offre {product.tickets} tickets de participation à des loteries
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="mt-2 bg-blue-500/10 border border-blue-500/30 rounded-md p-2 flex items-center">
-                      <Ticket className="text-blue-400 mr-2" size={18} />
-                      <p className="text-blue-100">
-                        Ce produit vous offre 1 ticket de participation à une loterie
-                      </p>
-                    </div>
-                  )}
-                  
-                  {/* Information sur la personnalisation */}
-                  {canCustomize && (
-                    <div className="mt-2 bg-winshirt-purple/10 border border-winshirt-purple/30 rounded-md p-2">
-                      <p className="text-gray-200">
-                        {hasPrintAreas 
-                          ? "Personnalisez votre produit avec un visuel dans l'onglet \"Personnaliser\". Les zones d'impression sont préconfigurées."
-                          : "Personnalisez votre produit avec un visuel dans l'onglet \"Personnaliser\"."
-                        }
-                      </p>
-                    </div>
-                  )}
                 </div>
                 
+                {/* Product Description */}
                 <p className="text-gray-300">{product.description}</p>
-                
-                {/* Delivery info section */}
-                {(product.weight || product.deliveryPrice) && (
-                  <div className="p-3 bg-gray-800/50 rounded-lg">
-                    <h3 className="font-semibold text-white flex items-center mb-2">
-                      <Truck size={18} className="mr-2" /> Informations de livraison
-                    </h3>
-                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
-                      {product.weight && (
-                        <div className="flex items-center">
-                          <Weight size={14} className="mr-1" /> 
-                          <span>Poids: {product.weight}g</span>
-                        </div>
-                      )}
-                      {product.deliveryPrice && (
-                        <div className="flex items-center">
-                          <Truck size={14} className="mr-1" /> 
-                          <span>Frais: {product.deliveryPrice.toFixed(2)} €</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
                 
                 {/* Size Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="size-select" className="text-white">Taille</Label>
-                  <Select
+                  <Label className="text-white">Taille</Label>
+                  <RadioGroup 
                     value={selectedSize}
                     onValueChange={setSelectedSize}
+                    className="flex flex-wrap gap-2"
                   >
-                    <SelectTrigger id="size-select" className="bg-winshirt-space-light border-winshirt-purple/30">
-                      <SelectValue placeholder="Sélectionner une taille" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                      {product.sizes && product.sizes.length > 0 ? (
-                        product.sizes.map((size) => (
-                          <SelectItem key={size} value={size}>{size}</SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="unique">Taille unique</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                    {product.sizes?.map((size) => (
+                      <div key={size} className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value={size}
+                          id={`size-${size}`}
+                          className="text-winshirt-purple"
+                        />
+                        <Label
+                          htmlFor={`size-${size}`}
+                          className="text-gray-200 cursor-pointer"
+                        >
+                          {size}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
                 </div>
                 
                 {/* Color Selection */}
                 <div className="space-y-2">
                   <Label className="text-white">Couleur</Label>
-                  <RadioGroup
+                  <RadioGroup 
                     value={selectedColor}
                     onValueChange={setSelectedColor}
-                    className="flex flex-wrap gap-4"
+                    className="flex flex-wrap gap-2"
                   >
-                    {product.colors && product.colors.length > 0 ? (
-                      product.colors.map((color) => (
-                        <div key={color} className="flex items-center space-x-2">
-                          <RadioGroupItem 
-                            value={color} 
-                            id={`color-${color}`} 
-                            className="bg-winshirt-space-light border-winshirt-purple/30"
-                          />
-                          <Label htmlFor={`color-${color}`} className="capitalize text-gray-300">
-                            {color}
-                          </Label>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem 
-                          value="default" 
-                          id="color-default" 
-                          className="bg-winshirt-space-light border-winshirt-purple/30"
+                    {product.colors?.map((color) => (
+                      <div key={color} className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value={color}
+                          id={`color-${color}`}
+                          className="text-winshirt-purple"
                         />
-                        <Label htmlFor="color-default" className="text-gray-300">
-                          Couleur standard
+                        <Label
+                          htmlFor={`color-${color}`}
+                          className="flex items-center cursor-pointer"
+                        >
+                          <span
+                            className="w-4 h-4 mr-2 rounded-full border border-gray-600"
+                            style={{ backgroundColor: color }}
+                          ></span>
+                          <span className="text-gray-200">{color}</span>
                         </Label>
                       </div>
-                    )}
+                    ))}
                   </RadioGroup>
                 </div>
                 
-                {/* Multiple Lottery Selections - One per ticket */}
-                {Array.from({ length: product.tickets || 1 }).map((_, index) => (
-                  <div key={index} className="space-y-2">
-                    <Label htmlFor={`lottery-select-${index}`} className="text-white flex items-center">
-                      <Ticket className="mr-2" size={16} />
-                      {product.tickets && product.tickets > 1 
-                        ? `Loterie ${index + 1} sur ${product.tickets}` 
-                        : "Loterie associée"}
+                {/* Lottery Selection for tickets */}
+                {product.tickets && product.tickets > 0 && (
+                  <div className="space-y-4">
+                    <Label className="text-white flex items-center">
+                      <Ticket size={16} className="mr-2" />
+                      Choisissez {product.tickets > 1 ? 'vos loteries' : 'votre loterie'}
                     </Label>
-                    <Select
-                      value={selectedLotteries[index]}
-                      onValueChange={(value) => handleLotteryChange(value, index)}
-                    >
-                      <SelectTrigger 
-                        id={`lottery-select-${index}`} 
-                        className="bg-winshirt-space-light border-winshirt-purple/30"
-                      >
-                        <SelectValue placeholder="Sélectionner une loterie" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                        {activeLotteries.map((lottery) => (
-                          <SelectItem key={`${lottery.id}-${index}`} value={lottery.id.toString()}>
-                            {lottery.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Chaque ticket vous donne droit à une participation à la loterie de votre choix
-                    </p>
+                    
+                    {Array.from({ length: product.tickets }).map((_, index) => (
+                      <div key={index} className="space-y-1">
+                        <Label className="text-sm text-gray-400">Ticket {index + 1}</Label>
+                        <Select
+                          value={selectedLotteries[index] || ''}
+                          onValueChange={(value) => handleLotteryChange(value, index)}
+                        >
+                          <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                            <SelectValue placeholder="Choisir une loterie" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                            {activeLotteries.map((lottery) => (
+                              <SelectItem key={lottery.id} value={lottery.id.toString()}>
+                                {lottery.title} - {lottery.prize}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
                 
-                {/* Add to Cart */}
-                <Button 
-                  className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                {/* Additional Info */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  {product.weight && (
+                    <div className="flex items-center text-gray-400">
+                      <Weight size={16} className="mr-2" />
+                      <span>{product.weight}g</span>
+                    </div>
+                  )}
+                  {product.deliveryPrice !== undefined && (
+                    <div className="flex items-center text-gray-400">
+                      <Truck size={16} className="mr-2" />
+                      <span>
+                        Livraison: {product.deliveryPrice > 0 
+                          ? `${product.deliveryPrice.toFixed(2)} €` 
+                          : 'Gratuite'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Add to Cart Button */}
+                <Button
                   onClick={handleAddToCart}
+                  className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark py-6 mt-6"
                 >
-                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  <ShoppingCart className="mr-2" />
                   Ajouter au panier
                 </Button>
               </div>
