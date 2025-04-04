@@ -137,6 +137,7 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
               addPrintArea={addPrintArea}
               updatePrintArea={updatePrintArea}
               removePrintArea={removePrintArea}
+              hideTabList={true} // Ajouter cette prop pour cacher les onglets internes
             />
           </TabsContent>
           

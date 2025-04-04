@@ -10,7 +10,7 @@ interface VisualPositionerProps {
   visualSettings: ProductVisualSettings;
   onUpdateSettings: (settings: ProductVisualSettings) => void;
   readOnly?: boolean;
-  printAreas?: PrintArea[]; // Ajout des zones d'impression
+  printAreas?: PrintArea[]; // Zones d'impression
   selectedPrintArea?: PrintArea | null; // Zone d'impression sélectionnée
 }
 
@@ -38,10 +38,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     if (containerRef.current) {
       setContainerRect(containerRef.current.getBoundingClientRect());
     }
-  }, []);
-  
-  // Recalculer le containerRect quand la fenêtre est redimensionnée
-  useEffect(() => {
+    
+    // Recalculer le containerRect quand le composant est monté ou mis à jour
     const handleResize = () => {
       if (containerRef.current) {
         setContainerRect(containerRef.current.getBoundingClientRect());
@@ -49,17 +47,25 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     };
     
     window.addEventListener('resize', handleResize);
+    handleResize();
+    
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [containerRef.current]); // Ajouter containerRef.current comme dépendance
   
-  // Utilisé pour déterminer si nous avons des zones d'impression à respecter
-  const hasRestrictedAreas = printAreas && printAreas.length > 0;
+  // Détermine automatiquement la zone d'impression active en fonction de la position du visuel
+  const getActivePrintArea = () => {
+    if (!printAreas || printAreas.length === 0) return null;
+    
+    // Si une zone est explicitement sélectionnée, l'utiliser
+    if (selectedPrintArea) return selectedPrintArea;
+    
+    // Sinon, utiliser la première zone disponible
+    return printAreas[0];
+  };
   
-  // Déterminer la zone d'impression active
-  const activePrintArea = selectedPrintArea || 
-    (hasRestrictedAreas ? printAreas[0] : null);
+  const activePrintArea = getActivePrintArea();
   
   const handleMouseDown = (e: React.MouseEvent) => {
     if (readOnly || !visual) return;
@@ -239,29 +245,32 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   
   // Repositionner le visuel à l'intérieur de la zone d'impression quand celle-ci change
   useEffect(() => {
-    if (activePrintArea && visual) {
-      let newX = visualSettings.position.x;
-      let newY = visualSettings.position.y;
+    if (activePrintArea && visual && containerRect) {
       const { bounds } = activePrintArea;
       
-      // Vérifier si le visuel est en dehors de la zone d'impression
-      const isOutsideX = newX < bounds.x || newX + visualSettings.size.width > bounds.x + bounds.width;
-      const isOutsideY = newY < bounds.y || newY + visualSettings.size.height > bounds.y + bounds.height;
+      // Calculer le centre de la zone d'impression
+      const centerX = bounds.x + bounds.width / 2 - visualSettings.size.width / 2;
+      const centerY = bounds.y + bounds.height / 2 - visualSettings.size.height / 2;
       
-      // Repositionner si nécessaire
-      if (isOutsideX || isOutsideY) {
-        // Contraindre le visuel à l'intérieur de la zone d'impression
-        newX = Math.max(bounds.x, Math.min(newX, bounds.x + bounds.width - visualSettings.size.width));
-        newY = Math.max(bounds.y, Math.min(newY, bounds.y + bounds.height - visualSettings.size.height));
-        
-        // Mettre à jour les paramètres
+      // Vérifier si le visuel est hors des limites de la zone d'impression
+      const isOutsideX = visualSettings.position.x < bounds.x || 
+                        visualSettings.position.x + visualSettings.size.width > bounds.x + bounds.width;
+      const isOutsideY = visualSettings.position.y < bounds.y || 
+                        visualSettings.position.y + visualSettings.size.height > bounds.y + bounds.height;
+      
+      // Si le visuel est hors des limites ou si c'est la première fois qu'il est positionné
+      if (isOutsideX || isOutsideY || (visualSettings.position.x === 50 && visualSettings.position.y === 50)) {
+        // Centrer le visuel dans la zone d'impression
         onUpdateSettings({
           ...visualSettings,
-          position: { x: newX, y: newY }
+          position: { 
+            x: Math.max(bounds.x, Math.min(centerX, bounds.x + bounds.width - visualSettings.size.width)),
+            y: Math.max(bounds.y, Math.min(centerY, bounds.y + bounds.height - visualSettings.size.height))
+          }
         });
       }
     }
-  }, [activePrintArea, visual]);
+  }, [activePrintArea, visual, containerRect]);
   
   return (
     <div className="space-y-4">

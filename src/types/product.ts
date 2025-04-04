@@ -50,11 +50,10 @@ export interface DeliveryInfo {
   shippingRestrictions?: string[]; // Pays où la livraison n'est pas possible
 }
 
-// Nouvelle interface pour les zones d'impression
+// Simplifié pour ne garder que le format personnalisé et seulement deux zones (recto/verso)
 export interface PrintArea {
   id: number;
-  name: string; // Nom de la zone (ex: "Pocket", "Front", "Back")
-  format: 'pocket' | 'a4' | 'a3' | 'custom'; // Format prédéfini
+  name: string; // Nom de la zone (ex: "Recto", "Verso")
   position: 'front' | 'back'; // Recto ou verso
   bounds: {
     x: number;
@@ -62,7 +61,7 @@ export interface PrintArea {
     width: number;
     height: number;
   }; // Coordonnées et dimensions de la zone
-  allowCustomPosition?: boolean; // Si le client peut repositionner dans la zone
+  allowCustomPosition?: boolean; // Si le client peut repositionner dans la zone (toujours true maintenant)
 }
 
 // Interface pour les filtres disponibles
