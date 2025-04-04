@@ -46,9 +46,12 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
     e.stopPropagation();
     e.preventDefault();
     
+    const coords = getRelativeCoordinates(e);
+    console.log(`Starting drag of area ${areaId} at ${coords.x}, ${coords.y}`);
+    
     setIsDragging(true);
     setDraggedAreaId(areaId);
-    setStartPos(getRelativeCoordinates(e));
+    setStartPos(coords);
     
     if (onSelectPrintArea) {
       onSelectPrintArea(areaId);
@@ -70,6 +73,8 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
     const newX = area.bounds.x + deltaX;
     const newY = area.bounds.y + deltaY;
     
+    console.log(`Moving area ${draggedAreaId} to ${newX}, ${newY}`);
+    
     // Actualiser la position
     onUpdateAreaPosition(draggedAreaId, newX, newY);
     
@@ -79,24 +84,39 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   
   // Terminer le drag
   const handleMouseUp = () => {
+    if (isDragging && draggedAreaId !== null) {
+      console.log(`Finished dragging area ${draggedAreaId}`);
+    }
+    
     setIsDragging(false);
     setDraggedAreaId(null);
   };
   
   // Ajouter et retirer les écouteurs d'événements globaux
   useEffect(() => {
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    const handleGlobalMouseMove = (e: MouseEvent) => handleMouseMove(e);
+    const handleGlobalMouseUp = () => handleMouseUp();
+    
+    if (isDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    }
     
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
   }, [isDragging, draggedAreaId, startPos]);
   
   // Filtrer les zones par position (front/back)
   const frontAreas = printAreas.filter(area => area.position === 'front');
   const backAreas = printAreas.filter(area => area.position === 'back');
+  
+  // S'assurer que nous ne quittons pas la page lors du changement de vue
+  const handleViewChange = (view: 'front' | 'back') => {
+    console.log(`Changing view to ${view}`);
+    setActiveView(view);
+  };
 
   // Toujours retourner "C" pour Custom car c'est la seule option maintenant
   const getFormatLabel = () => {
@@ -107,10 +127,6 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
     setZoom(value[0]);
   };
   
-  const handleViewChange = (view: 'front' | 'back') => {
-    setActiveView(view);
-  };
-  
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -119,12 +135,14 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
         {/* Boutons pour basculer entre les vues */}
         <div className="flex bg-winshirt-space-light rounded-md">
           <button
+            type="button"
             className={`px-3 py-1 rounded-l-md text-sm ${activeView === 'front' ? 'bg-winshirt-purple text-white' : 'text-gray-400'}`}
             onClick={() => handleViewChange('front')}
           >
             Recto
           </button>
           <button
+            type="button"
             className={`px-3 py-1 rounded-r-md text-sm ${activeView === 'back' ? 'bg-winshirt-purple text-white' : 'text-gray-400'}`}
             onClick={() => handleViewChange('back')}
           >

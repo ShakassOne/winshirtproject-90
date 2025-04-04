@@ -9,12 +9,14 @@ interface VisualSelectorProps {
   selectedVisualId: number | null;
   onSelectVisual: (visual: Visual | null) => void;
   categoryId?: number | null;
+  activePosition?: 'front' | 'back'; // Ajouter la position active
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({
   selectedVisualId,
   onSelectVisual,
-  categoryId
+  categoryId,
+  activePosition = 'front'
 }) => {
   const { 
     getCategories, 
@@ -54,7 +56,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   }, [categoryId, getVisualsByCategory, getVisualById, selectedVisualId, allVisuals]);
   
   const handleSelectVisual = (visual: Visual) => {
-    console.log(`Selected visual: ${visual.id} - ${visual.name}`);
+    console.log(`Selected visual for ${activePosition}: ${visual.id} - ${visual.name}`);
     // Réinitialiser le visuel uploadé si un visuel prédéfini est sélectionné
     setUploadedVisual(null);
     setSelectedVisual(visual);
@@ -92,7 +94,9 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   return (
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
       <div className="flex justify-between items-center p-4 border-b border-winshirt-purple/30">
-        <h3 className="text-lg font-medium">Choisissez un visuel</h3>
+        <h3 className="text-lg font-medium">
+          Choisissez un visuel pour {activePosition === 'front' ? 'le recto' : 'le verso'}
+        </h3>
         <CustomVisualUploader
           onVisualUpload={handleVisualUpload}
           onVisualRemove={handleVisualRemove}

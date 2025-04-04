@@ -15,21 +15,27 @@ const AdminNavigationHandler: React.FC = () => {
   useEffect(() => {
     // Vérifier si l'utilisateur est administrateur (via localStorage)
     const user = localStorage.getItem('user');
-    const isAdmin = user ? JSON.parse(user)?.isAdmin : false;
+    let isAdmin = false;
     
-    // Afficher la navigation si l'utilisateur est administrateur, même s'il n'est pas sur une page admin
-    if (isAdmin) {
-      setShouldShow(true);
-      return;
+    try {
+      const userData = user ? JSON.parse(user) : null;
+      isAdmin = userData?.isAdmin === true;
+    } catch (e) {
+      console.error("Erreur lors de la lecture des données utilisateur:", e);
     }
     
-    // Sinon, vérifier si on est sur une page admin
+    // Vérifier si on est sur une page admin
     const isAdminPage = location.pathname.startsWith('/admin');
-    setShouldShow(isAdminPage);
+    
+    // Afficher la navigation si l'utilisateur est administrateur, 
+    // ou si on est sur une page admin
+    setShouldShow(isAdmin || isAdminPage);
   }, [location]);
   
+  // Si on ne doit pas afficher la navigation, retourner null
   if (!shouldShow) return null;
   
+  // Ajout d'un élément wrapper pour s'assurer que le style fixed bottom fonctionne correctement
   return <AdminNavigation />;
 };
 

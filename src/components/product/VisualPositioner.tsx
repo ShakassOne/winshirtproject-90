@@ -11,6 +11,8 @@ interface VisualPositionerProps {
   visual: Visual | null;
   visualSettings: ProductVisualSettings;
   onUpdateSettings: (settings: ProductVisualSettings) => void;
+  onPositionChange?: (position: 'front' | 'back') => void; // Nouveau callback pour notifier du changement
+  position: 'front' | 'back'; // Position actuelle passée en prop
   readOnly?: boolean;
   printAreas?: PrintArea[]; // Zones d'impression
   selectedPrintArea?: PrintArea | null; // Zone d'impression sélectionnée
@@ -22,6 +24,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   visual,
   visualSettings,
   onUpdateSettings,
+  onPositionChange,
+  position,
   readOnly = false,
   printAreas = [],
   selectedPrintArea = null
@@ -29,13 +33,19 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   const frontContainerRef = useRef<HTMLDivElement>(null);
   const backContainerRef = useRef<HTMLDivElement>(null);
   
-  const [position, setPosition] = useState<'front' | 'back'>('front');
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [startSize, setStartSize] = useState({ width: 0, height: 0 });
   const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
+  
+  // Handler pour le changement de position (recto/verso)
+  const handlePositionChange = (newPosition: string) => {
+    if (onPositionChange && (newPosition === 'front' || newPosition === 'back')) {
+      onPositionChange(newPosition as 'front' | 'back');
+    }
+  };
   
   // Récupérer les dimensions du conteneur
   useEffect(() => {
@@ -288,7 +298,7 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   
   return (
     <div className="space-y-4">
-      <Tabs value={position} onValueChange={(value) => setPosition(value as 'front' | 'back')} className="w-full">
+      <Tabs value={position} onValueChange={handlePositionChange} className="w-full">
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="front">Recto</TabsTrigger>
           <TabsTrigger value="back">Verso</TabsTrigger>

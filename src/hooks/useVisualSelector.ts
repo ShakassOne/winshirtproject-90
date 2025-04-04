@@ -17,11 +17,30 @@ export const useVisualSelector = (
   printAreas?: PrintArea[]
 ) => {
   const { getVisualById, visuals } = useVisuals();
-  const [selectedVisual, setSelectedVisual] = useState<Visual | null>(null);
-  const [visualSettings, setVisualSettings] = useState<ProductVisualSettings>({
-    ...DEFAULT_VISUAL_SETTINGS,
-    ...(initialSettings || {})
+  
+  // Séparer les visuels et réglages pour recto/verso
+  const [selectedVisuals, setSelectedVisuals] = useState<{
+    front: Visual | null;
+    back: Visual | null;
+  }>({
+    front: null,
+    back: null
   });
+  
+  const [visualSettings, setVisualSettings] = useState<{
+    front: ProductVisualSettings;
+    back: ProductVisualSettings;
+  }>({
+    front: {
+      ...DEFAULT_VISUAL_SETTINGS,
+      ...(initialSettings || {})
+    },
+    back: {
+      ...DEFAULT_VISUAL_SETTINGS,
+      ...(initialSettings || {})
+    }
+  });
+  
   const [activePosition, setActivePosition] = useState<'front' | 'back'>('front');
 
   // Déterminer la zone d'impression active en fonction de la position
@@ -45,7 +64,12 @@ export const useVisualSelector = (
       const visual = getVisualById(initialVisualId);
       if (visual) {
         console.log(`Found visual: ${visual.name}`);
-        setSelectedVisual(visual);
+        
+        // Initialiser pour la face active uniquement
+        setSelectedVisuals(prev => ({
+          ...prev,
+          [activePosition]: visual
+        }));
         
         // Initialiser les paramètres de position en fonction de la zone d'impression si disponible
         if (activePrintArea && !initialSettings?.position) {
@@ -55,31 +79,42 @@ export const useVisualSelector = (
           const centerX = bounds.x + (bounds.width - (initialSettings?.size?.width || DEFAULT_VISUAL_SETTINGS.size.width)) / 2;
           const centerY = bounds.y + (bounds.height - (initialSettings?.size?.height || DEFAULT_VISUAL_SETTINGS.size.height)) / 2;
           
-          setVisualSettings(prevSettings => ({
-            ...prevSettings,
-            visualId: visual.id,
-            position: { 
-              x: Math.max(bounds.x, centerX),
-              y: Math.max(bounds.y, centerY)
+          setVisualSettings(prev => ({
+            ...prev,
+            [activePosition]: {
+              ...prev[activePosition],
+              visualId: visual.id,
+              position: { 
+                x: Math.max(bounds.x, centerX),
+                y: Math.max(bounds.y, centerY)
+              }
             }
           }));
         } else {
           // Utiliser les paramètres initiaux ou par défaut
-          setVisualSettings(prevSettings => ({
-            ...prevSettings,
-            visualId: visual.id
+          setVisualSettings(prev => ({
+            ...prev,
+            [activePosition]: {
+              ...prev[activePosition],
+              visualId: visual.id
+            }
           }));
         }
       } else {
         console.log(`Visual id ${initialVisualId} not found`);
       }
     }
-  }, [initialVisualId, getVisualById, activePrintArea, initialSettings]);
+  }, [initialVisualId, getVisualById, activePrintArea, initialSettings, activePosition]);
 
   // Sélectionner un nouveau visuel
   const handleSelectVisual = (visual: Visual | null) => {
-    console.log(`Selected new visual: ${visual?.id || 'none'}`);
-    setSelectedVisual(visual);
+    console.log(`Selected new visual for ${activePosition}: ${visual?.id || 'none'}`);
+    
+    // Mettre à jour uniquement le visuel de la face active
+    setSelectedVisuals(prev => ({
+      ...prev,
+      [activePosition]: visual
+    }));
     
     if (visual) {
       // Ajuster la position en fonction de la zone d'impression si disponible
@@ -87,37 +122,49 @@ export const useVisualSelector = (
         const { bounds } = activePrintArea;
         
         // Centrer le visuel dans la zone d'impression
-        const centerX = bounds.x + (bounds.width - visualSettings.size.width) / 2;
-        const centerY = bounds.y + (bounds.height - visualSettings.size.height) / 2;
+        const centerX = bounds.x + (bounds.width - visualSettings[activePosition].size.width) / 2;
+        const centerY = bounds.y + (bounds.height - visualSettings[activePosition].size.height) / 2;
         
-        setVisualSettings(prevSettings => ({
-          ...prevSettings,
-          visualId: visual.id,
-          position: { 
-            x: Math.max(bounds.x, centerX),
-            y: Math.max(bounds.y, centerY)
+        setVisualSettings(prev => ({
+          ...prev,
+          [activePosition]: {
+            ...prev[activePosition],
+            visualId: visual.id,
+            position: { 
+              x: Math.max(bounds.x, centerX),
+              y: Math.max(bounds.y, centerY)
+            }
           }
         }));
       } else {
         // Utiliser une position par défaut
-        setVisualSettings(prevSettings => ({
-          ...prevSettings,
-          visualId: visual.id
+        setVisualSettings(prev => ({
+          ...prev,
+          [activePosition]: {
+            ...prev[activePosition],
+            visualId: visual.id
+          }
         }));
       }
     } else {
-      setVisualSettings(prevSettings => ({
-        ...prevSettings,
-        visualId: null
+      setVisualSettings(prev => ({
+        ...prev,
+        [activePosition]: {
+          ...prev[activePosition],
+          visualId: null
+        }
       }));
     }
   };
 
   // Mettre à jour les paramètres du visuel (position, taille, opacité)
   const handleUpdateSettings = (newSettings: Partial<ProductVisualSettings>) => {
-    setVisualSettings(prevSettings => ({
-      ...prevSettings,
-      ...newSettings
+    setVisualSettings(prev => ({
+      ...prev,
+      [activePosition]: {
+        ...prev[activePosition],
+        ...newSettings
+      }
     }));
   };
   
@@ -127,11 +174,15 @@ export const useVisualSelector = (
   };
 
   return {
-    selectedVisual,
-    visualSettings,
+    // Exposer les données pour la face active et toutes les faces
+    selectedVisual: selectedVisuals[activePosition],
+    visualSettings: visualSettings[activePosition],
     activePosition,
     setPosition,
     handleSelectVisual,
-    handleUpdateSettings
+    handleUpdateSettings,
+    // Exposer aussi les données pour toutes les faces
+    allVisuals: selectedVisuals,
+    allSettings: visualSettings
   };
 };
