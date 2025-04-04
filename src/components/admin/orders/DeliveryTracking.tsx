@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Order, DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,26 @@ import {
 import { formatDate } from '@/lib/utils';
 
 interface DeliveryTrackingProps {
-  order: Order;
-  onUpdateDelivery: (orderId: number, deliveryData: Partial<Order['delivery']>) => void;
-  onAddHistoryEntry: (orderId: number, entry: DeliveryHistoryEntry) => void;
+  delivery?: Order['delivery'];
+  onUpdateDeliveryInfo: () => void;
+  trackingInfo: {
+    carrier: string;
+    trackingNumber: string;
+    trackingUrl: string;
+  };
+  onTrackingInfoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  newHistoryEntry: {
+    status: DeliveryStatus;
+    location: string;
+    description: string;
+  };
+  setNewHistoryEntry: React.Dispatch<React.SetStateAction<{
+    status: DeliveryStatus;
+    location: string;
+    description: string;
+  }>>;
+  onAddHistoryEntry: () => void;
+  statusOptions: { value: string; label: string }[];
 }
 
 const statusLabels: Record<DeliveryStatus, string> = {
@@ -54,58 +72,16 @@ const statusIcons: Record<DeliveryStatus, React.ReactNode> = {
 };
 
 const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({ 
-  order, 
-  onUpdateDelivery, 
-  onAddHistoryEntry 
+  delivery,
+  onUpdateDeliveryInfo,
+  trackingInfo,
+  onTrackingInfoChange,
+  newHistoryEntry,
+  setNewHistoryEntry,
+  onAddHistoryEntry,
+  statusOptions
 }) => {
-  const [trackingNumber, setTrackingNumber] = useState(order.delivery?.trackingNumber || '');
-  const [carrier, setCarrier] = useState(order.delivery?.carrier || '');
-  const [trackingUrl, setTrackingUrl] = useState(order.delivery?.trackingUrl || '');
-  const [deliveryStatus, setDeliveryStatus] = useState<DeliveryStatus>(order.delivery?.status || 'preparing');
-  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(order.delivery?.estimatedDeliveryDate || '');
-  const [deliveryInstructions, setDeliveryInstructions] = useState(order.delivery?.deliveryInstructions || '');
-  const [signatureRequired, setSignatureRequired] = useState(order.delivery?.signatureRequired || false);
-  
-  // State pour le nouveau point d'historique
-  const [newHistoryLocation, setNewHistoryLocation] = useState('');
-  const [newHistoryDescription, setNewHistoryDescription] = useState('');
-  
-  const handleUpdateDelivery = () => {
-    const deliveryData = {
-      status: deliveryStatus,
-      trackingNumber,
-      carrier,
-      trackingUrl,
-      estimatedDeliveryDate,
-      deliveryInstructions,
-      signatureRequired,
-      lastUpdate: new Date().toISOString()
-    };
-    
-    onUpdateDelivery(order.id, deliveryData);
-    toast.success("Informations de livraison mises à jour");
-  };
-  
-  const handleAddHistoryEntry = () => {
-    if (!newHistoryDescription) {
-      toast.error("Veuillez ajouter une description pour cette mise à jour");
-      return;
-    }
-    
-    const newEntry: DeliveryHistoryEntry = {
-      date: new Date().toISOString(),
-      status: deliveryStatus,
-      location: newHistoryLocation,
-      description: newHistoryDescription
-    };
-    
-    onAddHistoryEntry(order.id, newEntry);
-    setNewHistoryLocation('');
-    setNewHistoryDescription('');
-    toast.success("Point de suivi ajouté à l'historique");
-  };
-  
-  // Fonction pour formater une date
+  // Display date formatting helper function
   const displayDate = (dateString?: string) => {
     if (!dateString) return "Non défini";
     return formatDate(dateString);
@@ -123,16 +99,21 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Statut de livraison</label>
-              <Select value={deliveryStatus} onValueChange={(value: DeliveryStatus) => setDeliveryStatus(value)}>
+              <Select 
+                value={newHistoryEntry.status} 
+                onValueChange={(value: DeliveryStatus) => 
+                  setNewHistoryEntry({...newHistoryEntry, status: value})
+                }
+              >
                 <SelectTrigger className="w-full bg-winshirt-space-light border-winshirt-purple/30">
                   <SelectValue placeholder="Choisir un statut" />
                 </SelectTrigger>
                 <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                  {Object.entries(statusLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
+                  {statusOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center gap-2">
-                        {statusIcons[value as DeliveryStatus]}
-                        <span>{label}</span>
+                        {statusIcons[option.value as DeliveryStatus]}
+                        <span>{option.label}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -142,7 +123,14 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
             
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Transporteur</label>
-              <Select value={carrier} onValueChange={setCarrier}>
+              <Select 
+                value={trackingInfo.carrier} 
+                onValueChange={(value) => 
+                  onTrackingInfoChange({
+                    target: { name: 'carrier', value }
+                  } as React.ChangeEvent<HTMLInputElement>)
+                }
+              >
                 <SelectTrigger className="w-full bg-winshirt-space-light border-winshirt-purple/30">
                   <SelectValue placeholder="Choisir un transporteur" />
                 </SelectTrigger>
@@ -160,8 +148,9 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Numéro de suivi</label>
               <Input 
-                value={trackingNumber} 
-                onChange={(e) => setTrackingNumber(e.target.value)}
+                name="trackingNumber"
+                value={trackingInfo.trackingNumber} 
+                onChange={onTrackingInfoChange}
                 className="bg-winshirt-space-light border-winshirt-purple/30"
                 placeholder="Numéro de suivi"
               />
@@ -170,50 +159,18 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
             <div>
               <label className="text-sm text-gray-400 mb-1 block">URL de suivi</label>
               <Input 
-                value={trackingUrl} 
-                onChange={(e) => setTrackingUrl(e.target.value)}
+                name="trackingUrl"
+                value={trackingInfo.trackingUrl} 
+                onChange={onTrackingInfoChange}
                 className="bg-winshirt-space-light border-winshirt-purple/30"
                 placeholder="URL de suivi"
               />
             </div>
-            
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Date de livraison estimée</label>
-              <Input 
-                type="date"
-                value={estimatedDeliveryDate ? estimatedDeliveryDate.split('T')[0] : ''} 
-                onChange={(e) => setEstimatedDeliveryDate(e.target.value ? new Date(e.target.value).toISOString() : '')}
-                className="bg-winshirt-space-light border-winshirt-purple/30"
-              />
-            </div>
-            
-            <div className="flex items-center gap-2 mt-6">
-              <input 
-                type="checkbox" 
-                id="signatureRequired" 
-                checked={signatureRequired}
-                onChange={(e) => setSignatureRequired(e.target.checked)}
-                className="rounded-sm bg-winshirt-space-light border-winshirt-purple/30"
-              />
-              <label htmlFor="signatureRequired" className="text-white">
-                Signature requise à la livraison
-              </label>
-            </div>
-          </div>
-          
-          <div className="mt-4">
-            <label className="text-sm text-gray-400 mb-1 block">Instructions de livraison</label>
-            <Textarea 
-              value={deliveryInstructions} 
-              onChange={(e) => setDeliveryInstructions(e.target.value)}
-              className="bg-winshirt-space-light border-winshirt-purple/30 min-h-24"
-              placeholder="Instructions spéciales pour le livreur..."
-            />
           </div>
           
           <Button 
             className="w-full mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
-            onClick={handleUpdateDelivery}
+            onClick={onUpdateDeliveryInfo}
           >
             Mettre à jour les informations de livraison
           </Button>
@@ -232,8 +189,8 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Emplacement</label>
               <Input 
-                value={newHistoryLocation} 
-                onChange={(e) => setNewHistoryLocation(e.target.value)}
+                value={newHistoryEntry.location} 
+                onChange={(e) => setNewHistoryEntry({...newHistoryEntry, location: e.target.value})}
                 className="bg-winshirt-space-light border-winshirt-purple/30"
                 placeholder="Centre de tri, ville, pays..."
               />
@@ -242,8 +199,8 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Description de la mise à jour</label>
               <Textarea 
-                value={newHistoryDescription} 
-                onChange={(e) => setNewHistoryDescription(e.target.value)}
+                value={newHistoryEntry.description} 
+                onChange={(e) => setNewHistoryEntry({...newHistoryEntry, description: e.target.value})}
                 className="bg-winshirt-space-light border-winshirt-purple/30"
                 placeholder="Colis en cours de traitement au centre de tri..."
               />
@@ -251,7 +208,7 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
             
             <Button 
               className="w-full bg-winshirt-blue hover:bg-winshirt-blue-dark"
-              onClick={handleAddHistoryEntry}
+              onClick={onAddHistoryEntry}
             >
               Ajouter cette mise à jour
             </Button>
@@ -267,9 +224,9 @@ const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({
             Historique de livraison
           </h3>
           
-          {order.delivery?.history && order.delivery.history.length > 0 ? (
+          {delivery?.history && delivery.history.length > 0 ? (
             <div className="space-y-4">
-              {order.delivery.history.sort((a, b) => 
+              {delivery.history.sort((a, b) => 
                 new Date(b.date).getTime() - new Date(a.date).getTime()
               ).map((entry, index) => (
                 <div key={index} className="border-l-2 border-winshirt-purple pl-4 py-2">
