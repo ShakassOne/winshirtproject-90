@@ -17,7 +17,12 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   onSelectVisual,
   categoryId
 }) => {
-  const { getCategories, getVisualsByCategory, getVisualsByCategoryId } = useVisuals();
+  const { 
+    getCategories, 
+    getVisualsByCategory,
+    visuals: allVisuals
+  } = useVisuals();
+  
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [categories, setCategories] = useState<VisualCategory[]>([]);
   const [visuals, setVisuals] = useState<Visual[]>([]);
@@ -34,23 +39,25 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
         const categoryIdStr = categoryId.toString();
         setActiveCategory(categoryIdStr);
         
-        // Utiliser le bon getter en fonction de la situation
-        const categoryVisuals = getVisualsByCategoryId 
-          ? getVisualsByCategoryId(categoryId) 
-          : getVisualsByCategory(categoryId);
-          
+        // Récupérer les visuels pour cette catégorie
+        const categoryVisuals = getVisualsByCategory(categoryId);
         setVisuals(categoryVisuals);
       } else if (allCategories[0]) {
         const firstCatId = allCategories[0].id.toString();
         setActiveCategory(firstCatId);
-        setVisuals(getVisualsByCategory(allCategories[0].id));
+        
+        // Récupérer les visuels pour cette catégorie
+        const firstCategoryVisuals = getVisualsByCategory(allCategories[0].id);
+        setVisuals(firstCategoryVisuals);
       }
     }
-  }, [categoryId, getCategories, getVisualsByCategory, getVisualsByCategoryId]);
+  }, [categoryId, getCategories, getVisualsByCategory]);
   
   const handleCategoryChange = (categoryId: string) => {
     setActiveCategory(categoryId);
-    setVisuals(getVisualsByCategory(Number(categoryId)));
+    const categoryVisuals = getVisualsByCategory(Number(categoryId));
+    console.log(`Switching to category ${categoryId} with ${categoryVisuals.length} visuals`);
+    setVisuals(categoryVisuals);
   };
   
   const handleSelectVisual = (visual: Visual) => {

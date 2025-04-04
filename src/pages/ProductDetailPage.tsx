@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { ShoppingCart, Ticket, Truck, Weight } from 'lucide-react';
 import { mockProducts, mockLotteries } from '@/data/mockData';
 import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedProduct, PrintArea } from '@/types/product';
 import { useAuth } from '@/contexts/AuthContext';
 import { VisualCategory, Visual } from '@/types/visual';
 import { 
@@ -39,6 +40,9 @@ const ProductDetailPage: React.FC = () => {
   // Tableau de loteries sélectionnées pour gérer plusieurs tickets
   const [selectedLotteries, setSelectedLotteries] = useState<string[]>([]);
   
+  // Pour gérer la zone d'impression sélectionnée
+  const [selectedPrintArea, setSelectedPrintArea] = useState<PrintArea | null>(null);
+  
   // Nouveau state pour le visuel sélectionné
   const { 
     selectedVisual, 
@@ -64,6 +68,12 @@ const ProductDetailPage: React.FC = () => {
             setProduct(foundProduct);
             // Initialiser le tableau des loteries sélectionnées
             setSelectedLotteries(Array(foundProduct.tickets || 1).fill(''));
+            
+            // Initialiser la zone d'impression si disponible
+            if (foundProduct.printAreas && foundProduct.printAreas.length > 0) {
+              setSelectedPrintArea(foundProduct.printAreas[0]);
+            }
+            
             setLoading(false);
             return;
           }
@@ -107,6 +117,16 @@ const ProductDetailPage: React.FC = () => {
     const newSelectedLotteries = [...selectedLotteries];
     newSelectedLotteries[index] = lotteryId;
     setSelectedLotteries(newSelectedLotteries);
+  };
+  
+  // Gérer le changement de zone d'impression
+  const handlePrintAreaChange = (areaId: number) => {
+    if (product && product.printAreas) {
+      const selectedArea = product.printAreas.find(area => area.id === areaId);
+      if (selectedArea) {
+        setSelectedPrintArea(selectedArea);
+      }
+    }
   };
   
   if (loading) {
@@ -181,7 +201,8 @@ const ProductDetailPage: React.FC = () => {
         visualId: selectedVisual.id,
         visualName: selectedVisual.name,
         visualImage: selectedVisual.image,
-        settings: visualSettings
+        settings: visualSettings,
+        printAreaId: selectedPrintArea ? selectedPrintArea.id : null
       } : null
     };
     
@@ -208,6 +229,9 @@ const ProductDetailPage: React.FC = () => {
   // Vérifier si la personnalisation est permise - simplifié pour utiliser juste le flag allowCustomization
   const canCustomize = product.allowCustomization === true;
   
+  // Vérifier si le produit a des zones d'impression
+  const hasPrintAreas = product.printAreas && product.printAreas.length > 0;
+  
   return (
     <>
       <StarBackground />
@@ -232,21 +256,49 @@ const ProductDetailPage: React.FC = () => {
                         visualSettings={visualSettings}
                         onUpdateSettings={handleUpdateSettings}
                         readOnly={true}
+                        printAreas={product.printAreas}
+                        selectedPrintArea={selectedPrintArea}
                       />
                     </TabsContent>
                     
                     <TabsContent value="customize" className="mt-0 space-y-6">
+                      {/* Zone de positionnement du visuel */}
                       <VisualPositioner
                         productImage={product.image}
                         visual={selectedVisual}
                         visualSettings={visualSettings}
                         onUpdateSettings={handleUpdateSettings}
+                        printAreas={product.printAreas}
+                        selectedPrintArea={selectedPrintArea}
                       />
                       
+                      {/* Sélection de la zone d'impression si disponible */}
+                      {hasPrintAreas && (
+                        <div className="space-y-2">
+                          <Label className="text-white">Zone d'impression</Label>
+                          <Select
+                            value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
+                            onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
+                          >
+                            <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                              <SelectValue placeholder="Choisir une zone d'impression" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                              {product.printAreas?.map(area => (
+                                <SelectItem key={area.id} value={area.id.toString()}>
+                                  {area.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      
+                      {/* Sélection du visuel */}
                       <VisualSelector
                         selectedVisualId={selectedVisual?.id || null}
                         onSelectVisual={handleSelectVisual}
-                        categoryId={1} 
+                        categoryId={product.visualCategoryId || 1} 
                       />
                     </TabsContent>
                   </Tabs>
@@ -320,7 +372,10 @@ const ProductDetailPage: React.FC = () => {
                   {canCustomize && (
                     <div className="mt-2 bg-winshirt-purple/10 border border-winshirt-purple/30 rounded-md p-2">
                       <p className="text-gray-200">
-                        Personnalisez votre {product.name} avec un visuel dans l'onglet "Personnaliser".
+                        {hasPrintAreas 
+                          ? "Personnalisez votre produit avec un visuel dans l'onglet \"Personnaliser\". Les zones d'impression sont préconfigurées."
+                          : "Personnalisez votre produit avec un visuel dans l'onglet \"Personnaliser\"."
+                        }
                       </p>
                     </div>
                   )}

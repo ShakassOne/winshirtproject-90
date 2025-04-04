@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Slider } from "@/components/ui/slider";
 import { Visual, ProductVisualSettings } from '@/types/visual';
+import { PrintArea } from '@/types/product';
 
 interface VisualPositionerProps {
   productImage: string;
@@ -9,6 +10,8 @@ interface VisualPositionerProps {
   visualSettings: ProductVisualSettings;
   onUpdateSettings: (settings: ProductVisualSettings) => void;
   readOnly?: boolean;
+  printAreas?: PrintArea[]; // Ajout des zones d'impression
+  selectedPrintArea?: PrintArea | null; // Zone d'impression sélectionnée
 }
 
 const VisualPositioner: React.FC<VisualPositionerProps> = ({
@@ -16,7 +19,9 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   visual,
   visualSettings,
   onUpdateSettings,
-  readOnly = false
+  readOnly = false,
+  printAreas = [],
+  selectedPrintArea = null
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const visualRef = useRef<HTMLDivElement>(null);
@@ -26,6 +31,13 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [startSize, setStartSize] = useState({ width: 0, height: 0 });
+  
+  // Utilisé pour déterminer si nous avons des zones d'impression à respecter
+  const hasRestrictedAreas = printAreas && printAreas.length > 0;
+  
+  // Déterminer la zone d'impression active (pour le client)
+  const activePrintArea = selectedPrintArea || 
+    (hasRestrictedAreas ? printAreas[0] : null);
   
   const handleMouseDown = (e: React.MouseEvent) => {
     if (readOnly || !visual) return;
@@ -47,9 +59,18 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
       let newX = e.clientX - startPos.x;
       let newY = e.clientY - startPos.y;
       
-      // Contraindre le visuel à l'intérieur du conteneur
-      newX = Math.max(0, Math.min(newX, containerRect.width - visualSettings.size.width));
-      newY = Math.max(0, Math.min(newY, containerRect.height - visualSettings.size.height));
+      // Si nous avons une zone d'impression active, contraindre le mouvement à cette zone
+      if (activePrintArea) {
+        const { bounds } = activePrintArea;
+        
+        // Contraindre le visuel à l'intérieur de la zone d'impression
+        newX = Math.max(bounds.x, Math.min(newX, bounds.x + bounds.width - visualSettings.size.width));
+        newY = Math.max(bounds.y, Math.min(newY, bounds.y + bounds.height - visualSettings.size.height));
+      } else {
+        // Contraindre le visuel à l'intérieur du conteneur
+        newX = Math.max(0, Math.min(newX, containerRect.width - visualSettings.size.width));
+        newY = Math.max(0, Math.min(newY, containerRect.height - visualSettings.size.height));
+      }
       
       onUpdateSettings({
         ...visualSettings,
@@ -68,22 +89,62 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
       // Ajuster la taille basée sur la direction du redimensionnement
       if (resizeDirection.includes('e')) {
         newWidth = Math.max(50, startSize.width + (e.clientX - startPos.x));
-        newWidth = Math.min(newWidth, containerRect.width - visualSettings.position.x);
+        // Si nous avons une zone d'impression active, limiter la largeur
+        if (activePrintArea) {
+          const maxWidth = activePrintArea.bounds.x + activePrintArea.bounds.width - visualSettings.position.x;
+          newWidth = Math.min(newWidth, maxWidth);
+        } else {
+          newWidth = Math.min(newWidth, containerRect.width - visualSettings.position.x);
+        }
       }
       if (resizeDirection.includes('w')) {
         const diff = startPos.x - e.clientX;
         newWidth = Math.max(50, startSize.width + diff);
-        newX = Math.max(0, visualSettings.position.x - diff);
+        
+        // Calculer la nouvelle position X
+        const potentialNewX = Math.max(0, visualSettings.position.x - diff);
+        
+        // Si nous avons une zone d'impression active, vérifier les limites
+        if (activePrintArea) {
+          newX = Math.max(activePrintArea.bounds.x, potentialNewX);
+          // Ajuster la largeur en fonction de la position X
+          if (potentialNewX < activePrintArea.bounds.x) {
+            newWidth = startSize.width + (visualSettings.position.x - activePrintArea.bounds.x);
+          }
+        } else {
+          newX = potentialNewX;
+        }
+        
         newWidth = Math.min(newWidth, containerRect.width - newX);
       }
       if (resizeDirection.includes('s')) {
         newHeight = Math.max(50, startSize.height + (e.clientY - startPos.y));
-        newHeight = Math.min(newHeight, containerRect.height - visualSettings.position.y);
+        // Si nous avons une zone d'impression active, limiter la hauteur
+        if (activePrintArea) {
+          const maxHeight = activePrintArea.bounds.y + activePrintArea.bounds.height - visualSettings.position.y;
+          newHeight = Math.min(newHeight, maxHeight);
+        } else {
+          newHeight = Math.min(newHeight, containerRect.height - visualSettings.position.y);
+        }
       }
       if (resizeDirection.includes('n')) {
         const diff = startPos.y - e.clientY;
         newHeight = Math.max(50, startSize.height + diff);
-        newY = Math.max(0, visualSettings.position.y - diff);
+        
+        // Calculer la nouvelle position Y
+        const potentialNewY = Math.max(0, visualSettings.position.y - diff);
+        
+        // Si nous avons une zone d'impression active, vérifier les limites
+        if (activePrintArea) {
+          newY = Math.max(activePrintArea.bounds.y, potentialNewY);
+          // Ajuster la hauteur en fonction de la position Y
+          if (potentialNewY < activePrintArea.bounds.y) {
+            newHeight = startSize.height + (visualSettings.position.y - activePrintArea.bounds.y);
+          }
+        } else {
+          newY = potentialNewY;
+        }
+        
         newHeight = Math.min(newHeight, containerRect.height - newY);
       }
       
@@ -135,7 +196,33 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, isResizing, startPos, startSize, resizeDirection, readOnly]);
+  }, [isDragging, isResizing, startPos, startSize, resizeDirection, readOnly, activePrintArea]);
+  
+  // Repositionner le visuel à l'intérieur de la zone d'impression quand celle-ci change
+  useEffect(() => {
+    if (activePrintArea && visual) {
+      let newX = visualSettings.position.x;
+      let newY = visualSettings.position.y;
+      const { bounds } = activePrintArea;
+      
+      // Vérifier si le visuel est en dehors de la zone d'impression
+      const isOutsideX = newX < bounds.x || newX + visualSettings.size.width > bounds.x + bounds.width;
+      const isOutsideY = newY < bounds.y || newY + visualSettings.size.height > bounds.y + bounds.height;
+      
+      // Repositionner si nécessaire
+      if (isOutsideX || isOutsideY) {
+        // Contraindre le visuel à l'intérieur de la zone d'impression
+        newX = Math.max(bounds.x, Math.min(newX, bounds.x + bounds.width - visualSettings.size.width));
+        newY = Math.max(bounds.y, Math.min(newY, bounds.y + bounds.height - visualSettings.size.height));
+        
+        // Mettre à jour les paramètres
+        onUpdateSettings({
+          ...visualSettings,
+          position: { x: newX, y: newY }
+        });
+      }
+    }
+  }, [activePrintArea, visual]);
   
   return (
     <div className="space-y-4">
@@ -153,6 +240,34 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
           alt="Produit" 
           className="w-full h-full object-contain"
         />
+        
+        {/* Affichage des zones d'impression */}
+        {printAreas && printAreas.length > 0 && (
+          <>
+            {printAreas.map(area => (
+              <div
+                key={area.id}
+                className={`absolute border-2 ${activePrintArea && activePrintArea.id === area.id 
+                  ? 'border-winshirt-blue' 
+                  : 'border-winshirt-purple/30 border-dashed'
+                }`}
+                style={{
+                  left: `${area.bounds.x}px`,
+                  top: `${area.bounds.y}px`,
+                  width: `${area.bounds.width}px`,
+                  height: `${area.bounds.height}px`,
+                  pointerEvents: 'none'
+                }}
+              >
+                <div 
+                  className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t"
+                >
+                  {area.name}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
         
         {visual && (
           <div

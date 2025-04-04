@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedProduct, PrintArea } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import { toast } from '@/lib/toast';
 
@@ -49,6 +49,8 @@ const productFormSchema = z.object({
   brand: z.string().optional(),
 });
 
+export type ProductFormValues = z.infer<typeof productFormSchema>;
+
 export const useProductForm = (
   products: ExtendedProduct[],
   setProducts: React.Dispatch<React.SetStateAction<ExtendedProduct[]>>,
@@ -57,7 +59,7 @@ export const useProductForm = (
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
-  const form = useForm<z.infer<typeof productFormSchema>>({
+  const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       name: "",
@@ -143,7 +145,7 @@ export const useProductForm = (
     }
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: ProductFormValues) => {
     try {
       console.log("Form data submitted:", data);
       
@@ -183,6 +185,10 @@ export const useProductForm = (
         visualCategoryId: data.allowCustomization ? 
           (data.visualCategoryId || 1) : null,
         printAreas: data.printAreas || [],
+        gender: data.gender,
+        material: data.material,
+        fit: data.fit,
+        brand: data.brand,
       };
 
       if (isCreating) {
@@ -265,7 +271,7 @@ export const useProductForm = (
   };
   
   // Fonction pour ajouter une zone d'impression
-  const addPrintArea = (printArea: any) => {
+  const addPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
     const currentPrintAreas = form.getValues().printAreas || [];
     
     // Générer un ID unique pour la nouvelle zone d'impression
@@ -282,7 +288,7 @@ export const useProductForm = (
   };
   
   // Fonction pour mettre à jour une zone d'impression existante
-  const updatePrintArea = (id: number, updatedData: any) => {
+  const updatePrintArea = (id: number, updatedData: Partial<PrintArea>) => {
     const currentPrintAreas = form.getValues().printAreas || [];
     const updatedPrintAreas = currentPrintAreas.map(area => 
       area.id === id ? { ...area, ...updatedData } : area

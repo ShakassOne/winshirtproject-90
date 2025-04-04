@@ -10,7 +10,7 @@ import ProductList from '@/components/admin/products/ProductList';
 import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Button } from "@/components/ui/button";
-import { Download, Upload, FileJson } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { toast } from '@/lib/toast';
 
 const AdminProductsPage: React.FC = () => {
@@ -112,7 +112,10 @@ const AdminProductsPage: React.FC = () => {
     removeColor,
     toggleLottery,
     selectAllLotteries,
-    deselectAllLotteries
+    deselectAllLotteries,
+    addPrintArea,
+    updatePrintArea,
+    removePrintArea
   } = useProductForm(products, setProducts, activeLotteries);
   
   // Export products to JSON file
@@ -231,6 +234,9 @@ const AdminProductsPage: React.FC = () => {
                   toggleLottery={toggleLottery}
                   selectAllLotteries={selectAllLotteries}
                   deselectAllLotteries={deselectAllLotteries}
+                  addPrintArea={addPrintArea}
+                  updatePrintArea={updatePrintArea}
+                  removePrintArea={removePrintArea}
                 />
               </div>
             </div>
