@@ -361,12 +361,13 @@ export const useProductForm = (
           name: updatedData.name !== undefined ? updatedData.name : area.name,
           format: updatedData.format !== undefined ? updatedData.format : area.format,
           position: updatedData.position !== undefined ? updatedData.position : area.position,
-          bounds: updatedData.bounds ? {
-            x: updatedData.bounds.x !== undefined ? updatedData.bounds.x : area.bounds.x,
-            y: updatedData.bounds.y !== undefined ? updatedData.bounds.y : area.bounds.y,
-            width: updatedData.bounds.width !== undefined ? updatedData.bounds.width : area.bounds.width,
-            height: updatedData.bounds.height !== undefined ? updatedData.bounds.height : area.bounds.height
-          } : area.bounds,
+          bounds: {
+            // Make sure to use all non-optional properties for bounds
+            x: updatedData.bounds && updatedData.bounds.x !== undefined ? updatedData.bounds.x : area.bounds.x,
+            y: updatedData.bounds && updatedData.bounds.y !== undefined ? updatedData.bounds.y : area.bounds.y,
+            width: updatedData.bounds && updatedData.bounds.width !== undefined ? updatedData.bounds.width : area.bounds.width,
+            height: updatedData.bounds && updatedData.bounds.height !== undefined ? updatedData.bounds.height : area.bounds.height
+          },
           allowCustomPosition: updatedData.allowCustomPosition !== undefined ? 
             updatedData.allowCustomPosition : (area.allowCustomPosition ?? true)
         };
