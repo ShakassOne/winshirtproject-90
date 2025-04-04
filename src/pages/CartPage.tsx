@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
 import { useAuth } from '@/contexts/AuthContext';
-import { X, ShoppingBag, AlertTriangle, CreditCard, Check, MapPin, Truck } from 'lucide-react';
+import { X, ShoppingBag, AlertTriangle, CreditCard, Check, MapPin, Truck, User, Lock } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import {
   Select,
@@ -35,11 +36,12 @@ interface CartItem {
   secondaryImage?: string;
   tickets: number;
   selectedLotteries: { id: number; name: string }[];
+  customVisual?: string; // Ajout du champ customVisual pour stocker l'URL de l'image personnalisée
 }
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, register } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [total, setTotal] = useState(0);
   const [isCheckout, setIsCheckout] = useState(false);
@@ -54,9 +56,16 @@ const CartPage: React.FC = () => {
     expiryDate: '',
     cvv: ''
   });
+  const [userInfo, setUserInfo] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phoneNumber: ''
+  });
   const [isOrderConfirmed, setIsOrderConfirmed] = useState(false);
   const [selectedShipping, setSelectedShipping] = useState<string | null>(null);
   const [shippingCost, setShippingCost] = useState(0);
+  const [showAuthForm, setShowAuthForm] = useState(false);
   
   useEffect(() => {
     // Load cart from localStorage
@@ -65,7 +74,17 @@ const CartPage: React.FC = () => {
       const cartItems = JSON.parse(cartString) as CartItem[];
       setCart(cartItems);
     }
-  }, []);
+    
+    // Si l'utilisateur est connecté, pré-remplir les infos
+    if (user) {
+      setUserInfo({
+        name: user.name || '',
+        email: user.email || '',
+        password: '',
+        phoneNumber: user.phoneNumber || user.phone || ''
+      });
+    }
+  }, [user]);
   
   useEffect(() => {
     // Calculate total when cart changes
@@ -106,13 +125,11 @@ const CartPage: React.FC = () => {
       return;
     }
     
-    if (!user) {
-      toast.error("Vous devez être connecté pour passer à la caisse");
-      navigate('/login');
-      return;
-    }
-    
     setIsCheckout(true);
+    
+    if (!user) {
+      setShowAuthForm(true);
+    }
   };
   
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,6 +142,13 @@ const CartPage: React.FC = () => {
   const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPaymentInfo({
       ...paymentInfo,
+      [e.target.name]: e.target.value
+    });
+  };
+  
+  const handleUserInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUserInfo({
+      ...userInfo,
       [e.target.name]: e.target.value
     });
   };
@@ -156,7 +180,7 @@ const CartPage: React.FC = () => {
           id: orderData.clientId,
           name: orderData.clientName,
           email: orderData.clientEmail,
-          phone: user?.phoneNumber || '', // Use phoneNumber instead of phone
+          phone: userInfo.phoneNumber || '',
           address: shippingAddress.address,
           city: shippingAddress.city,
           postalCode: shippingAddress.zipCode,
@@ -187,6 +211,32 @@ const CartPage: React.FC = () => {
     }
   };
   
+  const handleRegisterAndOrder = async () => {
+    // Vérifier les champs obligatoires
+    if (!userInfo.name || !userInfo.email || !userInfo.password) {
+      toast.error("Veuillez remplir tous les champs d'inscription obligatoires");
+      return;
+    }
+    
+    try {
+      toast.loading("Création de votre compte...");
+      
+      // Essayer d'inscrire l'utilisateur
+      await register(userInfo.name, userInfo.email, userInfo.password);
+      
+      // Si l'inscription a réussi, continuer avec la commande
+      toast.dismiss();
+      toast.success("Compte créé avec succès");
+      
+      // Procéder au traitement de la commande
+      handleConfirmOrder();
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Erreur lors de la création du compte");
+      console.error("Erreur d'inscription:", error);
+    }
+  };
+  
   const handleConfirmOrder = () => {
     if (!shippingAddress.address || !shippingAddress.city || !shippingAddress.zipCode || !shippingAddress.country) {
       toast.error("Veuillez remplir tous les champs d'adresse de livraison");
@@ -203,6 +253,12 @@ const CartPage: React.FC = () => {
       return;
     }
     
+    // Si l'utilisateur n'est pas connecté et que le formulaire d'inscription est affiché
+    if (!user && showAuthForm) {
+      handleRegisterAndOrder();
+      return;
+    }
+    
     // Show processing state
     toast.loading("Traitement de votre commande...");
     
@@ -211,15 +267,20 @@ const CartPage: React.FC = () => {
       const orderDate = new Date().toISOString();
       const orderId = Date.now();
       
+      // Si l'utilisateur est connecté, utiliser ses informations
+      const clientId = user ? user.id : Math.floor(Math.random() * 10000) + 1000;
+      const clientName = user ? user.name : userInfo.name;
+      const clientEmail = user ? user.email : userInfo.email;
+      
       // Get products for detailed information
       const productsString = localStorage.getItem('products');
       const products = productsString ? JSON.parse(productsString) : [];
       
       const order: Order = {
         id: orderId,
-        clientId: user?.id || 0,
-        clientName: user?.name || '',
-        clientEmail: user?.email || '',
+        clientId: clientId,
+        clientName: clientName,
+        clientEmail: clientEmail,
         orderDate: orderDate,
         status: 'processing',
         items: cart.map(item => {
@@ -228,7 +289,7 @@ const CartPage: React.FC = () => {
             id: Date.now() + Math.floor(Math.random() * 1000) + item.id,
             productId: item.id,
             productName: item.name,
-            productImage: item.image || 'https://placehold.co/600x400/png',
+            productImage: item.customVisual || item.image || 'https://placehold.co/600x400/png',
             quantity: item.quantity,
             price: item.price,
             size: item.size || 'M',
@@ -328,11 +389,11 @@ const CartPage: React.FC = () => {
           const lotteryIndex = lotteries.findIndex((l: any) => l.id === selectedLottery.id);
           if (lotteryIndex === -1) return;
           
-          // Create participant based on current user
+          // Create participant based on current user or new user info
           const participant = {
             id: Date.now() + Math.floor(Math.random() * 1000),
-            name: user?.name || 'Anonymous',
-            email: user?.email || 'anonymous@example.com',
+            name: user ? user.name : userInfo.name || 'Anonymous',
+            email: user ? user.email : userInfo.email || 'anonymous@example.com',
             avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
           };
           
@@ -433,7 +494,7 @@ const CartPage: React.FC = () => {
                     <div key={item.id} className="flex items-center justify-between py-4 border-b border-winshirt-purple/20">
                       <div className="flex items-center">
                         <img 
-                          src={item.image} 
+                          src={item.customVisual || item.image} 
                           alt={item.name} 
                           className="w-20 h-20 object-cover rounded-md mr-4" 
                         />
@@ -453,6 +514,9 @@ const CartPage: React.FC = () => {
                                   </span>
                                 ))}
                               </>
+                            )}
+                            {item.customVisual && (
+                              <span className="ml-2 text-winshirt-purple-light">(Visuel personnalisé)</span>
                             )}
                           </p>
                         </div>
@@ -511,6 +575,61 @@ const CartPage: React.FC = () => {
               <h2 className="text-2xl font-bold text-white mb-6">Informations de livraison et de paiement</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* User Information (if not logged in) */}
+                {showAuthForm && !user && (
+                  <div className="md:col-span-2 mb-4 p-4 border border-winshirt-purple/30 rounded-md bg-winshirt-space-light/30">
+                    <h3 className="text-xl font-medium text-white mb-4 flex items-center">
+                      <User className="mr-2" size={20} />
+                      Créer un compte
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Input
+                          type="text"
+                          name="name"
+                          placeholder="Nom complet"
+                          value={userInfo.name}
+                          onChange={handleUserInfoChange}
+                          className="bg-winshirt-space-light border-winshirt-purple/30 h-12 mb-3"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          type="text"
+                          name="phoneNumber"
+                          placeholder="Téléphone"
+                          value={userInfo.phoneNumber}
+                          onChange={handleUserInfoChange}
+                          className="bg-winshirt-space-light border-winshirt-purple/30 h-12 mb-3"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          type="email"
+                          name="email"
+                          placeholder="Email"
+                          value={userInfo.email}
+                          onChange={handleUserInfoChange}
+                          className="bg-winshirt-space-light border-winshirt-purple/30 h-12 mb-3"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          type="password"
+                          name="password"
+                          placeholder="Mot de passe"
+                          value={userInfo.password}
+                          onChange={handleUserInfoChange}
+                          className="bg-winshirt-space-light border-winshirt-purple/30 h-12 mb-3"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-400 mt-2">
+                      La création d'un compte vous permettra de suivre vos commandes et d'accéder à votre historique.
+                    </p>
+                  </div>
+                )}
+                
                 {/* Shipping Information */}
                 <div>
                   <h3 className="text-xl font-medium text-white mb-4 flex items-center">
@@ -602,9 +721,10 @@ const CartPage: React.FC = () => {
               <div className="flex justify-end mt-6">
                 <Button 
                   onClick={handleConfirmOrder}
-                  className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                  className="bg-winshirt-purple hover:bg-winshirt-purple-dark flex items-center"
                 >
-                  Confirmer la commande
+                  <Lock className="mr-2" size={16} />
+                  {!user && showAuthForm ? "Créer mon compte et confirmer la commande" : "Confirmer la commande"}
                 </Button>
               </div>
             </div>
