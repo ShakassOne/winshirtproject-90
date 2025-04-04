@@ -113,17 +113,17 @@ export const useVisuals = () => {
           if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
             setCategories(parsedCategories);
           } else {
-            setCategories(defaultCategories);
-            localStorage.setItem('visualCategories', JSON.stringify(defaultCategories));
+            setCategories(mockVisualCategories);
+            localStorage.setItem('visualCategories', JSON.stringify(mockVisualCategories));
           }
         } catch (error) {
           console.error("Error loading visual categories:", error);
-          setCategories(defaultCategories);
-          localStorage.setItem('visualCategories', JSON.stringify(defaultCategories));
+          setCategories(mockVisualCategories);
+          localStorage.setItem('visualCategories', JSON.stringify(mockVisualCategories));
         }
       } else {
-        setCategories(defaultCategories);
-        localStorage.setItem('visualCategories', JSON.stringify(defaultCategories));
+        setCategories(mockVisualCategories);
+        localStorage.setItem('visualCategories', JSON.stringify(mockVisualCategories));
       }
       
       // Charger les visuels
@@ -134,17 +134,17 @@ export const useVisuals = () => {
           if (Array.isArray(parsedVisuals) && parsedVisuals.length > 0) {
             setVisuals(parsedVisuals);
           } else {
-            setVisuals(defaultVisuals);
-            localStorage.setItem('visuals', JSON.stringify(defaultVisuals));
+            setVisuals(mockVisuals);
+            localStorage.setItem('visuals', JSON.stringify(mockVisuals));
           }
         } catch (error) {
           console.error("Error loading visuals:", error);
-          setVisuals(defaultVisuals);
-          localStorage.setItem('visuals', JSON.stringify(defaultVisuals));
+          setVisuals(mockVisuals);
+          localStorage.setItem('visuals', JSON.stringify(mockVisuals));
         }
       } else {
-        setVisuals(defaultVisuals);
-        localStorage.setItem('visuals', JSON.stringify(defaultVisuals));
+        setVisuals(mockVisuals);
+        localStorage.setItem('visuals', JSON.stringify(mockVisuals));
       }
     };
     
