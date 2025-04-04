@@ -85,29 +85,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
     });
   };
   
-  const getOrderStatusOptions = () => {
-    return [
-      { value: 'pending', label: 'En attente' },
-      { value: 'processing', label: 'En traitement' },
-      { value: 'shipped', label: 'Expédiée' },
-      { value: 'delivered', label: 'Livrée' },
-      { value: 'cancelled', label: 'Annulée' },
-      { value: 'refunded', label: 'Remboursée' }
-    ];
-  };
-  
-  const getDeliveryStatusOptions = () => {
-    return [
-      { value: 'preparing', label: 'En préparation' },
-      { value: 'ready_to_ship', label: 'Prêt à expédier' },
-      { value: 'in_transit', label: 'En transit' },
-      { value: 'out_for_delivery', label: 'En cours de livraison' },
-      { value: 'delivered', label: 'Livré' },
-      { value: 'failed', label: 'Échec de livraison' },
-      { value: 'returned', label: 'Retourné' }
-    ];
-  };
-  
+  // Removed duplicate declaration - kept only one version of each function
   const getOrderStatusOptions = () => {
     return [
       { value: 'pending', label: 'En attente' },
