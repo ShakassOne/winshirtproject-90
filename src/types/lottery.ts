@@ -3,7 +3,7 @@ export interface ExtendedLottery {
   id: number;
   title: string;
   description: string;
-  value: number;
+  value: number;  // This is used instead of prize
   targetParticipants: number;
   currentParticipants: number;
   status: "active" | "completed" | "relaunched" | "cancelled";

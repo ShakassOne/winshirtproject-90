@@ -74,13 +74,27 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
     if (field.includes('.')) {
       // Handle nested fields like 'bounds.x'
       const [parent, child] = field.split('.');
-      setEditingArea({
-        ...editingArea,
-        [parent]: {
-          ...editingArea[parent as keyof PrintArea],
-          [child]: value
+      if (parent === 'bounds') {
+        setEditingArea({
+          ...editingArea,
+          bounds: {
+            ...editingArea.bounds,
+            [child]: value
+          }
+        });
+      } else {
+        // Handle other potential nested fields safely
+        const parentObj = editingArea[parent as keyof PrintArea];
+        if (parentObj && typeof parentObj === 'object') {
+          setEditingArea({
+            ...editingArea,
+            [parent]: {
+              ...parentObj,
+              [child]: value
+            }
+          });
         }
-      });
+      }
     } else {
       setEditingArea({
         ...editingArea,
@@ -93,13 +107,27 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
     if (field.includes('.')) {
       // Handle nested fields like 'bounds.x'
       const [parent, child] = field.split('.');
-      setNewArea({
-        ...newArea,
-        [parent]: {
-          ...newArea[parent as keyof typeof newArea],
-          [child]: value
+      if (parent === 'bounds') {
+        setNewArea({
+          ...newArea,
+          bounds: {
+            ...newArea.bounds,
+            [child]: value
+          }
+        });
+      } else {
+        // Handle other potential nested fields safely
+        const parentObj = newArea[parent as keyof typeof newArea];
+        if (parentObj && typeof parentObj === 'object') {
+          setNewArea({
+            ...newArea,
+            [parent]: {
+              ...parentObj,
+              [child]: value
+            }
+          });
         }
-      });
+      }
     } else {
       setNewArea({
         ...newArea,

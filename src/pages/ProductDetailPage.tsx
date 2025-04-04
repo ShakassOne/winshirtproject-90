@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -500,7 +499,7 @@ const ProductDetailPage: React.FC = () => {
                           <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
                             {activeLotteries.map((lottery) => (
                               <SelectItem key={lottery.id} value={lottery.id.toString()}>
-                                {lottery.title} - {lottery.prize}
+                                {lottery.title} - {lottery.value}€
                               </SelectItem>
                             ))}
                           </SelectContent>
