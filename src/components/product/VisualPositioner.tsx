@@ -29,7 +29,7 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   const frontContainerRef = useRef<HTMLDivElement>(null);
   const backContainerRef = useRef<HTMLDivElement>(null);
   
-  const [position, setPosition] = useState('front');
+  const [position, setPosition] = useState<'front' | 'back'>('front');
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
@@ -70,7 +70,7 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     if (selectedPrintArea) return selectedPrintArea;
     
     // Sinon, trouver la zone qui correspond à la position actuelle (recto/verso)
-    const positionAreas = printAreas.filter(area => area.position === (position === 'front' ? 'front' : 'back'));
+    const positionAreas = printAreas.filter(area => area.position === position);
     if (positionAreas.length > 0) return positionAreas[0];
     
     // Fallback: prendre la première zone disponible
@@ -284,16 +284,11 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     }
   }, [activePrintArea, visual, containerRect]);
   
-  // Fonction pour changer la position (recto/verso)
-  const handlePositionChange = (newPosition: string) => {
-    setPosition(newPosition);
-  };
-  
   const visualRef = useRef<HTMLDivElement>(null);
   
   return (
     <div className="space-y-4">
-      <Tabs value={position} onValueChange={handlePositionChange} className="w-full">
+      <Tabs value={position} onValueChange={(value) => setPosition(value as 'front' | 'back')} className="w-full">
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="front">Recto</TabsTrigger>
           <TabsTrigger value="back">Verso</TabsTrigger>

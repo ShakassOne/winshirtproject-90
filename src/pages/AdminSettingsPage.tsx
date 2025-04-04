@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import AdminNavigation from '@/components/admin/AdminNavigation';
+import AdminNavigationHandler from '@/components/AdminNavigationHandler';
 import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
 import ShippingSettingsManager from '@/components/admin/settings/ShippingSettingsManager';
 import TestEmailButton from '@/components/admin/settings/TestEmailButton';
 import HomeIntroManager from '@/components/admin/settings/HomeIntroManager';
 import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
+import CssEditorManager from '@/components/admin/settings/CssEditorManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload } from 'lucide-react';
+import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload, Palette } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'react-router-dom';
 
@@ -56,6 +57,10 @@ const AdminSettingsPage: React.FC = () => {
                 <Upload className="h-4 w-4 mr-2" />
                 Gestion uploads
               </TabsTrigger>
+              <TabsTrigger value="theme" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
+                <Palette className="h-4 w-4 mr-2" />
+                Apparence
+              </TabsTrigger>
               <TabsTrigger value="notifications" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
@@ -84,6 +89,10 @@ const AdminSettingsPage: React.FC = () => {
             
             <TabsContent value="uploads" className="space-y-6">
               <FtpSettingsManager />
+            </TabsContent>
+
+            <TabsContent value="theme" className="space-y-6">
+              <CssEditorManager />
             </TabsContent>
             
             <TabsContent value="notifications" className="space-y-6">
@@ -158,7 +167,7 @@ const AdminSettingsPage: React.FC = () => {
         </div>
       </section>
       
-      <AdminNavigation />
+      <AdminNavigationHandler />
     </>
   );
 };
