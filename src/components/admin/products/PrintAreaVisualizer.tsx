@@ -1,102 +1,100 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PrintArea } from '@/types/product';
 import { Slider } from "@/components/ui/slider";
+import { PrintArea } from '@/types/product';
 
 interface PrintAreaVisualizerProps {
   productImage: string;
   productSecondaryImage?: string;
   printAreas: PrintArea[];
-  onSelectPrintArea?: (areaId: number) => void;
-  onUpdateAreaPosition?: (areaId: number, x: number, y: number) => void;
   selectedAreaId?: number | null;
-  readOnly?: boolean;
+  onSelectPrintArea?: (id: number) => void;
+  onUpdateAreaPosition?: (id: number, x: number, y: number) => void;
   hideAreaBorders?: boolean;
 }
 
 const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   productImage,
   productSecondaryImage,
-  printAreas,
+  printAreas = [],
+  selectedAreaId,
   onSelectPrintArea,
   onUpdateAreaPosition,
-  selectedAreaId,
-  readOnly = false,
   hideAreaBorders = false
 }) => {
-  const frontContainerRef = useRef<HTMLDivElement>(null);
-  const backContainerRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<string>("front");
-  const [dragging, setDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(100);
+  const [activeView, setActiveView] = useState<'front' | 'back'>('front');
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedAreaId, setDraggedAreaId] = useState<number | null>(null);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   
-  // Fonction pour gérer le début du drag
-  const handleDragStart = (e: React.MouseEvent, area: PrintArea) => {
-    if (readOnly || !onSelectPrintArea || !onUpdateAreaPosition) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Sélectionner la zone
-    onSelectPrintArea(area.id);
-    
-    // Obtenir la position relative de la souris dans la zone
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-    
-    setDragging(true);
-  };
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  // Fonction pour gérer le drag
-  const handleDrag = (e: MouseEvent) => {
-    if (readOnly || !dragging || !selectedAreaId || !onUpdateAreaPosition) return;
+  // Fonction pour obtenir les coordonnées relatives au conteneur
+  const getRelativeCoordinates = (e: React.MouseEvent | MouseEvent) => {
+    if (!containerRef.current) return { x: 0, y: 0 };
     
-    const containerRef = activeTab === 'front' ? frontContainerRef : backContainerRef;
-    if (!containerRef.current) return;
-
-    const containerRect = containerRef.current.getBoundingClientRect();
-    
-    // Calculer la nouvelle position relative au conteneur
-    const newX = e.clientX - containerRect.left - dragOffset.x;
-    const newY = e.clientY - containerRect.top - dragOffset.y;
-    
-    // S'assurer que la zone reste dans les limites du conteneur
-    const x = Math.max(0, Math.min(newX, containerRect.width));
-    const y = Math.max(0, Math.min(newY, containerRect.height));
-    
-    // Mettre à jour la position de la zone
-    onUpdateAreaPosition(selectedAreaId, x, y);
-  };
-  
-  // Fonction pour terminer le drag
-  const handleDragEnd = () => {
-    setDragging(false);
-  };
-  
-  // Ajouter et supprimer les écouteurs d'événements globaux
-  useEffect(() => {
-    if (dragging) {
-      window.addEventListener('mousemove', handleDrag);
-      window.addEventListener('mouseup', handleDragEnd);
-    }
-    
-    return () => {
-      window.removeEventListener('mousemove', handleDrag);
-      window.removeEventListener('mouseup', handleDragEnd);
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) / zoom,
+      y: (e.clientY - rect.top) / zoom
     };
-  }, [dragging, selectedAreaId, activeTab]);
-
-  const handleAreaClick = (areaId: number) => {
-    if (!readOnly && onSelectPrintArea) {
+  };
+  
+  // Démarrer le drag d'une zone
+  const handleAreaMouseDown = (e: React.MouseEvent, areaId: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    setIsDragging(true);
+    setDraggedAreaId(areaId);
+    setStartPos(getRelativeCoordinates(e));
+    
+    if (onSelectPrintArea) {
       onSelectPrintArea(areaId);
     }
   };
-
+  
+  // Gérer le mouvement de la souris pour le drag
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging || draggedAreaId === null || !onUpdateAreaPosition) return;
+    
+    const currentPos = getRelativeCoordinates(e);
+    const deltaX = currentPos.x - startPos.x;
+    const deltaY = currentPos.y - startPos.y;
+    
+    const area = printAreas.find(a => a.id === draggedAreaId);
+    if (!area) return;
+    
+    // Calculer les nouvelles coordonnées
+    const newX = area.bounds.x + deltaX;
+    const newY = area.bounds.y + deltaY;
+    
+    // Actualiser la position
+    onUpdateAreaPosition(draggedAreaId, newX, newY);
+    
+    // Mettre à jour le point de départ pour le prochain mouvement
+    setStartPos(currentPos);
+  };
+  
+  // Terminer le drag
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDraggedAreaId(null);
+  };
+  
+  // Ajouter et retirer les écouteurs d'événements globaux
+  useEffect(() => {
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, draggedAreaId, startPos]);
+  
+  // Filtrer les zones par position (front/back)
   const frontAreas = printAreas.filter(area => area.position === 'front');
   const backAreas = printAreas.filter(area => area.position === 'back');
 
@@ -109,84 +107,83 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
     setZoom(value[0]);
   };
   
-  // Si aucun onglet actif ne correspond à une zone existante, sélectionner le premier onglet avec des zones
-  useEffect(() => {
-    if ((activeTab === 'front' && frontAreas.length === 0 && backAreas.length > 0) ||
-        (activeTab === 'back' && backAreas.length === 0 && frontAreas.length > 0)) {
-      setActiveTab(frontAreas.length > 0 ? 'front' : 'back');
-    }
-  }, [printAreas, activeTab]);
+  const handleViewChange = (view: 'front' | 'back') => {
+    setActiveView(view);
+  };
   
   return (
-    <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
-      <div className="p-4 border-b border-winshirt-purple/30 bg-winshirt-space-light">
-        <h3 className="text-lg font-medium text-white">Aperçu des zones d'impression</h3>
-        {!readOnly && (
-          <p className="text-sm text-gray-400 mt-1">
-            Cliquez sur une zone pour la sélectionner, puis faites-la glisser pour la repositionner
-          </p>
-        )}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Aperçu du produit</h3>
+        
+        {/* Boutons pour basculer entre les vues */}
+        <div className="flex bg-winshirt-space-light rounded-md">
+          <button
+            className={`px-3 py-1 rounded-l-md text-sm ${activeView === 'front' ? 'bg-winshirt-purple text-white' : 'text-gray-400'}`}
+            onClick={() => handleViewChange('front')}
+          >
+            Recto
+          </button>
+          <button
+            className={`px-3 py-1 rounded-r-md text-sm ${activeView === 'back' ? 'bg-winshirt-purple text-white' : 'text-gray-400'}`}
+            onClick={() => handleViewChange('back')}
+          >
+            Verso
+          </button>
+        </div>
       </div>
-
-      <div className="p-3 border-b border-winshirt-purple/30 bg-winshirt-space-light flex items-center gap-4">
+      
+      <div className="bg-winshirt-space-light p-2 rounded-md flex items-center gap-2">
         <span className="text-sm text-gray-300">Zoom:</span>
         <Slider
+          min={0.5}
+          max={2}
+          step={0.1}
           value={[zoom]}
           onValueChange={handleZoomChange}
-          min={50}
-          max={150}
-          step={5}
-          className="max-w-[200px]"
+          className="w-32"
         />
-        <span className="text-sm text-gray-300">{zoom}%</span>
+        <span className="text-sm text-gray-300">{Math.round(zoom * 100)}%</span>
       </div>
-
-      <Tabs 
-        value={activeTab} 
-        onValueChange={setActiveTab} 
-        className="w-full"
+      
+      <div
+        ref={containerRef}
+        className="relative border border-gray-700 rounded-lg overflow-hidden bg-winshirt-space-light"
+        style={{
+          height: '400px',
+          transform: `scale(${zoom})`,
+          transformOrigin: 'top left',
+        }}
       >
-        <TabsList className="grid grid-cols-2 w-full bg-winshirt-space-light border-b border-winshirt-purple/30">
-          <TabsTrigger value="front">Recto</TabsTrigger>
-          <TabsTrigger value="back">Verso</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="front" className="p-4 bg-gray-900/50">
-          <div 
-            ref={frontContainerRef}
-            className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900 mx-auto"
-            style={{ width: '100%', height: '400px', maxWidth: '500px' }}
-          >
-            {productImage ? (
-              <img 
-                src={productImage} 
-                alt="Recto du produit" 
-                className="w-full h-full object-contain transition-transform"
-                style={{ transform: `scale(${zoom / 100})` }}
+        {/* Vue recto */}
+        {activeView === 'front' && (
+          <>
+            {/* Image du produit */}
+            {productImage && (
+              <img
+                src={productImage}
+                alt="Recto du produit"
+                className="absolute top-0 left-0 w-full h-full object-contain"
               />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                Aucune image principale définie
-              </div>
             )}
             
-            {frontAreas.map((area) => (
+            {/* Zones d'impression recto */}
+            {frontAreas.map(area => (
               <div
                 key={area.id}
-                className={`absolute ${hideAreaBorders ? '' : 'border-2'} ${
-                  selectedAreaId === area.id 
-                    ? 'border-winshirt-blue' 
-                    : 'border-winshirt-purple/50 border-dashed'
-                } ${!readOnly ? 'cursor-move' : ''}`}
+                className={`absolute ${!hideAreaBorders ? 'border-2' : ''} ${
+                  selectedAreaId === area.id
+                    ? 'border-winshirt-purple'
+                    : 'border-gray-700'
+                } rounded-md cursor-move transition-colors duration-200`}
                 style={{
                   left: `${area.bounds.x}px`,
                   top: `${area.bounds.y}px`,
                   width: `${area.bounds.width}px`,
                   height: `${area.bounds.height}px`,
-                  zIndex: 5
+                  backgroundColor: selectedAreaId === area.id ? 'rgba(124, 58, 237, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                 }}
-                onClick={() => handleAreaClick(area.id)}
-                onMouseDown={(e) => !readOnly && onUpdateAreaPosition && handleDragStart(e, area)}
+                onMouseDown={(e) => handleAreaMouseDown(e, area.id)}
               >
                 {!hideAreaBorders && (
                   <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
@@ -195,58 +192,39 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                 )}
               </div>
             ))}
-            
-            {frontAreas.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                Aucune zone d'impression définie pour le recto
-              </div>
-            )}
-          </div>
-        </TabsContent>
+          </>
+        )}
         
-        <TabsContent value="back" className="p-4 bg-gray-900/50">
-          <div 
-            ref={backContainerRef}
-            className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900 mx-auto"
-            style={{ width: '100%', height: '400px', maxWidth: '500px' }}
-          >
-            {productSecondaryImage ? (
-              <img 
-                src={productSecondaryImage} 
-                alt="Verso du produit" 
-                className="w-full h-full object-contain transition-transform"
-                style={{ transform: `scale(${zoom / 100})` }}
+        {/* Vue verso */}
+        {activeView === 'back' && (
+          <>
+            {/* Image secondaire ou image principale si pas d'image secondaire */}
+            {(productSecondaryImage || productImage) && (
+              <img
+                src={productSecondaryImage || productImage}
+                alt="Verso du produit"
+                className="absolute top-0 left-0 w-full h-full object-contain"
+                style={{ opacity: productSecondaryImage ? 1 : 0.7 }}
               />
-            ) : productImage ? (
-              <img 
-                src={productImage} 
-                alt="Verso du produit (image principale)" 
-                className="w-full h-full object-contain opacity-70 transition-transform"
-                style={{ transform: `scale(${zoom / 100})` }}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                Aucune image secondaire définie
-              </div>
             )}
             
-            {backAreas.map((area) => (
+            {/* Zones d'impression verso */}
+            {backAreas.map(area => (
               <div
                 key={area.id}
-                className={`absolute ${hideAreaBorders ? '' : 'border-2'} ${
-                  selectedAreaId === area.id 
-                    ? 'border-winshirt-blue' 
-                    : 'border-winshirt-purple/50 border-dashed'
-                } ${!readOnly ? 'cursor-move' : ''}`}
+                className={`absolute ${!hideAreaBorders ? 'border-2' : ''} ${
+                  selectedAreaId === area.id
+                    ? 'border-winshirt-purple'
+                    : 'border-gray-700'
+                } rounded-md cursor-move transition-colors duration-200`}
                 style={{
                   left: `${area.bounds.x}px`,
                   top: `${area.bounds.y}px`,
                   width: `${area.bounds.width}px`,
                   height: `${area.bounds.height}px`,
-                  zIndex: 5
+                  backgroundColor: selectedAreaId === area.id ? 'rgba(124, 58, 237, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                 }}
-                onClick={() => handleAreaClick(area.id)}
-                onMouseDown={(e) => !readOnly && onUpdateAreaPosition && handleDragStart(e, area)}
+                onMouseDown={(e) => handleAreaMouseDown(e, area.id)}
               >
                 {!hideAreaBorders && (
                   <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
@@ -255,15 +233,17 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                 )}
               </div>
             ))}
-            
-            {backAreas.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                Aucune zone d'impression définie pour le verso
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+          </>
+        )}
+      </div>
+      
+      <div className="text-sm text-gray-400">
+        <p>
+          {activeView === 'front' ? 'Vue recto' : 'Vue verso'} - 
+          {activeView === 'front' ? frontAreas.length : backAreas.length} zone(s) d'impression
+        </p>
+        <p className="text-xs">Cliquez et faites glisser les zones pour les repositionner</p>
+      </div>
     </div>
   );
 };

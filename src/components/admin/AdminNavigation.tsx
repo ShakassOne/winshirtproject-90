@@ -1,107 +1,80 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  ShoppingBag, 
-  Users, 
-  Ticket, 
-  Settings,
-  ShoppingCart,
-  ImagePlus
-} from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { LayoutDashboard, Boxes, Tag, Palette, BarChart4, Settings, UserCircle, Filter } from "lucide-react";
 
 const AdminNavigation: React.FC = () => {
+  const navigate = useNavigate();
   const location = useLocation();
-  const path = location.pathname;
   
-  const isActive = (route: string) => path.includes(route);
+  // Définition des liens
+  const navLinks = [
+    { 
+      path: '/admin/dashboard', 
+      label: 'Tableau de bord', 
+      icon: <LayoutDashboard size={20} /> 
+    },
+    { 
+      path: '/admin/products', 
+      label: 'Produits', 
+      icon: <Boxes size={20} /> 
+    },
+    { 
+      path: '/admin/filters', 
+      label: 'Filtres', 
+      icon: <Filter size={20} /> 
+    },
+    { 
+      path: '/admin/lotteries', 
+      label: 'Loteries', 
+      icon: <Tag size={20} /> 
+    },
+    { 
+      path: '/admin/visuals', 
+      label: 'Visuels', 
+      icon: <Palette size={20} /> 
+    },
+    { 
+      path: '/admin/stats', 
+      label: 'Statistiques', 
+      icon: <BarChart4 size={20} /> 
+    },
+    { 
+      path: '/admin/users', 
+      label: 'Utilisateurs', 
+      icon: <UserCircle size={20} /> 
+    },
+    { 
+      path: '/admin/settings', 
+      label: 'Paramètres', 
+      icon: <Settings size={20} /> 
+    },
+  ];
+  
+  // Vérifier si un lien est actif
+  const isActive = (path: string) => location.pathname === path;
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 mb-4 flex justify-center">
-      <div className="flex space-x-1 p-1 rounded-full bg-winshirt-space/70 backdrop-blur-lg border border-winshirt-purple/30 shadow-lg">
-        <Link
-          to="/admin/products"
-          className={`
-            rounded-full p-3 flex items-center justify-center
-            ${isActive('/admin/products') 
-              ? 'bg-winshirt-purple text-white' 
-              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
-            transition-all duration-200
-          `}
-          title="Produits"
-        >
-          <ShoppingBag size={20} />
-        </Link>
-        
-        <Link
-          to="/admin/visuals"
-          className={`
-            rounded-full p-3 flex items-center justify-center
-            ${isActive('/admin/visuals') 
-              ? 'bg-winshirt-purple text-white' 
-              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
-            transition-all duration-200
-          `}
-          title="Visuels"
-        >
-          <ImagePlus size={20} />
-        </Link>
-        
-        <Link
-          to="/admin/lotteries"
-          className={`
-            rounded-full p-3 flex items-center justify-center
-            ${isActive('/admin/lotteries') 
-              ? 'bg-winshirt-purple text-white' 
-              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
-            transition-all duration-200
-          `}
-          title="Loteries"
-        >
-          <Ticket size={20} />
-        </Link>
-        
-        <Link
-          to="/admin/commandes"
-          className={`
-            rounded-full p-3 flex items-center justify-center
-            ${isActive('/admin/commandes') 
-              ? 'bg-winshirt-purple text-white' 
-              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
-            transition-all duration-200
-          `}
-          title="Commandes"
-        >
-          <ShoppingCart size={20} />
-        </Link>
-        
-        <Link
-          to="/admin/clients"
-          className={`
-            rounded-full p-3 flex items-center justify-center
-            ${isActive('/admin/clients') 
-              ? 'bg-winshirt-purple text-white' 
-              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
-            transition-all duration-200
-          `}
-          title="Clients"
-        >
-          <Users size={20} />
-        </Link>
-        
-        <Link
-          to="/admin/settings"
-          className={`
-            rounded-full p-3 flex items-center justify-center
-            ${isActive('/admin/settings') 
-              ? 'bg-winshirt-purple text-white' 
-              : 'text-gray-400 hover:text-white hover:bg-winshirt-space-light'}
-            transition-all duration-200
-          `}
-          title="Paramètres"
-        >
-          <Settings size={20} />
-        </Link>
+    <div className="fixed bottom-0 left-0 right-0 bg-winshirt-space border-t border-winshirt-purple/20 z-10">
+      <div className="container mx-auto px-4 py-2 overflow-x-auto">
+        <div className="flex space-x-2 justify-between md:justify-start">
+          {navLinks.map((link) => (
+            <Button
+              key={link.path}
+              variant={isActive(link.path) ? "secondary" : "ghost"}
+              className={`flex-shrink-0 transition-colors ${
+                isActive(link.path) ? "bg-winshirt-purple text-white hover:bg-winshirt-purple-dark" : "text-gray-400 hover:text-white"
+              }`}
+              onClick={() => navigate(link.path)}
+            >
+              <span className="flex items-center">
+                <span className="mr-2">{link.icon}</span>
+                <span className="hidden md:inline">{link.label}</span>
+              </span>
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   );

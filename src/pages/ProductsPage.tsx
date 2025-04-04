@@ -1,220 +1,363 @@
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { mockProducts, mockLotteries } from '../data/mockData';
-import ProductCard from '../components/ProductCard';
-import StarBackground from '../components/StarBackground';
-import AdminNavigationHandler from '@/components/AdminNavigationHandler';
-import { ExtendedProduct, ProductFilters } from '@/types/product';
-import AdvancedFilters from '@/components/product/AdvancedFilters';
+import { mockProducts } from '@/data/mockData';
+import { ExtendedProduct } from '@/types/product';
+import StarBackground from '@/components/StarBackground';
+import ProductCard from '@/components/product/ProductCard';
+import { Input } from '@/components/ui/input';
+import { Search, Sliders } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const ProductsPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const lotteryIdParam = searchParams.get('lottery');
-  
-  // Filtres basiques
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [selectedProductType, setSelectedProductType] = useState<string>('all');
-  const [selectedSleeveType, setSelectedSleeveType] = useState<string>('all');
-  
-  // Filtres avancés
-  const [selectedGender, setSelectedGender] = useState<string>('all');
-  const [selectedMaterial, setSelectedMaterial] = useState<string>('all');
-  const [selectedFit, setSelectedFit] = useState<string>('all');
-  const [selectedBrand, setSelectedBrand] = useState<string>('all');
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  
-  const [selectedLotteryId, setSelectedLotteryId] = useState<string | null>(lotteryIdParam);
-  const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
-  const [lotteries, setLotteries] = useState(mockLotteries);
-  
-  // Extraire tous les filtres disponibles des produits
-  const [availableFilters, setAvailableFilters] = useState<ProductFilters>({
-    productTypes: ['T-shirt', 'Sweatshirt', 'Polo', 'Casquette', 'Autre'],
-    sleeveTypes: ['Courtes', 'Longues', 'Sans manches'],
-    genders: ['homme', 'femme', 'enfant', 'unisexe'],
-    materials: ['coton', 'polyester', 'bio', 'technique'],
-    fits: ['regular', 'ajusté', 'oversize'],
-    brands: ['WinShirt', 'Premium', 'Eco'],
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
-    colors: ['Noir', 'Blanc', 'Bleu', 'Rouge', 'Vert', 'Jaune', 'Orange', 'Gris', 'Violet']
+  const [products, setProducts] = useState<ExtendedProduct[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({
+    productTypes: [] as string[],
+    sleeveTypes: [] as string[],
+    genders: [] as string[],
+    materials: [] as string[],
+    fits: [] as string[],
+    brands: [] as string[],
+    allowCustomization: false,
   });
   
-  // Set the selected lottery ID from URL parameters
+  // Chargement des produits
   useEffect(() => {
-    if (lotteryIdParam) {
-      setSelectedLotteryId(lotteryIdParam);
-    }
-  }, [lotteryIdParam]);
-  
-  // Charger les produits et loteries depuis localStorage
-  useEffect(() => {
-    const loadData = () => {
-      // Chargement des produits
+    const loadProducts = () => {
+      // Essayer d'abord de charger depuis localStorage
       const savedProducts = localStorage.getItem('products');
+      
       if (savedProducts) {
         try {
           const parsedProducts = JSON.parse(savedProducts);
           if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
             setProducts(parsedProducts);
-            
-            // Extraire tous les filtres disponibles des produits réels
-            const filters: ProductFilters = {
-              productTypes: [...new Set(parsedProducts.map(p => p.productType).filter(Boolean))],
-              sleeveTypes: [...new Set(parsedProducts.map(p => p.sleeveType).filter(Boolean))],
-              genders: [...new Set(parsedProducts.map(p => p.gender).filter(Boolean))],
-              materials: [...new Set(parsedProducts.map(p => p.material).filter(Boolean))],
-              fits: [...new Set(parsedProducts.map(p => p.fit).filter(Boolean))],
-              brands: [...new Set(parsedProducts.map(p => p.brand).filter(Boolean))],
-              sizes: [...new Set([].concat(...parsedProducts.map(p => p.sizes || [])))],
-              colors: [...new Set([].concat(...parsedProducts.map(p => p.colors || [])))],
-            };
-            
-            // Fusionner avec les valeurs par défaut
-            setAvailableFilters({
-              productTypes: [...availableFilters.productTypes, ...filters.productTypes].filter(Boolean),
-              sleeveTypes: [...availableFilters.sleeveTypes, ...filters.sleeveTypes].filter(Boolean),
-              genders: [...availableFilters.genders, ...filters.genders].filter(Boolean),
-              materials: [...availableFilters.materials, ...filters.materials].filter(Boolean),
-              fits: [...availableFilters.fits, ...filters.fits].filter(Boolean),
-              brands: [...availableFilters.brands, ...filters.brands].filter(Boolean),
-              sizes: [...availableFilters.sizes, ...filters.sizes].filter(Boolean),
-              colors: [...availableFilters.colors, ...filters.colors].filter(Boolean),
-            });
+            return;
           }
         } catch (error) {
           console.error("Erreur lors du chargement des produits:", error);
         }
       }
       
-      // Chargement des loteries
-      const savedLotteries = localStorage.getItem('lotteries');
-      if (savedLotteries) {
-        try {
-          const parsedLotteries = JSON.parse(savedLotteries);
-          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-            setLotteries(parsedLotteries);
-          }
-        } catch (error) {
-          console.error("Erreur lors du chargement des loteries:", error);
-        }
-      }
+      // Fallback aux données mock
+      setProducts(mockProducts as ExtendedProduct[]);
     };
     
-    loadData();
-    
-    // Écouter les changements d'URL
-    window.addEventListener('popstate', loadData);
-    
-    return () => {
-      window.removeEventListener('popstate', loadData);
-    };
+    loadProducts();
   }, []);
   
-  // Get the lottery details if a lottery ID is selected
-  const selectedLottery = selectedLotteryId 
-    ? lotteries.find(lottery => lottery.id.toString() === selectedLotteryId)
-    : null;
+  // Extraire les filtres disponibles
+  const availableFilters = {
+    productTypes: [...new Set(products.map(p => p.productType).filter(Boolean))],
+    sleeveTypes: [...new Set(products.map(p => p.sleeveType).filter(Boolean))],
+    genders: [...new Set(products.map(p => p.gender).filter(Boolean))],
+    materials: [...new Set(
+      products.flatMap(p => p.material ? p.material.split(',').map(m => m.trim()) : [])
+    )],
+    fits: [...new Set(products.map(p => p.fit).filter(Boolean))],
+    brands: [...new Set(products.map(p => p.brand).filter(Boolean))],
+    sizes: [...new Set(products.flatMap(p => p.sizes || []))],
+    colors: [...new Set(products.flatMap(p => p.colors || []))],
+  };
   
+  // Filtrer les produits
   const filteredProducts = products.filter(product => {
-    // Filtres de base
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesQualityType = selectedType === 'all' || product.type === selectedType;
-    const matchesProductType = selectedProductType === 'all' || product.productType === selectedProductType;
-    const matchesSleeveType = selectedSleeveType === 'all' || product.sleeveType === selectedSleeveType;
+    // Filtrage par recherche
+    const matchesSearch = 
+      !searchQuery || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Filtres avancés 
-    const matchesGender = selectedGender === 'all' || product.gender === selectedGender;
-    const matchesMaterial = selectedMaterial === 'all' || product.material === selectedMaterial;
-    const matchesFit = selectedFit === 'all' || product.fit === selectedFit;
-    const matchesBrand = selectedBrand === 'all' || product.brand === selectedBrand;
+    // Filtrage par type de produit
+    const matchesProductType = 
+      filters.productTypes.length === 0 || 
+      (product.productType && filters.productTypes.includes(product.productType));
     
-    // Filtres multi-sélection (tailles et couleurs)
-    const matchesSizes = selectedSizes.length === 0 || 
-      (product.sizes && selectedSizes.some(size => product.sizes.includes(size)));
+    // Filtrage par type de manches
+    const matchesSleeveType = 
+      filters.sleeveTypes.length === 0 || 
+      (product.sleeveType && filters.sleeveTypes.includes(product.sleeveType));
     
-    const matchesColors = selectedColors.length === 0 || 
-      (product.colors && selectedColors.some(color => product.colors.includes(color)));
+    // Filtrage par genre
+    const matchesGender = 
+      filters.genders.length === 0 || 
+      (product.gender && filters.genders.includes(product.gender));
     
-    // Filter by lottery if a lottery ID is selected
-    const matchesLottery = !selectedLotteryId || 
-      (product.linkedLotteries && product.linkedLotteries.includes(Number(selectedLotteryId)));
+    // Filtrage par matière
+    const matchesMaterial = 
+      filters.materials.length === 0 || 
+      (product.material && filters.materials.some(mat => 
+        product.material!.toLowerCase().includes(mat.toLowerCase())
+      ));
     
-    return matchesSearch && matchesQualityType && matchesProductType && matchesSleeveType && 
-           matchesGender && matchesMaterial && matchesFit && matchesBrand && 
-           matchesSizes && matchesColors && matchesLottery;
+    // Filtrage par coupe
+    const matchesFit = 
+      filters.fits.length === 0 || 
+      (product.fit && filters.fits.includes(product.fit));
+    
+    // Filtrage par marque
+    const matchesBrand = 
+      filters.brands.length === 0 || 
+      (product.brand && filters.brands.includes(product.brand));
+    
+    // Filtrage par personnalisation
+    const matchesCustomization = 
+      !filters.allowCustomization || 
+      product.allowCustomization === true;
+    
+    return matchesSearch && 
+           matchesProductType && 
+           matchesSleeveType && 
+           matchesGender && 
+           matchesMaterial && 
+           matchesFit && 
+           matchesBrand && 
+           matchesCustomization;
   });
+  
+  // Mise à jour d'un filtre
+  const toggleFilter = (category: string, value: string) => {
+    setFilters(prevFilters => {
+      const currentFilters = [...(prevFilters[category as keyof typeof prevFilters] as string[])];
+      const index = currentFilters.indexOf(value);
+      
+      if (index === -1) {
+        // Ajouter le filtre s'il n'existe pas
+        return {
+          ...prevFilters,
+          [category]: [...currentFilters, value]
+        };
+      } else {
+        // Retirer le filtre s'il existe déjà
+        currentFilters.splice(index, 1);
+        return {
+          ...prevFilters,
+          [category]: currentFilters
+        };
+      }
+    });
+  };
+  
+  // Réinitialiser tous les filtres
+  const resetFilters = () => {
+    setFilters({
+      productTypes: [],
+      sleeveTypes: [],
+      genders: [],
+      materials: [],
+      fits: [],
+      brands: [],
+      allowCustomization: false,
+    });
+    setSearchQuery('');
+  };
   
   return (
     <>
       <StarBackground />
       
-      {/* Admin Navigation */}
-      <AdminNavigationHandler />
-      
       <section className="pt-32 pb-16">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
-            Nos Produits
-          </h1>
-          
-          {/* Lottery filter info */}
-          {selectedLottery && (
-            <div className="mb-6 text-center">
-              <p className="text-winshirt-blue-light text-xl">
-                Produits associés à la loterie: <span className="font-semibold">{selectedLottery.title}</span>
-              </p>
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-white">Nos Produits</h1>
+            
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  placeholder="Rechercher un produit..."
+                  className="pl-10 bg-winshirt-space-light border-winshirt-purple/30 w-full md:w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="border-winshirt-purple/30">
+                    <Sliders size={18} className="mr-2" />
+                    Filtres
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="bg-winshirt-space border-l border-winshirt-purple/30 overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="text-white">Filtres</SheetTitle>
+                  </SheetHeader>
+                  
+                  <div className="py-4 space-y-6">
+                    {/* Filtre Personnalisable */}
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="custom"
+                          checked={filters.allowCustomization}
+                          onCheckedChange={(checked) => 
+                            setFilters(prev => ({ ...prev, allowCustomization: checked === true }))
+                          }
+                          className="data-[state=checked]:bg-winshirt-purple"
+                        />
+                        <Label htmlFor="custom">Personnalisable</Label>
+                      </div>
+                    </div>
+                    
+                    {/* Types de produit */}
+                    {availableFilters.productTypes.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-white mb-2">Type de produit</h3>
+                        <div className="space-y-2">
+                          {availableFilters.productTypes.map(type => (
+                            <div key={type} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`type-${type}`}
+                                checked={filters.productTypes.includes(type)}
+                                onCheckedChange={() => toggleFilter('productTypes', type)}
+                                className="data-[state=checked]:bg-winshirt-purple"
+                              />
+                              <Label htmlFor={`type-${type}`}>{type}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Types de manches */}
+                    {availableFilters.sleeveTypes.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-white mb-2">Type de manches</h3>
+                        <div className="space-y-2">
+                          {availableFilters.sleeveTypes.map(type => (
+                            <div key={type} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`sleeve-${type}`}
+                                checked={filters.sleeveTypes.includes(type)}
+                                onCheckedChange={() => toggleFilter('sleeveTypes', type)}
+                                className="data-[state=checked]:bg-winshirt-purple"
+                              />
+                              <Label htmlFor={`sleeve-${type}`}>{type}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Genres */}
+                    {availableFilters.genders.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-white mb-2">Genre</h3>
+                        <div className="space-y-2">
+                          {availableFilters.genders.map(gender => (
+                            <div key={gender} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`gender-${gender}`}
+                                checked={filters.genders.includes(gender)}
+                                onCheckedChange={() => toggleFilter('genders', gender)}
+                                className="data-[state=checked]:bg-winshirt-purple"
+                              />
+                              <Label htmlFor={`gender-${gender}`}>
+                                {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Coupes */}
+                    {availableFilters.fits.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-white mb-2">Coupe</h3>
+                        <div className="space-y-2">
+                          {availableFilters.fits.map(fit => (
+                            <div key={fit} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`fit-${fit}`}
+                                checked={filters.fits.includes(fit)}
+                                onCheckedChange={() => toggleFilter('fits', fit)}
+                                className="data-[state=checked]:bg-winshirt-purple"
+                              />
+                              <Label htmlFor={`fit-${fit}`}>
+                                {fit.charAt(0).toUpperCase() + fit.slice(1)}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Matières */}
+                    {availableFilters.materials.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-white mb-2">Matière</h3>
+                        <div className="space-y-2">
+                          {availableFilters.materials.map(material => (
+                            <div key={material} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`material-${material}`}
+                                checked={filters.materials.includes(material)}
+                                onCheckedChange={() => toggleFilter('materials', material)}
+                                className="data-[state=checked]:bg-winshirt-purple"
+                              />
+                              <Label htmlFor={`material-${material}`}>{material}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Marques */}
+                    {availableFilters.brands.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-white mb-2">Marque</h3>
+                        <div className="space-y-2">
+                          {availableFilters.brands.map(brand => (
+                            <div key={brand} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`brand-${brand}`}
+                                checked={filters.brands.includes(brand)}
+                                onCheckedChange={() => toggleFilter('brands', brand)}
+                                className="data-[state=checked]:bg-winshirt-purple"
+                              />
+                              <Label htmlFor={`brand-${brand}`}>{brand}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-6 border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"
+                      onClick={resetFilters}
+                    >
+                      Réinitialiser les filtres
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
-          )}
-          
-          <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-            Découvrez notre collection de vêtements tendance qui vous permettent de participer à nos loteries exclusives.
-          </p>
-          
-          {/* Advanced Filters */}
-          <AdvancedFilters 
-            availableFilters={availableFilters}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            selectedType={selectedType}
-            setSelectedType={setSelectedType}
-            selectedProductType={selectedProductType}
-            setSelectedProductType={setSelectedProductType}
-            selectedSleeveType={selectedSleeveType}
-            setSelectedSleeveType={setSelectedSleeveType}
-            selectedGender={selectedGender}
-            setSelectedGender={setSelectedGender}
-            selectedMaterial={selectedMaterial}
-            setSelectedMaterial={setSelectedMaterial}
-            selectedFit={selectedFit}
-            setSelectedFit={setSelectedFit}
-            selectedBrand={selectedBrand}
-            setSelectedBrand={setSelectedBrand}
-            selectedSizes={selectedSizes}
-            setSelectedSizes={setSelectedSizes}
-            selectedColors={selectedColors}
-            setSelectedColors={setSelectedColors}
-          />
-          
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
           </div>
           
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-16">
-              <h3 className="text-xl text-gray-400 mb-2">Aucun produit trouvé</h3>
-              <p className="text-gray-500">
-                {selectedLotteryId 
-                  ? "Aucun produit n'est associé à cette loterie"
-                  : "Veuillez modifier vos critères de recherche"
-                }
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="winshirt-card p-8 text-center">
+              <h2 className="text-xl text-white mb-2">Aucun produit trouvé</h2>
+              <p className="text-gray-400">
+                Essayez de modifier vos critères de recherche ou de réinitialiser les filtres.
               </p>
+              <Button 
+                className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                onClick={resetFilters}
+              >
+                Réinitialiser les filtres
+              </Button>
             </div>
           )}
         </div>

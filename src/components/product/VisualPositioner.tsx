@@ -315,8 +315,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
               className="w-full h-full object-contain"
             />
             
-            {/* Affichage des zones d'impression du recto */}
-            {printAreas && printAreas.filter(area => area.position === 'front').map(area => (
+            {/* Affichage des zones d'impression du recto (seulement si pas en lecture seule) */}
+            {!readOnly && printAreas && printAreas.filter(area => area.position === 'front').map(area => (
               <div
                 key={area.id}
                 className="absolute border-winshirt-purple/10 border border-dashed"
@@ -402,8 +402,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
               />
             )}
             
-            {/* Affichage des zones d'impression du verso */}
-            {printAreas && printAreas.filter(area => area.position === 'back').map(area => (
+            {/* Affichage des zones d'impression du verso (seulement si pas en lecture seule) */}
+            {!readOnly && printAreas && printAreas.filter(area => area.position === 'back').map(area => (
               <div
                 key={area.id}
                 className="absolute border-winshirt-purple/10 border border-dashed"

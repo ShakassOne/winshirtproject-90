@@ -1,119 +1,97 @@
 
+import { useState, useEffect } from 'react';
+import { Routes, Route, BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+
+// Pages
+import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';
+import LotteriesPage from './pages/LotteriesPage';
+import LotteryDetailPage from './pages/LotteryDetailPage';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import ProfilePage from './pages/ProfilePage';
+import OrdersPage from './pages/OrdersPage';
+import OrderDetailPage from './pages/OrderDetailPage';
+import TicketsPage from './pages/TicketsPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+// Admin Pages
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminProductsPage from './pages/AdminProductsPage';
+import AdminLotteriesPage from './pages/AdminLotteriesPage';
+import AdminVisualsPage from './pages/AdminVisualsPage';
+import AdminFiltersPage from './pages/AdminFiltersPage'; // Nouvelle page de gestion des filtres
+
+// Components
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
 
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import { AuthProvider } from "./contexts/AuthContext";
-import AdminNavigationHandler from "./components/AdminNavigationHandler";
-
-import HomePage from "./pages/HomePage";
-import ProductsPage from "./pages/ProductsPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import LotteriesPage from "./pages/LotteriesPage";
-import LotteryDetailPage from "./pages/LotteryDetailPage";
-import CartPage from "./pages/CartPage";
-import ConfirmationPage from "./pages/ConfirmationPage";
-import AccountPage from "./pages/AccountPage";
-import LoginPage from "./pages/LoginPage";
-import HowItWorksPage from "./pages/HowItWorksPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import AdminProductsPage from "./pages/AdminProductsPage";
-import AdminLotteriesPage from "./pages/AdminLotteriesPage";
-import AdminClientsPage from "./pages/AdminClientsPage";
-import AdminCommandesPage from "./pages/AdminCommandesPage";
-import AdminSettingsPage from "./pages/AdminSettingsPage";
-import AdminVisualsPage from "./pages/AdminVisualsPage";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-
-const queryClient = new QueryClient();
-
-// Composant pour remonter en haut de la page à chaque changement de route
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
-  
+function App() {
+  // Effect for setting theme colors
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-  
-  return null;
-};
+    const root = document.documentElement;
+    
+    // Winshirt color palette
+    root.style.setProperty('--winshirt-space', '#0c1019');
+    root.style.setProperty('--winshirt-space-light', '#151b27');
+    root.style.setProperty('--winshirt-space-dark', '#080c12');
+    
+    root.style.setProperty('--winshirt-purple', '#7c3aed');
+    root.style.setProperty('--winshirt-purple-light', '#9869f5');
+    root.style.setProperty('--winshirt-purple-dark', '#6026c5');
+    
+    root.style.setProperty('--winshirt-blue', '#3a86ff');
+    root.style.setProperty('--winshirt-blue-light', '#66a3ff');
+    root.style.setProperty('--winshirt-blue-dark', '#2e6acd');
+  }, []);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <ScrollToTop />
-          <Toaster />
-          <Sonner />
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/products/:id" element={<ProductDetailPage />} />
-                <Route path="/lotteries" element={<LotteriesPage />} />
-                <Route path="/lotteries/:id" element={<LotteryDetailPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/confirmation" element={<ConfirmationPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/how-it-works" element={<HowItWorksPage />} />
-                
-                {/* Routes protégées */}
-                <Route path="/account" element={
-                  <ProtectedRoute>
-                    <AccountPage />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Routes Admin protégées */}
-                <Route path="/admin/products" element={
-                  <ProtectedRoute adminOnly>
-                    <AdminProductsPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/lotteries" element={
-                  <ProtectedRoute adminOnly>
-                    <AdminLotteriesPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/clients" element={
-                  <ProtectedRoute adminOnly>
-                    <AdminClientsPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/commandes" element={
-                  <ProtectedRoute adminOnly>
-                    <AdminCommandesPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/visuals" element={
-                  <ProtectedRoute adminOnly>
-                    <AdminVisualsPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/settings" element={
-                  <ProtectedRoute adminOnly>
-                    <AdminSettingsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </main>
-            <Footer />
-            <AdminNavigationHandler />
-          </div>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Navbar />
+        <main className="bg-winshirt-space min-h-screen relative">
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/lotteries" element={<LotteriesPage />} />
+            <Route path="/lottery/:id" element={<LotteryDetailPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/product/:id" element={<ProductDetailPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            {/* Protected routes */}
+            <Route path="/profile" element={<ProtectedRoute element={<ProfilePage />} />} />
+            <Route path="/orders" element={<ProtectedRoute element={<OrdersPage />} />} />
+            <Route path="/order/:id" element={<ProtectedRoute element={<OrderDetailPage />} />} />
+            <Route path="/tickets" element={<ProtectedRoute element={<TicketsPage />} />} />
+            <Route path="/checkout" element={<ProtectedRoute element={<CheckoutPage />} />} />
+            
+            {/* Admin routes */}
+            <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboardPage />} isAdmin />} />
+            <Route path="/admin/products" element={<ProtectedRoute element={<AdminProductsPage />} isAdmin />} />
+            <Route path="/admin/lotteries" element={<ProtectedRoute element={<AdminLotteriesPage />} isAdmin />} />
+            <Route path="/admin/visuals" element={<ProtectedRoute element={<AdminVisualsPage />} isAdmin />} />
+            <Route path="/admin/filters" element={<ProtectedRoute element={<AdminFiltersPage />} isAdmin />} /> {/* Nouvelle route */}
+            
+            {/* 404 route */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </main>
+        <Footer />
+        <Toaster />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
 
 export default App;
