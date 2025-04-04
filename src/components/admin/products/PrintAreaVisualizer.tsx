@@ -100,9 +100,9 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   const frontAreas = printAreas.filter(area => area.position === 'front');
   const backAreas = printAreas.filter(area => area.position === 'back');
 
-  // Simplifier en toujours affichant "C" pour Custom
-  const getFormatLabel = (area: PrintArea) => {
-    return area.format === 'custom' ? 'C' : '';
+  // Toujours retourner "C" pour Custom car c'est la seule option maintenant
+  const getFormatLabel = () => {
+    return 'C';
   };
   
   const handleZoomChange = (value: number[]) => {
@@ -190,7 +190,7 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
               >
                 {!hideAreaBorders && (
                   <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
-                    {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel(area)}]</span>
+                    {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel()}]</span>
                   </div>
                 )}
               </div>
@@ -250,7 +250,7 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
               >
                 {!hideAreaBorders && (
                   <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
-                    {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel(area)}]</span>
+                    {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel()}]</span>
                   </div>
                 )}
               </div>

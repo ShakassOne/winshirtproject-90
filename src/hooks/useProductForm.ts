@@ -115,7 +115,7 @@ export const useProductForm = (
     const typedPrintAreas: PrintArea[] = (product.printAreas || []).map(area => ({
       id: area.id,
       name: area.name,
-      format: 'custom', // Toujours format personnalisé
+      format: 'custom' as const, // Utiliser 'as const' pour garantir le type littéral
       position: area.position,
       bounds: {
         x: area.bounds.x,
@@ -184,7 +184,7 @@ export const useProductForm = (
       const typedPrintAreas: PrintArea[] = (data.printAreas || []).map(area => ({
         id: area.id,
         name: area.name,
-        format: 'custom',
+        format: 'custom' as const,
         position: area.position,
         bounds: {
           x: area.bounds.x,
@@ -318,7 +318,7 @@ export const useProductForm = (
     const newArea: PrintArea = {
       ...printArea,
       id: generatePrintAreaId(),
-      format: 'custom'
+      format: 'custom' as const
     };
     
     const currentAreas = form.getValues().printAreas || [];
@@ -343,13 +343,13 @@ export const useProductForm = (
         return { 
           ...area, 
           ...data,
-          format: 'custom' // Ensure format is always 'custom'
+          format: 'custom' as const // Ensure format is always 'custom'
         };
       }
       return area;
     });
     
-    form.setValue("printAreas", updatedAreas);
+    form.setValue("printAreas", updatedAreas as PrintArea[]);
   };
   
   // Remove a print area

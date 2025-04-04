@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +41,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
     
     onAddArea({
       ...newArea,
-      format: 'custom' // Toujours format personnalisé
+      format: 'custom' as const // Utiliser as const pour garantir le type littéral
     });
     setIsAddingNew(false);
     setNewArea({
