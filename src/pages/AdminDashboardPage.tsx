@@ -189,10 +189,10 @@ const AdminDashboardPage: React.FC = () => {
                 <tbody>
                   {mockWinners.slice(0, 5).map((winner, index) => (
                     <tr key={index} className="border-b border-winshirt-purple/10">
-                      <td className="px-4 py-3 text-sm text-gray-300">{winner.username}</td>
-                      <td className="px-4 py-3 text-sm text-gray-300">{winner.lotteryName}</td>
-                      <td className="px-4 py-3 text-sm text-gray-300">{winner.productName}</td>
-                      <td className="px-4 py-3 text-sm text-gray-300">{winner.date}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{winner.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{winner.lotteryTitle}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{winner.lotteryTitle}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{winner.drawDate}</td>
                     </tr>
                   ))}
                 </tbody>
