@@ -20,6 +20,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   const { 
     getCategories, 
     getVisualsByCategory,
+    getVisualById,
     visuals: allVisuals
   } = useVisuals();
   
@@ -27,11 +28,20 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   const [categories, setCategories] = useState<VisualCategory[]>([]);
   const [visuals, setVisuals] = useState<Visual[]>([]);
   const [uploadedVisual, setUploadedVisual] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [selectedVisual, setSelectedVisual] = useState<Visual | null>(null);
   
   // Initialize categories and select the first one or the specified one
   useEffect(() => {
     const allCategories = getCategories();
     setCategories(allCategories);
+    
+    // Si nous avons un visuel sélectionné, trouvons-le
+    if (selectedVisualId !== null) {
+      const visual = getVisualById(selectedVisualId);
+      if (visual) {
+        setSelectedVisual(visual);
+      }
+    }
     
     if (allCategories.length > 0) {
       // Si nous avons une categoryId, utiliser celle-là; sinon utiliser la première catégorie
@@ -51,7 +61,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
         setVisuals(firstCategoryVisuals);
       }
     }
-  }, [categoryId, getCategories, getVisualsByCategory]);
+  }, [categoryId, getCategories, getVisualsByCategory, getVisualById, selectedVisualId]);
   
   const handleCategoryChange = (categoryId: string) => {
     setActiveCategory(categoryId);
@@ -63,11 +73,13 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   const handleSelectVisual = (visual: Visual) => {
     // Réinitialiser le visuel uploadé si un visuel prédéfini est sélectionné
     setUploadedVisual(null);
+    setSelectedVisual(visual);
     onSelectVisual(visual);
   };
   
   const handleRemoveVisual = () => {
     setUploadedVisual(null);
+    setSelectedVisual(null);
     onSelectVisual(null);
   };
 
@@ -83,11 +95,13 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     };
     
     setUploadedVisual({ file, previewUrl });
+    setSelectedVisual(customVisual);
     onSelectVisual(customVisual);
   };
 
   const handleVisualRemove = () => {
     setUploadedVisual(null);
+    setSelectedVisual(null);
     onSelectVisual(null);
   };
 
@@ -136,7 +150,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
                       onClick={() => handleSelectVisual(visual)}
                       className={`
                         cursor-pointer border rounded-md overflow-hidden hover:shadow-md transition-all
-                        ${selectedVisualId === visual.id 
+                        ${(selectedVisual && selectedVisual.id === visual.id) || selectedVisualId === visual.id
                           ? 'border-winshirt-purple shadow-lg scale-105' 
                           : 'border-gray-700/30'}
                       `}
@@ -162,7 +176,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
         ))}
       </Tabs>
       
-      {selectedVisualId && (
+      {(selectedVisual || selectedVisualId) && (
         <div className="p-4 border-t border-winshirt-purple/30 bg-winshirt-purple/10 flex justify-between items-center">
           <span className="text-sm">Visuel sélectionné</span>
           <button 

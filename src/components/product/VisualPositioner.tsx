@@ -256,7 +256,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
                   top: `${area.bounds.y}px`,
                   width: `${area.bounds.width}px`,
                   height: `${area.bounds.height}px`,
-                  pointerEvents: 'none'
+                  pointerEvents: 'none',
+                  zIndex: 5
                 }}
               >
                 <div 
@@ -279,7 +280,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
               width: `${visualSettings.size.width}px`,
               height: `${visualSettings.size.height}px`,
               opacity: visualSettings.opacity,
-              mixBlendMode: 'multiply'
+              mixBlendMode: 'multiply',
+              zIndex: 10
             }}
             onMouseDown={handleMouseDown}
           >

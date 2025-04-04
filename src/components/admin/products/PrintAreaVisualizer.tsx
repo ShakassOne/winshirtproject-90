@@ -182,7 +182,8 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                   left: `${area.bounds.x}px`,
                   top: `${area.bounds.y}px`,
                   width: `${area.bounds.width}px`,
-                  height: `${area.bounds.height}px`
+                  height: `${area.bounds.height}px`,
+                  zIndex: 5
                 }}
                 onClick={() => handleAreaClick(area.id)}
                 onMouseDown={(e) => handleDragStart(e, area)}
@@ -239,7 +240,8 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                   left: `${area.bounds.x}px`,
                   top: `${area.bounds.y}px`,
                   width: `${area.bounds.width}px`,
-                  height: `${area.bounds.height}px`
+                  height: `${area.bounds.height}px`,
+                  zIndex: 5
                 }}
                 onClick={() => handleAreaClick(area.id)}
                 onMouseDown={(e) => handleDragStart(e, area)}

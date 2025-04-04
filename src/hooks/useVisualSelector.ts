@@ -10,10 +10,13 @@ const DEFAULT_VISUAL_SETTINGS: ProductVisualSettings = {
   opacity: 0.8
 };
 
-export const useVisualSelector = (initialVisualId?: number | null) => {
+export const useVisualSelector = (initialVisualId?: number | null, initialSettings?: Partial<ProductVisualSettings>) => {
   const { getVisualById } = useVisuals();
   const [selectedVisual, setSelectedVisual] = useState<Visual | null>(null);
-  const [visualSettings, setVisualSettings] = useState<ProductVisualSettings>(DEFAULT_VISUAL_SETTINGS);
+  const [visualSettings, setVisualSettings] = useState<ProductVisualSettings>({
+    ...DEFAULT_VISUAL_SETTINGS,
+    ...initialSettings
+  });
 
   // Charger le visuel initial s'il existe
   useEffect(() => {
@@ -27,7 +30,7 @@ export const useVisualSelector = (initialVisualId?: number | null) => {
         }));
       }
     }
-  }, [initialVisualId]);
+  }, [initialVisualId, getVisualById]);
 
   const handleSelectVisual = (visual: Visual | null) => {
     setSelectedVisual(visual);

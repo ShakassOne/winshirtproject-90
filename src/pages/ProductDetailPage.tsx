@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -43,13 +42,16 @@ const ProductDetailPage: React.FC = () => {
   // Pour gérer la zone d'impression sélectionnée
   const [selectedPrintArea, setSelectedPrintArea] = useState<PrintArea | null>(null);
   
-  // Nouveau state pour le visuel sélectionné
+  // Nouveau state pour le visuel sélectionné avec settings initiaux si disponibles
   const { 
     selectedVisual, 
     visualSettings, 
     handleSelectVisual, 
     handleUpdateSettings 
-  } = useVisualSelector();
+  } = useVisualSelector(
+    product?.defaultVisualId || null,
+    product?.defaultVisualSettings || undefined
+  );
   
   // Charger le produit
   useEffect(() => {
@@ -286,7 +288,7 @@ const ProductDetailPage: React.FC = () => {
                             <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
                               {product.printAreas?.map(area => (
                                 <SelectItem key={area.id} value={area.id.toString()}>
-                                  {area.name}
+                                  {area.name} ({area.position === 'front' ? 'Recto' : 'Verso'})
                                 </SelectItem>
                               ))}
                             </SelectContent>
