@@ -58,6 +58,9 @@ export const useProductForm = (
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
+  // Create a proper empty array of the correct type for printAreas
+  const emptyPrintAreas: PrintArea[] = [];
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
@@ -79,7 +82,7 @@ export const useProductForm = (
       defaultVisualId: null,
       defaultVisualSettings: null,
       visualCategoryId: null,
-      printAreas: [],
+      printAreas: emptyPrintAreas, // Use our properly typed empty array
       gender: undefined,
       material: "",
       fit: undefined,
@@ -93,6 +96,7 @@ export const useProductForm = (
     form.reset();
   };
 
+  // Ensure the printAreas in form.reset are also properly typed
   const handleEditProduct = (product: ExtendedProduct) => {
     setIsCreating(false);
     setSelectedProductId(product.id);
@@ -115,7 +119,7 @@ export const useProductForm = (
       defaultVisualId: product.defaultVisualId,
       defaultVisualSettings: product.defaultVisualSettings,
       visualCategoryId: product.visualCategoryId,
-      printAreas: product.printAreas || [],
+      printAreas: (product.printAreas || []) as PrintArea[], // Ensure correct typing
       gender: product.gender,
       material: product.material,
       fit: product.fit,
@@ -292,7 +296,8 @@ export const useProductForm = (
       allowCustomPosition: printArea.allowCustomPosition ?? true
     };
     
-    form.setValue("printAreas", [...currentPrintAreas, newPrintArea]);
+    const updatedPrintAreas: PrintArea[] = [...currentPrintAreas, newPrintArea];
+    form.setValue("printAreas", updatedPrintAreas);
   };
   
   // Fonction pour mettre à jour une zone d'impression existante
@@ -308,7 +313,8 @@ export const useProductForm = (
   // Fonction pour supprimer une zone d'impression
   const removePrintArea = (id: number) => {
     const currentPrintAreas = form.getValues().printAreas || [];
-    form.setValue("printAreas", currentPrintAreas.filter(area => area.id !== id));
+    const filteredAreas = currentPrintAreas.filter(area => area.id !== id) as PrintArea[];
+    form.setValue("printAreas", filteredAreas);
   };
 
   return {
