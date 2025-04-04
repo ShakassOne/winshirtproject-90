@@ -286,6 +286,7 @@ const ProductDetailPage: React.FC = () => {
                         visual={selectedVisual}
                         visualSettings={visualSettings}
                         onUpdateSettings={handleUpdateSettings}
+                        position={activePosition} // Add the missing position prop
                         readOnly={true}
                         printAreas={product.printAreas}
                         selectedPrintArea={selectedPrintArea}
@@ -339,6 +340,7 @@ const ProductDetailPage: React.FC = () => {
                                 visual={selectedVisual}
                                 visualSettings={visualSettings}
                                 onUpdateSettings={handleUpdateSettings}
+                                position="front" // Add missing position prop
                                 printAreas={product.printAreas?.filter(area => area.position === 'front')}
                                 selectedPrintArea={selectedPrintArea}
                               />
@@ -350,6 +352,7 @@ const ProductDetailPage: React.FC = () => {
                                 visual={selectedVisual}
                                 visualSettings={visualSettings}
                                 onUpdateSettings={handleUpdateSettings}
+                                position="back" // Add missing position prop
                                 printAreas={product.printAreas?.filter(area => area.position === 'back')}
                                 selectedPrintArea={selectedPrintArea}
                               />
