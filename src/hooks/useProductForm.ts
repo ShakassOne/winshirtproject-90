@@ -279,13 +279,17 @@ export const useProductForm = (
       : 1;
       
     const newPrintArea: PrintArea = {
-      ...printArea,
       id: newId,
       name: printArea.name,
       format: printArea.format,
       position: printArea.position,
-      bounds: printArea.bounds,
-      allowCustomPosition: printArea.allowCustomPosition
+      bounds: {
+        x: printArea.bounds.x,
+        y: printArea.bounds.y,
+        width: printArea.bounds.width,
+        height: printArea.bounds.height
+      },
+      allowCustomPosition: printArea.allowCustomPosition ?? true
     };
     
     form.setValue("printAreas", [...currentPrintAreas, newPrintArea]);
@@ -296,7 +300,7 @@ export const useProductForm = (
     const currentPrintAreas = form.getValues().printAreas || [];
     const updatedPrintAreas = currentPrintAreas.map(area => 
       area.id === id ? { ...area, ...updatedData } : area
-    );
+    ) as PrintArea[];
     
     form.setValue("printAreas", updatedPrintAreas);
   };
