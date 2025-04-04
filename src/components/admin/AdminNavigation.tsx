@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Boxes, Tag, Palette, Settings, UserCircle, Filter } from "lucide-react";
+import { LayoutDashboard, Boxes, Tag, Palette, Settings, UserCircle, Filter, ShoppingBag } from "lucide-react";
 
 const AdminNavigation: React.FC = () => {
   const navigate = useNavigate();
@@ -34,6 +34,16 @@ const AdminNavigation: React.FC = () => {
       path: '/admin/visuals', 
       label: 'Visuels', 
       icon: <Palette size={20} /> 
+    },
+    { 
+      path: '/admin/commandes', 
+      label: 'Commandes', 
+      icon: <ShoppingBag size={20} /> 
+    },
+    { 
+      path: '/admin/clients', 
+      label: 'Clients', 
+      icon: <UserCircle size={20} /> 
     },
     { 
       path: '/admin/settings', 

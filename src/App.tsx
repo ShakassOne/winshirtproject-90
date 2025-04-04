@@ -14,10 +14,14 @@ import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Admin Pages
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminLotteriesPage from './pages/AdminLotteriesPage';
 import AdminVisualsPage from './pages/AdminVisualsPage';
 import AdminFiltersPage from './pages/AdminFiltersPage';
+import AdminSettingsPage from './pages/AdminSettingsPage';
+import AdminCommandesPage from './pages/AdminCommandesPage';
+import AdminClientsPage from './pages/AdminClientsPage';
 
 // Components
 import Navbar from './components/Navbar';
@@ -68,11 +72,14 @@ function App() {
             <Route path="/checkout" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             
             {/* Admin routes */}
-            <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true}><HomePage /></ProtectedRoute>} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true}><AdminDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><AdminProductsPage /></ProtectedRoute>} />
             <Route path="/admin/lotteries" element={<ProtectedRoute adminOnly={true}><AdminLotteriesPage /></ProtectedRoute>} />
             <Route path="/admin/visuals" element={<ProtectedRoute adminOnly={true}><AdminVisualsPage /></ProtectedRoute>} />
             <Route path="/admin/filters" element={<ProtectedRoute adminOnly={true}><AdminFiltersPage /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute adminOnly={true}><AdminSettingsPage /></ProtectedRoute>} />
+            <Route path="/admin/commandes" element={<ProtectedRoute adminOnly={true}><AdminCommandesPage /></ProtectedRoute>} />
+            <Route path="/admin/clients" element={<ProtectedRoute adminOnly={true}><AdminClientsPage /></ProtectedRoute>} />
             
             {/* 404 route */}
             <Route path="*" element={<NotFoundPage />} />
