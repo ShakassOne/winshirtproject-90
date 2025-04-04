@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PrintArea } from '@/types/product';
@@ -11,6 +12,7 @@ interface PrintAreaVisualizerProps {
   onUpdateAreaPosition?: (areaId: number, x: number, y: number) => void;
   selectedAreaId?: number | null;
   readOnly?: boolean;
+  hideAreaBorders?: boolean;
 }
 
 const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
@@ -20,7 +22,8 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   onSelectPrintArea,
   onUpdateAreaPosition,
   selectedAreaId,
-  readOnly = false
+  readOnly = false,
+  hideAreaBorders = false
 }) => {
   const frontContainerRef = useRef<HTMLDivElement>(null);
   const backContainerRef = useRef<HTMLDivElement>(null);
@@ -51,7 +54,7 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   
   // Fonction pour gérer le drag
   const handleDrag = (e: MouseEvent) => {
-    if (!dragging || !selectedAreaId || !onUpdateAreaPosition) return;
+    if (readOnly || !dragging || !selectedAreaId || !onUpdateAreaPosition) return;
     
     const containerRef = activeTab === 'front' ? frontContainerRef : backContainerRef;
     if (!containerRef.current) return;
@@ -98,13 +101,21 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   const backAreas = printAreas.filter(area => area.position === 'back');
 
   // Simplifier en toujours affichant "C" pour Custom
-  const getFormatLabel = () => {
-    return 'C';
+  const getFormatLabel = (area: PrintArea) => {
+    return area.format === 'custom' ? 'C' : '';
   };
   
   const handleZoomChange = (value: number[]) => {
     setZoom(value[0]);
   };
+  
+  // Si aucun onglet actif ne correspond à une zone existante, sélectionner le premier onglet avec des zones
+  useEffect(() => {
+    if ((activeTab === 'front' && frontAreas.length === 0 && backAreas.length > 0) ||
+        (activeTab === 'back' && backAreas.length === 0 && frontAreas.length > 0)) {
+      setActiveTab(frontAreas.length > 0 ? 'front' : 'back');
+    }
+  }, [printAreas, activeTab]);
   
   return (
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
@@ -162,7 +173,7 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
             {frontAreas.map((area) => (
               <div
                 key={area.id}
-                className={`absolute border-2 ${
+                className={`absolute ${hideAreaBorders ? '' : 'border-2'} ${
                   selectedAreaId === area.id 
                     ? 'border-winshirt-blue' 
                     : 'border-winshirt-purple/50 border-dashed'
@@ -177,9 +188,11 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                 onClick={() => handleAreaClick(area.id)}
                 onMouseDown={(e) => !readOnly && onUpdateAreaPosition && handleDragStart(e, area)}
               >
-                <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
-                  {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel()}]</span>
-                </div>
+                {!hideAreaBorders && (
+                  <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
+                    {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel(area)}]</span>
+                  </div>
+                )}
               </div>
             ))}
             
@@ -220,7 +233,7 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
             {backAreas.map((area) => (
               <div
                 key={area.id}
-                className={`absolute border-2 ${
+                className={`absolute ${hideAreaBorders ? '' : 'border-2'} ${
                   selectedAreaId === area.id 
                     ? 'border-winshirt-blue' 
                     : 'border-winshirt-purple/50 border-dashed'
@@ -235,9 +248,11 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                 onClick={() => handleAreaClick(area.id)}
                 onMouseDown={(e) => !readOnly && onUpdateAreaPosition && handleDragStart(e, area)}
               >
-                <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
-                  {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel()}]</span>
-                </div>
+                {!hideAreaBorders && (
+                  <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
+                    {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel(area)}]</span>
+                  </div>
+                )}
               </div>
             ))}
             

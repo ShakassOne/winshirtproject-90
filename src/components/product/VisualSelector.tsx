@@ -48,7 +48,9 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
             if (visual.categoryId) {
               const visualCategoryId = visual.categoryId.toString();
               setActiveCategory(visualCategoryId);
-              setVisuals(getVisualsByCategory(visual.categoryId));
+              const categoryVisuals = getVisualsByCategory(visual.categoryId);
+              console.log(`Loaded category ${visual.categoryId} with ${categoryVisuals.length} visuals`);
+              setVisuals(categoryVisuals);
               return;
             }
           }
@@ -58,11 +60,15 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
         if (categoryId) {
           const categoryIdStr = categoryId.toString();
           setActiveCategory(categoryIdStr);
-          setVisuals(getVisualsByCategory(categoryId));
+          const categoryVisuals = getVisualsByCategory(categoryId);
+          console.log(`Using specified category ${categoryId} with ${categoryVisuals.length} visuals`);
+          setVisuals(categoryVisuals);
         } else if (allCategories[0]) {
           const firstCatId = allCategories[0].id.toString();
           setActiveCategory(firstCatId);
-          setVisuals(getVisualsByCategory(allCategories[0].id));
+          const firstCatVisuals = getVisualsByCategory(allCategories[0].id);
+          console.log(`Using first category ${allCategories[0].id} with ${firstCatVisuals.length} visuals`);
+          setVisuals(firstCatVisuals);
         }
       }
     };
@@ -78,6 +84,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   };
   
   const handleSelectVisual = (visual: Visual) => {
+    console.log(`Selected visual: ${visual.id} - ${visual.name}`);
     // Réinitialiser le visuel uploadé si un visuel prédéfini est sélectionné
     setUploadedVisual(null);
     setSelectedVisual(visual);
@@ -185,7 +192,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
       
       {(selectedVisual || selectedVisualId) && (
         <div className="p-4 border-t border-winshirt-purple/30 bg-winshirt-purple/10 flex justify-between items-center">
-          <span className="text-sm">Visuel sélectionné</span>
+          <span className="text-sm">Visuel sélectionné: {selectedVisual?.name || getVisualById(selectedVisualId || 0)?.name}</span>
           <button 
             onClick={handleRemoveVisual}
             className="px-2 py-1 text-xs bg-red-500/20 hover:bg-red-500/30 rounded"

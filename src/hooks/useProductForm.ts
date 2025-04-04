@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,8 +32,8 @@ const productFormSchema = z.object({
   printAreas: z.array(z.object({
     id: z.number(),
     name: z.string(),
-    format: z.literal('custom'), // Seulement format personnalisé
     position: z.enum(['front', 'back']),
+    format: z.literal('custom'), 
     bounds: z.object({
       x: z.number(),
       y: z.number(),
@@ -160,6 +161,7 @@ export const useProductForm = (
       material: product.material,
       fit: product.fit,
       brand: product.brand,
+      printAreas: typedPrintAreas
     });
   };
 
@@ -303,116 +305,57 @@ export const useProductForm = (
     form.setValue("linkedLotteries", []);
   };
   
-  // Fonction pour ajouter une zone d'impression
-  const addPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
-    const currentPrintAreas = form.getValues().printAreas || [];
-    
-    // Générer un ID unique pour la nouvelle zone d'impression
-    const newId = currentPrintAreas.length > 0
-      ? Math.max(...currentPrintAreas.map(area => area.id)) + 1
+  // Create a unique ID for new print area
+  const generatePrintAreaId = (): number => {
+    const currentAreas = form.getValues().printAreas || [];
+    return currentAreas.length > 0 
+      ? Math.max(...currentAreas.map(area => area.id)) + 1 
       : 1;
-      
-    // Ensure all required properties are defined as non-optional
-    const newPrintArea: PrintArea = {
-      id: newId,
-      name: printArea.name,
-      format: 'custom', // Toujours format personnalisé
-      position: printArea.position,
-      bounds: {
-        x: printArea.bounds.x,
-        y: printArea.bounds.y,
-        width: printArea.bounds.width,
-        height: printArea.bounds.height
-      },
-      allowCustomPosition: printArea.allowCustomPosition ?? true
+  };
+  
+  // Add a new print area
+  const addPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
+    const newArea: PrintArea = {
+      ...printArea,
+      id: generatePrintAreaId(),
+      format: 'custom'
     };
     
-    // Retrieve current areas and ensure they are properly typed
-    const typedCurrentAreas: PrintArea[] = currentPrintAreas.map(area => ({
-      id: area.id,
-      name: area.name,
-      format: 'custom', // Toujours format personnalisé
-      position: area.position,
-      bounds: {
-        x: area.bounds.x,
-        y: area.bounds.y,
-        width: area.bounds.width,
-        height: area.bounds.height
-      },
-      allowCustomPosition: area.allowCustomPosition ?? true
-    }));
+    const currentAreas = form.getValues().printAreas || [];
     
-    // Add new area to the typed array
-    const updatedPrintAreas: PrintArea[] = [...typedCurrentAreas, newPrintArea];
-    form.setValue("printAreas", updatedPrintAreas);
+    // Check if we already have a front or back area
+    const hasArea = currentAreas.some(area => area.position === printArea.position);
+    
+    // Si on a déjà une zone pour cette position (recto/verso), ne pas en ajouter une autre
+    if (hasArea) {
+      toast.error(`Une zone d'impression ${printArea.position === 'front' ? 'recto' : 'verso'} existe déjà`);
+      return;
+    }
+    
+    form.setValue("printAreas", [...currentAreas, newArea]);
   };
   
-  // Fonction pour mettre à jour une zone d'impression existante
-  const updatePrintArea = (id: number, updatedData: Partial<PrintArea>) => {
-    const currentPrintAreas = form.getValues().printAreas || [];
-    
-    // Map over each area and ensure proper typing for all fields
-    const updatedPrintAreas: PrintArea[] = currentPrintAreas.map(area => {
+  // Update an existing print area
+  const updatePrintArea = (id: number, data: Partial<PrintArea>) => {
+    const currentAreas = form.getValues().printAreas || [];
+    const updatedAreas = currentAreas.map(area => {
       if (area.id === id) {
-        // Create updated area with all required fields
-        const updatedArea: PrintArea = {
-          id: area.id,
-          name: updatedData.name !== undefined ? updatedData.name : area.name,
-          format: 'custom', // Toujours format personnalisé
-          position: updatedData.position !== undefined ? updatedData.position : area.position,
-          bounds: {
-            // Make sure to use all non-optional properties for bounds
-            x: updatedData.bounds && updatedData.bounds.x !== undefined ? updatedData.bounds.x : area.bounds.x,
-            y: updatedData.bounds && updatedData.bounds.y !== undefined ? updatedData.bounds.y : area.bounds.y,
-            width: updatedData.bounds && updatedData.bounds.width !== undefined ? updatedData.bounds.width : area.bounds.width,
-            height: updatedData.bounds && updatedData.bounds.height !== undefined ? updatedData.bounds.height : area.bounds.height
-          },
-          allowCustomPosition: updatedData.allowCustomPosition !== undefined ? 
-            updatedData.allowCustomPosition : (area.allowCustomPosition ?? true)
+        return { 
+          ...area, 
+          ...data,
+          format: 'custom' // Ensure format is always 'custom'
         };
-        return updatedArea;
       }
-      
-      // Return existing area with explicit non-optional typing
-      return {
-        id: area.id,
-        name: area.name,
-        format: 'custom', // Toujours format personnalisé
-        position: area.position,
-        bounds: {
-          x: area.bounds.x,
-          y: area.bounds.y,
-          width: area.bounds.width,
-          height: area.bounds.height
-        },
-        allowCustomPosition: area.allowCustomPosition ?? true
-      };
+      return area;
     });
     
-    form.setValue("printAreas", updatedPrintAreas);
+    form.setValue("printAreas", updatedAreas);
   };
   
-  // Fonction pour supprimer une zone d'impression
+  // Remove a print area
   const removePrintArea = (id: number) => {
-    const currentPrintAreas = form.getValues().printAreas || [];
-    // Filter areas and ensure the resulting array is properly typed
-    const filteredAreas: PrintArea[] = currentPrintAreas
-      .filter(area => area.id !== id)
-      .map(area => ({
-        id: area.id,
-        name: area.name,
-        format: 'custom',
-        position: area.position,
-        bounds: {
-          x: area.bounds.x,
-          y: area.bounds.y,
-          width: area.bounds.width,
-          height: area.bounds.height
-        },
-        allowCustomPosition: area.allowCustomPosition ?? true
-      }));
-      
-    form.setValue("printAreas", filteredAreas);
+    const currentAreas = form.getValues().printAreas || [];
+    form.setValue("printAreas", currentAreas.filter(area => area.id !== id));
   };
 
   return {

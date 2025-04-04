@@ -22,11 +22,18 @@ export const useVisualSelector = (
     ...DEFAULT_VISUAL_SETTINGS,
     ...(initialSettings || {})
   });
+  const [activePosition, setActivePosition] = useState<'front' | 'back'>('front');
 
-  // Déterminer la zone d'impression active
+  // Déterminer la zone d'impression active en fonction de la position
   const getActivePrintArea = () => {
     if (!printAreas || printAreas.length === 0) return null;
-    return printAreas[0]; // Prendre la première zone par défaut (recto)
+    
+    // Trouver la zone qui correspond à la position active (recto/verso)
+    const positionAreas = printAreas.filter(area => area.position === activePosition);
+    if (positionAreas.length > 0) return positionAreas[0];
+    
+    // Fallback: première zone disponible
+    return printAreas[0];
   };
   
   const activePrintArea = getActivePrintArea();
@@ -34,8 +41,10 @@ export const useVisualSelector = (
   // Charger le visuel initial s'il existe
   useEffect(() => {
     if (initialVisualId) {
+      console.log(`Loading initial visual ${initialVisualId}`);
       const visual = getVisualById(initialVisualId);
       if (visual) {
+        console.log(`Found visual: ${visual.name}`);
         setSelectedVisual(visual);
         
         // Initialiser les paramètres de position en fonction de la zone d'impression si disponible
@@ -61,12 +70,15 @@ export const useVisualSelector = (
             visualId: visual.id
           }));
         }
+      } else {
+        console.log(`Visual id ${initialVisualId} not found`);
       }
     }
   }, [initialVisualId, getVisualById, activePrintArea, initialSettings]);
 
   // Sélectionner un nouveau visuel
   const handleSelectVisual = (visual: Visual | null) => {
+    console.log(`Selected new visual: ${visual?.id || 'none'}`);
     setSelectedVisual(visual);
     
     if (visual) {
@@ -108,10 +120,17 @@ export const useVisualSelector = (
       ...newSettings
     }));
   };
+  
+  // Mettre à jour la position active (recto/verso)
+  const setPosition = (position: 'front' | 'back') => {
+    setActivePosition(position);
+  };
 
   return {
     selectedVisual,
     visualSettings,
+    activePosition,
+    setPosition,
     handleSelectVisual,
     handleUpdateSettings
   };

@@ -1,11 +1,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Visual, ProductVisualSettings } from '@/types/visual';
 import { PrintArea } from '@/types/product';
 
 interface VisualPositionerProps {
   productImage: string;
+  productSecondaryImage?: string;
   visual: Visual | null;
   visualSettings: ProductVisualSettings;
   onUpdateSettings: (settings: ProductVisualSettings) => void;
@@ -16,6 +18,7 @@ interface VisualPositionerProps {
 
 const VisualPositioner: React.FC<VisualPositionerProps> = ({
   productImage,
+  productSecondaryImage,
   visual,
   visualSettings,
   onUpdateSettings,
@@ -23,9 +26,10 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   printAreas = [],
   selectedPrintArea = null
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const visualRef = useRef<HTMLDivElement>(null);
+  const frontContainerRef = useRef<HTMLDivElement>(null);
+  const backContainerRef = useRef<HTMLDivElement>(null);
   
+  const [position, setPosition] = useState('front');
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
@@ -35,14 +39,18 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   
   // Récupérer les dimensions du conteneur
   useEffect(() => {
-    if (containerRef.current) {
-      setContainerRect(containerRef.current.getBoundingClientRect());
+    if (position === 'front' && frontContainerRef.current) {
+      setContainerRect(frontContainerRef.current.getBoundingClientRect());
+    } else if (position === 'back' && backContainerRef.current) {
+      setContainerRect(backContainerRef.current.getBoundingClientRect());
     }
     
     // Recalculer le containerRect quand le composant est monté ou mis à jour
     const handleResize = () => {
-      if (containerRef.current) {
-        setContainerRect(containerRef.current.getBoundingClientRect());
+      if (position === 'front' && frontContainerRef.current) {
+        setContainerRect(frontContainerRef.current.getBoundingClientRect());
+      } else if (position === 'back' && backContainerRef.current) {
+        setContainerRect(backContainerRef.current.getBoundingClientRect());
       }
     };
     
@@ -52,16 +60,20 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [containerRef.current]); // Ajouter containerRef.current comme dépendance
+  }, [position, frontContainerRef.current, backContainerRef.current]);
   
-  // Détermine automatiquement la zone d'impression active en fonction de la position du visuel
+  // Détermine automatiquement la zone d'impression active en fonction de la position
   const getActivePrintArea = () => {
     if (!printAreas || printAreas.length === 0) return null;
     
     // Si une zone est explicitement sélectionnée, l'utiliser
     if (selectedPrintArea) return selectedPrintArea;
     
-    // Sinon, utiliser la première zone disponible
+    // Sinon, trouver la zone qui correspond à la position actuelle (recto/verso)
+    const positionAreas = printAreas.filter(area => area.position === (position === 'front' ? 'front' : 'back'));
+    if (positionAreas.length > 0) return positionAreas[0];
+    
+    // Fallback: prendre la première zone disponible
     return printAreas[0];
   };
   
@@ -272,33 +284,42 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     }
   }, [activePrintArea, visual, containerRect]);
   
+  // Fonction pour changer la position (recto/verso)
+  const handlePositionChange = (newPosition: string) => {
+    setPosition(newPosition);
+  };
+  
+  const visualRef = useRef<HTMLDivElement>(null);
+  
   return (
     <div className="space-y-4">
-      <div 
-        ref={containerRef}
-        className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900 mx-auto"
-        style={{ 
-          width: '100%', 
-          height: '400px',
-          maxWidth: '500px'
-        }}
-      >
-        <img 
-          src={productImage} 
-          alt="Produit" 
-          className="w-full h-full object-contain"
-        />
+      <Tabs value={position} onValueChange={handlePositionChange} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full">
+          <TabsTrigger value="front">Recto</TabsTrigger>
+          <TabsTrigger value="back">Verso</TabsTrigger>
+        </TabsList>
         
-        {/* Affichage des zones d'impression */}
-        {printAreas && printAreas.length > 0 && (
-          <>
-            {printAreas.map(area => (
+        <TabsContent value="front">
+          <div 
+            ref={frontContainerRef}
+            className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900 mx-auto"
+            style={{ 
+              width: '100%', 
+              height: '400px',
+              maxWidth: '500px'
+            }}
+          >
+            <img 
+              src={productImage} 
+              alt="Produit recto" 
+              className="w-full h-full object-contain"
+            />
+            
+            {/* Affichage des zones d'impression du recto */}
+            {printAreas && printAreas.filter(area => area.position === 'front').map(area => (
               <div
                 key={area.id}
-                className={`absolute border-2 ${activePrintArea && activePrintArea.id === area.id 
-                  ? 'border-winshirt-blue' 
-                  : 'border-winshirt-purple/30 border-dashed'
-                }`}
+                className="absolute border-winshirt-purple/10 border border-dashed"
                 style={{
                   left: `${area.bounds.x}px`,
                   top: `${area.bounds.y}px`,
@@ -307,62 +328,143 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
                   pointerEvents: 'none',
                   zIndex: 5
                 }}
-              >
-                <div 
-                  className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t"
-                >
-                  {area.name}
-                </div>
-              </div>
+              />
             ))}
-          </>
-        )}
-        
-        {visual && (
-          <div
-            ref={visualRef}
-            className={`absolute cursor-move ${readOnly ? '' : 'hover:outline hover:outline-dashed hover:outline-2 hover:outline-winshirt-blue-light'}`}
-            style={{
-              left: `${visualSettings.position.x}px`,
-              top: `${visualSettings.position.y}px`,
-              width: `${visualSettings.size.width}px`,
-              height: `${visualSettings.size.height}px`,
-              opacity: visualSettings.opacity,
-              mixBlendMode: 'multiply',
-              zIndex: 10
-            }}
-            onMouseDown={handleMouseDown}
-          >
-            <img 
-              src={visual.image} 
-              alt={visual.name} 
-              className="w-full h-full object-contain pointer-events-none"
-            />
             
-            {!readOnly && (
-              <>
-                {/* Poignées de redimensionnement */}
-                <div className="absolute top-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-nw-resize z-20" 
-                    onMouseDown={(e) => handleResizeStart(e, 'nw')} />
-                <div className="absolute top-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-ne-resize z-20"
-                    onMouseDown={(e) => handleResizeStart(e, 'ne')} />
-                <div className="absolute bottom-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-sw-resize z-20"
-                    onMouseDown={(e) => handleResizeStart(e, 'sw')} />
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-se-resize z-20"
-                    onMouseDown={(e) => handleResizeStart(e, 'se')} />
-                <div className="absolute top-1/2 left-0 w-3 h-3 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
-                    onMouseDown={(e) => handleResizeStart(e, 'w')} />
-                <div className="absolute top-1/2 right-0 w-3 h-3 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
-                    onMouseDown={(e) => handleResizeStart(e, 'e')} />
-                <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
-                    onMouseDown={(e) => handleResizeStart(e, 's')} />
-                <div className="absolute top-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
-                    onMouseDown={(e) => handleResizeStart(e, 'n')} />
-              </>
+            {visual && position === 'front' && (
+              <div
+                ref={visualRef}
+                className={`absolute cursor-move ${readOnly ? '' : 'hover:outline hover:outline-dashed hover:outline-2 hover:outline-winshirt-blue-light'}`}
+                style={{
+                  left: `${visualSettings.position.x}px`,
+                  top: `${visualSettings.position.y}px`,
+                  width: `${visualSettings.size.width}px`,
+                  height: `${visualSettings.size.height}px`,
+                  opacity: visualSettings.opacity,
+                  mixBlendMode: 'multiply',
+                  zIndex: 10
+                }}
+                onMouseDown={handleMouseDown}
+              >
+                <img 
+                  src={visual.image} 
+                  alt={visual.name} 
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+                
+                {!readOnly && (
+                  <>
+                    {/* Poignées de redimensionnement */}
+                    <div className="absolute top-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-nw-resize z-20" 
+                        onMouseDown={(e) => handleResizeStart(e, 'nw')} />
+                    <div className="absolute top-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-ne-resize z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'ne')} />
+                    <div className="absolute bottom-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-sw-resize z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'sw')} />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-se-resize z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'se')} />
+                    <div className="absolute top-1/2 left-0 w-3 h-3 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'w')} />
+                    <div className="absolute top-1/2 right-0 w-3 h-3 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'e')} />
+                    <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 's')} />
+                    <div className="absolute top-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'n')} />
+                  </>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </TabsContent>
+        
+        <TabsContent value="back">
+          <div 
+            ref={backContainerRef}
+            className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900 mx-auto"
+            style={{ 
+              width: '100%', 
+              height: '400px',
+              maxWidth: '500px'
+            }}
+          >
+            {productSecondaryImage ? (
+              <img 
+                src={productSecondaryImage} 
+                alt="Produit verso" 
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <img 
+                src={productImage} 
+                alt="Produit verso (image principale)" 
+                className="w-full h-full object-contain opacity-70"
+              />
+            )}
+            
+            {/* Affichage des zones d'impression du verso */}
+            {printAreas && printAreas.filter(area => area.position === 'back').map(area => (
+              <div
+                key={area.id}
+                className="absolute border-winshirt-purple/10 border border-dashed"
+                style={{
+                  left: `${area.bounds.x}px`,
+                  top: `${area.bounds.y}px`,
+                  width: `${area.bounds.width}px`,
+                  height: `${area.bounds.height}px`,
+                  pointerEvents: 'none',
+                  zIndex: 5
+                }}
+              />
+            ))}
+            
+            {visual && position === 'back' && (
+              <div
+                ref={visualRef}
+                className={`absolute cursor-move ${readOnly ? '' : 'hover:outline hover:outline-dashed hover:outline-2 hover:outline-winshirt-blue-light'}`}
+                style={{
+                  left: `${visualSettings.position.x}px`,
+                  top: `${visualSettings.position.y}px`,
+                  width: `${visualSettings.size.width}px`,
+                  height: `${visualSettings.size.height}px`,
+                  opacity: visualSettings.opacity,
+                  mixBlendMode: 'multiply',
+                  zIndex: 10
+                }}
+                onMouseDown={handleMouseDown}
+              >
+                <img 
+                  src={visual.image} 
+                  alt={visual.name} 
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+                
+                {!readOnly && (
+                  <>
+                    {/* Poignées de redimensionnement */}
+                    <div className="absolute top-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-nw-resize z-20" 
+                        onMouseDown={(e) => handleResizeStart(e, 'nw')} />
+                    <div className="absolute top-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-ne-resize z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'ne')} />
+                    <div className="absolute bottom-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-sw-resize z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'sw')} />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-se-resize z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'se')} />
+                    <div className="absolute top-1/2 left-0 w-3 h-3 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'w')} />
+                    <div className="absolute top-1/2 right-0 w-3 h-3 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'e')} />
+                    <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 's')} />
+                    <div className="absolute top-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
+                        onMouseDown={(e) => handleResizeStart(e, 'n')} />
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
       
       {/* Contrôle d'opacité */}
       {visual && !readOnly && (
