@@ -125,16 +125,28 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
               addColor={addColor}
               removeColor={removeColor}
               visualCategories={visualCategories}
+              isCreating={isCreating}
+              selectedProductId={selectedProductId}
+              activeLotteries={activeLotteries}
+              onCancel={onCancel}
+              onSubmit={onSubmit}
+              onCreateProduct={onCreateProduct}
+              toggleLottery={toggleLottery}
+              selectAllLotteries={selectAllLotteries}
+              deselectAllLotteries={deselectAllLotteries}
+              addPrintArea={addPrintArea}
+              updatePrintArea={updatePrintArea}
+              removePrintArea={removePrintArea}
             />
           </TabsContent>
           
           <TabsContent value="lotteries" className="space-y-6">
             <LotterySelection
-              form={form}
-              activeLotteries={activeLotteries}
-              toggleLottery={toggleLottery}
-              selectAllLotteries={selectAllLotteries}
-              deselectAllLotteries={deselectAllLotteries}
+              lotteries={activeLotteries}
+              selectedLotteries={form.getValues().linkedLotteries || []}
+              onToggleLottery={toggleLottery}
+              onSelectAll={selectAllLotteries}
+              onDeselectAll={deselectAllLotteries}
             />
           </TabsContent>
           

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -279,9 +278,14 @@ export const useProductForm = (
       ? Math.max(...currentPrintAreas.map(area => area.id)) + 1
       : 1;
       
-    const newPrintArea = {
+    const newPrintArea: PrintArea = {
       ...printArea,
-      id: newId
+      id: newId,
+      name: printArea.name,
+      format: printArea.format,
+      position: printArea.position,
+      bounds: printArea.bounds,
+      allowCustomPosition: printArea.allowCustomPosition
     };
     
     form.setValue("printAreas", [...currentPrintAreas, newPrintArea]);

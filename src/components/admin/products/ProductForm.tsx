@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import {
   Form,
@@ -21,6 +20,10 @@ import { isLightColor } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PrintAreaVisualizer from "./PrintAreaVisualizer";
 import AdvancedFiltersForm from "./AdvancedFiltersForm";
+import { UseFormReturn } from "react-hook-form";
+import { VisualCategory } from '@/types/visual';
+import { ExtendedLottery } from '@/types/lottery';
+import { PrintArea } from '@/types/product';
 
 interface LotterySelectionProps {
   lotteries: any[];
@@ -43,12 +46,12 @@ interface PrintAreaManagerProps {
 import LotterySelection from './LotterySelection';
 import PrintAreaManager from './PrintAreaManager';
 
-interface ProductFormProps {
+export interface ProductFormProps {
   isCreating: boolean;
   selectedProductId: number | null;
-  form: any;
-  activeLotteries: any[];
-  visualCategories: any[];
+  form: UseFormReturn<any>;
+  activeLotteries: ExtendedLottery[];
+  visualCategories: VisualCategory[];
   onCancel: () => void;
   onSubmit: (data: any) => void;
   onCreateProduct: () => void;
@@ -59,8 +62,8 @@ interface ProductFormProps {
   toggleLottery: (lotteryId: string) => void;
   selectAllLotteries?: () => void;
   deselectAllLotteries?: () => void;
-  addPrintArea?: (printArea: any) => void;
-  updatePrintArea?: (id: number, updatedData: any) => void;
+  addPrintArea?: (printArea: Omit<PrintArea, 'id'>) => void;
+  updatePrintArea?: (id: number, updatedData: Partial<PrintArea>) => void;
   removePrintArea?: (id: number) => void;
 }
 

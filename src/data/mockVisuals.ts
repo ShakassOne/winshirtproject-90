@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Visual, VisualCategory } from '@/types/visual';
 
 // Exemple de catégories de visuels
-const defaultCategories: VisualCategory[] = [
+export const mockVisualCategories: VisualCategory[] = [
   {
     id: 1,
     name: "Sports",
@@ -31,7 +31,7 @@ const defaultCategories: VisualCategory[] = [
 ];
 
 // Exemple de visuels
-const defaultVisuals: Visual[] = [
+export const mockVisuals: Visual[] = [
   {
     id: 1,
     name: "Football",
