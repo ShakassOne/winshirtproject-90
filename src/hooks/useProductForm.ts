@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,11 +27,11 @@ const productFormSchema = z.object({
   defaultVisualId: z.number().nullable().optional(),
   defaultVisualSettings: z.any().optional(),
   visualCategoryId: z.number().nullable().optional(),
-  // Ajout des champs pour les zones d'impression
+  // Mise à jour du schéma pour les zones d'impression
   printAreas: z.array(z.object({
     id: z.number(),
     name: z.string(),
-    format: z.enum(['pocket', 'a4', 'a3', 'custom']),
+    format: z.literal('custom'), // Seulement format personnalisé
     position: z.enum(['front', 'back']),
     bounds: z.object({
       x: z.number(),
@@ -97,6 +96,16 @@ export const useProductForm = (
     form.reset();
   };
 
+  const handleDeleteProduct = (productId: number) => {
+    const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?");
+    if (confirmDelete) {
+      const updatedProducts = products.filter(product => product.id !== productId);
+      setProducts(updatedProducts);
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
+      toast.success("Produit supprimé avec succès");
+    }
+  };
+
   const handleEditProduct = (product: ExtendedProduct) => {
     setIsCreating(false);
     setSelectedProductId(product.id);
@@ -105,7 +114,7 @@ export const useProductForm = (
     const typedPrintAreas: PrintArea[] = (product.printAreas || []).map(area => ({
       id: area.id,
       name: area.name,
-      format: area.format,
+      format: 'custom', // Toujours format personnalisé
       position: area.position,
       bounds: {
         x: area.bounds.x,
@@ -154,16 +163,6 @@ export const useProductForm = (
     });
   };
 
-  const handleDeleteProduct = (productId: number) => {
-    const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?");
-    if (confirmDelete) {
-      const updatedProducts = products.filter(product => product.id !== productId);
-      setProducts(updatedProducts);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-      toast.success("Produit supprimé avec succès");
-    }
-  };
-
   const onSubmit = async (data: ProductFormValues) => {
     try {
       console.log("Form data submitted:", data);
@@ -183,7 +182,7 @@ export const useProductForm = (
       const typedPrintAreas: PrintArea[] = (data.printAreas || []).map(area => ({
         id: area.id,
         name: area.name,
-        format: area.format,
+        format: 'custom',
         position: area.position,
         bounds: {
           x: area.bounds.x,
@@ -317,7 +316,7 @@ export const useProductForm = (
     const newPrintArea: PrintArea = {
       id: newId,
       name: printArea.name,
-      format: printArea.format,
+      format: 'custom', // Toujours format personnalisé
       position: printArea.position,
       bounds: {
         x: printArea.bounds.x,
@@ -332,7 +331,7 @@ export const useProductForm = (
     const typedCurrentAreas: PrintArea[] = currentPrintAreas.map(area => ({
       id: area.id,
       name: area.name,
-      format: area.format,
+      format: 'custom', // Toujours format personnalisé
       position: area.position,
       bounds: {
         x: area.bounds.x,
@@ -359,7 +358,7 @@ export const useProductForm = (
         const updatedArea: PrintArea = {
           id: area.id,
           name: updatedData.name !== undefined ? updatedData.name : area.name,
-          format: updatedData.format !== undefined ? updatedData.format : area.format,
+          format: 'custom', // Toujours format personnalisé
           position: updatedData.position !== undefined ? updatedData.position : area.position,
           bounds: {
             // Make sure to use all non-optional properties for bounds
@@ -378,7 +377,7 @@ export const useProductForm = (
       return {
         id: area.id,
         name: area.name,
-        format: area.format,
+        format: 'custom', // Toujours format personnalisé
         position: area.position,
         bounds: {
           x: area.bounds.x,
@@ -402,7 +401,7 @@ export const useProductForm = (
       .map(area => ({
         id: area.id,
         name: area.name,
-        format: area.format,
+        format: 'custom',
         position: area.position,
         bounds: {
           x: area.bounds.x,

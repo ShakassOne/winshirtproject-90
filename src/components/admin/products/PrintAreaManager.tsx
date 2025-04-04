@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { PrintArea } from '@/types/product';
 
 interface PrintAreaManagerProps {
   printAreas: PrintArea[];
-  onAddArea?: (printArea: PrintArea) => void;
+  onAddArea?: (printArea: Omit<PrintArea, 'id'>) => void;
   onRemoveArea?: (id: number) => void;
   onUpdateArea?: (id: number, updates: Partial<PrintArea>) => void;
   selectedAreaId?: number | null;
@@ -27,6 +26,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
   const [newArea, setNewArea] = useState<Omit<PrintArea, 'id'>>({
     name: '',
     position: 'front',
+    format: 'custom', // Toujours format personnalisé
     bounds: { x: 0, y: 0, width: 200, height: 200 },
     allowCustomPosition: true
   });
@@ -40,12 +40,13 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
     
     onAddArea({
       ...newArea,
-      id: Date.now()
+      format: 'custom' // Toujours format personnalisé
     });
     setIsAddingNew(false);
     setNewArea({
       name: '',
       position: 'front',
+      format: 'custom',
       bounds: { x: 0, y: 0, width: 200, height: 200 },
       allowCustomPosition: true
     });
@@ -56,6 +57,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
     setNewArea({
       name: '',
       position: 'front',
+      format: 'custom',
       bounds: { x: 0, y: 0, width: 200, height: 200 },
       allowCustomPosition: true
     });

@@ -63,7 +63,7 @@ export const useVisualSelector = (
         }
       }
     }
-  }, [initialVisualId, getVisualById, activePrintArea]);
+  }, [initialVisualId, getVisualById, activePrintArea, initialSettings]);
 
   // Sélectionner un nouveau visuel
   const handleSelectVisual = (visual: Visual | null) => {

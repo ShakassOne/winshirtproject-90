@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PrintArea } from '@/types/product';
@@ -98,19 +97,9 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   const frontAreas = printAreas.filter(area => area.position === 'front');
   const backAreas = printAreas.filter(area => area.position === 'back');
 
-  const getFormatLabel = (format: string) => {
-    switch (format) {
-      case 'pocket':
-        return 'P';
-      case 'a4':
-        return 'A4';
-      case 'a3':
-        return 'A3';
-      case 'custom':
-        return 'C';
-      default:
-        return '?';
-    }
+  // Simplifier en toujours affichant "C" pour Custom
+  const getFormatLabel = () => {
+    return 'C';
   };
   
   const handleZoomChange = (value: number[]) => {
@@ -186,10 +175,10 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                   zIndex: 5
                 }}
                 onClick={() => handleAreaClick(area.id)}
-                onMouseDown={(e) => handleDragStart(e, area)}
+                onMouseDown={(e) => !readOnly && onUpdateAreaPosition && handleDragStart(e, area)}
               >
                 <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
-                  {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel(area.format)}]</span>
+                  {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel()}]</span>
                 </div>
               </div>
             ))}
@@ -244,10 +233,10 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
                   zIndex: 5
                 }}
                 onClick={() => handleAreaClick(area.id)}
-                onMouseDown={(e) => handleDragStart(e, area)}
+                onMouseDown={(e) => !readOnly && onUpdateAreaPosition && handleDragStart(e, area)}
               >
                 <div className="absolute top-0 left-0 transform -translate-y-full bg-winshirt-space-light text-xs px-1 rounded-t">
-                  {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel(area.format)}]</span>
+                  {area.name} <span className="text-winshirt-blue-light">[{getFormatLabel()}]</span>
                 </div>
               </div>
             ))}
