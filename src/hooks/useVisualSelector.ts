@@ -11,11 +11,11 @@ const DEFAULT_VISUAL_SETTINGS: ProductVisualSettings = {
 };
 
 export const useVisualSelector = (initialVisualId?: number | null, initialSettings?: Partial<ProductVisualSettings>) => {
-  const { getVisualById } = useVisuals();
+  const { getVisualById, visuals } = useVisuals();
   const [selectedVisual, setSelectedVisual] = useState<Visual | null>(null);
   const [visualSettings, setVisualSettings] = useState<ProductVisualSettings>({
     ...DEFAULT_VISUAL_SETTINGS,
-    ...initialSettings
+    ...(initialSettings || {})
   });
 
   // Charger le visuel initial s'il existe
@@ -48,8 +48,11 @@ export const useVisualSelector = (initialVisualId?: number | null, initialSettin
     }
   };
 
-  const handleUpdateSettings = (newSettings: ProductVisualSettings) => {
-    setVisualSettings(newSettings);
+  const handleUpdateSettings = (newSettings: Partial<ProductVisualSettings>) => {
+    setVisualSettings(prevSettings => ({
+      ...prevSettings,
+      ...newSettings
+    }));
   };
 
   return {

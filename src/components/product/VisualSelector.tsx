@@ -32,35 +32,42 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   
   // Initialize categories and select the first one or the specified one
   useEffect(() => {
-    const allCategories = getCategories();
-    setCategories(allCategories);
-    
-    // Si nous avons un visuel sélectionné, trouvons-le
-    if (selectedVisualId !== null) {
-      const visual = getVisualById(selectedVisualId);
-      if (visual) {
-        setSelectedVisual(visual);
-      }
-    }
-    
-    if (allCategories.length > 0) {
-      // Si nous avons une categoryId, utiliser celle-là; sinon utiliser la première catégorie
-      if (categoryId) {
-        const categoryIdStr = categoryId.toString();
-        setActiveCategory(categoryIdStr);
+    const loadCategories = async () => {
+      const allCategories = getCategories();
+      
+      if (allCategories.length > 0) {
+        setCategories(allCategories);
         
-        // Récupérer les visuels pour cette catégorie
-        const categoryVisuals = getVisualsByCategory(categoryId);
-        setVisuals(categoryVisuals);
-      } else if (allCategories[0]) {
-        const firstCatId = allCategories[0].id.toString();
-        setActiveCategory(firstCatId);
+        // Si nous avons un visuel sélectionné, trouvons-le
+        if (selectedVisualId !== null) {
+          const visual = getVisualById(selectedVisualId);
+          if (visual) {
+            setSelectedVisual(visual);
+            
+            // Si le visuel a une catégorie, on l'active
+            if (visual.categoryId) {
+              const visualCategoryId = visual.categoryId.toString();
+              setActiveCategory(visualCategoryId);
+              setVisuals(getVisualsByCategory(visual.categoryId));
+              return;
+            }
+          }
+        }
         
-        // Récupérer les visuels pour cette catégorie
-        const firstCategoryVisuals = getVisualsByCategory(allCategories[0].id);
-        setVisuals(firstCategoryVisuals);
+        // Si une catégorie est spécifiée, l'utiliser; sinon utiliser la première
+        if (categoryId) {
+          const categoryIdStr = categoryId.toString();
+          setActiveCategory(categoryIdStr);
+          setVisuals(getVisualsByCategory(categoryId));
+        } else if (allCategories[0]) {
+          const firstCatId = allCategories[0].id.toString();
+          setActiveCategory(firstCatId);
+          setVisuals(getVisualsByCategory(allCategories[0].id));
+        }
       }
-    }
+    };
+    
+    loadCategories();
   }, [categoryId, getCategories, getVisualsByCategory, getVisualById, selectedVisualId]);
   
   const handleCategoryChange = (categoryId: string) => {

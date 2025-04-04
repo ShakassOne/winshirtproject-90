@@ -31,11 +31,33 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [startSize, setStartSize] = useState({ width: 0, height: 0 });
+  const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
+  
+  // Récupérer les dimensions du conteneur
+  useEffect(() => {
+    if (containerRef.current) {
+      setContainerRect(containerRef.current.getBoundingClientRect());
+    }
+  }, []);
+  
+  // Recalculer le containerRect quand la fenêtre est redimensionnée
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        setContainerRect(containerRef.current.getBoundingClientRect());
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
   
   // Utilisé pour déterminer si nous avons des zones d'impression à respecter
   const hasRestrictedAreas = printAreas && printAreas.length > 0;
   
-  // Déterminer la zone d'impression active (pour le client)
+  // Déterminer la zone d'impression active
   const activePrintArea = selectedPrintArea || 
     (hasRestrictedAreas ? printAreas[0] : null);
   
@@ -45,19 +67,20 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     e.preventDefault();
     setIsDragging(true);
     setStartPos({
-      x: e.clientX - visualSettings.position.x,
-      y: e.clientY - visualSettings.position.y
+      x: e.clientX,
+      y: e.clientY
     });
   };
   
   const handleMouseMove = (e: MouseEvent) => {
-    if (readOnly) return;
+    if (readOnly || !containerRect) return;
     
-    if (isDragging && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
+    if (isDragging && visualRef.current) {
+      const dx = e.clientX - startPos.x;
+      const dy = e.clientY - startPos.y;
       
-      let newX = e.clientX - startPos.x;
-      let newY = e.clientY - startPos.y;
+      let newX = visualSettings.position.x + dx;
+      let newY = visualSettings.position.y + dy;
       
       // Si nous avons une zone d'impression active, contraindre le mouvement à cette zone
       if (activePrintArea) {
@@ -76,10 +99,17 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
         ...visualSettings,
         position: { x: newX, y: newY }
       });
+      
+      // Mettre à jour la position de départ pour le prochain mouvement
+      setStartPos({
+        x: e.clientX,
+        y: e.clientY
+      });
     }
     
-    if (isResizing && containerRef.current && resizeDirection) {
-      const containerRect = containerRef.current.getBoundingClientRect();
+    if (isResizing && resizeDirection && containerRect) {
+      const dx = e.clientX - startPos.x;
+      const dy = e.clientY - startPos.y;
       
       let newWidth = startSize.width;
       let newHeight = startSize.height;
@@ -88,7 +118,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
       
       // Ajuster la taille basée sur la direction du redimensionnement
       if (resizeDirection.includes('e')) {
-        newWidth = Math.max(50, startSize.width + (e.clientX - startPos.x));
+        newWidth = Math.max(50, startSize.width + dx);
+        
         // Si nous avons une zone d'impression active, limiter la largeur
         if (activePrintArea) {
           const maxWidth = activePrintArea.bounds.x + activePrintArea.bounds.width - visualSettings.position.x;
@@ -97,28 +128,33 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
           newWidth = Math.min(newWidth, containerRect.width - visualSettings.position.x);
         }
       }
+      
       if (resizeDirection.includes('w')) {
-        const diff = startPos.x - e.clientX;
-        newWidth = Math.max(50, startSize.width + diff);
-        
-        // Calculer la nouvelle position X
-        const potentialNewX = Math.max(0, visualSettings.position.x - diff);
+        const newWidthW = Math.max(50, startSize.width - dx);
+        newX = visualSettings.position.x + (startSize.width - newWidthW);
         
         // Si nous avons une zone d'impression active, vérifier les limites
         if (activePrintArea) {
-          newX = Math.max(activePrintArea.bounds.x, potentialNewX);
-          // Ajuster la largeur en fonction de la position X
-          if (potentialNewX < activePrintArea.bounds.x) {
-            newWidth = startSize.width + (visualSettings.position.x - activePrintArea.bounds.x);
+          if (newX < activePrintArea.bounds.x) {
+            const adjustedWidth = visualSettings.position.x + startSize.width - activePrintArea.bounds.x;
+            newWidth = Math.max(50, adjustedWidth);
+            newX = activePrintArea.bounds.x;
+          } else {
+            newWidth = newWidthW;
           }
         } else {
-          newX = potentialNewX;
+          if (newX < 0) {
+            newWidth = Math.max(50, visualSettings.position.x + startSize.width);
+            newX = 0;
+          } else {
+            newWidth = newWidthW;
+          }
         }
-        
-        newWidth = Math.min(newWidth, containerRect.width - newX);
       }
+      
       if (resizeDirection.includes('s')) {
-        newHeight = Math.max(50, startSize.height + (e.clientY - startPos.y));
+        newHeight = Math.max(50, startSize.height + dy);
+        
         // Si nous avons une zone d'impression active, limiter la hauteur
         if (activePrintArea) {
           const maxHeight = activePrintArea.bounds.y + activePrintArea.bounds.height - visualSettings.position.y;
@@ -127,25 +163,28 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
           newHeight = Math.min(newHeight, containerRect.height - visualSettings.position.y);
         }
       }
+      
       if (resizeDirection.includes('n')) {
-        const diff = startPos.y - e.clientY;
-        newHeight = Math.max(50, startSize.height + diff);
-        
-        // Calculer la nouvelle position Y
-        const potentialNewY = Math.max(0, visualSettings.position.y - diff);
+        const newHeightN = Math.max(50, startSize.height - dy);
+        newY = visualSettings.position.y + (startSize.height - newHeightN);
         
         // Si nous avons une zone d'impression active, vérifier les limites
         if (activePrintArea) {
-          newY = Math.max(activePrintArea.bounds.y, potentialNewY);
-          // Ajuster la hauteur en fonction de la position Y
-          if (potentialNewY < activePrintArea.bounds.y) {
-            newHeight = startSize.height + (visualSettings.position.y - activePrintArea.bounds.y);
+          if (newY < activePrintArea.bounds.y) {
+            const adjustedHeight = visualSettings.position.y + startSize.height - activePrintArea.bounds.y;
+            newHeight = Math.max(50, adjustedHeight);
+            newY = activePrintArea.bounds.y;
+          } else {
+            newHeight = newHeightN;
           }
         } else {
-          newY = potentialNewY;
+          if (newY < 0) {
+            newHeight = Math.max(50, visualSettings.position.y + startSize.height);
+            newY = 0;
+          } else {
+            newHeight = newHeightN;
+          }
         }
-        
-        newHeight = Math.min(newHeight, containerRect.height - newY);
       }
       
       onUpdateSettings({
@@ -196,7 +235,7 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, isResizing, startPos, startSize, resizeDirection, readOnly, activePrintArea]);
+  }, [isDragging, isResizing, startPos, startSize, resizeDirection, readOnly, containerRect, visualSettings]);
   
   // Repositionner le visuel à l'intérieur de la zone d'impression quand celle-ci change
   useEffect(() => {
@@ -294,21 +333,21 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
             {!readOnly && (
               <>
                 {/* Poignées de redimensionnement */}
-                <div className="absolute top-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-nw-resize" 
+                <div className="absolute top-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-nw-resize z-20" 
                     onMouseDown={(e) => handleResizeStart(e, 'nw')} />
-                <div className="absolute top-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-ne-resize"
+                <div className="absolute top-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-ne-resize z-20"
                     onMouseDown={(e) => handleResizeStart(e, 'ne')} />
-                <div className="absolute bottom-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-sw-resize"
+                <div className="absolute bottom-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-sw-resize z-20"
                     onMouseDown={(e) => handleResizeStart(e, 'sw')} />
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-se-resize"
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-se-resize z-20"
                     onMouseDown={(e) => handleResizeStart(e, 'se')} />
-                <div className="absolute top-1/2 left-0 w-3 h-3 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2"
+                <div className="absolute top-1/2 left-0 w-3 h-3 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
                     onMouseDown={(e) => handleResizeStart(e, 'w')} />
-                <div className="absolute top-1/2 right-0 w-3 h-3 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2"
+                <div className="absolute top-1/2 right-0 w-3 h-3 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
                     onMouseDown={(e) => handleResizeStart(e, 'e')} />
-                <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2"
+                <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
                     onMouseDown={(e) => handleResizeStart(e, 's')} />
-                <div className="absolute top-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2"
+                <div className="absolute top-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
                     onMouseDown={(e) => handleResizeStart(e, 'n')} />
               </>
             )}
