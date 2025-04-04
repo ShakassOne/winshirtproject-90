@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PrintArea } from '@/types/product';
+import { Slider } from "@/components/ui/slider";
 
 interface PrintAreaVisualizerProps {
   productImage: string;
@@ -22,10 +23,12 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   selectedAreaId,
   readOnly = false
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const frontContainerRef = useRef<HTMLDivElement>(null);
+  const backContainerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<string>("front");
   const [dragging, setDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(100);
   
   // Fonction pour gérer le début du drag
   const handleDragStart = (e: React.MouseEvent, area: PrintArea) => {
@@ -49,16 +52,23 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
   
   // Fonction pour gérer le drag
   const handleDrag = (e: MouseEvent) => {
-    if (!dragging || !selectedAreaId || !onUpdateAreaPosition || !containerRef.current) return;
+    if (!dragging || !selectedAreaId || !onUpdateAreaPosition) return;
     
+    const containerRef = activeTab === 'front' ? frontContainerRef : backContainerRef;
+    if (!containerRef.current) return;
+
     const containerRect = containerRef.current.getBoundingClientRect();
     
     // Calculer la nouvelle position relative au conteneur
     const newX = e.clientX - containerRect.left - dragOffset.x;
     const newY = e.clientY - containerRect.top - dragOffset.y;
     
+    // S'assurer que la zone reste dans les limites du conteneur
+    const x = Math.max(0, Math.min(newX, containerRect.width));
+    const y = Math.max(0, Math.min(newY, containerRect.height));
+    
     // Mettre à jour la position de la zone
-    onUpdateAreaPosition(selectedAreaId, newX, newY);
+    onUpdateAreaPosition(selectedAreaId, x, y);
   };
   
   // Fonction pour terminer le drag
@@ -77,7 +87,7 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
       window.removeEventListener('mousemove', handleDrag);
       window.removeEventListener('mouseup', handleDragEnd);
     };
-  }, [dragging, selectedAreaId]);
+  }, [dragging, selectedAreaId, activeTab]);
 
   const handleAreaClick = (areaId: number) => {
     if (!readOnly && onSelectPrintArea) {
@@ -103,6 +113,10 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
     }
   };
   
+  const handleZoomChange = (value: number[]) => {
+    setZoom(value[0]);
+  };
+  
   return (
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
       <div className="p-4 border-b border-winshirt-purple/30 bg-winshirt-space-light">
@@ -112,6 +126,19 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
             Cliquez sur une zone pour la sélectionner, puis faites-la glisser pour la repositionner
           </p>
         )}
+      </div>
+
+      <div className="p-3 border-b border-winshirt-purple/30 bg-winshirt-space-light flex items-center gap-4">
+        <span className="text-sm text-gray-300">Zoom:</span>
+        <Slider
+          value={[zoom]}
+          onValueChange={handleZoomChange}
+          min={50}
+          max={150}
+          step={5}
+          className="max-w-[200px]"
+        />
+        <span className="text-sm text-gray-300">{zoom}%</span>
       </div>
 
       <Tabs 
@@ -126,15 +153,22 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
         
         <TabsContent value="front" className="p-4 bg-gray-900/50">
           <div 
-            ref={containerRef}
+            ref={frontContainerRef}
             className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900 mx-auto"
             style={{ width: '100%', height: '400px', maxWidth: '500px' }}
           >
-            <img 
-              src={productImage} 
-              alt="Recto du produit" 
-              className="w-full h-full object-contain"
-            />
+            {productImage ? (
+              <img 
+                src={productImage} 
+                alt="Recto du produit" 
+                className="w-full h-full object-contain transition-transform"
+                style={{ transform: `scale(${zoom / 100})` }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                Aucune image principale définie
+              </div>
+            )}
             
             {frontAreas.map((area) => (
               <div
@@ -169,14 +203,29 @@ const PrintAreaVisualizer: React.FC<PrintAreaVisualizerProps> = ({
         
         <TabsContent value="back" className="p-4 bg-gray-900/50">
           <div 
+            ref={backContainerRef}
             className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900 mx-auto"
             style={{ width: '100%', height: '400px', maxWidth: '500px' }}
           >
-            <img 
-              src={productSecondaryImage || productImage} 
-              alt="Verso du produit" 
-              className="w-full h-full object-contain"
-            />
+            {productSecondaryImage ? (
+              <img 
+                src={productSecondaryImage} 
+                alt="Verso du produit" 
+                className="w-full h-full object-contain transition-transform"
+                style={{ transform: `scale(${zoom / 100})` }}
+              />
+            ) : productImage ? (
+              <img 
+                src={productImage} 
+                alt="Verso du produit (image principale)" 
+                className="w-full h-full object-contain opacity-70 transition-transform"
+                style={{ transform: `scale(${zoom / 100})` }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                Aucune image secondaire définie
+              </div>
+            )}
             
             {backAreas.map((area) => (
               <div

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -15,6 +15,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { toast } from 'sonner';
+import { ExtendedLottery } from '@/types/lottery';
 
 interface ProductCardProps {
   product: ExtendedProduct;
@@ -24,19 +25,66 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
-  const [selectedLottery, setSelectedLottery] = useState<number | null>(
-    product.linkedLotteries && product.linkedLotteries.length > 0 
-      ? product.linkedLotteries[0] 
-      : null
-  );
+  const [selectedLottery, setSelectedLottery] = useState<number | null>(null);
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [linkedLottery, setLinkedLottery] = useState<ExtendedLottery | null>(null);
 
   // Vérifier que le produit existe avant de l'afficher
   if (!product) {
     return null;
   }
 
+  // Charger toutes les loteries disponibles et trouver la loterie liée à ce produit
+  useEffect(() => {
+    const loadLotteries = () => {
+      try {
+        const storedLotteries = localStorage.getItem('lotteries');
+        if (storedLotteries) {
+          const parsedLotteries = JSON.parse(storedLotteries);
+          if (Array.isArray(parsedLotteries)) {
+            // Filtrer les loteries actives
+            const activeLotteries = parsedLotteries.filter(lottery => lottery.status === 'active');
+            setLotteries(activeLotteries);
+            
+            // Trouver la première loterie liée à ce produit
+            if (product.linkedLotteries && product.linkedLotteries.length > 0) {
+              const linkedId = product.linkedLotteries[0];
+              const foundLottery = parsedLotteries.find(lottery => lottery.id === linkedId);
+              
+              if (foundLottery) {
+                setLinkedLottery(foundLottery);
+                setSelectedLottery(foundLottery.id);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des loteries:", error);
+      }
+    };
+    
+    loadLotteries();
+    
+    // Écouter les mises à jour des loteries
+    const handleLotteriesUpdate = () => loadLotteries();
+    window.addEventListener('lotteriesUpdated', handleLotteriesUpdate);
+    
+    return () => {
+      window.removeEventListener('lotteriesUpdated', handleLotteriesUpdate);
+    };
+  }, [product.linkedLotteries]);
+
   const handleAddToCart = () => {
     setIsDialogOpen(true);
+    
+    // Pré-sélectionner la première taille et couleur si disponibles
+    if (product.sizes && product.sizes.length > 0) {
+      setSelectedSize(product.sizes[0]);
+    }
+    
+    if (product.colors && product.colors.length > 0) {
+      setSelectedColor(product.colors[0]);
+    }
   };
 
   const handleConfirmAddToCart = () => {
@@ -53,6 +101,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setSelectedColor('');
   };
 
+  // Filtrer les loteries liées à ce produit
+  const getProductLinkedLotteries = () => {
+    if (!product.linkedLotteries || !Array.isArray(product.linkedLotteries) || product.linkedLotteries.length === 0) {
+      return [];
+    }
+    
+    return lotteries.filter(lottery => 
+      product.linkedLotteries?.includes(lottery.id)
+    );
+  };
+
+  const productLotteries = getProductLinkedLotteries();
+
   return (
     <>
       <Card className="winshirt-card winshirt-card-hover h-full flex flex-col">
@@ -68,17 +129,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </Link>
         <CardContent className="flex-grow p-4">
           <h3 className="text-lg font-medium text-white truncate">{product.name}</h3>
-          <div className="mt-2 border-t border-winshirt-purple/20 pt-2">
-            <p className="text-xs text-gray-400">Participe à la loterie</p>
-            <div className="flex items-center mt-1 space-x-2">
-              <img 
-                src={product.lotteryImage || 'https://placehold.co/100x100/png'} 
-                alt={product.lotteryName || 'Loterie'} 
-                className="w-8 h-8 rounded-full object-cover border border-winshirt-purple/50"
-              />
-              <span className="text-sm text-winshirt-blue-light">{product.lotteryName || 'Sélectionnez une loterie'}</span>
+          {linkedLottery && (
+            <div className="mt-2 border-t border-winshirt-purple/20 pt-2">
+              <p className="text-xs text-gray-400">Participe à la loterie</p>
+              <div className="flex items-center mt-1 space-x-2">
+                <img 
+                  src={linkedLottery.image || 'https://placehold.co/100x100/png'} 
+                  alt={linkedLottery.title || 'Loterie'} 
+                  className="w-8 h-8 rounded-full object-cover border border-winshirt-purple/50"
+                />
+                <span className="text-sm text-winshirt-blue-light">{linkedLottery.title || 'Loterie'}</span>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
         <CardFooter className="p-4 pt-0 justify-between">
           <Link to={`/products/${product.id}`}>
@@ -158,18 +221,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             )}
             
             {/* Sélection de loterie */}
-            {product.linkedLotteries && product.linkedLotteries.length > 1 && (
+            {productLotteries.length > 1 && (
               <div className="space-y-3">
                 <label className="text-sm font-medium leading-none">Loterie</label>
-                <RadioGroup value={String(selectedLottery)} onValueChange={(value) => setSelectedLottery(Number(value))}>
-                  {product.linkedLotteries.map((lotteryId) => (
-                    <div key={lotteryId} className="flex items-center space-x-2">
-                      <RadioGroupItem value={String(lotteryId)} id={`lottery-${lotteryId}`} className="text-winshirt-purple" />
+                <RadioGroup 
+                  value={selectedLottery ? String(selectedLottery) : ''} 
+                  onValueChange={(value) => setSelectedLottery(Number(value))}
+                >
+                  {productLotteries.map((lottery) => (
+                    <div key={lottery.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={String(lottery.id)} id={`lottery-${lottery.id}`} className="text-winshirt-purple" />
                       <label 
-                        htmlFor={`lottery-${lotteryId}`} 
-                        className="text-sm cursor-pointer"
+                        htmlFor={`lottery-${lottery.id}`} 
+                        className="text-sm cursor-pointer flex items-center gap-2"
                       >
-                        Loterie #{lotteryId}
+                        <img 
+                          src={lottery.image || 'https://placehold.co/100x100/png'} 
+                          alt={lottery.title} 
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                        {lottery.title}
                       </label>
                     </div>
                   ))}

@@ -54,7 +54,9 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
 
   // Navigate to the lottery details page
   const handleOpenLottery = (id: number) => {
-    navigate(`/lotteries#${id}`);
+    // Changed to navigate to /lotteries/:id instead of using hash
+    navigate(`/lottery/${id}`);
+    console.log(`Navigating to lottery ${id}`);
   };
 
   // Change slide

@@ -85,7 +85,18 @@ const FtpSettingsManager: React.FC = () => {
         throw new Error(`Erreur ${response.status}: ${await response.text()}`);
       }
 
-      const result = await response.json();
+      // Fixed JSON parsing - check content type before parsing
+      const contentType = response.headers.get('content-type');
+      let result;
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        // Handle non-JSON responses
+        const textResponse = await response.text();
+        throw new Error(`Le serveur n'a pas retourné de JSON valide: ${textResponse.substring(0, 100)}...`);
+      }
+      
       const baseUrl = form.getValues('baseUrl');
       const imageUrl = `${baseUrl}/test/${result.filename}`;
       
