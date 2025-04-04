@@ -8,6 +8,7 @@ export interface User {
   provider?: 'email' | 'facebook' | 'google';
   profilePicture?: string;
   phoneNumber?: string;
+  phone?: string; // Adding this property to fix the error
   socialMediaDetails?: {
     providerId?: string;
     displayName?: string;

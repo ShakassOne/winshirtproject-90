@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,7 +156,7 @@ const CartPage: React.FC = () => {
           id: orderData.clientId,
           name: orderData.clientName,
           email: orderData.clientEmail,
-          phone: user?.phone || '',
+          phone: user?.phoneNumber || '', // Use phoneNumber instead of phone
           address: shippingAddress.address,
           city: shippingAddress.city,
           postalCode: shippingAddress.zipCode,
