@@ -40,7 +40,7 @@ const productFormSchema = z.object({
       width: z.number(),
       height: z.number()
     }),
-    allowCustomPosition: z.boolean().optional()
+    allowCustomPosition: z.boolean().optional().default(true)
   })).optional(),
   // Nouveaux champs pour les filtres avancés
   gender: z.enum(['homme', 'femme', 'enfant', 'unisexe']).optional(),
@@ -83,7 +83,7 @@ export const useProductForm = (
       defaultVisualId: null,
       defaultVisualSettings: null,
       visualCategoryId: null,
-      printAreas: emptyPrintAreas, // Use our properly typed empty array
+      printAreas: emptyPrintAreas,
       gender: undefined,
       material: "",
       fit: undefined,
@@ -97,10 +97,25 @@ export const useProductForm = (
     form.reset();
   };
 
-  // Ensure the printAreas in form.reset are also properly typed
   const handleEditProduct = (product: ExtendedProduct) => {
     setIsCreating(false);
     setSelectedProductId(product.id);
+    
+    // Create properly typed print areas array
+    const typedPrintAreas: PrintArea[] = (product.printAreas || []).map(area => ({
+      id: area.id,
+      name: area.name,
+      format: area.format,
+      position: area.position,
+      bounds: {
+        x: area.bounds.x,
+        y: area.bounds.y,
+        width: area.bounds.width,
+        height: area.bounds.height
+      },
+      allowCustomPosition: area.allowCustomPosition ?? true
+    }));
+    
     form.reset({
       name: product.name,
       description: product.description,
@@ -120,7 +135,7 @@ export const useProductForm = (
       defaultVisualId: product.defaultVisualId,
       defaultVisualSettings: product.defaultVisualSettings,
       visualCategoryId: product.visualCategoryId,
-      printAreas: (product.printAreas || []) as PrintArea[], // Ensure correct typing
+      printAreas: typedPrintAreas,
       gender: product.gender,
       material: product.material,
       fit: product.fit,
@@ -164,6 +179,21 @@ export const useProductForm = (
         return;
       }
       
+      // Ensure properly typed printAreas
+      const typedPrintAreas: PrintArea[] = (data.printAreas || []).map(area => ({
+        id: area.id,
+        name: area.name,
+        format: area.format,
+        position: area.position,
+        bounds: {
+          x: area.bounds.x,
+          y: area.bounds.y,
+          width: area.bounds.width,
+          height: area.bounds.height
+        },
+        allowCustomPosition: area.allowCustomPosition ?? true
+      }));
+      
       const newProduct: ExtendedProduct = {
         id: isCreating ? Date.now() : selectedProductId || Date.now(),
         name: data.name,
@@ -188,7 +218,7 @@ export const useProductForm = (
         // Sinon on la met à null
         visualCategoryId: data.allowCustomization ? 
           (data.visualCategoryId || 1) : null,
-        printAreas: data.printAreas || [],
+        printAreas: typedPrintAreas,
         gender: data.gender,
         material: data.material,
         fit: data.fit,
@@ -298,8 +328,23 @@ export const useProductForm = (
       allowCustomPosition: printArea.allowCustomPosition ?? true
     };
     
-    // Ensure we have a properly typed array
-    const updatedPrintAreas: PrintArea[] = [...currentPrintAreas, newPrintArea];
+    // Retrieve current areas and ensure they are properly typed
+    const typedCurrentAreas: PrintArea[] = currentPrintAreas.map(area => ({
+      id: area.id,
+      name: area.name,
+      format: area.format,
+      position: area.position,
+      bounds: {
+        x: area.bounds.x,
+        y: area.bounds.y,
+        width: area.bounds.width,
+        height: area.bounds.height
+      },
+      allowCustomPosition: area.allowCustomPosition ?? true
+    }));
+    
+    // Add new area to the typed array
+    const updatedPrintAreas: PrintArea[] = [...typedCurrentAreas, newPrintArea];
     form.setValue("printAreas", updatedPrintAreas);
   };
   
@@ -307,10 +352,42 @@ export const useProductForm = (
   const updatePrintArea = (id: number, updatedData: Partial<PrintArea>) => {
     const currentPrintAreas = form.getValues().printAreas || [];
     
-    // Use a proper type assertion after mapping to ensure TypeScript knows this is a PrintArea[]
-    const updatedPrintAreas = currentPrintAreas.map(area => 
-      area.id === id ? { ...area, ...updatedData } : area
-    ) as PrintArea[];
+    // Map over each area and ensure proper typing for all fields
+    const updatedPrintAreas: PrintArea[] = currentPrintAreas.map(area => {
+      if (area.id === id) {
+        // Create updated area with all required fields
+        const updatedArea: PrintArea = {
+          id: area.id,
+          name: updatedData.name !== undefined ? updatedData.name : area.name,
+          format: updatedData.format !== undefined ? updatedData.format : area.format,
+          position: updatedData.position !== undefined ? updatedData.position : area.position,
+          bounds: updatedData.bounds ? {
+            x: updatedData.bounds.x !== undefined ? updatedData.bounds.x : area.bounds.x,
+            y: updatedData.bounds.y !== undefined ? updatedData.bounds.y : area.bounds.y,
+            width: updatedData.bounds.width !== undefined ? updatedData.bounds.width : area.bounds.width,
+            height: updatedData.bounds.height !== undefined ? updatedData.bounds.height : area.bounds.height
+          } : area.bounds,
+          allowCustomPosition: updatedData.allowCustomPosition !== undefined ? 
+            updatedData.allowCustomPosition : (area.allowCustomPosition ?? true)
+        };
+        return updatedArea;
+      }
+      
+      // Return existing area with explicit non-optional typing
+      return {
+        id: area.id,
+        name: area.name,
+        format: area.format,
+        position: area.position,
+        bounds: {
+          x: area.bounds.x,
+          y: area.bounds.y,
+          width: area.bounds.width,
+          height: area.bounds.height
+        },
+        allowCustomPosition: area.allowCustomPosition ?? true
+      };
+    });
     
     form.setValue("printAreas", updatedPrintAreas);
   };
@@ -318,7 +395,23 @@ export const useProductForm = (
   // Fonction pour supprimer une zone d'impression
   const removePrintArea = (id: number) => {
     const currentPrintAreas = form.getValues().printAreas || [];
-    const filteredAreas = currentPrintAreas.filter(area => area.id !== id) as PrintArea[];
+    // Filter areas and ensure the resulting array is properly typed
+    const filteredAreas: PrintArea[] = currentPrintAreas
+      .filter(area => area.id !== id)
+      .map(area => ({
+        id: area.id,
+        name: area.name,
+        format: area.format,
+        position: area.position,
+        bounds: {
+          x: area.bounds.x,
+          y: area.bounds.y,
+          width: area.bounds.width,
+          height: area.bounds.height
+        },
+        allowCustomPosition: area.allowCustomPosition ?? true
+      }));
+      
     form.setValue("printAreas", filteredAreas);
   };
 
