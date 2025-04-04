@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,8 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import ShippingOptions from '@/components/cart/ShippingOptions'; // Correct import statement
+import ShippingOptions from '@/components/cart/ShippingOptions';
 import { toast } from '@/lib/toast';
+import { initiateStripeCheckout } from '@/lib/stripe';
+import { supabase } from '@/integrations/supabase/client'; 
+import { Client } from '@/types/client';
+import { Order } from '@/types/order';
 
 interface CartItem {
   id: number;
@@ -124,6 +129,64 @@ const CartPage: React.FC = () => {
       [e.target.name]: e.target.value
     });
   };
+
+  // Function to create or update client information
+  const saveClientInfo = (orderData: Order) => {
+    try {
+      // Get existing clients from localStorage
+      const clientsString = localStorage.getItem('clients');
+      const clients = clientsString ? JSON.parse(clientsString) as Client[] : [];
+      
+      // Check if client already exists
+      const existingClientIndex = clients.findIndex(c => c.id === orderData.clientId);
+      
+      if (existingClientIndex !== -1) {
+        // Update existing client
+        clients[existingClientIndex] = {
+          ...clients[existingClientIndex],
+          orderCount: (clients[existingClientIndex].orderCount || 0) + 1,
+          totalSpent: (clients[existingClientIndex].totalSpent || 0) + orderData.total,
+          address: shippingAddress.address,
+          city: shippingAddress.city,
+          postalCode: shippingAddress.zipCode,
+          country: shippingAddress.country,
+        };
+      } else {
+        // Create new client
+        const newClient: Client = {
+          id: orderData.clientId,
+          name: orderData.clientName,
+          email: orderData.clientEmail,
+          phone: user?.phone || '',
+          address: shippingAddress.address,
+          city: shippingAddress.city,
+          postalCode: shippingAddress.zipCode,
+          country: shippingAddress.country,
+          registrationDate: user?.registrationDate || new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          orderCount: 1,
+          totalSpent: orderData.total,
+          participatedLotteries: orderData.items
+            .filter(item => item.lotteriesEntries && item.lotteriesEntries.length > 0)
+            .flatMap(item => item.lotteriesEntries || []),
+        };
+        
+        clients.push(newClient);
+      }
+      
+      // Save updated clients to localStorage
+      localStorage.setItem('clients', JSON.stringify(clients));
+      
+      // Also update sessionStorage for immediate use
+      sessionStorage.setItem('clients', JSON.stringify(clients));
+      
+      console.log('Client information saved successfully');
+      return true;
+    } catch (error) {
+      console.error('Error saving client information:', error);
+      return false;
+    }
+  };
   
   const handleConfirmOrder = () => {
     if (!shippingAddress.address || !shippingAddress.city || !shippingAddress.zipCode || !shippingAddress.country) {
@@ -141,14 +204,178 @@ const CartPage: React.FC = () => {
       return;
     }
     
-    setIsOrderConfirmed(true);
-    localStorage.removeItem('cart');
-    setCart([]);
+    // Show processing state
+    toast.loading("Traitement de votre commande...");
     
-    // Redirection vers la page de confirmation après un délai
-    setTimeout(() => {
-      navigate('/confirmation');
-    }, 3000);
+    try {
+      // Create order object
+      const orderDate = new Date().toISOString();
+      const orderId = Date.now();
+      
+      // Get products for detailed information
+      const productsString = localStorage.getItem('products');
+      const products = productsString ? JSON.parse(productsString) : [];
+      
+      const order: Order = {
+        id: orderId,
+        clientId: user?.id || 0,
+        clientName: user?.name || '',
+        clientEmail: user?.email || '',
+        orderDate: orderDate,
+        status: 'processing',
+        items: cart.map(item => {
+          const product = products.find((p: any) => p.id.toString() === item.id.toString());
+          return {
+            id: Date.now() + Math.floor(Math.random() * 1000) + item.id,
+            productId: item.id,
+            productName: item.name,
+            productImage: item.image || 'https://placehold.co/600x400/png',
+            quantity: item.quantity,
+            price: item.price,
+            size: item.size || 'M',
+            color: item.color || 'Noir',
+            lotteriesEntries: item.selectedLotteries.map(lottery => lottery.id)
+          };
+        }),
+        shipping: {
+          address: shippingAddress.address,
+          city: shippingAddress.city,
+          postalCode: shippingAddress.zipCode,
+          country: shippingAddress.country,
+          method: selectedShipping === 'express' ? 'Express' : 'Standard',
+          cost: shippingCost
+        },
+        delivery: {
+          status: 'preparing',
+          estimatedDeliveryDate: new Date(Date.now() + (selectedShipping === 'express' ? 2 : 5) * 24 * 60 * 60 * 1000).toISOString(),
+          lastUpdate: orderDate,
+          history: [
+            {
+              date: orderDate,
+              status: 'preparing',
+              description: 'Commande reçue et en cours de préparation'
+            }
+          ]
+        },
+        payment: {
+          method: 'Carte bancaire',
+          transactionId: 'TR' + orderId,
+          status: 'completed'
+        },
+        subtotal: total,
+        total: total + shippingCost,
+        trackingNumber: 'TRK' + orderId,
+        notes: ''
+      };
+      
+      // Get existing orders from localStorage
+      const ordersString = localStorage.getItem('orders');
+      const orders = ordersString ? JSON.parse(ordersString) : [];
+      
+      // Add new order
+      orders.push(order);
+      
+      // Save to localStorage
+      localStorage.setItem('orders', JSON.stringify(orders));
+      
+      // Also update sessionStorage for immediate use
+      sessionStorage.setItem('orders', JSON.stringify(orders));
+      
+      // Save last order info for confirmation page
+      sessionStorage.setItem('last_order_info', JSON.stringify(order));
+      
+      // Save client information
+      saveClientInfo(order);
+      
+      // Update lotteries participants
+      updateLotteryParticipants(cart);
+      
+      // Clear cart
+      localStorage.setItem('cart', JSON.stringify([]));
+      setCart([]);
+      
+      // Show confirmation
+      setIsOrderConfirmed(true);
+      toast.dismiss();
+      toast.success("Commande confirmée avec succès!");
+      
+      // Redirect to confirmation page after a brief delay
+      setTimeout(() => {
+        navigate('/confirmation');
+      }, 1000);
+    } catch (error) {
+      console.error('Error processing order:', error);
+      toast.dismiss();
+      toast.error("Une erreur s'est produite lors du traitement de votre commande");
+    }
+  };
+
+  // Function to update lottery participants
+  const updateLotteryParticipants = (cartItems: CartItem[]) => {
+    try {
+      // Get lotteries data
+      const lotteriesString = localStorage.getItem('lotteries');
+      if (!lotteriesString) return;
+      
+      const lotteries = JSON.parse(lotteriesString);
+      let updated = false;
+      
+      // Update each lottery with new participants
+      cartItems.forEach(item => {
+        // Skip if no lotteries selected
+        if (!item.selectedLotteries || item.selectedLotteries.length === 0) return;
+        
+        item.selectedLotteries.forEach(selectedLottery => {
+          const lotteryIndex = lotteries.findIndex((l: any) => l.id === selectedLottery.id);
+          if (lotteryIndex === -1) return;
+          
+          // Create participant based on current user
+          const participant = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            name: user?.name || 'Anonymous',
+            email: user?.email || 'anonymous@example.com',
+            avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+          };
+          
+          // Initialize participants array if not exists
+          if (!lotteries[lotteryIndex].participants) {
+            lotteries[lotteryIndex].participants = [];
+          }
+          
+          // Add participant for each quantity
+          for (let i = 0; i < item.quantity; i++) {
+            lotteries[lotteryIndex].participants.push({
+              ...participant,
+              id: participant.id + i
+            });
+            
+            // Increment current participants count
+            lotteries[lotteryIndex].currentParticipants += 1;
+          }
+          
+          updated = true;
+          
+          // Check if lottery has reached target
+          if (lotteries[lotteryIndex].currentParticipants >= lotteries[lotteryIndex].targetParticipants) {
+            // Schedule a draw if not already scheduled
+            if (!lotteries[lotteryIndex].drawDate) {
+              const drawDate = new Date();
+              drawDate.setDate(drawDate.getDate() + 1); // +24 hours
+              lotteries[lotteryIndex].drawDate = drawDate.toISOString();
+            }
+          }
+        });
+      });
+      
+      // Save updated lotteries if changes were made
+      if (updated) {
+        localStorage.setItem('lotteries', JSON.stringify(lotteries));
+        sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
+        console.log('Lotteries updated with new participants');
+      }
+    } catch (error) {
+      console.error('Error updating lottery participants:', error);
+    }
   };
 
   const calculateShippingCost = (shippingOption: string) => {

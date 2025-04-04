@@ -17,6 +17,7 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 import LotteriesPage from "./pages/LotteriesPage";
 import LotteryDetailPage from "./pages/LotteryDetailPage";
 import CartPage from "./pages/CartPage";
+import ConfirmationPage from "./pages/ConfirmationPage";
 import AccountPage from "./pages/AccountPage";
 import LoginPage from "./pages/LoginPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
@@ -60,6 +61,7 @@ const App = () => (
                 <Route path="/lotteries" element={<LotteriesPage />} />
                 <Route path="/lotteries/:id" element={<LotteryDetailPage />} />
                 <Route path="/cart" element={<CartPage />} />
+                <Route path="/confirmation" element={<ConfirmationPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 

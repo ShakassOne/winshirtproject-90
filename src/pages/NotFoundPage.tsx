@@ -1,10 +1,30 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
 
 const NotFoundPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // If the user was redirected to a 404 page from a missing URL like '/confirmation',
+  // we'll check if there's a way to recover by redirecting them to an expected page
+  useEffect(() => {
+    // If we're hitting this from a redirection from '/confirmation', and we have an order confirmation
+    // in the session, redirect back to the correct URL
+    if (location.pathname === '/confirmation') {
+      const lastOrderInfo = sessionStorage.getItem('last_order_info');
+      if (lastOrderInfo) {
+        // The order exists so redirect to the confirmation page (should now be registered in the routes)
+        navigate('/confirmation');
+      } else {
+        // No order but trying to access confirmation, send to cart instead
+        navigate('/cart');
+      }
+    }
+  }, [location, navigate]);
+
   return (
     <>
       <StarBackground />
