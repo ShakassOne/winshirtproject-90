@@ -12,6 +12,10 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import PreviousWinnersPage from './pages/PreviousWinnersPage';
+import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 // Admin Pages
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -63,6 +67,11 @@ function App() {
             <Route path="/product/:id" element={<ProductDetailPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
+            <Route path="/previous-winners" element={<PreviousWinnersPage />} />
+            <Route path="/terms-conditions" element={<TermsAndConditionsPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/faq" element={<HowItWorksPage />} />
             
             {/* Protected routes */}
             <Route path="/profile" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />

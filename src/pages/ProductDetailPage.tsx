@@ -286,7 +286,7 @@ const ProductDetailPage: React.FC = () => {
                         visual={selectedVisual}
                         visualSettings={visualSettings}
                         onUpdateSettings={handleUpdateSettings}
-                        position={activePosition} // Add the missing position prop
+                        position={activePosition}
                         readOnly={true}
                         printAreas={product.printAreas}
                         selectedPrintArea={selectedPrintArea}
@@ -386,7 +386,7 @@ const ProductDetailPage: React.FC = () => {
                   </Tabs>
                 ) : (
                   // Si la personnalisation n'est pas autorisée, montrer le carrousel d'images simple
-                  <Carousel className="w-full">
+                  <Carousel className="w-full" opts={{ loop: true }}>
                     <CarouselContent>
                       {productImages.map((image, index) => (
                         <CarouselItem key={index}>
@@ -400,8 +400,8 @@ const ProductDetailPage: React.FC = () => {
                         </CarouselItem>
                       ))}
                     </CarouselContent>
-                    <CarouselPrevious className="text-winshirt-purple" />
-                    <CarouselNext className="text-winshirt-purple" />
+                    <CarouselPrevious className="text-winshirt-purple left-2" />
+                    <CarouselNext className="text-winshirt-purple right-2" />
                   </Carousel>
                 )}
               </div>
