@@ -8,8 +8,9 @@ import TestEmailButton from '@/components/admin/settings/TestEmailButton';
 import HomeIntroManager from '@/components/admin/settings/HomeIntroManager';
 import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
 import CssEditorManager from '@/components/admin/settings/CssEditorManager';
+import SyncSettingsManager from '@/components/admin/settings/SyncSettingsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload, Palette, FileCode } from 'lucide-react';
+import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload, Palette, FileCode, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'react-router-dom';
 
@@ -57,6 +58,10 @@ const AdminSettingsPage: React.FC = () => {
                 <Upload className="h-4 w-4 mr-2" />
                 Gestion uploads
               </TabsTrigger>
+              <TabsTrigger value="sync" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Synchronisation
+              </TabsTrigger>
               <TabsTrigger value="theme" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <Palette className="h-4 w-4 mr-2" />
                 Apparence
@@ -93,6 +98,10 @@ const AdminSettingsPage: React.FC = () => {
             
             <TabsContent value="uploads" className="space-y-6">
               <FtpSettingsManager />
+            </TabsContent>
+            
+            <TabsContent value="sync" className="space-y-6">
+              <SyncSettingsManager />
             </TabsContent>
 
             <TabsContent value="theme" className="space-y-6">

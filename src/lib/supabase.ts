@@ -46,12 +46,20 @@ export const supabase = createClient(
   }
 );
 
-// Configuration pour le serveur FTP
+// Configuration pour le serveur FTP/API de production
 export const ftpConfig = {
-  // Ces valeurs seront remplies lors de la mise en production
-  enabled: false, // À activer quand on se connectera à winshirt.fr
-  uploadEndpoint: '/api/upload', // Endpoint de l'API pour l'upload FTP
-  baseUrl: 'https://winshirt.fr/images', // URL de base pour les images sur FTP
+  enabled: true, // Activé pour la production
+  uploadEndpoint: 'https://winshirt.fr/api/upload', // Endpoint de l'API pour l'upload sur votre serveur
+  baseUrl: 'https://winshirt.fr/images', // URL de base pour les images
+  apiBaseUrl: 'https://winshirt.fr/api', // URL de base pour les API sur votre serveur
+};
+
+// Configuration pour la synchronisation des données
+export const syncConfig = {
+  enabled: true, // Active la synchronisation
+  autoSync: true, // Synchronisation automatique
+  syncInterval: 3600000, // Intervalle de synchronisation en ms (1 heure)
+  tables: ['products', 'clients', 'orders', 'lotteries'], // Tables à synchroniser
 };
 
 // Fonction pour déterminer si on utilise FTP ou Supabase
@@ -104,7 +112,7 @@ export const uploadImage = async (file: File, bucket: string = 'products'): Prom
   }
 };
 
-// Fonction pour uploader une image vers le serveur FTP via une API
+// Fonction pour uploader une image vers le serveur via une API
 export const uploadImageToFTP = async (file: File, folder: string = 'products'): Promise<string | null> => {
   try {
     // Créer un FormData pour l'upload
@@ -120,7 +128,7 @@ export const uploadImageToFTP = async (file: File, folder: string = 'products'):
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Erreur lors de l'upload FTP: ${errorText}`);
+      console.error(`Erreur lors de l'upload: ${errorText}`);
       return null;
     }
 
@@ -130,7 +138,7 @@ export const uploadImageToFTP = async (file: File, folder: string = 'products'):
     // Renvoyer l'URL complète
     return `${ftpConfig.baseUrl}/${folder}/${result.filename}`;
   } catch (error) {
-    console.error('Erreur lors de l\'upload FTP:', error);
+    console.error('Erreur lors de l\'upload:', error);
     return null;
   }
 };
@@ -155,9 +163,75 @@ export type HomeIntroConfig = {
   autoPlay: boolean;
 };
 
+// Fonction pour synchroniser les données entre Supabase et le serveur
+export const syncData = async (table: string): Promise<boolean> => {
+  try {
+    if (!syncConfig.enabled) return true;
+    
+    if (isSupabaseConfigured()) {
+      console.log(`Synchronisation des données de la table ${table} en cours...`);
+      
+      // Récupérer les données de Supabase
+      const { data, error } = await supabase
+        .from(table)
+        .select('*');
+      
+      if (error) {
+        console.error(`Erreur lors de la récupération des données de ${table}:`, error);
+        return false;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log(`Pas de données à synchroniser pour la table ${table}`);
+        return true;
+      }
+      
+      // Envoyer les données au serveur
+      const response = await fetch(`${ftpConfig.apiBaseUrl}/sync/${table}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Erreur lors de la synchronisation de ${table}:`, errorText);
+        return false;
+      }
+      
+      console.log(`Synchronisation de ${table} réussie`);
+      return true;
+    }
+    
+    console.warn("Supabase n'est pas configuré, impossible de synchroniser les données");
+    return false;
+  } catch (error) {
+    console.error(`Erreur lors de la synchronisation de ${table}:`, error);
+    return false;
+  }
+};
+
 // Fonction pour récupérer la configuration de l'intro de la page d'accueil
 export const getHomeIntroConfig = async (): Promise<HomeIntroConfig | null> => {
   try {
+    // Si FTP est activé et que nous voulons récupérer depuis le serveur
+    if (shouldUseFTP()) {
+      try {
+        // Récupérer depuis le serveur
+        const response = await fetch(`${ftpConfig.apiBaseUrl}/configs/home_intro`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data || getDefaultHomeIntroConfig();
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération de la configuration depuis le serveur:", error);
+        // Fallback au localStorage puis à Supabase
+      }
+    }
+    
     if (isSupabaseConfigured()) {
       // Essayer de récupérer depuis Supabase
       const { data, error } = await supabase
@@ -188,6 +262,30 @@ export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<bool
   try {
     // Sauvegarder dans localStorage pour fallback
     localStorage.setItem('home_intro_config', JSON.stringify(config));
+    
+    // Si FTP est activé, sauvegarder sur le serveur
+    if (shouldUseFTP()) {
+      try {
+        const response = await fetch(`${ftpConfig.apiBaseUrl}/configs/home_intro`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(config),
+        });
+        
+        if (!response.ok) {
+          console.error("Erreur lors de la sauvegarde de la configuration sur le serveur");
+          // Continuer avec Supabase si disponible
+        } else {
+          console.log("Configuration sauvegardée sur le serveur");
+          return true;
+        }
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde sur le serveur:", error);
+        // Continuer avec Supabase
+      }
+    }
     
     if (isSupabaseConfigured()) {
       // Essayer de sauvegarder dans Supabase
