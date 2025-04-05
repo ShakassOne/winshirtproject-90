@@ -33,7 +33,7 @@ const PreviousWinnersPage: React.FC = () => {
                     <tr key={index} className="border-b border-winshirt-purple/10">
                       <td className="px-4 py-3 text-sm text-gray-300">{winner.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-300">{winner.lotteryTitle}</td>
-                      <td className="px-4 py-3 text-sm text-gray-300">{winner.prize}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{winner.lotteryValue}€</td>
                       <td className="px-4 py-3 text-sm text-gray-300">{winner.drawDate}</td>
                     </tr>
                   ))}
