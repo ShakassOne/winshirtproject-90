@@ -314,73 +314,71 @@ const ProductDetailPage: React.FC = () => {
                         </Select>
                       </div>
                       
-                      {/* Sélecteur de visuel */}
-                      <VisualSelector
-                        selectedVisualId={selectedVisual?.id || null}
-                        onSelectVisual={handleSelectVisual}
-                        categoryId={selectedCategoryId}
-                      />
+                      {/* Navigation Recto/Verso au-dessus du sélecteur de visuel */}
+                      <Tabs defaultValue={activePosition} onValueChange={(value) => handleTabChange(value as 'front' | 'back')} className="w-full">
+                        <TabsList className="grid grid-cols-2 w-full">
+                          <TabsTrigger value="front">Recto</TabsTrigger>
+                          <TabsTrigger value="back">Verso</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="front" className="mt-2">
+                          {/* Sélecteur de visuel */}
+                          <VisualSelector
+                            selectedVisualId={selectedVisual?.id || null}
+                            onSelectVisual={handleSelectVisual}
+                            categoryId={selectedCategoryId}
+                            activePosition="front"
+                          />
+                        </TabsContent>
+                        
+                        <TabsContent value="back" className="mt-2">
+                          {/* Sélecteur de visuel */}
+                          <VisualSelector
+                            selectedVisualId={selectedVisual?.id || null}
+                            onSelectVisual={handleSelectVisual}
+                            categoryId={selectedCategoryId}
+                            activePosition="back"
+                          />
+                        </TabsContent>
+                      </Tabs>
                       
                       {/* Séparateur */}
-                      {selectedVisual && <div className="border-t border-winshirt-purple/20 my-6"></div>}
+                      <div className="border-t border-winshirt-purple/20 my-4"></div>
                       
-                      {/* Zone de positionnement du visuel */}
-                      {selectedVisual && (
-                        <>
-                          <Tabs defaultValue={activePosition} onValueChange={(value) => handleTabChange(value as 'front' | 'back')} className="w-full">
-                            <TabsList className="grid grid-cols-2 w-full">
-                              <TabsTrigger value="front">Recto</TabsTrigger>
-                              <TabsTrigger value="back">Verso</TabsTrigger>
-                            </TabsList>
-                            
-                            <TabsContent value="front" className="mt-0">
-                              <VisualPositioner
-                                productImage={product.image}
-                                productSecondaryImage={product.secondaryImage}
-                                visual={selectedVisual}
-                                visualSettings={visualSettings}
-                                onUpdateSettings={handleUpdateSettings}
-                                position="front" // Add missing position prop
-                                printAreas={product.printAreas?.filter(area => area.position === 'front')}
-                                selectedPrintArea={selectedPrintArea}
-                              />
-                            </TabsContent>
-                            
-                            <TabsContent value="back" className="mt-0">
-                              <VisualPositioner
-                                productImage={product.secondaryImage || product.image}
-                                visual={selectedVisual}
-                                visualSettings={visualSettings}
-                                onUpdateSettings={handleUpdateSettings}
-                                position="back" // Add missing position prop
-                                printAreas={product.printAreas?.filter(area => area.position === 'back')}
-                                selectedPrintArea={selectedPrintArea}
-                              />
-                            </TabsContent>
-                          </Tabs>
-                          
-                          {/* Sélection de la zone d'impression si disponible */}
-                          {hasPrintAreas && (
-                            <div className="space-y-2 mt-4">
-                              <Label className="text-white">Zone d'impression</Label>
-                              <Select
-                                value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
-                                onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
-                              >
-                                <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                                  <SelectValue placeholder="Choisir une zone d'impression" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                                  {product.printAreas?.filter(area => area.position === activePosition).map(area => (
-                                    <SelectItem key={area.id} value={area.id.toString()}>
-                                      {area.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </>
+                      {/* Affichage du positionnement */}
+                      <div className="mt-2">
+                        <VisualPositioner
+                          productImage={product.image}
+                          productSecondaryImage={product.secondaryImage}
+                          visual={selectedVisual}
+                          visualSettings={visualSettings}
+                          onUpdateSettings={handleUpdateSettings}
+                          position={activePosition}
+                          printAreas={product.printAreas?.filter(area => area.position === activePosition)}
+                          selectedPrintArea={selectedPrintArea}
+                        />
+                      </div>
+                      
+                      {/* Sélection de la zone d'impression si disponible */}
+                      {hasPrintAreas && (
+                        <div className="space-y-2 mt-4">
+                          <Label className="text-white">Zone d'impression</Label>
+                          <Select
+                            value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
+                            onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
+                          >
+                            <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                              <SelectValue placeholder="Choisir une zone d'impression" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                              {product.printAreas?.filter(area => area.position === activePosition).map(area => (
+                                <SelectItem key={area.id} value={area.id.toString()}>
+                                  {area.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
                     </TabsContent>
                   </Tabs>
