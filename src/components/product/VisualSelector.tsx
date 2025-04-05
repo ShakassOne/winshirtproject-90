@@ -9,14 +9,16 @@ interface VisualSelectorProps {
   selectedVisualId: number | null;
   onSelectVisual: (visual: Visual | null) => void;
   categoryId?: number | null;
-  activePosition?: 'front' | 'back'; // Ajouter la position active
+  activePosition?: 'front' | 'back';
+  hideUploader?: boolean; // Ajout de l'option pour cacher l'uploader
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({
   selectedVisualId,
   onSelectVisual,
   categoryId,
-  activePosition = 'front'
+  activePosition = 'front',
+  hideUploader = false
 }) => {
   const { 
     getCategories, 
@@ -95,14 +97,17 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
       <div className="flex justify-between items-center p-4 border-b border-winshirt-purple/30">
         <h3 className="text-lg font-medium">
-          Choisissez un visuel pour {activePosition === 'front' ? 'le recto' : 'le verso'}
+          Choisissez un visuel
         </h3>
-        <CustomVisualUploader
-          onVisualUpload={handleVisualUpload}
-          onVisualRemove={handleVisualRemove}
-          uploadedVisual={uploadedVisual}
-          allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
-        />
+        {!hideUploader && (
+          <CustomVisualUploader
+            onVisualUpload={handleVisualUpload}
+            onVisualRemove={handleVisualRemove}
+            uploadedVisual={uploadedVisual}
+            allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
+            buttonStyle="compact"
+          />
+        )}
       </div>
       
       <ScrollArea className="h-64">

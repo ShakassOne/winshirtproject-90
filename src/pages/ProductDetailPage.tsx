@@ -25,6 +25,7 @@ import VisualSelector from '@/components/product/VisualSelector';
 import VisualPositioner from '@/components/product/VisualPositioner';
 import { useVisualSelector } from '@/hooks/useVisualSelector';
 import { useVisuals } from '@/data/mockVisuals';
+import CustomVisualUploader from '@/components/product/CustomVisualUploader';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -159,6 +160,21 @@ const ProductDetailPage: React.FC = () => {
     setPosition(position);
   };
   
+  // Gérer l'upload de visuel personnalisé
+  const handleVisualUpload = (file: File, previewUrl: string) => {
+    // Créer un visuel personnalisé basé sur le fichier uploadé
+    const customVisual: Visual = {
+      id: -Date.now(), // ID négatif pour distinguer les visuels personnalisés
+      name: file.name,
+      description: 'Visuel personnalisé',
+      image: previewUrl,
+      categoryId: -1, // Catégorie spéciale pour les uploads
+      categoryName: 'Uploads personnalisés'
+    };
+    
+    handleSelectVisual(customVisual);
+  };
+  
   if (loading) {
     return (
       <div className="pt-32 pb-8 text-center">
@@ -274,6 +290,7 @@ const ProductDetailPage: React.FC = () => {
               <div className="rounded-lg overflow-hidden">
                 {canCustomize ? (
                   <Tabs defaultValue="preview" className="w-full">
+                    {/* 1. Aperçu et Personnalisation tabs */}
                     <TabsList className="w-full grid grid-cols-2 mb-4">
                       <TabsTrigger value="preview">Aperçu</TabsTrigger>
                       <TabsTrigger value="customize">Personnaliser</TabsTrigger>
@@ -294,7 +311,29 @@ const ProductDetailPage: React.FC = () => {
                     </TabsContent>
                     
                     <TabsContent value="customize" className="mt-0 space-y-6">
-                      {/* Sélection de la catégorie de visuels */}
+                      {/* 2. Le Visuel du T-Shirt (VisualPositioner) */}
+                      <div className="mt-2">
+                        <VisualPositioner
+                          productImage={product.image}
+                          productSecondaryImage={product.secondaryImage}
+                          visual={selectedVisual}
+                          visualSettings={visualSettings}
+                          onUpdateSettings={handleUpdateSettings}
+                          position={activePosition}
+                          printAreas={product.printAreas?.filter(area => area.position === activePosition)}
+                          selectedPrintArea={selectedPrintArea}
+                        />
+                      </div>
+                      
+                      {/* 3. Recto Verso tabs */}
+                      <Tabs defaultValue={activePosition} onValueChange={(value) => handleTabChange(value as 'front' | 'back')} className="w-full">
+                        <TabsList className="grid grid-cols-2 w-full">
+                          <TabsTrigger value="front">Recto</TabsTrigger>
+                          <TabsTrigger value="back">Verso</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                      
+                      {/* 4. Sélection de la catégorie de visuels */}
                       <div className="space-y-2">
                         <Label className="text-white">Catégorie de visuels</Label>
                         <Select
@@ -314,48 +353,25 @@ const ProductDetailPage: React.FC = () => {
                         </Select>
                       </div>
                       
-                      {/* Navigation Recto/Verso au-dessus du sélecteur de visuel */}
-                      <Tabs defaultValue={activePosition} onValueChange={(value) => handleTabChange(value as 'front' | 'back')} className="w-full">
-                        <TabsList className="grid grid-cols-2 w-full">
-                          <TabsTrigger value="front">Recto</TabsTrigger>
-                          <TabsTrigger value="back">Verso</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="front" className="mt-2">
-                          {/* Sélecteur de visuel */}
-                          <VisualSelector
-                            selectedVisualId={selectedVisual?.id || null}
-                            onSelectVisual={handleSelectVisual}
-                            categoryId={selectedCategoryId}
-                            activePosition="front"
-                          />
-                        </TabsContent>
-                        
-                        <TabsContent value="back" className="mt-2">
-                          {/* Sélecteur de visuel */}
-                          <VisualSelector
-                            selectedVisualId={selectedVisual?.id || null}
-                            onSelectVisual={handleSelectVisual}
-                            categoryId={selectedCategoryId}
-                            activePosition="back"
-                          />
-                        </TabsContent>
-                      </Tabs>
+                      {/* 5. Upload functionality */}
+                      <div className="mt-4">
+                        <Label className="text-white mb-2 block">Ajouter votre propre visuel</Label>
+                        <CustomVisualUploader
+                          onVisualUpload={handleVisualUpload}
+                          onVisualRemove={() => handleSelectVisual(null)}
+                          uploadedVisual={null}
+                          allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
+                        />
+                      </div>
                       
-                      {/* Séparateur */}
-                      <div className="border-t border-winshirt-purple/20 my-4"></div>
-                      
-                      {/* Affichage du positionnement */}
-                      <div className="mt-2">
-                        <VisualPositioner
-                          productImage={product.image}
-                          productSecondaryImage={product.secondaryImage}
-                          visual={selectedVisual}
-                          visualSettings={visualSettings}
-                          onUpdateSettings={handleUpdateSettings}
-                          position={activePosition}
-                          printAreas={product.printAreas?.filter(area => area.position === activePosition)}
-                          selectedPrintArea={selectedPrintArea}
+                      {/* 6. Images (VisualSelector) */}
+                      <div className="mt-4">
+                        <VisualSelector
+                          selectedVisualId={selectedVisual?.id || null}
+                          onSelectVisual={handleSelectVisual}
+                          categoryId={selectedCategoryId}
+                          activePosition={activePosition}
+                          hideUploader={true} // Cacher l'uploader car on l'a mis séparément au-dessus
                         />
                       </div>
                       
