@@ -54,7 +54,7 @@ const LotteriesPage: React.FC = () => {
         description: "Dernière chance de gagner cette PS5 Pro en édition limitée! Le tirage aura lieu dans quelques heures.",
         value: 899,
         targetParticipants: 20,
-        currentParticipants: 19, // Complète
+        currentParticipants: 20, // Complète
         status: "active",
         image: "https://pixelprint.world/wp-content/uploads/2025/04/ps5-limited-edition.jpg",
         endDate: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(), // 1 heure à partir de maintenant
