@@ -7,6 +7,7 @@ import { ExtendedLottery } from '@/types/lottery';
 import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
