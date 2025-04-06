@@ -27,15 +27,14 @@ const AdminNavigationHandler: React.FC = () => {
     // Vérifier si on est sur une page admin
     const isAdminPage = location.pathname.startsWith('/admin');
     
-    // Afficher la navigation si l'utilisateur est administrateur, 
+    // Afficher la navigation si l'utilisateur est administrateur
     // ou si on est sur une page admin
     setShouldShow(isAdmin || isAdminPage);
-  }, [location]);
+  }, [location.pathname]);
   
   // Si on ne doit pas afficher la navigation, retourner null
   if (!shouldShow) return null;
   
-  // Ajout d'un élément wrapper pour s'assurer que le style fixed bottom fonctionne correctement
   return <AdminNavigation />;
 };
 

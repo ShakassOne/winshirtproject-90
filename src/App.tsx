@@ -91,13 +91,13 @@ function App() {
             
             {/* Protected routes */}
             <Route path="/profile" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
-            <Route path="/orders" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/order/:id" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/tickets" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/checkout" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+            <Route path="/order/:id" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+            <Route path="/tickets" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+            <Route path="/checkout" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
             
             {/* Admin routes */}
+            <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true}><AdminDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><AdminProductsPage /></ProtectedRoute>} />
             <Route path="/admin/lotteries" element={<ProtectedRoute adminOnly={true}><AdminLotteriesPage /></ProtectedRoute>} />

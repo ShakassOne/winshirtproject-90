@@ -8,7 +8,6 @@ import { ExtendedLottery } from '@/types/lottery';
 import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
-import AdminNavigation from '@/components/admin/AdminNavigation';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
@@ -16,16 +15,18 @@ const LotteriesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   // Fonction optimisée pour ajouter la loterie iPhone
-  const addIPhoneLottery = (currentLotteries: ExtendedLottery[]): ExtendedLottery[] => {
+  const addSpecialLotteries = (currentLotteries: ExtendedLottery[]): ExtendedLottery[] => {
+    let updatedLotteries = [...currentLotteries];
+    
     // Vérifier si une loterie avec l'iPhone existe déjà
-    const iPhoneLotteryExists = currentLotteries.some(
+    const iPhoneLotteryExists = updatedLotteries.some(
       lottery => lottery.title.toLowerCase().includes('iphone')
     );
     
     if (!iPhoneLotteryExists) {
       // Créer une nouvelle loterie iPhone
       const iPhoneLottery: ExtendedLottery = {
-        id: Math.max(...currentLotteries.map(l => l.id), 0) + 1, // ID unique
+        id: Math.max(...updatedLotteries.map(l => l.id), 0) + 1, // ID unique
         title: "iPhone 16 Pro",
         description: "Gagnez le tout nouveau iPhone 16 Pro avec ses nouvelles couleurs exclusives et ses fonctionnalités révolutionnaires.",
         value: 1299,
@@ -37,10 +38,62 @@ const LotteriesPage: React.FC = () => {
         featured: true, // Set iPhone lottery as featured by default
       };
       
-      return [...currentLotteries, iPhoneLottery];
+      updatedLotteries.push(iPhoneLottery);
     }
     
-    return currentLotteries;
+    // Vérifier si une loterie qui va se terminer existe déjà
+    const expiringLotteryExists = updatedLotteries.some(
+      lottery => lottery.title.toLowerCase().includes('se termine bientôt')
+    );
+    
+    if (!expiringLotteryExists) {
+      // Créer une loterie qui va bientôt se terminer
+      const expiringLottery: ExtendedLottery = {
+        id: Math.max(...updatedLotteries.map(l => l.id), 0) + 2, // ID unique
+        title: "PS5 Pro Edition Limitée - Se termine bientôt",
+        description: "Dernière chance de gagner cette PS5 Pro en édition limitée! Le tirage aura lieu dans quelques heures.",
+        value: 899,
+        targetParticipants: 20,
+        currentParticipants: 20, // Complète
+        status: "active",
+        image: "https://pixelprint.world/wp-content/uploads/2025/04/ps5-limited-edition.jpg",
+        endDate: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(), // 1 heure à partir de maintenant
+        featured: true,
+      };
+      
+      updatedLotteries.push(expiringLottery);
+    }
+    
+    // Vérifier si une loterie complétée existe déjà
+    const completedLotteryExists = updatedLotteries.some(
+      lottery => lottery.status === "completed" && lottery.title.toLowerCase().includes('macbook')
+    );
+    
+    if (!completedLotteryExists) {
+      // Ajouter une loterie déjà complétée
+      const completedLottery: ExtendedLottery = {
+        id: Math.max(...updatedLotteries.map(l => l.id), 0) + 3, // ID unique
+        title: "MacBook Pro M3 Max",
+        description: "Cette loterie pour un MacBook Pro avec la puce M3 Max est maintenant terminée. Félicitations au gagnant!",
+        value: 1999,
+        targetParticipants: 40,
+        currentParticipants: 40,
+        status: "completed",
+        image: "https://pixelprint.world/wp-content/uploads/2025/04/macbook-pro-m3.jpg",
+        endDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 jours avant aujourd'hui
+        drawDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 jour avant aujourd'hui
+        winner: {
+          id: 123,
+          name: "Jean Dupont",
+          email: "jean.dupont@example.com",
+          avatar: "https://ui-avatars.com/api/?name=Jean+Dupont"
+        }
+      };
+      
+      updatedLotteries.push(completedLottery);
+    }
+    
+    return updatedLotteries;
   };
   
   // Fonction optimisée pour synchroniser les loteries avec le stockage
@@ -130,8 +183,8 @@ const LotteriesPage: React.FC = () => {
           }
         });
         
-        // 5. Ajouter l'iPhone lottery si besoin
-        allLotteries = addIPhoneLottery(allLotteries);
+        // 5. Ajouter les loteries spéciales (iPhone, expirante, complétée)
+        allLotteries = addSpecialLotteries(allLotteries);
         
         // 6. Synchroniser toutes les loteries
         syncAllLotteriesToStorage(allLotteries);
@@ -144,7 +197,7 @@ const LotteriesPage: React.FC = () => {
         
         // Fallback aux mock data si tout échoue
         let loadedLotteries = mockLotteries as ExtendedLottery[];
-        loadedLotteries = addIPhoneLottery(loadedLotteries);
+        loadedLotteries = addSpecialLotteries(loadedLotteries);
         setLotteries(loadedLotteries);
       } finally {
         setIsLoading(false);
@@ -191,9 +244,6 @@ const LotteriesPage: React.FC = () => {
   
   return (
     <>
-      {/* Admin Navigation */}
-      <AdminNavigation />
-      
       {/* Show featured lottery slider if there are any featured lotteries */}
       {hasFeaturedLotteries && (
         <FeaturedLotterySlider lotteries={lotteries} />
