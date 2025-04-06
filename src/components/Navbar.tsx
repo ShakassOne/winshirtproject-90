@@ -74,6 +74,12 @@ const Navbar: React.FC = () => {
               >
                 Comment ça marche
               </Link>
+              <Link 
+                to="/contact" 
+                className={`nav-link ${isActive('/contact') ? 'active' : ''}`}
+              >
+                Contact
+              </Link>
               {/* Removed the admin link from here */}
             </nav>
             
@@ -139,6 +145,13 @@ const Navbar: React.FC = () => {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Comment ça marche
+                  </Link>
+                  <Link 
+                    to="/contact" 
+                    className={`nav-link text-center ${isActive('/contact') ? 'active' : ''}`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Contact
                   </Link>
                   {/* Removed the admin link from mobile menu */}
                 </nav>

@@ -48,7 +48,7 @@ const Footer: React.FC = () => {
                 <Link to="/lotteries" className="hover:text-winshirt-blue-light">Loteries actives</Link>
               </li>
               <li>
-                <Link to="/winners" className="hover:text-winshirt-blue-light">Gagnants précédents</Link>
+                <Link to="/previous-winners" className="hover:text-winshirt-blue-light">Gagnants précédents</Link>
               </li>
             </ul>
           </div>
@@ -63,10 +63,10 @@ const Footer: React.FC = () => {
                 <Link to="/faq" className="hover:text-winshirt-blue-light">FAQ</Link>
               </li>
               <li>
-                <Link to="/terms" className="hover:text-winshirt-blue-light">Conditions générales</Link>
+                <Link to="/terms-conditions" className="hover:text-winshirt-blue-light">Conditions générales</Link>
               </li>
               <li>
-                <Link to="/privacy" className="hover:text-winshirt-blue-light">Politique de confidentialité</Link>
+                <Link to="/privacy-policy" className="hover:text-winshirt-blue-light">Politique de confidentialité</Link>
               </li>
             </ul>
           </div>

@@ -17,6 +17,7 @@ import PreviousWinnersPage from './pages/PreviousWinnersPage';
 import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import ContactPage from './pages/ContactPage';
+import AccountPage from './pages/AccountPage';
 
 // Admin Pages
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -86,9 +87,10 @@ function App() {
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/faq" element={<HowItWorksPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/account" element={<AccountPage />} />
             
             {/* Protected routes */}
-            <Route path="/profile" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/order/:id" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
