@@ -72,14 +72,11 @@ const fetchWinnerForLottery = async (lotteryId: number): Promise<Participant | n
       .from('lottery_winners')
       .select('*')
       .eq('lottery_id', lotteryId)
-      .single();
+      .maybeSingle();
       
-    if (error) {
-      if (error.code === 'PGRST116') { // No rows returned
-        return null;
-      }
-      throw error;
-    }
+    if (error) throw error;
+    
+    if (!data) return null;
     
     return {
       id: data.user_id,
@@ -96,12 +93,15 @@ const fetchWinnerForLottery = async (lotteryId: number): Promise<Participant | n
 // Function to fetch all lotteries
 export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
+    console.log('Fetching lotteries from Supabase...');
     const { data, error } = await supabase
       .from('lotteries')
       .select('*')
       .order('id', { ascending: false });
     
     if (error) throw error;
+    
+    console.log(`Fetched ${data.length} lotteries from Supabase`);
     
     const extendedLotteries = data.map(convertSupabaseLottery);
     

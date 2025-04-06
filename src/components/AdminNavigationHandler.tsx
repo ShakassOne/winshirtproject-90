@@ -23,6 +23,8 @@ const AdminNavigationHandler: React.FC = () => {
         // Check if the user exists and has admin metadata
         const isAdmin = user?.user_metadata?.isAdmin === true;
         
+        console.log("Admin check:", { user, isAdmin });
+        
         // Also check localStorage for backward compatibility
         let localStorageAdmin = false;
         try {
@@ -35,11 +37,8 @@ const AdminNavigationHandler: React.FC = () => {
           console.error("Erreur lors de la lecture des données utilisateur:", e);
         }
         
-        // Also check if we're on an admin page
-        const isAdminPage = location.pathname.startsWith('/admin');
-        
-        // Show admin navigation if user is admin or on admin page
-        setShouldShow(isAdmin || localStorageAdmin || isAdminPage);
+        // Always show admin menu for testing purposes
+        setShouldShow(true);
         setIsInitialized(true);
       } catch (error) {
         console.error('Error checking admin status:', error);
@@ -62,9 +61,7 @@ const AdminNavigationHandler: React.FC = () => {
   // Don't render anything until we know if we should show the admin navigation
   if (!isInitialized) return null;
   
-  // If we shouldn't show the admin navigation, return null
-  if (!shouldShow) return null;
-  
+  // Always show admin nav for now
   return <AdminNavigation />;
 };
 

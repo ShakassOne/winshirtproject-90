@@ -19,6 +19,7 @@ const LotteriesPage: React.FC = () => {
       setIsLoading(true);
       try {
         const lotteriesData = await fetchLotteries();
+        console.log("Loaded lotteries:", lotteriesData);
         setLotteries(lotteriesData);
       } catch (error) {
         console.error('Error loading lotteries:', error);
@@ -30,15 +31,20 @@ const LotteriesPage: React.FC = () => {
     
     loadLotteries();
     
-    // Set up event listener for lottery updates
-    const handleLotteryUpdate = () => {
-      loadLotteries();
-    };
-    
-    window.addEventListener('lotteriesUpdated', handleLotteryUpdate);
+    // Set up subscription for real-time updates
+    const channel = supabase
+      .channel('public:lotteries')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'lotteries' }, 
+        () => {
+          console.log("Lottery data changed, reloading...");
+          loadLotteries();
+        }
+      )
+      .subscribe();
     
     return () => {
-      window.removeEventListener('lotteriesUpdated', handleLotteryUpdate);
+      supabase.removeChannel(channel);
     };
   }, []);
   
@@ -109,6 +115,11 @@ const LotteriesPage: React.FC = () => {
             >
               Relancées
             </Button>
+          </div>
+          
+          {/* Debug Information */}
+          <div className="mb-6 text-center text-sm text-gray-500">
+            {lotteries.length} loteries chargées
           </div>
           
           {/* Lotteries Grid */}
