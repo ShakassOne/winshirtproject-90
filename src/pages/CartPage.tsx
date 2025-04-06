@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { mockLotteries } from '@/data/mockData';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
@@ -9,16 +8,8 @@ import StarBackground from '@/components/StarBackground';
 import { useAuth } from '@/contexts/AuthContext';
 import { X, ShoppingBag, AlertTriangle, CreditCard, Check, MapPin, Truck, User, Lock } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import ShippingOptions from '@/components/cart/ShippingOptions';
 import { toast } from '@/lib/toast';
-import { initiateStripeCheckout } from '@/lib/stripe';
 import { supabase } from '@/integrations/supabase/client'; 
 import { Client } from '@/types/client';
 import { Order } from '@/types/order';
@@ -35,7 +26,7 @@ interface CartItem {
   secondaryImage?: string;
   tickets: number;
   selectedLotteries: { id: number; name: string }[];
-  customVisual?: string; // Ajout du champ customVisual pour stocker l'URL de l'image personnalisée
+  customVisual?: string;
 }
 
 const CartPage: React.FC = () => {
@@ -65,6 +56,7 @@ const CartPage: React.FC = () => {
   const [selectedShipping, setSelectedShipping] = useState<string | null>(null);
   const [shippingCost, setShippingCost] = useState(0);
   const [showAuthForm, setShowAuthForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
     // Load cart from localStorage
@@ -152,58 +144,118 @@ const CartPage: React.FC = () => {
     });
   };
 
-  // Function to create or update client information
-  const saveClientInfo = (orderData: Order) => {
+  // Function to create or update client information in Supabase
+  const saveClientInfo = async (orderData: Order) => {
     try {
-      // Get existing clients from localStorage
-      const clientsString = localStorage.getItem('clients');
-      const clients = clientsString ? JSON.parse(clientsString) as Client[] : [];
+      console.log("Saving client info to Supabase:", orderData);
       
-      // Check if client already exists
-      const existingClientIndex = clients.findIndex(c => c.id === orderData.clientId);
-      
-      if (existingClientIndex !== -1) {
-        // Update existing client
-        clients[existingClientIndex] = {
-          ...clients[existingClientIndex],
-          orderCount: (clients[existingClientIndex].orderCount || 0) + 1,
-          totalSpent: (clients[existingClientIndex].totalSpent || 0) + orderData.total,
-          address: shippingAddress.address,
-          city: shippingAddress.city,
-          postalCode: shippingAddress.zipCode,
-          country: shippingAddress.country,
-        };
-      } else {
-        // Create new client
-        const newClient: Client = {
-          id: orderData.clientId,
-          name: orderData.clientName,
-          email: orderData.clientEmail,
-          phone: userInfo.phoneNumber || '',
-          address: shippingAddress.address,
-          city: shippingAddress.city,
-          postalCode: shippingAddress.zipCode,
-          country: shippingAddress.country,
-          registrationDate: user?.registrationDate || new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          orderCount: 1,
-          totalSpent: orderData.total,
-          participatedLotteries: orderData.items
-            .filter(item => item.lotteriesEntries && item.lotteriesEntries.length > 0)
-            .flatMap(item => item.lotteriesEntries || []),
-        };
+      // First try to save in Supabase if available
+      try {
+        // Check if client exists
+        const { data: existingClient, error: queryError } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', orderData.clientId)
+          .maybeSingle();
+          
+        if (queryError) throw queryError;
         
-        clients.push(newClient);
+        if (existingClient) {
+          // Update existing client
+          const { error: updateError } = await supabase
+            .from('clients')
+            .update({
+              orderCount: (existingClient.orderCount || 0) + 1,
+              totalSpent: (existingClient.totalSpent || 0) + orderData.total,
+              address: shippingAddress.address,
+              city: shippingAddress.city,
+              postalCode: shippingAddress.zipCode,
+              country: shippingAddress.country,
+              lastUpdate: new Date().toISOString()
+            })
+            .eq('id', orderData.clientId);
+            
+          if (updateError) throw updateError;
+        } else {
+          // Create new client
+          const { error: insertError } = await supabase
+            .from('clients')
+            .insert({
+              id: orderData.clientId,
+              name: orderData.clientName,
+              email: orderData.clientEmail,
+              phone: userInfo.phoneNumber || '',
+              address: shippingAddress.address,
+              city: shippingAddress.city,
+              postalCode: shippingAddress.zipCode,
+              country: shippingAddress.country,
+              registrationDate: user?.registrationDate || new Date().toISOString(),
+              lastLogin: new Date().toISOString(),
+              orderCount: 1,
+              totalSpent: orderData.total,
+              participatedLotteries: orderData.items
+                .filter(item => item.lotteriesEntries && item.lotteriesEntries.length > 0)
+                .flatMap(item => item.lotteriesEntries || []),
+            });
+            
+          if (insertError) throw insertError;
+        }
+        
+        console.log("Client info saved to Supabase successfully");
+        return true;
+      } catch (supabaseError) {
+        console.error("Error saving to Supabase, fallback to localStorage:", supabaseError);
+        
+        // Fallback to localStorage if Supabase fails
+        const clientsString = localStorage.getItem('clients');
+        const clients = clientsString ? JSON.parse(clientsString) as Client[] : [];
+        
+        // Check if client already exists
+        const existingClientIndex = clients.findIndex(c => c.id === orderData.clientId);
+        
+        if (existingClientIndex !== -1) {
+          // Update existing client
+          clients[existingClientIndex] = {
+            ...clients[existingClientIndex],
+            orderCount: (clients[existingClientIndex].orderCount || 0) + 1,
+            totalSpent: (clients[existingClientIndex].totalSpent || 0) + orderData.total,
+            address: shippingAddress.address,
+            city: shippingAddress.city,
+            postalCode: shippingAddress.zipCode,
+            country: shippingAddress.country,
+          };
+        } else {
+          // Create new client
+          const newClient: Client = {
+            id: orderData.clientId,
+            name: orderData.clientName,
+            email: orderData.clientEmail,
+            phone: userInfo.phoneNumber || '',
+            address: shippingAddress.address,
+            city: shippingAddress.city,
+            postalCode: shippingAddress.zipCode,
+            country: shippingAddress.country,
+            registrationDate: user?.registrationDate || new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            orderCount: 1,
+            totalSpent: orderData.total,
+            participatedLotteries: orderData.items
+              .filter(item => item.lotteriesEntries && item.lotteriesEntries.length > 0)
+              .flatMap(item => item.lotteriesEntries || []),
+          };
+          
+          clients.push(newClient);
+        }
+        
+        // Save updated clients to localStorage
+        localStorage.setItem('clients', JSON.stringify(clients));
+        
+        // Also update sessionStorage for immediate use
+        sessionStorage.setItem('clients', JSON.stringify(clients));
+        
+        console.log('Client information saved to localStorage successfully');
+        return true;
       }
-      
-      // Save updated clients to localStorage
-      localStorage.setItem('clients', JSON.stringify(clients));
-      
-      // Also update sessionStorage for immediate use
-      sessionStorage.setItem('clients', JSON.stringify(clients));
-      
-      console.log('Client information saved successfully');
-      return true;
     } catch (error) {
       console.error('Error saving client information:', error);
       return false;
@@ -217,6 +269,8 @@ const CartPage: React.FC = () => {
       return;
     }
     
+    setIsSubmitting(true);
+    
     try {
       toast.loading("Création de votre compte...");
       
@@ -228,7 +282,7 @@ const CartPage: React.FC = () => {
       toast.success("Compte créé avec succès");
       
       // Procéder au traitement de la commande
-      handleConfirmOrder();
+      await handleConfirmOrder();
     } catch (error) {
       toast.dismiss();
       console.error("Erreur d'inscription:", error);
@@ -245,10 +299,12 @@ const CartPage: React.FC = () => {
       } else {
         toast.error("Erreur lors de la création du compte");
       }
+      
+      setIsSubmitting(false);
     }
   };
   
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
     console.log("Confirming order with data:", {
       shippingAddress,
       paymentInfo,
@@ -279,6 +335,8 @@ const CartPage: React.FC = () => {
       handleRegisterAndOrder();
       return;
     }
+    
+    setIsSubmitting(true);
     
     // Show processing state
     toast.loading("Traitement de votre commande...");
@@ -349,27 +407,40 @@ const CartPage: React.FC = () => {
         notes: ''
       };
       
-      // Get existing orders from localStorage
-      const ordersString = localStorage.getItem('orders');
-      const orders = ordersString ? JSON.parse(ordersString) : [];
-      
-      // Add new order
-      orders.push(order);
-      
-      // Save to localStorage
-      localStorage.setItem('orders', JSON.stringify(orders));
-      
-      // Also update sessionStorage for immediate use
-      sessionStorage.setItem('orders', JSON.stringify(orders));
+      // Try to save order in Supabase
+      try {
+        const { error: orderError } = await supabase
+          .from('orders')
+          .insert(order);
+          
+        if (orderError) throw orderError;
+        
+        console.log("Order saved to Supabase successfully");
+      } catch (supabaseError) {
+        console.error("Error saving order to Supabase, fallback to localStorage:", supabaseError);
+        
+        // Fallback to localStorage
+        const ordersString = localStorage.getItem('orders');
+        const orders = ordersString ? JSON.parse(ordersString) : [];
+        
+        // Add new order
+        orders.push(order);
+        
+        // Save to localStorage
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        // Also update sessionStorage for immediate use
+        sessionStorage.setItem('orders', JSON.stringify(orders));
+      }
       
       // Save last order info for confirmation page
       sessionStorage.setItem('last_order_info', JSON.stringify(order));
       
       // Save client information
-      saveClientInfo(order);
+      await saveClientInfo(order);
       
       // Update lotteries participants
-      updateLotteryParticipants(cart);
+      await updateLotteryParticipants(cart);
       
       // Clear cart
       localStorage.setItem('cart', JSON.stringify([]));
@@ -388,74 +459,75 @@ const CartPage: React.FC = () => {
       console.error('Error processing order:', error);
       toast.dismiss();
       toast.error("Une erreur s'est produite lors du traitement de votre commande");
+      setIsSubmitting(false);
     }
   };
 
   // Function to update lottery participants
-  const updateLotteryParticipants = (cartItems: CartItem[]) => {
+  const updateLotteryParticipants = async (cartItems: CartItem[]) => {
     try {
-      // Get lotteries data
-      const lotteriesString = localStorage.getItem('lotteries');
-      if (!lotteriesString) return;
-      
-      const lotteries = JSON.parse(lotteriesString);
+      console.log("Updating lottery participants from cart items:", cartItems);
       let updated = false;
       
-      // Update each lottery with new participants
-      cartItems.forEach(item => {
+      // Process each cart item
+      for (const item of cartItems) {
         // Skip if no lotteries selected
-        if (!item.selectedLotteries || item.selectedLotteries.length === 0) return;
+        if (!item.selectedLotteries || item.selectedLotteries.length === 0) continue;
         
-        item.selectedLotteries.forEach(selectedLottery => {
-          const lotteryIndex = lotteries.findIndex((l: any) => l.id === selectedLottery.id);
-          if (lotteryIndex === -1) return;
-          
-          // Create participant based on current user or new user info
-          const participant = {
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            name: user ? user.name : userInfo.name || 'Anonymous',
-            email: user ? user.email : userInfo.email || 'anonymous@example.com',
-            avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
-          };
-          
-          // Initialize participants array if not exists
-          if (!lotteries[lotteryIndex].participants) {
-            lotteries[lotteryIndex].participants = [];
-          }
-          
-          // Add participant for each quantity
-          for (let i = 0; i < item.quantity; i++) {
-            lotteries[lotteryIndex].participants.push({
-              ...participant,
-              id: participant.id + i
-            });
+        for (const selectedLottery of item.selectedLotteries) {
+          try {
+            // Create participant based on current user or new user info
+            const participant = {
+              name: user ? user.name : userInfo.name || 'Anonymous',
+              email: user ? user.email : userInfo.email || 'anonymous@example.com',
+              avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
+              lottery_id: selectedLottery.id,
+              user_id: Date.now() + Math.floor(Math.random() * 1000)
+            };
             
-            // Increment current participants count
-            lotteries[lotteryIndex].currentParticipants += 1;
+            // Try to add participant to Supabase
+            console.log("Adding participant to lottery:", selectedLottery.id, participant);
+            
+            // Add participant to lottery_participants table
+            const { error: participantError } = await supabase
+              .from('lottery_participants')
+              .insert(participant);
+              
+            if (participantError) throw participantError;
+            
+            // Update current_participants count in lotteries table
+            const { data: lotteryData, error: lotteryError } = await supabase
+              .from('lotteries')
+              .select('current_participants, target_participants')
+              .eq('id', selectedLottery.id)
+              .single();
+              
+            if (lotteryError) throw lotteryError;
+            
+            // For each quantity, add a participant
+            const newParticipantCount = lotteryData.current_participants + item.quantity;
+            
+            const { error: updateError } = await supabase
+              .from('lotteries')
+              .update({ current_participants: newParticipantCount })
+              .eq('id', selectedLottery.id);
+              
+            if (updateError) throw updateError;
+            
+            console.log(`Updated lottery ${selectedLottery.id} with ${item.quantity} new participants. New count: ${newParticipantCount}`);
+            
+            updated = true;
+          } catch (lotteryError) {
+            console.error(`Error updating lottery ${selectedLottery.id}:`, lotteryError);
+            // Continue with next lottery even if one fails
           }
-          
-          updated = true;
-          
-          // Check if lottery has reached target
-          if (lotteries[lotteryIndex].currentParticipants >= lotteries[lotteryIndex].targetParticipants) {
-            // Schedule a draw if not already scheduled
-            if (!lotteries[lotteryIndex].drawDate) {
-              const drawDate = new Date();
-              drawDate.setDate(drawDate.getDate() + 1); // +24 hours
-              lotteries[lotteryIndex].drawDate = drawDate.toISOString();
-            }
-          }
-        });
-      });
-      
-      // Save updated lotteries if changes were made
-      if (updated) {
-        localStorage.setItem('lotteries', JSON.stringify(lotteries));
-        sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
-        console.log('Lotteries updated with new participants');
+        }
       }
+      
+      return updated;
     } catch (error) {
       console.error('Error updating lottery participants:', error);
+      return false;
     }
   };
 
@@ -741,8 +813,9 @@ const CartPage: React.FC = () => {
               
               <div className="flex justify-end mt-6">
                 <Button 
-                  onClick={handleConfirmOrder}
+                  onClick={!user && showAuthForm ? handleRegisterAndOrder : handleConfirmOrder}
                   className="bg-winshirt-purple hover:bg-winshirt-purple-dark flex items-center"
+                  disabled={isSubmitting}
                 >
                   <Lock className="mr-2" size={16} />
                   {!user && showAuthForm ? "Créer mon compte et confirmer la commande" : "Confirmer la commande"}

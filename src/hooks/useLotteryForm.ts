@@ -70,6 +70,10 @@ export const useLotteryForm = (
     if (lotteryToEdit) {
       setSelectedLotteryId(lotteryId);
       setIsCreating(false);
+      
+      // Debug: log the lottery being edited
+      console.log("Editing lottery:", lotteryToEdit);
+      
       form.reset({
         title: lotteryToEdit.title,
         description: lotteryToEdit.description,
@@ -136,21 +140,6 @@ export const useLotteryForm = (
       
       if (createdLottery) {
         setLotteries(prev => [...prev, createdLottery]);
-        
-        // Sync with storage
-        const updatedLotteries = [...lotteries, createdLottery];
-        try {
-          localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-          sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-          
-          // Dispatch an event to notify other components that lotteries have been updated
-          window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
-            detail: { lotteries: updatedLotteries } 
-          }));
-        } catch (err) {
-          console.error("Error syncing updated lotteries to storage:", err);
-        }
-        
         toast.success("Loterie créée avec succès !");
       }
     } else if (selectedLotteryId) {
@@ -172,29 +161,21 @@ export const useLotteryForm = (
           featured: data.featured || false,
         };
         
+        console.log("Sending update to Supabase:", updatedLotteryData);
+        
         const updatedLottery = await updateLottery(updatedLotteryData);
         
         if (updatedLottery) {
+          console.log("Lottery updated successfully:", updatedLottery);
           const updatedLotteries = lotteries.map(lottery => 
             lottery.id === selectedLotteryId ? updatedLottery : lottery
           );
           
           setLotteries(updatedLotteries);
-          
-          // Sync with storage
-          try {
-            localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-            sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-            
-            // Dispatch an event to notify other components that lotteries have been updated
-            window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
-              detail: { lotteries: updatedLotteries } 
-            }));
-          } catch (err) {
-            console.error("Error syncing updated lotteries to storage:", err);
-          }
-          
           toast.success("Loterie modifiée avec succès !");
+        } else {
+          console.error("Failed to update lottery");
+          toast.error("Erreur lors de la mise à jour de la loterie");
         }
       }
     }
@@ -249,20 +230,6 @@ export const useLotteryForm = (
       );
       
       setLotteries(updatedLotteries);
-      
-      // Sync with storage
-      try {
-        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-        
-        // Dispatch an event to notify other components that lotteries have been updated
-        window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
-          detail: { lotteries: updatedLotteries } 
-        }));
-      } catch (err) {
-        console.error("Error syncing updated lotteries to storage:", err);
-      }
-      
       toast.success(`Le gagnant de la loterie est ${winner.name} !`);
     }
   };
@@ -287,20 +254,6 @@ export const useLotteryForm = (
       );
       
       setLotteries(updatedLotteries);
-      
-      // Sync with storage
-      try {
-        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-        
-        // Dispatch an event to notify other components that lotteries have been updated
-        window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
-          detail: { lotteries: updatedLotteries } 
-        }));
-      } catch (err) {
-        console.error("Error syncing updated lotteries to storage:", err);
-      }
-      
       toast.success(featured ? 
         "Loterie mise en avant avec succès !" : 
         "Loterie retirée des mises en avant avec succès !");
