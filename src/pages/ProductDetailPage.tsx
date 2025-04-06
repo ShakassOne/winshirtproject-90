@@ -333,49 +333,51 @@ const ProductDetailPage: React.FC = () => {
                         </TabsList>
                       </Tabs>
                       
-                      {/* 4. Sélection de la catégorie de visuels */}
-                      <div className="space-y-2">
-                        <Label className="text-white">Catégorie de visuels</Label>
-                        <Select
-                          value={selectedCategoryId ? selectedCategoryId.toString() : ""}
-                          onValueChange={(value) => handleCategoryChange(value ? parseInt(value) : null)}
-                        >
-                          <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                            <SelectValue placeholder="Choisir une catégorie" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                            {visualCategories.map((category) => (
-                              <SelectItem key={category.id} value={category.id.toString()}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      {/* 4. Sélection de la catégorie de visuels et 5. Upload côte à côte */}
+                      <div className="flex flex-wrap gap-4 items-start">
+                        <div className="space-y-2 flex-1 min-w-[180px]">
+                          <Label className="text-white">Catégorie de visuels</Label>
+                          <Select
+                            value={selectedCategoryId ? selectedCategoryId.toString() : ""}
+                            onValueChange={(value) => handleCategoryChange(value ? parseInt(value) : null)}
+                          >
+                            <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+                              <SelectValue placeholder="Choisir une catégorie" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                              {visualCategories.map((category) => (
+                                <SelectItem key={category.id} value={category.id.toString()}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2 mt-7">
+                          <CustomVisualUploader
+                            onVisualUpload={handleVisualUpload}
+                            onVisualRemove={() => handleSelectVisual(null)}
+                            uploadedVisual={null}
+                            allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
+                            buttonStyle="compact"
+                          />
+                        </div>
                       </div>
                       
-                      {/* 5. Upload functionality */}
-                      <div className="mt-4">
-                        <Label className="text-white mb-2 block">Ajouter votre propre visuel</Label>
-                        <CustomVisualUploader
-                          onVisualUpload={handleVisualUpload}
-                          onVisualRemove={() => handleSelectVisual(null)}
-                          uploadedVisual={null}
-                          allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
-                        />
-                      </div>
-                      
-                      {/* 6. Images (VisualSelector) */}
+                      {/* 6. Images (VisualSelector) avec grille 4 colonnes au lieu de 3 */}
                       <div className="mt-4">
                         <VisualSelector
                           selectedVisualId={selectedVisual?.id || null}
                           onSelectVisual={handleSelectVisual}
                           categoryId={selectedCategoryId}
                           activePosition={activePosition}
-                          hideUploader={true} // Cacher l'uploader car on l'a mis séparément au-dessus
+                          hideUploader={true}
+                          gridCols={4}
                         />
                       </div>
                       
-                      {/* Sélection de la zone d'impression si disponible */}
+                      {/* Zone d'impression si disponible */}
                       {hasPrintAreas && (
                         <div className="space-y-2 mt-4">
                           <Label className="text-white">Zone d'impression</Label>

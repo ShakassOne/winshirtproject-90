@@ -10,7 +10,8 @@ interface VisualSelectorProps {
   onSelectVisual: (visual: Visual | null) => void;
   categoryId?: number | null;
   activePosition?: 'front' | 'back';
-  hideUploader?: boolean; // Ajout de l'option pour cacher l'uploader
+  hideUploader?: boolean;
+  gridCols?: 2 | 3 | 4; // New prop to control grid columns
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({
@@ -18,7 +19,8 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   onSelectVisual,
   categoryId,
   activePosition = 'front',
-  hideUploader = false
+  hideUploader = false,
+  gridCols = 3 // Default to 3 columns if not specified
 }) => {
   const { 
     getCategories, 
@@ -93,6 +95,12 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     onSelectVisual(null);
   };
 
+  // Configure grid columns classes based on gridCols prop
+  const gridColumnsClass = 
+    gridCols === 2 ? "grid-cols-1 sm:grid-cols-2" :
+    gridCols === 4 ? "grid-cols-2 sm:grid-cols-4" :
+    "grid-cols-2 sm:grid-cols-3"; // Default (3)
+
   return (
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
       <div className="flex justify-between items-center p-4 border-b border-winshirt-purple/30">
@@ -111,7 +119,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
       </div>
       
       <ScrollArea className="h-64">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
+        <div className={`grid ${gridColumnsClass} gap-3 p-4`}>
           {visuals.length > 0 ? (
             visuals.map((visual) => (
               <div 
@@ -135,7 +143,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
               </div>
             ))
           ) : (
-            <div className="col-span-3 p-8 text-center">
+            <div className="col-span-4 p-8 text-center">
               <p className="text-gray-400">Aucun visuel disponible dans cette catégorie</p>
             </div>
           )}

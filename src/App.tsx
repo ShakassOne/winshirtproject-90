@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Routes, Route, BrowserRouter } from 'react-router-dom';
+import { Routes, Route, BrowserRouter, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Pages
@@ -16,6 +16,7 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import PreviousWinnersPage from './pages/PreviousWinnersPage';
 import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import ContactPage from './pages/ContactPage';
 
 // Admin Pages
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -33,6 +34,17 @@ import Footer from './components/Footer';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Toaster } from "@/components/ui/toaster";
 import AdminNavigationHandler from './components/AdminNavigationHandler';
+
+// ScrollToTop component to reset scroll position on route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  
+  return null;
+}
 
 function App() {
   // Effect for setting theme colors
@@ -56,6 +68,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ScrollToTop />
         <Navbar />
         <main className="bg-winshirt-space min-h-screen relative">
           <Routes>
@@ -64,7 +77,7 @@ function App() {
             <Route path="/lotteries" element={<LotteriesPage />} />
             <Route path="/lottery/:id" element={<LotteryDetailPage />} />
             <Route path="/products" element={<ProductsPage />} />
-            <Route path="/product/:id" element={<ProductDetailPage />} />
+            <Route path="/products/:id" element={<ProductDetailPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/how-it-works" element={<HowItWorksPage />} />
@@ -72,6 +85,7 @@ function App() {
             <Route path="/terms-conditions" element={<TermsAndConditionsPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/faq" element={<HowItWorksPage />} />
+            <Route path="/contact" element={<ContactPage />} />
             
             {/* Protected routes */}
             <Route path="/profile" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
@@ -79,6 +93,7 @@ function App() {
             <Route path="/order/:id" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
             
             {/* Admin routes */}
             <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true}><AdminDashboardPage /></ProtectedRoute>} />
