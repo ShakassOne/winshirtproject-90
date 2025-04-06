@@ -38,8 +38,8 @@ const LotteriesPage: React.FC = () => {
       .channel('public:lotteries')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'lotteries' }, 
-        () => {
-          console.log("Lottery data changed, reloading...");
+        (payload) => {
+          console.log("Lottery data changed, reloading...", payload);
           loadLotteries();
         }
       )

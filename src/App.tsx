@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Routes, Route, BrowserRouter, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -36,6 +35,9 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Toaster } from "@/components/ui/toaster";
 import AdminNavigationHandler from './components/AdminNavigationHandler';
 
+// Supabase initialization
+import { initializeSupabase } from './lib/initSupabase';
+
 // ScrollToTop component to reset scroll position on route change
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -48,6 +50,8 @@ function ScrollToTop() {
 }
 
 function App() {
+  const [isSupabaseInitialized, setIsSupabaseInitialized] = useState(false);
+
   // Effect for setting theme colors
   useEffect(() => {
     const root = document.documentElement;
@@ -64,6 +68,38 @@ function App() {
     root.style.setProperty('--winshirt-blue', '#3a86ff');
     root.style.setProperty('--winshirt-blue-light', '#66a3ff');
     root.style.setProperty('--winshirt-blue-dark', '#2e6acd');
+    
+    // Charger les variables CSS personnalisées
+    try {
+      const savedSettings = localStorage.getItem('winshirt-css-settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        Object.entries(settings).forEach(([name, value]) => {
+          root.style.setProperty(name, value as string);
+        });
+      }
+      
+      // Appliquer le CSS personnalisé
+      const customCss = localStorage.getItem('winshirt-custom-css');
+      if (customCss) {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'winshirt-custom-css';
+        styleEl.textContent = customCss;
+        document.head.appendChild(styleEl);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des styles personnalisés:', error);
+    }
+  }, []);
+  
+  // Initialize Supabase
+  useEffect(() => {
+    const init = async () => {
+      const success = await initializeSupabase();
+      setIsSupabaseInitialized(true);
+    };
+    
+    init();
   }, []);
 
   return (

@@ -11,7 +11,8 @@ import {
   updateLottery, 
   deleteLottery, 
   toggleLotteryFeatured, 
-  updateLotteryWinner 
+  updateLotteryWinner,
+  fetchLotteries 
 } from '@/api/lotteryApi';
 
 const formSchema = z.object({
@@ -43,6 +44,7 @@ export const useLotteryForm = (
 ) => {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedLotteryId, setSelectedLotteryId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -97,92 +99,113 @@ export const useLotteryForm = (
   };
 
   const handleDeleteLottery = async (lotteryId: number) => {
-    const success = await deleteLottery(lotteryId);
-    
-    if (success) {
-      setLotteries(prev => prev.filter(lottery => lottery.id !== lotteryId));
-      setSelectedLotteryId(null);
-      toast.success("Loterie supprimée avec succès !");
+    try {
+      const confirmed = window.confirm("Êtes-vous sûr de vouloir supprimer cette loterie ? Cette action est irréversible.");
+      if (!confirmed) return;
+      
+      const success = await deleteLottery(lotteryId);
+      
+      if (success) {
+        // Forcer la mise à jour des données
+        const updatedLotteries = await fetchLotteries(true);
+        setLotteries(updatedLotteries);
+        setSelectedLotteryId(null);
+        toast.success("Loterie supprimée avec succès !");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la loterie:", error);
+      toast.error("Erreur lors de la suppression de la loterie");
     }
   };
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    console.log("Données du formulaire soumises:", data); // Debug: afficher les données envoyées
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     
-    // Ensure numeric values
-    const valueAsNumber = Number(data.value);
-    const targetParticipantsAsNumber = Number(data.targetParticipants);
-    
-    if (isNaN(valueAsNumber) || isNaN(targetParticipantsAsNumber)) {
-      toast.error("Erreur de conversion des valeurs numériques");
-      return;
-    }
-    
-    if (isCreating) {
-      // Créer une nouvelle loterie
-      const newLotteryData: Omit<ExtendedLottery, 'id'> = {
-        title: data.title,
-        description: data.description,
-        value: valueAsNumber,
-        targetParticipants: targetParticipantsAsNumber,
-        currentParticipants: 0,
-        status: data.status,
-        image: data.image,
-        linkedProducts: data.linkedProducts?.map(Number) || [],
-        participants: [],
-        winner: null,
-        drawDate: null,
-        endDate: data.endDate,
-        featured: data.featured || false,
-      };
+    try {
+      console.log("Données du formulaire soumises:", data);
       
-      const createdLottery = await createLottery(newLotteryData);
+      // Ensure numeric values
+      const valueAsNumber = Number(data.value);
+      const targetParticipantsAsNumber = Number(data.targetParticipants);
       
-      if (createdLottery) {
-        setLotteries(prev => [...prev, createdLottery]);
-        toast.success("Loterie créée avec succès !");
+      if (isNaN(valueAsNumber) || isNaN(targetParticipantsAsNumber)) {
+        toast.error("Erreur de conversion des valeurs numériques");
+        return;
       }
-    } else if (selectedLotteryId) {
-      // Trouver la loterie existante pour conserver ses propriétés non modifiables par le formulaire
-      const existingLottery = lotteries.find(l => l.id === selectedLotteryId);
       
-      if (existingLottery) {
-        // Préparer les données pour la mise à jour
-        const updatedLotteryData: ExtendedLottery = {
-          ...existingLottery,
+      if (isCreating) {
+        // Créer une nouvelle loterie
+        const newLotteryData: Omit<ExtendedLottery, 'id'> = {
           title: data.title,
           description: data.description,
           value: valueAsNumber,
           targetParticipants: targetParticipantsAsNumber,
+          currentParticipants: 0,
           status: data.status,
           image: data.image,
-          endDate: data.endDate,
           linkedProducts: data.linkedProducts?.map(Number) || [],
+          participants: [],
+          winner: null,
+          drawDate: null,
+          endDate: data.endDate,
           featured: data.featured || false,
         };
         
-        console.log("Sending update to Supabase:", updatedLotteryData);
+        const createdLottery = await createLottery(newLotteryData);
         
-        const updatedLottery = await updateLottery(updatedLotteryData);
-        
-        if (updatedLottery) {
-          console.log("Lottery updated successfully:", updatedLottery);
-          const updatedLotteries = lotteries.map(lottery => 
-            lottery.id === selectedLotteryId ? updatedLottery : lottery
-          );
-          
+        if (createdLottery) {
+          // Forcer la mise à jour des données
+          const updatedLotteries = await fetchLotteries(true);
           setLotteries(updatedLotteries);
-          toast.success("Loterie modifiée avec succès !");
-        } else {
-          console.error("Failed to update lottery");
-          toast.error("Erreur lors de la mise à jour de la loterie");
+          toast.success("Loterie créée avec succès !");
+        }
+      } else if (selectedLotteryId) {
+        // Trouver la loterie existante pour conserver ses propriétés non modifiables par le formulaire
+        const existingLottery = lotteries.find(l => l.id === selectedLotteryId);
+        
+        if (existingLottery) {
+          // Préparer les données pour la mise à jour
+          const updatedLotteryData: ExtendedLottery = {
+            ...existingLottery,
+            title: data.title,
+            description: data.description,
+            value: valueAsNumber,
+            targetParticipants: targetParticipantsAsNumber,
+            status: data.status,
+            image: data.image,
+            endDate: data.endDate,
+            linkedProducts: data.linkedProducts?.map(Number) || [],
+            featured: data.featured || false,
+          };
+          
+          console.log("Sending update to Supabase:", updatedLotteryData);
+          
+          const updatedLottery = await updateLottery(updatedLotteryData);
+          
+          if (updatedLottery) {
+            console.log("Lottery updated successfully:", updatedLottery);
+            
+            // Forcer la mise à jour des données
+            const updatedLotteries = await fetchLotteries(true);
+            setLotteries(updatedLotteries);
+            toast.success("Loterie modifiée avec succès !");
+          } else {
+            console.error("Failed to update lottery");
+            toast.error("Erreur lors de la mise à jour de la loterie");
+          }
         }
       }
+      
+      setIsCreating(false);
+      setSelectedLotteryId(null);
+      form.reset();
+    } catch (error) {
+      console.error("Erreur lors de la soumission du formulaire:", error);
+      toast.error("Erreur lors de la soumission du formulaire");
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsCreating(false);
-    setSelectedLotteryId(null);
-    form.reset();
   };
 
   const handleCancel = () => {
@@ -215,22 +238,18 @@ export const useLotteryForm = (
   };
 
   const handleDrawWinner = async (lotteryId: number, winner: Participant) => {
-    const success = await updateLotteryWinner(lotteryId, winner);
-    
-    if (success) {
-      const updatedLotteries = lotteries.map(lottery => 
-        lottery.id === lotteryId 
-          ? { 
-              ...lottery, 
-              winner: winner,
-              drawDate: new Date().toISOString(),
-              status: 'completed' as const
-            } 
-          : lottery
-      );
+    try {
+      const success = await updateLotteryWinner(lotteryId, winner);
       
-      setLotteries(updatedLotteries);
-      toast.success(`Le gagnant de la loterie est ${winner.name} !`);
+      if (success) {
+        // Forcer la mise à jour des données
+        const updatedLotteries = await fetchLotteries(true);
+        setLotteries(updatedLotteries);
+        toast.success(`Le gagnant de la loterie est ${winner.name} !`);
+      }
+    } catch (error) {
+      console.error("Erreur lors du tirage au sort:", error);
+      toast.error("Erreur lors du tirage au sort");
     }
   };
 
@@ -244,19 +263,20 @@ export const useLotteryForm = (
   }, [lotteries]);
 
   const handleToggleFeatured = async (lotteryId: number, featured: boolean) => {
-    const success = await toggleLotteryFeatured(lotteryId, featured);
-    
-    if (success) {
-      const updatedLotteries = lotteries.map(lottery => 
-        lottery.id === lotteryId 
-          ? { ...lottery, featured } 
-          : lottery
-      );
+    try {
+      const success = await toggleLotteryFeatured(lotteryId, featured);
       
-      setLotteries(updatedLotteries);
-      toast.success(featured ? 
-        "Loterie mise en avant avec succès !" : 
-        "Loterie retirée des mises en avant avec succès !");
+      if (success) {
+        // Forcer la mise à jour des données
+        const updatedLotteries = await fetchLotteries(true);
+        setLotteries(updatedLotteries);
+        toast.success(featured ? 
+          "Loterie mise en avant avec succès !" : 
+          "Loterie retirée des mises en avant avec succès !");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la modification du statut vedette:", error);
+      toast.error("Erreur lors de la modification du statut vedette");
     }
   };
 
@@ -264,6 +284,7 @@ export const useLotteryForm = (
     isCreating,
     selectedLotteryId,
     form,
+    isSubmitting,
     handleCreateLottery,
     handleEditLottery,
     handleDeleteLottery,

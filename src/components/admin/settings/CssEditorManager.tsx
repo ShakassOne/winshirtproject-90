@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,11 +30,28 @@ const CssEditorManager: React.FC = () => {
   useEffect(() => {
     loadCssVariables();
     loadCustomCss();
+    
+    // Appliquer le CSS personnalisé dès le chargement du composant
+    applyCustomCssOnLoad();
   }, []);
   
   const loadCssVariables = () => {
     const root = document.documentElement;
     const computedStyle = getComputedStyle(root);
+    
+    // Essayer de charger les variables CSS depuis le localStorage
+    try {
+      const savedSettings = localStorage.getItem('winshirt-css-settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        // Appliquer les variables sauvegardées
+        Object.entries(settings).forEach(([name, value]) => {
+          root.style.setProperty(name, value as string);
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des variables CSS:', error);
+    }
     
     const winshirtVariables: CssVariable[] = [
       { name: '--winshirt-space', value: computedStyle.getPropertyValue('--winshirt-space').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-space').trim(), description: 'Couleur de fond principale', category: 'colors' },
@@ -82,6 +98,30 @@ const CssEditorManager: React.FC = () => {
     const customCss = localStorage.getItem('winshirt-custom-css') || '';
     setCssCode(customCss);
     setOriginalCssCode(customCss);
+  };
+  
+  // Nouvelle fonction pour appliquer le CSS personnalisé au chargement
+  const applyCustomCssOnLoad = () => {
+    try {
+      const customCss = localStorage.getItem('winshirt-custom-css');
+      if (customCss) {
+        // Supprimer l'ancien style personnalisé s'il existe
+        const existingStyle = document.getElementById('winshirt-custom-css');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+        
+        // Créer et ajouter le nouveau style
+        const styleEl = document.createElement('style');
+        styleEl.id = 'winshirt-custom-css';
+        styleEl.textContent = customCss;
+        document.head.appendChild(styleEl);
+        
+        console.log('CSS personnalisé appliqué au chargement:', customCss);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'application du CSS personnalisé au chargement:', error);
+    }
   };
   
   const handleInputChange = (index: number, value: string) => {

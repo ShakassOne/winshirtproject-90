@@ -10,7 +10,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storage: localStorage
   },
   realtime: {
     params: {
@@ -19,10 +20,39 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   db: {
     schema: 'public'
+  },
+  global: {
+    fetch: (...args) => {
+      // Set a shorter timeout to detect connection issues faster
+      const controller = new AbortController();
+      const { signal } = controller;
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+      
+      // @ts-ignore
+      return fetch(...args, { signal })
+        .finally(() => clearTimeout(timeoutId));
+    }
   }
 });
 
 // Helper function to check if Supabase is configured
 export const isSupabaseConfigured = () => {
   return Boolean(supabaseUrl && supabaseAnonKey);
+};
+
+// Add function to check if Supabase is connected
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+      
+    console.log("Supabase connection check result:", { data, error });
+    return !error;
+  } catch (error) {
+    console.error("Error checking Supabase connection:", error);
+    return false;
+  }
 };

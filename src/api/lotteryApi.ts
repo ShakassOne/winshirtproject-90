@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -117,7 +116,7 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
       const cachedTime = sessionStorage.getItem('cached_lotteries_time');
       
       if (cachedData && cachedTime) {
-        // Only use cache if it's less than 1 minute old
+        // Only use cache if it's less than 30 seconds old
         const cacheAge = Date.now() - parseInt(cachedTime);
         if (cacheAge < 30000) { // 30 seconds
           console.log('Using cached lottery data (< 30 sec old)');
@@ -207,13 +206,16 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
   }
 };
 
-// Function to create a new lottery - with sync improvement
+// Function to create a new lottery - with better error handling
 export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promise<ExtendedLottery | null> => {
   try {
     console.log('Creating lottery in Supabase:', lottery);
     
     // Format lottery data for Supabase
     const formattedLottery = formatLotteryForSupabase(lottery);
+    
+    // Force clear cache before creating
+    sessionStorage.removeItem('cached_lotteries');
     
     const { data, error } = await supabase
       .from('lotteries')
@@ -223,11 +225,22 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
     
     if (error) {
       console.error('Error creating lottery in Supabase:', error);
+      
+      // Provide more context in the error message
+      if (error.code === '23505') {
+        toast.error("Cette loterie existe déjà.");
+      } else if (error.code === '23503') {
+        toast.error("Référence invalide. Veuillez vérifier les produits liés.");
+      } else {
+        toast.error(`Erreur lors de la création de la loterie: ${error.message}`);
+      }
+      
       throw error;
     }
     
     if (!data) {
       console.error('No data returned after creating lottery');
+      toast.error("Aucune donnée retournée après création de la loterie.");
       throw new Error('No data returned after creating lottery');
     }
     
@@ -236,51 +249,57 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
     // Convert to ExtendedLottery type
     const newLottery = convertSupabaseLottery(data);
     
-    // Clear cache to force refresh
-    sessionStorage.removeItem('cached_lotteries');
-    
     // Wait for fetchLotteries to update both storage locations
     await fetchLotteries(true);
     
+    toast.success("Loterie créée avec succès !");
     return newLottery;
   } catch (error) {
     console.error('Error creating lottery:', error);
-    toast.error("Erreur lors de la création de la loterie.");
     
-    try {
-      // Fallback to localStorage
-      console.log('Falling back to localStorage for lottery creation');
-      
-      const lotteriesString = localStorage.getItem('lotteries');
-      const lotteries = lotteriesString ? JSON.parse(lotteriesString) : [];
-      
-      // Generate a fake ID
-      const newId = lotteries.length > 0 
-        ? Math.max(...lotteries.map((l: any) => l.id)) + 1 
-        : 1;
-      
-      const newLottery: ExtendedLottery = {
-        ...lottery as Omit<ExtendedLottery, 'id'>,
-        id: newId,
-      };
-      
-      lotteries.push(newLottery);
-      localStorage.setItem('lotteries', JSON.stringify(lotteries));
-      
-      return newLottery;
-    } catch (localStorageError) {
-      console.error('Error with localStorage fallback:', localStorageError);
-      return null;
+    // Retry with localStorage fallback only if the error is a connection issue
+    if (error instanceof Error && error.message.includes('Failed to fetch')) {
+      try {
+        // Fallback to localStorage
+        console.log('Falling back to localStorage for lottery creation');
+        
+        const lotteriesString = localStorage.getItem('lotteries');
+        const lotteries = lotteriesString ? JSON.parse(lotteriesString) : [];
+        
+        // Generate a fake ID
+        const newId = lotteries.length > 0 
+          ? Math.max(...lotteries.map((l: any) => l.id)) + 1 
+          : 1;
+        
+        const newLottery: ExtendedLottery = {
+          ...lottery as Omit<ExtendedLottery, 'id'>,
+          id: newId,
+        };
+        
+        lotteries.push(newLottery);
+        localStorage.setItem('lotteries', JSON.stringify(lotteries));
+        
+        toast.success("Loterie créée localement (mode hors ligne)");
+        return newLottery;
+      } catch (localStorageError) {
+        console.error('Error with localStorage fallback:', localStorageError);
+        toast.error("Erreur lors de la création locale de la loterie.");
+      }
     }
+    
+    return null;
   }
 };
 
-// Function to update an existing lottery - with sync improvement
+// Function to update an existing lottery
 export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedLottery | null> => {
   try {
     console.log('Updating lottery in Supabase:', lottery);
     
     const formattedLottery = formatLotteryForSupabase(lottery);
+    
+    // Force clear cache before updating
+    sessionStorage.removeItem('cached_lotteries');
     
     // Perform update in Supabase
     const { data, error } = await supabase
@@ -292,11 +311,20 @@ export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedL
     
     if (error) {
       console.error('Error updating lottery in Supabase:', error);
+      
+      // Provide more context in the error message
+      if (error.code === '23503') {
+        toast.error("Référence invalide. Veuillez vérifier les produits liés.");
+      } else {
+        toast.error(`Erreur lors de la mise à jour de la loterie: ${error.message}`);
+      }
+      
       throw error;
     }
     
     if (!data) {
       console.error('No data returned after updating lottery');
+      toast.error("Aucune donnée retournée après mise à jour de la loterie.");
       throw new Error('No data returned after updating lottery');
     }
     
@@ -309,38 +337,42 @@ export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedL
     updatedLottery.participants = lottery.participants || [];
     updatedLottery.winner = lottery.winner;
     
-    // Clear cache to force refresh
-    sessionStorage.removeItem('cached_lotteries');
-    
     // Wait for fetchLotteries to update both storage locations
     await fetchLotteries(true);
     
+    toast.success("Loterie modifiée avec succès !");
     return updatedLottery;
   } catch (error) {
     console.error('Error updating lottery:', error);
-    toast.error("Erreur lors de la mise à jour de la loterie.");
     
-    try {
-      // Fallback to localStorage
-      console.log('Falling back to localStorage for lottery update');
-      
-      const lotteriesString = localStorage.getItem('lotteries');
-      if (!lotteriesString) return null;
-      
-      const lotteries = JSON.parse(lotteriesString);
-      const index = lotteries.findIndex((l: any) => l.id === lottery.id);
-      
-      if (index !== -1) {
-        lotteries[index] = lottery;
-        localStorage.setItem('lotteries', JSON.stringify(lotteries));
-        return lottery;
+    // Retry with localStorage fallback only if the error is a connection issue
+    if (error instanceof Error && error.message.includes('Failed to fetch')) {
+      try {
+        // Fallback to localStorage
+        console.log('Falling back to localStorage for lottery update');
+        
+        const lotteriesString = localStorage.getItem('lotteries');
+        if (!lotteriesString) return null;
+        
+        const lotteries = JSON.parse(lotteriesString);
+        const index = lotteries.findIndex((l: any) => l.id === lottery.id);
+        
+        if (index !== -1) {
+          lotteries[index] = lottery;
+          localStorage.setItem('lotteries', JSON.stringify(lotteries));
+          
+          toast.success("Loterie modifiée localement (mode hors ligne)");
+          return lottery;
+        }
+        
+        return null;
+      } catch (localStorageError) {
+        console.error('Error with localStorage fallback:', localStorageError);
+        toast.error("Erreur lors de la mise à jour locale de la loterie.");
       }
-      
-      return null;
-    } catch (localStorageError) {
-      console.error('Error with localStorage fallback:', localStorageError);
-      return null;
     }
+    
+    return null;
   }
 };
 
@@ -527,6 +559,9 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
   try {
     console.log(`Adding participant to lottery ${lotteryId} in Supabase:`, participant);
     
+    // Force clear cache before updating
+    sessionStorage.removeItem('cached_lotteries');
+    
     // First check current participants count
     const { data: lotteryData, error: lotteryError } = await supabase
       .from('lotteries')
@@ -536,6 +571,7 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
     
     if (lotteryError) {
       console.error('Error getting lottery data from Supabase:', lotteryError);
+      toast.error(`Erreur lors de la récupération des données de la loterie: ${lotteryError.message}`);
       throw lotteryError;
     }
     
@@ -552,6 +588,14 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
     
     if (participantError) {
       console.error('Error adding participant to Supabase:', participantError);
+      
+      // Provide more context in the error message
+      if (participantError.code === '23505') {
+        toast.error("Ce participant est déjà inscrit à cette loterie.");
+      } else {
+        toast.error(`Erreur lors de l'ajout du participant: ${participantError.message}`);
+      }
+      
       throw participantError;
     }
     
@@ -564,13 +608,11 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
     
     if (updateError) {
       console.error('Error updating participant count in Supabase:', updateError);
+      toast.error(`Erreur lors de la mise à jour du nombre de participants: ${updateError.message}`);
       throw updateError;
     }
     
     console.log(`Participant added successfully to lottery ${lotteryId} in Supabase`);
-    
-    // Clear cache to force refresh
-    sessionStorage.removeItem('cached_lotteries');
     
     // Check if participant count has reached target
     if (newCount >= lotteryData.target_participants) {
@@ -580,38 +622,45 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
     // Wait for fetchLotteries to update both storage locations
     await fetchLotteries(true);
     
+    toast.success("Participation enregistrée avec succès !");
     return true;
   } catch (error) {
     console.error('Error adding participant to lottery:', error);
-    toast.error("Erreur lors de l'ajout du participant.");
     
-    try {
-      // Fallback to localStorage
-      console.log('Falling back to localStorage for adding participant');
-      
-      const lotteriesString = localStorage.getItem('lotteries');
-      if (!lotteriesString) return false;
-      
-      const lotteries = JSON.parse(lotteriesString);
-      const updatedLotteries = lotteries.map((l: any) => {
-        if (l.id === lotteryId) {
-          const participants = l.participants || [];
-          const newParticipants = [...participants, participant];
-          return { 
-            ...l, 
-            participants: newParticipants,
-            currentParticipants: newParticipants.length
-          };
-        }
-        return l;
-      });
-      
-      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-      return true;
-    } catch (localStorageError) {
-      console.error('Error with localStorage fallback:', localStorageError);
-      return false;
+    // Retry with localStorage fallback only if the error is a connection issue
+    if (error instanceof Error && error.message.includes('Failed to fetch')) {
+      try {
+        // Fallback to localStorage
+        console.log('Falling back to localStorage for adding participant');
+        
+        const lotteriesString = localStorage.getItem('lotteries');
+        if (!lotteriesString) return false;
+        
+        const lotteries = JSON.parse(lotteriesString);
+        const updatedLotteries = lotteries.map((l: any) => {
+          if (l.id === lotteryId) {
+            const participants = l.participants || [];
+            const newParticipants = [...participants, participant];
+            return { 
+              ...l, 
+              participants: newParticipants,
+              currentParticipants: newParticipants.length
+            };
+          }
+          return l;
+        });
+        
+        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        
+        toast.success("Participation enregistrée localement (mode hors ligne)");
+        return true;
+      } catch (localStorageError) {
+        console.error('Error with localStorage fallback:', localStorageError);
+        toast.error("Erreur lors de l'enregistrement local de la participation.");
+      }
     }
+    
+    return false;
   }
 };
 
