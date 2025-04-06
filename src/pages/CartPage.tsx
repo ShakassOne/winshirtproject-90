@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -232,12 +231,33 @@ const CartPage: React.FC = () => {
       handleConfirmOrder();
     } catch (error) {
       toast.dismiss();
-      toast.error("Erreur lors de la création du compte");
       console.error("Erreur d'inscription:", error);
+      
+      // Afficher un message d'erreur plus spécifique
+      if (error instanceof Error) {
+        if (error.message.includes("already exist")) {
+          toast.error("Cet email est déjà utilisé par un autre compte");
+        } else if (error.message.includes("password")) {
+          toast.error("Le mot de passe n'est pas assez sécurisé (min 6 caractères)");
+        } else {
+          toast.error("Erreur lors de la création du compte: " + error.message);
+        }
+      } else {
+        toast.error("Erreur lors de la création du compte");
+      }
     }
   };
   
   const handleConfirmOrder = () => {
+    console.log("Confirming order with data:", {
+      shippingAddress,
+      paymentInfo,
+      selectedShipping,
+      user,
+      showAuthForm,
+      userInfo
+    });
+    
     if (!shippingAddress.address || !shippingAddress.city || !shippingAddress.zipCode || !shippingAddress.country) {
       toast.error("Veuillez remplir tous les champs d'adresse de livraison");
       return;
@@ -255,6 +275,7 @@ const CartPage: React.FC = () => {
     
     // Si l'utilisateur n'est pas connecté et que le formulaire d'inscription est affiché
     if (!user && showAuthForm) {
+      console.log("User not logged in, registering first...");
       handleRegisterAndOrder();
       return;
     }

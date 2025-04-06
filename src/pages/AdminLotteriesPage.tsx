@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -13,6 +12,7 @@ import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminLotteriesPage: React.FC = () => {
   // Création de deux loteries spéciales
@@ -67,116 +67,58 @@ const AdminLotteriesPage: React.FC = () => {
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   const [isLoading, setIsLoading] = useState(true);
   
-  // Function to sync lotteries to storage with debouncing to improve performance
-  const syncLotteriesToStorage = (lotteriesData: ExtendedLottery[]) => {
-    try {
-      // Limite la fréquence d'écriture dans le stockage
-      const stringifiedData = JSON.stringify(lotteriesData);
-      localStorage.setItem('lotteries', stringifiedData);
-      sessionStorage.setItem('lotteries', stringifiedData);
-      
-      // Dispatch un seul événement
-      window.dispatchEvent(new CustomEvent('lotteriesUpdated', { 
-        detail: { lotteries: lotteriesData } 
-      }));
-      
-      console.log("Admin: Synced lotteries to storage:", lotteriesData.length);
-    } catch (err) {
-      console.error("Admin: Error syncing lotteries to storage:", err);
-    }
-  };
-  
   // Chargement des données depuis toutes les sources, optimisé
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       
-      let allLotteries: ExtendedLottery[] = [];
-      
       try {
-        // 1. Essayer d'abord le localStorage pour un chargement rapide
-        const storedLotteries = localStorage.getItem('lotteries');
-        if (storedLotteries) {
-          try {
-            const parsed = JSON.parse(storedLotteries);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              allLotteries = parsed;
-              console.log("Admin: Loaded from localStorage:", parsed.length);
-            }
-          } catch (err) {
-            console.error("Admin: Error parsing localStorage lotteries:", err);
-          }
-        }
+        // Forcer le rafraîchissement des données pour s'assurer qu'elles sont à jour
+        const apiLotteries = await fetchLotteries(true);
         
-        // 2. Si pas de données en localStorage ou peu de données, essayer l'API
-        if (allLotteries.length === 0) {
-          try {
-            const apiLotteries = await fetchLotteries();
-            if (apiLotteries && apiLotteries.length > 0) {
-              allLotteries = apiLotteries;
-              console.log("Admin: Loaded from API:", apiLotteries.length);
-            }
-          } catch (err) {
-            console.error("Admin: Error fetching lotteries from API:", err);
-          }
-        }
-        
-        // 3. Si toujours pas de données, utiliser les loteries spéciales
-        if (allLotteries.length === 0) {
-          allLotteries = [...specialLotteries];
-          console.log("Admin: Using special lotteries:", specialLotteries.length);
-        } else {
+        if (apiLotteries && apiLotteries.length > 0) {
+          console.log("Admin: Loaded from API:", apiLotteries.length);
+          
           // S'assurer que les loteries spéciales sont incluses
+          const allLotteries = [...apiLotteries];
           specialLotteries.forEach(specialLottery => {
             if (!allLotteries.some(l => l.id === specialLottery.id)) {
               allLotteries.push(specialLottery);
             }
           });
-        }
-        
-        // 4. Vérifier si la loterie iPhone existe
-        const iPhoneLotteryExists = allLotteries.some(
-          lottery => lottery.title.toLowerCase().includes('iphone')
-        );
-        
-        if (!iPhoneLotteryExists) {
-          const iPhoneLottery: ExtendedLottery = {
-            id: Math.max(...allLotteries.map(l => l.id), 0) + 1,
-            title: "iPhone 16 Pro",
-            description: "Gagnez le tout nouveau iPhone 16 Pro avec ses nouvelles couleurs exclusives et ses fonctionnalités révolutionnaires.",
-            value: 1299,
-            targetParticipants: 30,
-            currentParticipants: 12,
-            status: "active",
-            image: "https://pixelprint.world/wp-content/uploads/2025/04/iPhone-16-Pro-couleurs.jpg",
-            endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-            featured: true,
-          };
           
-          allLotteries.push(iPhoneLottery);
-        }
-        
-        // Sync les loteries au stockage une seule fois à la fin
-        syncLotteriesToStorage(allLotteries);
-        setLotteries(allLotteries);
-        
-        // Charger les produits avec un système similaire
-        try {
-          // Essayer d'abord le localStorage
-          const storedProducts = localStorage.getItem('products');
-          if (storedProducts) {
-            const parsedProducts = JSON.parse(storedProducts);
-            if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-              setProducts(parsedProducts);
-              return; // Si les produits sont chargés, sortir de la fonction
-            }
+          // Vérifier si la loterie iPhone existe
+          const iPhoneLotteryExists = allLotteries.some(
+            lottery => lottery.title.toLowerCase().includes('iphone')
+          );
+          
+          if (!iPhoneLotteryExists) {
+            const iPhoneLottery: ExtendedLottery = {
+              id: Math.max(...allLotteries.map(l => l.id), 0) + 1,
+              title: "iPhone 16 Pro",
+              description: "Gagnez le tout nouveau iPhone 16 Pro avec ses nouvelles couleurs exclusives et ses fonctionnalités révolutionnaires.",
+              value: 1299,
+              targetParticipants: 30,
+              currentParticipants: 12,
+              status: "active",
+              image: "https://pixelprint.world/wp-content/uploads/2025/04/iPhone-16-Pro-couleurs.jpg",
+              endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+              featured: true,
+            };
+            
+            allLotteries.push(iPhoneLottery);
           }
           
-          // Sinon, essayer l'API
+          setLotteries(allLotteries);
+        } else {
+          setLotteries([...specialLotteries]);
+        }
+        
+        // Charger les produits
+        try {
           const fetchedProducts = await fetchProducts();
           if (fetchedProducts && fetchedProducts.length > 0) {
             setProducts(fetchedProducts);
-            localStorage.setItem('products', JSON.stringify(fetchedProducts));
           }
         } catch (err) {
           console.error("Admin: Error loading products:", err);
@@ -184,6 +126,9 @@ const AdminLotteriesPage: React.FC = () => {
       } catch (error) {
         console.error("Admin: Erreur lors du chargement des données:", error);
         toast.error("Erreur lors du chargement des données");
+        
+        // Fallback aux données spéciales en cas d'erreur
+        setLotteries([...specialLotteries]);
       } finally {
         setIsLoading(false);
       }
@@ -191,17 +136,20 @@ const AdminLotteriesPage: React.FC = () => {
     
     loadData();
     
-    // Optimisation: Ne réagir qu'aux événements essentiels
-    const handleLotteryUpdate = (event: Event) => {
-      if ((event as CustomEvent).detail?.forceReload) {
-        loadData();
-      }
-    };
-    
-    window.addEventListener('lotteriesUpdated', handleLotteryUpdate);
+    // Set up subscription for real-time updates
+    const channel = supabase
+      .channel('public:lotteries')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'lotteries' }, 
+        () => {
+          console.log("Admin: Lottery data changed, reloading...");
+          loadData();
+        }
+      )
+      .subscribe();
     
     return () => {
-      window.removeEventListener('lotteriesUpdated', handleLotteryUpdate);
+      supabase.removeChannel(channel);
     };
   }, []);
   

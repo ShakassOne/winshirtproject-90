@@ -14,12 +14,13 @@ const LotteriesPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Load lotteries from Supabase
+  // Load lotteries from Supabase with force refresh
   useEffect(() => {
     const loadLotteries = async () => {
       setIsLoading(true);
       try {
-        const lotteriesData = await fetchLotteries();
+        // Force refresh to ensure we have the latest data
+        const lotteriesData = await fetchLotteries(true);
         console.log("Loaded lotteries:", lotteriesData);
         setLotteries(lotteriesData);
       } catch (error) {

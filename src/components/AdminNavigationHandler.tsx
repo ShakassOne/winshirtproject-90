@@ -43,6 +43,9 @@ const AdminNavigationHandler: React.FC = () => {
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsInitialized(true);
+        
+        // Fallback: montrer quand même la navigation admin en cas d'erreur
+        setShouldShow(true);
       }
     };
     

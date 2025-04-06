@@ -90,10 +90,26 @@ const fetchWinnerForLottery = async (lotteryId: number): Promise<Participant | n
   }
 };
 
-// Function to fetch all lotteries
-export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
+// Function to fetch all lotteries - Improved with better caching
+export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLottery[]> => {
   try {
     console.log('Fetching lotteries from Supabase...');
+    
+    // Check if we have cached data and forceRefresh is not true
+    if (!forceRefresh) {
+      const cachedData = sessionStorage.getItem('cached_lotteries');
+      const cachedTime = sessionStorage.getItem('cached_lotteries_time');
+      
+      if (cachedData && cachedTime) {
+        // Only use cache if it's less than 1 minute old
+        const cacheAge = Date.now() - parseInt(cachedTime);
+        if (cacheAge < 60000) { // 1 minute
+          console.log('Using cached lottery data (< 1 min old)');
+          return JSON.parse(cachedData);
+        }
+      }
+    }
+    
     const { data, error } = await supabase
       .from('lotteries')
       .select('*')
@@ -114,15 +130,30 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       }
     }
     
+    // Update cache
+    sessionStorage.setItem('cached_lotteries', JSON.stringify(extendedLotteries));
+    sessionStorage.setItem('cached_lotteries_time', Date.now().toString());
+    
+    // Also update localStorage for broader availability
+    localStorage.setItem('lotteries', JSON.stringify(extendedLotteries));
+    
     return extendedLotteries;
   } catch (error) {
     console.error('Error fetching lotteries:', error);
     toast.error("Erreur lors de la récupération des loteries.");
+    
+    // Try to get from localStorage as fallback
+    const localData = localStorage.getItem('lotteries');
+    if (localData) {
+      console.log('Using localStorage lottery data as fallback');
+      return JSON.parse(localData);
+    }
+    
     return [];
   }
 };
 
-// Function to create a new lottery
+// Function to create a new lottery - with sync improvement
 export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promise<ExtendedLottery | null> => {
   try {
     const formattedLottery = formatLotteryForSupabase(lottery);
@@ -135,7 +166,15 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
     
     if (error) throw error;
     
-    return convertSupabaseLottery(data);
+    const newLottery = convertSupabaseLottery(data);
+    
+    // Clear cache to force refresh
+    sessionStorage.removeItem('cached_lotteries');
+    
+    // Wait for fetchLotteries to update both storage locations
+    await fetchLotteries(true);
+    
+    return newLottery;
   } catch (error) {
     console.error('Error creating lottery:', error);
     toast.error("Erreur lors de la création de la loterie.");
@@ -143,7 +182,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
   }
 };
 
-// Function to update an existing lottery
+// Function to update an existing lottery - with sync improvement
 export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedLottery | null> => {
   try {
     const formattedLottery = formatLotteryForSupabase(lottery);
@@ -157,7 +196,15 @@ export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedL
     
     if (error) throw error;
     
-    return convertSupabaseLottery(data);
+    const updatedLottery = convertSupabaseLottery(data);
+    
+    // Clear cache to force refresh
+    sessionStorage.removeItem('cached_lotteries');
+    
+    // Wait for fetchLotteries to update both storage locations
+    await fetchLotteries(true);
+    
+    return updatedLottery;
   } catch (error) {
     console.error('Error updating lottery:', error);
     toast.error("Erreur lors de la mise à jour de la loterie.");
@@ -174,6 +221,12 @@ export const deleteLottery = async (lotteryId: number): Promise<boolean> => {
       .eq('id', lotteryId);
     
     if (error) throw error;
+    
+    // Clear cache to force refresh
+    sessionStorage.removeItem('cached_lotteries');
+    
+    // Wait for fetchLotteries to update both storage locations
+    await fetchLotteries(true);
     
     return true;
   } catch (error) {
@@ -192,6 +245,12 @@ export const toggleLotteryFeatured = async (lotteryId: number, featured: boolean
       .eq('id', lotteryId);
     
     if (error) throw error;
+    
+    // Clear cache to force refresh
+    sessionStorage.removeItem('cached_lotteries');
+    
+    // Wait for fetchLotteries to update both storage locations
+    await fetchLotteries(true);
     
     return true;
   } catch (error) {
@@ -227,6 +286,12 @@ export const updateLotteryWinner = async (lotteryId: number, winner: Participant
       });
     
     if (winnerError) throw winnerError;
+    
+    // Clear cache to force refresh
+    sessionStorage.removeItem('cached_lotteries');
+    
+    // Wait for fetchLotteries to update both storage locations
+    await fetchLotteries(true);
     
     return true;
   } catch (error) {
@@ -270,10 +335,16 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
     
     if (updateError) throw updateError;
     
+    // Clear cache to force refresh
+    sessionStorage.removeItem('cached_lotteries');
+    
     // Check if participant count has reached target
     if (newCount >= lotteryData.target_participants) {
       toast.info(`La loterie a atteint son objectif de participants ! Elle est prête pour le tirage.`);
     }
+    
+    // Wait for fetchLotteries to update both storage locations
+    await fetchLotteries(true);
     
     return true;
   } catch (error) {
