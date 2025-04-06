@@ -3,13 +3,13 @@ import React from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Lottery } from '@/types/lottery';
+import { ExtendedLottery } from '@/types/lottery';
 
 interface LotterySelectionProps {
   tickets: number;
   selectedLotteries: string[];
   handleLotteryChange: (lotteryId: string, index: number) => void;
-  activeLotteries: Lottery[];
+  activeLotteries: ExtendedLottery[];
 }
 
 const LotterySelection: React.FC<LotterySelectionProps> = ({
