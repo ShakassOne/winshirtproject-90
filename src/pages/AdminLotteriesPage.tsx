@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -11,6 +12,7 @@ import { Gift } from 'lucide-react';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 import AdminNavigation from '@/components/admin/AdminNavigation';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 const AdminLotteriesPage: React.FC = () => {
   // Création de deux loteries spéciales
@@ -274,9 +276,9 @@ const AdminLotteriesPage: React.FC = () => {
             </Alert>
           )}
 
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Lottery List */}
-            <div className="w-full lg:w-1/3">
+          <ResizablePanelGroup direction="horizontal" className="min-h-[600px]">
+            {/* Lottery List - Default 40% width, can be resized */}
+            <ResizablePanel defaultSize={40} minSize={30} maxSize={70}>
               <LotteryList
                 lotteries={lotteries}
                 selectedLotteryId={selectedLotteryId}
@@ -286,10 +288,13 @@ const AdminLotteriesPage: React.FC = () => {
                 onDrawWinner={handleDrawWinner}
                 onToggleFeatured={handleToggleFeatured}
               />
-            </div>
+            </ResizablePanel>
             
-            {/* Lottery Form */}
-            <div className="w-full lg:w-2/3">
+            {/* Resizable handle */}
+            <ResizableHandle withHandle />
+            
+            {/* Lottery Form - Default 60% width, can be resized */}
+            <ResizablePanel defaultSize={60} minSize={30} maxSize={70}>
               <div className="winshirt-card p-6">
                 <h2 className="text-2xl font-bold text-white mb-6">
                   {isCreating ? "Créer une nouvelle loterie" : selectedLotteryId ? "Modifier la loterie" : "Sélectionnez ou créez une loterie"}
@@ -309,8 +314,8 @@ const AdminLotteriesPage: React.FC = () => {
                   deselectAllProducts={deselectAllProducts}
                 />
               </div>
-            </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </section>
     </>

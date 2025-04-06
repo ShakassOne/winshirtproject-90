@@ -77,7 +77,7 @@ function App() {
             <Route path="/lotteries" element={<LotteriesPage />} />
             <Route path="/lottery/:id" element={<LotteryDetailPage />} />
             <Route path="/products" element={<ProductsPage />} />
-            <Route path="/products/:id" element={<ProductDetailPage />} />
+            <Route path="/product/:id" element={<ProductDetailPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/how-it-works" element={<HowItWorksPage />} />
