@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import AdminNavigation from './admin/AdminNavigation';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Ce composant est un wrapper pour AdminNavigation
@@ -11,28 +12,57 @@ import AdminNavigation from './admin/AdminNavigation';
 const AdminNavigationHandler: React.FC = () => {
   const location = useLocation();
   const [shouldShow, setShouldShow] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   useEffect(() => {
-    // Vérifier si l'utilisateur est administrateur (via localStorage)
-    const user = localStorage.getItem('user');
-    let isAdmin = false;
+    const checkAdminStatus = async () => {
+      try {
+        // Check if user is logged in with Supabase
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // Check if the user exists and has admin metadata
+        const isAdmin = user?.user_metadata?.isAdmin === true;
+        
+        // Also check localStorage for backward compatibility
+        let localStorageAdmin = false;
+        try {
+          const localUser = localStorage.getItem('user');
+          if (localUser) {
+            const userData = JSON.parse(localUser);
+            localStorageAdmin = userData?.isAdmin === true;
+          }
+        } catch (e) {
+          console.error("Erreur lors de la lecture des données utilisateur:", e);
+        }
+        
+        // Also check if we're on an admin page
+        const isAdminPage = location.pathname.startsWith('/admin');
+        
+        // Show admin navigation if user is admin or on admin page
+        setShouldShow(isAdmin || localStorageAdmin || isAdminPage);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsInitialized(true);
+      }
+    };
     
-    try {
-      const userData = user ? JSON.parse(user) : null;
-      isAdmin = userData?.isAdmin === true;
-    } catch (e) {
-      console.error("Erreur lors de la lecture des données utilisateur:", e);
-    }
+    checkAdminStatus();
     
-    // Vérifier si on est sur une page admin
-    const isAdminPage = location.pathname.startsWith('/admin');
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      checkAdminStatus();
+    });
     
-    // Afficher la navigation si l'utilisateur est administrateur
-    // ou si on est sur une page admin
-    setShouldShow(isAdmin || isAdminPage);
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [location.pathname]);
   
-  // Si on ne doit pas afficher la navigation, retourner null
+  // Don't render anything until we know if we should show the admin navigation
+  if (!isInitialized) return null;
+  
+  // If we shouldn't show the admin navigation, return null
   if (!shouldShow) return null;
   
   return <AdminNavigation />;

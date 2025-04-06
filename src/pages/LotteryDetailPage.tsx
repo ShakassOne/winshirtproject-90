@@ -8,8 +8,8 @@ import { ExtendedLottery, Participant } from "@/types/lottery";
 import StarBackground from "@/components/StarBackground";
 import { ArrowLeft, Calendar, Gift, Trophy, Users } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { mockLotteries } from "@/data/mockData";
 import { toast } from "@/lib/toast";
+import { fetchLotteryById } from "@/api/lotteryApi";
 
 const LotteryDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,36 +18,32 @@ const LotteryDetailPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
   useEffect(() => {
-    // Fetch lottery data
-    setIsLoading(true);
-    try {
-      const lotteryId = Number(id);
-      
-      // Try to get lotteries from localStorage first
-      const storedLotteries = localStorage.getItem('lotteries');
-      let lotteryData: ExtendedLottery[] = [];
-      
-      if (storedLotteries) {
-        lotteryData = JSON.parse(storedLotteries);
-      } else {
-        // Fall back to mock data if nothing in localStorage
-        lotteryData = mockLotteries;
-      }
-      
-      const foundLottery = lotteryData.find(l => l.id === lotteryId);
-      
-      if (foundLottery) {
-        setLottery(foundLottery);
-      } else {
-        toast.error("Loterie non trouvée");
+    const loadLottery = async () => {
+      setIsLoading(true);
+      try {
+        if (!id) {
+          throw new Error("ID de loterie manquant");
+        }
+        
+        const lotteryId = Number(id);
+        const fetchedLottery = await fetchLotteryById(lotteryId);
+        
+        if (fetchedLottery) {
+          setLottery(fetchedLottery);
+        } else {
+          toast.error("Loterie non trouvée");
+          navigate("/lotteries");
+        }
+      } catch (error) {
+        console.error("Error fetching lottery:", error);
+        toast.error("Erreur lors du chargement de la loterie");
         navigate("/lotteries");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching lottery:", error);
-      toast.error("Erreur lors du chargement de la loterie");
-    } finally {
-      setIsLoading(false);
-    }
+    };
+    
+    loadLottery();
   }, [id, navigate]);
   
   const formatDate = (dateString?: string | null) => {

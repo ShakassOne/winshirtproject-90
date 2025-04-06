@@ -9,7 +9,133 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      lotteries: {
+        Row: {
+          created_at: string | null
+          current_participants: number
+          description: string
+          draw_date: string | null
+          end_date: string | null
+          featured: boolean | null
+          id: number
+          image: string
+          linked_products: number[] | null
+          status: string
+          target_participants: number
+          title: string
+          updated_at: string | null
+          value: number
+        }
+        Insert: {
+          created_at?: string | null
+          current_participants?: number
+          description: string
+          draw_date?: string | null
+          end_date?: string | null
+          featured?: boolean | null
+          id?: number
+          image: string
+          linked_products?: number[] | null
+          status: string
+          target_participants: number
+          title: string
+          updated_at?: string | null
+          value: number
+        }
+        Update: {
+          created_at?: string | null
+          current_participants?: number
+          description?: string
+          draw_date?: string | null
+          end_date?: string | null
+          featured?: boolean | null
+          id?: number
+          image?: string
+          linked_products?: number[] | null
+          status?: string
+          target_participants?: number
+          title?: string
+          updated_at?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
+      lottery_participants: {
+        Row: {
+          avatar: string | null
+          email: string
+          id: number
+          lottery_id: number | null
+          name: string
+          participation_date: string | null
+          user_id: number
+        }
+        Insert: {
+          avatar?: string | null
+          email: string
+          id?: number
+          lottery_id?: number | null
+          name: string
+          participation_date?: string | null
+          user_id: number
+        }
+        Update: {
+          avatar?: string | null
+          email?: string
+          id?: number
+          lottery_id?: number | null
+          name?: string
+          participation_date?: string | null
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lottery_participants_lottery_id_fkey"
+            columns: ["lottery_id"]
+            isOneToOne: false
+            referencedRelation: "lotteries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lottery_winners: {
+        Row: {
+          avatar: string | null
+          draw_date: string | null
+          email: string
+          id: number
+          lottery_id: number | null
+          name: string
+          user_id: number
+        }
+        Insert: {
+          avatar?: string | null
+          draw_date?: string | null
+          email: string
+          id?: number
+          lottery_id?: number | null
+          name: string
+          user_id: number
+        }
+        Update: {
+          avatar?: string | null
+          draw_date?: string | null
+          email?: string
+          id?: number
+          lottery_id?: number | null
+          name?: string
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lottery_winners_lottery_id_fkey"
+            columns: ["lottery_id"]
+            isOneToOne: false
+            referencedRelation: "lotteries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

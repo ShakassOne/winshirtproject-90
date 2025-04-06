@@ -1,12 +1,11 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ExtendedLottery } from '@/types/lottery';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Gift, Users } from 'lucide-react';
+import { ExtendedLottery } from '@/types/lottery';
 import { Progress } from '@/components/ui/progress';
-import { CalendarClock, Trophy, Users } from 'lucide-react';
 
 interface LotteryCardProps {
   lottery: ExtendedLottery;
@@ -19,108 +18,99 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
+      year: 'numeric'
     });
   };
-  
-  const progressPercent = Math.min(
-    (lottery.currentParticipants / lottery.targetParticipants) * 100,
-    100
-  );
-  
-  const getStatusBadge = () => {
-    if (lottery.status === 'completed') {
-      return (
-        <Badge className="absolute top-2 left-2 bg-blue-600 hover:bg-blue-700">
-          Terminée
-        </Badge>
-      );
-    } else if (lottery.status === 'relaunched') {
-      return (
-        <Badge className="absolute top-2 left-2 bg-purple-600 hover:bg-purple-700">
-          Relancée
-        </Badge>
-      );
-    } else if (lottery.status === 'cancelled') {
-      return (
-        <Badge className="absolute top-2 left-2 bg-red-600 hover:bg-red-700">
-          Annulée
-        </Badge>
-      );
+
+  const getStatusStyle = () => {
+    switch (lottery.status) {
+      case 'active':
+        return 'bg-green-500/80 hover:bg-green-500';
+      case 'completed':
+        return 'bg-blue-500/80 hover:bg-blue-500';
+      case 'relaunched':
+        return 'bg-purple-500/80 hover:bg-purple-500';
+      case 'cancelled':
+        return 'bg-red-500/80 hover:bg-red-500';
+      default:
+        return 'bg-gray-500/80 hover:bg-gray-500';
     }
-    return null;
   };
   
+  const progressPercent = Math.min((lottery.currentParticipants / lottery.targetParticipants) * 100, 100);
+  
+  const isCompleted = lottery.status === 'completed';
+  const isReady = lottery.currentParticipants >= lottery.targetParticipants || 
+                 (lottery.endDate && new Date(lottery.endDate) <= new Date());
+  
   return (
-    <Card className="overflow-hidden border-winshirt-space-light bg-winshirt-space-light/50 backdrop-blur-xl hover:bg-winshirt-space-light/80 transition-all hover:translate-y-[-5px] hover:shadow-lg hover:shadow-winshirt-purple/10">
-      <div className="relative">
-        {getStatusBadge()}
-        <Badge className="absolute top-2 right-2 bg-winshirt-blue-dark">
-          {lottery.value.toFixed(2)} €
-        </Badge>
-        <Link to={`/lottery/${lottery.id}`}>
-          <img
-            src={lottery.image}
-            alt={lottery.title}
+    <Link to={`/lottery/${lottery.id}`} className="block">
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow bg-winshirt-space border-winshirt-space-light hover:border-winshirt-blue-light/50">
+        <div className="relative">
+          <img 
+            src={lottery.image} 
+            alt={lottery.title} 
             className="w-full h-48 object-cover"
           />
-        </Link>
-      </div>
-      
-      <CardContent className="pt-4">
-        <Link to={`/lottery/${lottery.id}`}>
-          <h3 className="text-xl font-semibold text-white mb-2 hover:text-winshirt-blue-light transition-colors">
-            {lottery.title}
-          </h3>
-        </Link>
+          <Badge className={`absolute top-3 right-3 ${getStatusStyle()}`}>
+            {lottery.status === 'active' ? 'En cours' : 
+             lottery.status === 'completed' ? 'Terminée' : 
+             lottery.status === 'relaunched' ? 'Relancée' : 'Annulée'}
+          </Badge>
+          {isReady && lottery.status === 'active' && (
+            <Badge className="absolute top-3 left-3 bg-yellow-500/80 hover:bg-yellow-500">
+              Prête pour tirage
+            </Badge>
+          )}
+        </div>
         
-        <p className="text-gray-300 mb-4 text-sm line-clamp-2">{lottery.description}</p>
-        
-        {lottery.status === 'completed' && lottery.winner ? (
-          <div className="bg-blue-500/20 p-3 rounded-md flex items-center gap-2 mb-3">
-            <Trophy className="text-blue-400 w-5 h-5" />
-            <div>
-              <p className="text-sm text-white">Gagnant: <span className="font-medium">{lottery.winner.name}</span></p>
-              <p className="text-xs text-gray-300">Tiré le {formatDate(lottery.drawDate)}</p>
-            </div>
+        <CardContent className="pt-4">
+          <h3 className="text-xl font-semibold text-white mb-2">{lottery.title}</h3>
+          <p className="text-gray-400 mb-3 line-clamp-2">{lottery.description}</p>
+          
+          <div className="flex justify-between text-sm text-gray-300 mb-2">
+            <span className="flex items-center gap-1">
+              <Gift size={16} className="text-winshirt-purple-light" />
+              {lottery.value.toFixed(2)} €
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar size={16} className="text-winshirt-blue-light" />
+              {isCompleted && lottery.drawDate 
+                ? formatDate(lottery.drawDate)
+                : formatDate(lottery.endDate)}
+            </span>
           </div>
-        ) : (
-          <>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-winshirt-blue-light flex items-center gap-1">
-                <Users className="w-4 h-4" /> {lottery.currentParticipants} participants
-              </span>
-              <span className="text-gray-400">
-                Objectif: {lottery.targetParticipants}
-              </span>
-            </div>
-            
-            <Progress
-              value={progressPercent}
-              className="h-2 mb-4 bg-winshirt-space"
-            />
-            
-            <div className="flex items-center gap-1 text-sm text-gray-400 mb-2">
-              <CalendarClock className="w-4 h-4 text-winshirt-purple-light" />
-              <span>Tirage: {formatDate(lottery.endDate)}</span>
-            </div>
-          </>
-        )}
-      </CardContent>
-      
-      <CardFooter className="pt-0">
-        <Link to={`/lottery/${lottery.id}`} className="w-full">
-          <Button
-            variant="default"
-            className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
-          >
-            {lottery.status === 'completed'
-              ? 'Voir les détails'
-              : 'Participer'}
-          </Button>
-        </Link>
-      </CardFooter>
-    </Card>
+          
+          <div className="mb-1 flex justify-between text-sm">
+            <span className="text-white flex items-center gap-1">
+              <Users size={16} />
+              {lottery.currentParticipants} / {lottery.targetParticipants}
+            </span>
+            <span className="text-gray-400">
+              {progressPercent.toFixed(0)}%
+            </span>
+          </div>
+          
+          <Progress value={progressPercent} className="h-2 bg-winshirt-space-light" />
+        </CardContent>
+        
+        <CardFooter className="pt-0 pb-4">
+          {isCompleted && lottery.winner ? (
+            <p className="text-green-400 text-sm">
+              Gagnant: {lottery.winner.name}
+            </p>
+          ) : (
+            <p className={`text-sm ${
+              isReady ? 'text-yellow-400' : 'text-gray-400'
+            }`}>
+              {isReady 
+                ? 'Prête pour le tirage au sort !' 
+                : 'En attente de participants...'}
+            </p>
+          )}
+        </CardFooter>
+      </Card>
+    </Link>
   );
 };
 
