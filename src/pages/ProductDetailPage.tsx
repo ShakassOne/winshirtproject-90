@@ -1,31 +1,23 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { ShoppingCart, Ticket, Truck, Weight } from 'lucide-react';
 import { mockProducts, mockLotteries } from '@/data/mockData';
-import StarBackground from '@/components/StarBackground';
 import { toast } from '@/lib/toast';
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { useAuth } from '@/contexts/AuthContext';
-import { VisualCategory, Visual } from '@/types/visual';
-import { 
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious
-} from "@/components/ui/carousel";
-
-// Nouveaux imports pour la sélection de visuels
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import VisualSelector from '@/components/product/VisualSelector';
-import VisualPositioner from '@/components/product/VisualPositioner';
+import { Visual, VisualCategory } from '@/types/visual';
+import StarBackground from '@/components/StarBackground';
 import { useVisualSelector } from '@/hooks/useVisualSelector';
 import { useVisuals } from '@/data/mockVisuals';
-import CustomVisualUploader from '@/components/product/CustomVisualUploader';
+
+// Import refactored components
+import ProductGallery from '@/components/product/ProductDetail/ProductGallery';
+import ProductInfo from '@/components/product/ProductDetail/ProductInfo';
+import ProductOptions from '@/components/product/ProductDetail/ProductOptions';
+import LotterySelection from '@/components/product/ProductDetail/LotterySelection';
+import AdditionalInfo from '@/components/product/ProductDetail/AdditionalInfo';
+import ProductCustomization from '@/components/product/ProductDetail/ProductCustomization';
+import AddToCartButton from '@/components/product/ProductDetail/AddToCartButton';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -155,11 +147,6 @@ const ProductDetailPage: React.FC = () => {
     setSelectedCategoryId(categoryId);
   };
   
-  // Synchroniser le changement entre les onglets recto/verso avec le composant VisualPositioner
-  const handleTabChange = (position: 'front' | 'back') => {
-    setPosition(position);
-  };
-  
   // Gérer l'upload de visuel personnalisé
   const handleVisualUpload = (file: File, previewUrl: string) => {
     // Créer un visuel personnalisé basé sur le fichier uploadé
@@ -187,12 +174,7 @@ const ProductDetailPage: React.FC = () => {
     return (
       <div className="pt-32 pb-8 text-center">
         <h1 className="text-2xl text-white">Produit non trouvé</h1>
-        <Button 
-          onClick={() => navigate('/products')}
-          className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
-        >
-          Retour aux produits
-        </Button>
+        <AddToCartButton onClick={() => navigate('/products')} />
       </div>
     );
   }
@@ -272,11 +254,8 @@ const ProductDetailPage: React.FC = () => {
     productImages.push(product.secondaryImage);
   }
   
-  // Vérifier si la personnalisation est permise - simplifié pour utiliser juste le flag allowCustomization
+  // Vérifier si la personnalisation est permise
   const canCustomize = product.allowCustomization === true;
-  
-  // Vérifier si le produit a des zones d'impression
-  const hasPrintAreas = product.printAreas && product.printAreas.length > 0;
   
   return (
     <>
@@ -286,276 +265,67 @@ const ProductDetailPage: React.FC = () => {
         <div className="container mx-auto px-4 md:px-8">
           <div className="winshirt-card overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
-              {/* Product Image Carousel with Visual Overlay */}
+              {/* Left Column: Product Image or Customization Interface */}
               <div className="rounded-lg overflow-hidden">
                 {canCustomize ? (
-                  <Tabs defaultValue="preview" className="w-full">
-                    {/* 1. Aperçu et Personnalisation tabs */}
-                    <TabsList className="w-full grid grid-cols-2 mb-4">
-                      <TabsTrigger value="preview">Aperçu</TabsTrigger>
-                      <TabsTrigger value="customize">Personnaliser</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="preview" className="mt-0">
-                      <VisualPositioner
-                        productImage={product.image}
-                        productSecondaryImage={product.secondaryImage}
-                        visual={selectedVisual}
-                        visualSettings={visualSettings}
-                        onUpdateSettings={handleUpdateSettings}
-                        position={activePosition}
-                        readOnly={true}
-                        printAreas={product.printAreas}
-                        selectedPrintArea={selectedPrintArea}
-                      />
-                    </TabsContent>
-                    
-                    <TabsContent value="customize" className="mt-0 space-y-6">
-                      {/* 2. Le Visuel du T-Shirt (VisualPositioner) */}
-                      <div className="mt-2">
-                        <VisualPositioner
-                          productImage={product.image}
-                          productSecondaryImage={product.secondaryImage}
-                          visual={selectedVisual}
-                          visualSettings={visualSettings}
-                          onUpdateSettings={handleUpdateSettings}
-                          position={activePosition}
-                          printAreas={product.printAreas?.filter(area => area.position === activePosition)}
-                          selectedPrintArea={selectedPrintArea}
-                        />
-                      </div>
-                      
-                      {/* 3. Recto Verso tabs */}
-                      <Tabs defaultValue={activePosition} onValueChange={(value) => handleTabChange(value as 'front' | 'back')} className="w-full">
-                        <TabsList className="grid grid-cols-2 w-full">
-                          <TabsTrigger value="front">Recto</TabsTrigger>
-                          <TabsTrigger value="back">Verso</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                      
-                      {/* 4. Sélection de la catégorie de visuels et 5. Upload côte à côte */}
-                      <div className="flex flex-wrap gap-4 items-start">
-                        <div className="space-y-2 flex-1 min-w-[180px]">
-                          <Label className="text-white">Catégorie de visuels</Label>
-                          <Select
-                            value={selectedCategoryId ? selectedCategoryId.toString() : ""}
-                            onValueChange={(value) => handleCategoryChange(value ? parseInt(value) : null)}
-                          >
-                            <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                              <SelectValue placeholder="Choisir une catégorie" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                              {visualCategories.map((category) => (
-                                <SelectItem key={category.id} value={category.id.toString()}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2 mt-7">
-                          <CustomVisualUploader
-                            onVisualUpload={handleVisualUpload}
-                            onVisualRemove={() => handleSelectVisual(null)}
-                            uploadedVisual={null}
-                            allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
-                            buttonStyle="compact"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* 6. Images (VisualSelector) avec grille 4 colonnes au lieu de 3 */}
-                      <div className="mt-4">
-                        <VisualSelector
-                          selectedVisualId={selectedVisual?.id || null}
-                          onSelectVisual={handleSelectVisual}
-                          categoryId={selectedCategoryId}
-                          activePosition={activePosition}
-                          hideUploader={true}
-                          gridCols={4}
-                        />
-                      </div>
-                      
-                      {/* Zone d'impression si disponible */}
-                      {hasPrintAreas && (
-                        <div className="space-y-2 mt-4">
-                          <Label className="text-white">Zone d'impression</Label>
-                          <Select
-                            value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
-                            onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
-                          >
-                            <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                              <SelectValue placeholder="Choisir une zone d'impression" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                              {product.printAreas?.filter(area => area.position === activePosition).map(area => (
-                                <SelectItem key={area.id} value={area.id.toString()}>
-                                  {area.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
+                  <ProductCustomization 
+                    productImage={product.image}
+                    productSecondaryImage={product.secondaryImage}
+                    visual={selectedVisual}
+                    visualSettings={visualSettings}
+                    onUpdateSettings={handleUpdateSettings}
+                    position={activePosition}
+                    setPosition={setPosition}
+                    handleSelectVisual={handleSelectVisual}
+                    selectedCategoryId={selectedCategoryId}
+                    handleCategoryChange={handleCategoryChange}
+                    visualCategories={visualCategories}
+                    printAreas={product.printAreas}
+                    selectedPrintArea={selectedPrintArea}
+                    handlePrintAreaChange={handlePrintAreaChange}
+                    handleVisualUpload={handleVisualUpload}
+                  />
                 ) : (
-                  // Si la personnalisation n'est pas autorisée, montrer le carrousel d'images simple
-                  <Carousel className="w-full" opts={{ loop: true }}>
-                    <CarouselContent>
-                      {productImages.map((image, index) => (
-                        <CarouselItem key={index}>
-                          <div className="flex justify-center items-center p-1">
-                            <img
-                              src={image}
-                              alt={`${product.name} - Image ${index + 1}`}
-                              className="max-h-96 object-contain"
-                            />
-                          </div>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="text-winshirt-purple left-2" />
-                    <CarouselNext className="text-winshirt-purple right-2" />
-                  </Carousel>
+                  <ProductGallery 
+                    images={productImages} 
+                    productName={product.name} 
+                  />
                 )}
               </div>
 
-              {/* Product Info and Options */}
+              {/* Right Column: Product Info and Options */}
               <div className="space-y-6">
-                {/* Product Title and Price */}
-                <div>
-                  <h1 className="text-3xl font-bold text-white">{product.name}</h1>
-                  <div className="flex items-center mt-2">
-                    <span className="text-2xl font-bold text-winshirt-purple-light">{product.price.toFixed(2)} €</span>
-                    {product.tickets && product.tickets > 0 && (
-                      <span className="ml-2 bg-winshirt-purple text-white text-sm px-2 py-1 rounded-full flex items-center">
-                        <Ticket size={14} className="mr-1" />
-                        {product.tickets} {product.tickets > 1 ? 'tickets' : 'ticket'}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <ProductInfo 
+                  name={product.name}
+                  price={product.price}
+                  description={product.description}
+                  tickets={product.tickets}
+                />
                 
-                {/* Product Description */}
-                <p className="text-gray-300">{product.description}</p>
+                <ProductOptions 
+                  sizes={product.sizes}
+                  colors={product.colors}
+                  selectedSize={selectedSize}
+                  selectedColor={selectedColor}
+                  setSelectedSize={setSelectedSize}
+                  setSelectedColor={setSelectedColor}
+                />
                 
-                {/* Size Selection */}
-                <div className="space-y-2">
-                  <Label className="text-white">Taille</Label>
-                  <RadioGroup 
-                    value={selectedSize}
-                    onValueChange={setSelectedSize}
-                    className="flex flex-wrap gap-2"
-                  >
-                    {product.sizes?.map((size) => (
-                      <div key={size} className="flex items-center space-x-2">
-                        <RadioGroupItem
-                          value={size}
-                          id={`size-${size}`}
-                          className="text-winshirt-purple"
-                        />
-                        <Label
-                          htmlFor={`size-${size}`}
-                          className="text-gray-200 cursor-pointer"
-                        >
-                          {size}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-                
-                {/* Color Selection */}
-                <div className="space-y-2">
-                  <Label className="text-white">Couleur</Label>
-                  <RadioGroup 
-                    value={selectedColor}
-                    onValueChange={setSelectedColor}
-                    className="flex flex-wrap gap-2"
-                  >
-                    {product.colors?.map((color) => (
-                      <div key={color} className="flex items-center space-x-2">
-                        <RadioGroupItem
-                          value={color}
-                          id={`color-${color}`}
-                          className="text-winshirt-purple"
-                        />
-                        <Label
-                          htmlFor={`color-${color}`}
-                          className="flex items-center cursor-pointer"
-                        >
-                          <span
-                            className="w-4 h-4 mr-2 rounded-full border border-gray-600"
-                            style={{ backgroundColor: color }}
-                          ></span>
-                          <span className="text-gray-200">{color}</span>
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-                
-                {/* Lottery Selection for tickets */}
                 {product.tickets && product.tickets > 0 && (
-                  <div className="space-y-4">
-                    <Label className="text-white flex items-center">
-                      <Ticket size={16} className="mr-2" />
-                      Choisissez {product.tickets > 1 ? 'vos loteries' : 'votre loterie'}
-                    </Label>
-                    
-                    {Array.from({ length: product.tickets }).map((_, index) => (
-                      <div key={index} className="space-y-1">
-                        <Label className="text-sm text-gray-400">Ticket {index + 1}</Label>
-                        <Select
-                          value={selectedLotteries[index] || ''}
-                          onValueChange={(value) => handleLotteryChange(value, index)}
-                        >
-                          <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                            <SelectValue placeholder="Choisir une loterie" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                            {activeLotteries.map((lottery) => (
-                              <SelectItem key={lottery.id} value={lottery.id.toString()}>
-                                {lottery.title} - {lottery.value}€
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
+                  <LotterySelection 
+                    tickets={product.tickets}
+                    selectedLotteries={selectedLotteries}
+                    handleLotteryChange={handleLotteryChange}
+                    activeLotteries={activeLotteries}
+                  />
                 )}
                 
-                {/* Additional Info */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                  {product.weight && (
-                    <div className="flex items-center text-gray-400">
-                      <Weight size={16} className="mr-2" />
-                      <span>{product.weight}g</span>
-                    </div>
-                  )}
-                  {product.deliveryPrice !== undefined && (
-                    <div className="flex items-center text-gray-400">
-                      <Truck size={16} className="mr-2" />
-                      <span>
-                        Livraison: {product.deliveryPrice > 0 
-                          ? `${product.deliveryPrice.toFixed(2)} €` 
-                          : 'Gratuite'}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <AdditionalInfo 
+                  weight={product.weight}
+                  deliveryPrice={product.deliveryPrice}
+                />
                 
-                {/* Add to Cart Button */}
-                <Button
-                  onClick={handleAddToCart}
-                  className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark py-6 mt-6"
-                >
-                  <ShoppingCart className="mr-2" />
-                  Ajouter au panier
-                </Button>
+                <AddToCartButton onClick={handleAddToCart} />
               </div>
             </div>
           </div>
