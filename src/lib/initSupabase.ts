@@ -1,3 +1,4 @@
+
 import { supabase, checkSupabaseConnection, checkRequiredTables, requiredTables } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
@@ -143,13 +144,19 @@ const createMissingTables = async (missingTables: string[]): Promise<boolean> =>
           console.error(`Error creating table ${tableName}:`, error);
           success = false;
           
-          // Fallback: try simple query if RPC fails
+          // Fallback: try direct SQL execution if RPC fails
           try {
-            await supabase.query(sql);
-            console.log(`Table ${tableName} created using direct query`);
-            success = true;
+            // Using the SQL API directly instead of the non-existent query method
+            const { error: directError } = await supabase.sql(sql);
+            
+            if (!directError) {
+              console.log(`Table ${tableName} created using direct SQL`);
+              success = true;
+            } else {
+              console.error(`Failed to create table ${tableName} with direct SQL:`, directError);
+            }
           } catch (directError) {
-            console.error(`Failed to create table ${tableName} with direct query:`, directError);
+            console.error(`Exception when creating table ${tableName} with direct SQL:`, directError);
           }
         } else {
           console.log(`Table ${tableName} created successfully`);
