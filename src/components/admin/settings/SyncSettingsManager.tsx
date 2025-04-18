@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { syncConfig, syncData } from '@/lib/initSupabase';
+import { syncConfig, syncData, forceSupabaseConnection } from '@/lib/initSupabase';
 import { checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
 
 const SyncSettingsManager: React.FC = () => {
@@ -15,6 +15,7 @@ const SyncSettingsManager: React.FC = () => {
   const [syncSuccess, setSyncSuccess] = useState<Record<string, boolean | null>>({});
   const [autoSync, setAutoSync] = useState(syncConfig.autoSync);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
   
   // Check if connected to Supabase on mount
   useEffect(() => {
@@ -85,6 +86,26 @@ const SyncSettingsManager: React.FC = () => {
     toast.success(`Synchronisation automatique ${checked ? 'activée' : 'désactivée'}`);
   };
   
+  const handleForceConnection = async () => {
+    setIsConnecting(true);
+    
+    try {
+      const success = await forceSupabaseConnection();
+      setIsConnected(success);
+      
+      if (success) {
+        toast.success("Connexion établie avec succès!");
+      } else {
+        toast.error("Impossible d'établir la connexion à Supabase");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la tentative de connexion:", error);
+      toast.error("Erreur lors de la tentative de connexion à Supabase");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+  
   const getStatusIcon = (table: string) => {
     if (isLoading[table]) {
       return <Loader2 className="h-5 w-5 animate-spin text-winshirt-blue" />;
@@ -116,11 +137,28 @@ const SyncSettingsManager: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <p className="text-gray-300">
-              {isConnected ? 'Connecté à Supabase' : 'Non connecté à Supabase (mode hors-ligne)'}
-            </p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <p className="text-gray-300">
+                {isConnected ? 'Connecté à Supabase' : 'Non connecté à Supabase (mode hors-ligne)'}
+              </p>
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleForceConnection}
+              disabled={isConnecting || isConnected}
+              className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+            >
+              {isConnecting ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Link2 className="h-4 w-4 mr-1" />
+              )}
+              {isConnected ? 'Connecté' : 'Établir la connexion'}
+            </Button>
           </div>
           
           <p className="text-gray-300 mb-4">
@@ -143,17 +181,17 @@ const SyncSettingsManager: React.FC = () => {
           {!isConnected && (
             <div className="bg-red-950/30 border border-red-500/30 p-4 rounded-md mb-6">
               <p className="text-red-200 text-sm">
-                La connexion à Supabase n'est pas établie. Veuillez vérifier votre connexion internet et les paramètres de Supabase.
+                La connexion à Supabase n'est pas établie. Veuillez cliquer sur "Établir la connexion" pour vous connecter à votre base de données.
               </p>
-              <Button 
-                variant="outline"
-                size="sm" 
-                onClick={() => checkSupabaseConnection().then(setIsConnected)}
-                className="mt-2 border-red-500/30 text-red-200 hover:bg-red-500/10"
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Vérifier la connexion
-              </Button>
+              <div className="mt-4 text-sm text-red-200">
+                <p className="font-semibold">Instructions pour établir la connexion:</p>
+                <ol className="list-decimal pl-4 mt-2 space-y-1">
+                  <li>Vérifiez que le serveur Supabase est accessible (https://phasprgawmnctyavtygh.supabase.co)</li>
+                  <li>Assurez-vous que votre clé API Supabase est valide</li>
+                  <li>Cliquez sur le bouton "Établir la connexion" ci-dessus</li>
+                  <li>Une fois connecté, vous pourrez synchroniser vos données</li>
+                </ol>
+              </div>
             </div>
           )}
           

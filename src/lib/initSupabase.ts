@@ -178,6 +178,57 @@ const createMissingTables = async (missingTables: string[]): Promise<boolean> =>
   return success;
 };
 
+// New function to manually force connection to Supabase
+export const forceSupabaseConnection = async (): Promise<boolean> => {
+  console.log("Forcing Supabase connection...");
+  
+  try {
+    // Test connection with a simple query
+    const { data, error } = await supabase
+      .from('pg_tables')
+      .select('tablename')
+      .eq('schemaname', 'public')
+      .limit(1);
+    
+    if (error) {
+      console.error("Error forcing Supabase connection:", error);
+      toast.error("Impossible de connecter à Supabase: " + error.message);
+      return false;
+    }
+    
+    console.log("Successfully forced connection to Supabase");
+    toast.success("Connexion à Supabase établie avec succès!");
+    
+    // Check required tables
+    const tablesResult = await checkRequiredTables();
+    if (!tablesResult.exists) {
+      console.log(`Missing tables: ${tablesResult.missing.join(', ')}`);
+      
+      const confirm = window.confirm(
+        `Les tables suivantes sont manquantes: ${tablesResult.missing.join(', ')}. Souhaitez-vous les créer automatiquement?`
+      );
+      
+      if (confirm) {
+        const created = await createMissingTables(tablesResult.missing);
+        if (created) {
+          toast.success("Tables créées avec succès");
+        } else {
+          toast.error("Certaines tables n'ont pas pu être créées");
+        }
+      }
+    }
+    
+    // Setup realtime subscriptions
+    setupRealtimeSubscriptions();
+    
+    return true;
+  } catch (error) {
+    console.error("Exception forcing Supabase connection:", error);
+    toast.error("Erreur de connexion à Supabase");
+    return false;
+  }
+};
+
 // Function to initialize Supabase connection
 export const initializeSupabase = async () => {
   console.log("Initializing Supabase connection...");
