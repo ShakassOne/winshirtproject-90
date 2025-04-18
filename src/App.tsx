@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Routes, Route, BrowserRouter, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -51,6 +52,7 @@ function ScrollToTop() {
 
 function App() {
   const [isSupabaseInitialized, setIsSupabaseInitialized] = useState(false);
+  const [initAttempted, setInitAttempted] = useState(false);
 
   // Effect for setting theme colors
   useEffect(() => {
@@ -92,15 +94,35 @@ function App() {
     }
   }, []);
   
-  // Initialize Supabase
+  // Initialize Supabase with retry logic
   useEffect(() => {
     const init = async () => {
-      const success = await initializeSupabase();
-      setIsSupabaseInitialized(true);
+      try {
+        console.log("Attempting to initialize Supabase...");
+        const success = await initializeSupabase();
+        console.log("Supabase initialization result:", success);
+        setIsSupabaseInitialized(true);
+      } catch (error) {
+        console.error("Error during Supabase initialization:", error);
+      } finally {
+        setInitAttempted(true);
+      }
     };
     
     init();
-  }, []);
+    
+    // Retry Supabase initialization every 30 seconds if it failed
+    const intervalId = setInterval(() => {
+      if (!isSupabaseInitialized) {
+        console.log("Retrying Supabase initialization...");
+        init();
+      } else {
+        clearInterval(intervalId);
+      }
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [isSupabaseInitialized]);
 
   return (
     <BrowserRouter>
@@ -150,6 +172,21 @@ function App() {
         <Footer />
         <Toaster />
         <AdminNavigationHandler />
+        
+        {/* Supabase Status Indicator for Development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div 
+            className="fixed bottom-4 right-4 p-2 rounded-md text-xs"
+            style={{ 
+              backgroundColor: isSupabaseInitialized ? 'rgba(0, 128, 0, 0.2)' : 'rgba(128, 0, 0, 0.2)',
+              border: `1px solid ${isSupabaseInitialized ? 'rgba(0, 128, 0, 0.5)' : 'rgba(128, 0, 0, 0.5)'}`,
+              color: isSupabaseInitialized ? 'rgb(0, 200, 0)' : 'rgb(255, 100, 100)',
+              zIndex: 1000
+            }}
+          >
+            Supabase: {initAttempted ? (isSupabaseInitialized ? 'Connected' : 'Offline') : 'Connecting...'}
+          </div>
+        )}
       </AuthProvider>
     </BrowserRouter>
   );

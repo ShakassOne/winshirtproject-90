@@ -13,6 +13,7 @@ const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
   
   // Load lotteries from Supabase with force refresh
   useEffect(() => {
@@ -23,9 +24,11 @@ const LotteriesPage: React.FC = () => {
         const lotteriesData = await fetchLotteries(true);
         console.log("Loaded lotteries:", lotteriesData);
         setLotteries(lotteriesData);
+        setIsConnected(true);
       } catch (error) {
         console.error('Error loading lotteries:', error);
         toast.error("Erreur lors du chargement des loteries");
+        setIsConnected(false);
       } finally {
         setIsLoading(false);
       }
@@ -119,9 +122,14 @@ const LotteriesPage: React.FC = () => {
             </Button>
           </div>
           
-          {/* Debug Information */}
+          {/* Connection Status */}
           <div className="mb-6 text-center text-sm text-gray-500">
-            {lotteries.length} loteries chargées
+            {lotteries.length} loterie{lotteries.length !== 1 ? 's' : ''} chargée{lotteries.length !== 1 ? 's' : ''}
+            {isConnected !== null && (
+              <span className="ml-2">
+                ({isConnected ? '✓ connecté à Supabase' : '✗ mode hors-ligne'})
+              </span>
+            )}
           </div>
           
           {/* Lotteries Grid */}

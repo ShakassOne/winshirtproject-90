@@ -1,6 +1,168 @@
-
-import { supabase, checkSupabaseConnection } from '@/integrations/supabase/client';
+import { supabase, checkSupabaseConnection, checkRequiredTables, requiredTables } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+
+// SQL statements to create the required tables if they don't exist
+const createTablesSQL = {
+  lotteries: `
+    CREATE TABLE IF NOT EXISTS lotteries (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      value NUMERIC NOT NULL,
+      target_participants INTEGER NOT NULL DEFAULT 10,
+      current_participants INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'active',
+      image TEXT,
+      linked_products INTEGER[] DEFAULT '{}',
+      end_date TIMESTAMP WITH TIME ZONE,
+      draw_date TIMESTAMP WITH TIME ZONE,
+      featured BOOLEAN DEFAULT false,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+  `,
+  
+  lottery_participants: `
+    CREATE TABLE IF NOT EXISTS lottery_participants (
+      id SERIAL PRIMARY KEY,
+      lottery_id INTEGER NOT NULL REFERENCES lotteries(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL,
+      name TEXT,
+      email TEXT,
+      avatar TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(lottery_id, user_id)
+    );
+  `,
+  
+  lottery_winners: `
+    CREATE TABLE IF NOT EXISTS lottery_winners (
+      id SERIAL PRIMARY KEY,
+      lottery_id INTEGER NOT NULL REFERENCES lotteries(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL,
+      name TEXT,
+      email TEXT,
+      avatar TEXT,
+      drawn_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(lottery_id)
+    );
+  `,
+  
+  products: `
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      price NUMERIC NOT NULL,
+      image TEXT,
+      secondary_image TEXT,
+      sizes TEXT[] DEFAULT '{}',
+      colors TEXT[] DEFAULT '{}',
+      type TEXT DEFAULT 'standard',
+      product_type TEXT,
+      sleeve_type TEXT,
+      linked_lotteries INTEGER[] DEFAULT '{}',
+      popularity NUMERIC DEFAULT 0,
+      tickets INTEGER DEFAULT 1,
+      weight NUMERIC,
+      delivery_price NUMERIC,
+      allow_customization BOOLEAN DEFAULT false,
+      default_visual_id INTEGER,
+      default_visual_settings JSONB,
+      visual_category_id INTEGER,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+  `,
+  
+  visuals: `
+    CREATE TABLE IF NOT EXISTS visuals (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      image_url TEXT NOT NULL,
+      category_id INTEGER,
+      tags TEXT[] DEFAULT '{}',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+  `,
+  
+  orders: `
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      status TEXT DEFAULT 'pending',
+      total NUMERIC NOT NULL,
+      shipping_address JSONB,
+      shipping_method TEXT,
+      shipping_cost NUMERIC DEFAULT 0,
+      payment_method TEXT,
+      payment_status TEXT DEFAULT 'pending',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+  `,
+  
+  order_items: `
+    CREATE TABLE IF NOT EXISTS order_items (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      price NUMERIC NOT NULL,
+      customization JSONB,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+  `,
+  
+  clients: `
+    CREATE TABLE IF NOT EXISTS clients (
+      id SERIAL PRIMARY KEY,
+      user_id UUID REFERENCES auth.users(id),
+      name TEXT,
+      email TEXT UNIQUE,
+      phone TEXT,
+      address JSONB,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+  `
+};
+
+// Function to create missing tables
+const createMissingTables = async (missingTables: string[]): Promise<boolean> => {
+  let success = true;
+  
+  for (const tableName of missingTables) {
+    if (createTablesSQL[tableName as keyof typeof createTablesSQL]) {
+      const sql = createTablesSQL[tableName as keyof typeof createTablesSQL];
+      console.log(`Creating table ${tableName}...`);
+      
+      try {
+        const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
+        
+        if (error) {
+          console.error(`Error creating table ${tableName}:`, error);
+          success = false;
+          
+          // Fallback: try simple query if RPC fails
+          try {
+            await supabase.query(sql);
+            console.log(`Table ${tableName} created using direct query`);
+            success = true;
+          } catch (directError) {
+            console.error(`Failed to create table ${tableName} with direct query:`, directError);
+          }
+        } else {
+          console.log(`Table ${tableName} created successfully`);
+        }
+      } catch (error) {
+        console.error(`Exception when creating table ${tableName}:`, error);
+        success = false;
+      }
+    }
+  }
+  
+  return success;
+};
 
 // Function to initialize Supabase connection
 export const initializeSupabase = async () => {
@@ -13,11 +175,28 @@ export const initializeSupabase = async () => {
     if (isConnected) {
       console.log("Successfully connected to Supabase");
       
+      // Check if all required tables exist
+      const { exists, missing } = await checkRequiredTables();
+      
+      if (!exists && missing.length > 0) {
+        console.log(`Missing tables: ${missing.join(', ')}`);
+        
+        // Create missing tables
+        const tablesCreated = await createMissingTables(missing);
+        
+        if (tablesCreated) {
+          console.log("All missing tables created successfully");
+          toast.success("Base de données initialisée avec succès");
+        } else {
+          console.warn("Some tables could not be created");
+          toast.error("Certaines tables n'ont pas pu être créées, contactez l'administrateur");
+        }
+      } else {
+        console.log("All required tables exist");
+      }
+      
       // Subscribe to realtime channels for critical tables
       setupRealtimeSubscriptions();
-      
-      // Optional: Show success message
-      // toast.success("Connecté au serveur");
       
       return true;
     } else {
@@ -69,6 +248,124 @@ const setupRealtimeSubscriptions = () => {
       }
     )
     .subscribe();
+    
+  // Subscribe to products changes
+  const productsChannel = supabase
+    .channel('product-updates')
+    .on('postgres_changes', 
+      { event: '*', schema: 'public', table: 'products' }, 
+      (payload) => {
+        console.log("Product data changed:", payload);
+        // The component will handle the actual data refresh
+      }
+    )
+    .subscribe();
 
   // We don't need to unsubscribe because these channels should last for the entire app lifetime
+};
+
+// Export a function to sync data between localStorage and Supabase
+export const syncConfig = {
+  autoSync: true,
+  tables: ['lotteries', 'products', 'lottery_participants', 'lottery_winners']
+};
+
+// Function to sync data from localStorage to Supabase
+export const syncData = async (tableName: string): Promise<boolean> => {
+  try {
+    console.log(`Syncing ${tableName} data to Supabase...`);
+    
+    // Get data from localStorage
+    const localData = localStorage.getItem(tableName);
+    if (!localData) {
+      console.log(`No local data found for ${tableName}`);
+      return false;
+    }
+    
+    const parsedData = JSON.parse(localData);
+    if (!Array.isArray(parsedData) || parsedData.length === 0) {
+      console.log(`No valid data found for ${tableName} in localStorage`);
+      return false;
+    }
+    
+    // Map keys to database format based on table name
+    const preparedData = parsedData.map(item => {
+      // Common fields that keep the same name
+      const result: any = { ...item };
+      
+      // Table-specific transformations
+      if (tableName === 'lotteries') {
+        if ('targetParticipants' in item) result.target_participants = item.targetParticipants;
+        if ('currentParticipants' in item) result.current_participants = item.currentParticipants;
+        if ('linkedProducts' in item) result.linked_products = item.linkedProducts;
+        if ('endDate' in item) result.end_date = item.endDate;
+        if ('drawDate' in item) result.draw_date = item.drawDate;
+        
+        // Remove fields that don't belong in the database
+        delete result.targetParticipants;
+        delete result.currentParticipants;
+        delete result.linkedProducts;
+        delete result.endDate;
+        delete result.drawDate;
+        delete result.participants;
+        delete result.winner;
+      } 
+      else if (tableName === 'products') {
+        if ('secondaryImage' in item) result.secondary_image = item.secondaryImage;
+        if ('productType' in item) result.product_type = item.productType;
+        if ('sleeveType' in item) result.sleeve_type = item.sleeveType;
+        if ('linkedLotteries' in item) result.linked_lotteries = item.linkedLotteries;
+        if ('deliveryPrice' in item) result.delivery_price = item.deliveryPrice;
+        if ('allowCustomization' in item) result.allow_customization = item.allowCustomization;
+        if ('defaultVisualId' in item) result.default_visual_id = item.defaultVisualId;
+        if ('defaultVisualSettings' in item) result.default_visual_settings = item.defaultVisualSettings;
+        if ('visualCategoryId' in item) result.visual_category_id = item.visualCategoryId;
+        
+        // Remove fields that don't belong in the database
+        delete result.secondaryImage;
+        delete result.productType;
+        delete result.sleeveType;
+        delete result.linkedLotteries;
+        delete result.deliveryPrice;
+        delete result.allowCustomization;
+        delete result.defaultVisualId;
+        delete result.defaultVisualSettings;
+        delete result.visualCategoryId;
+      }
+      
+      return result;
+    });
+    
+    // Clear the table first
+    const { error: deleteError } = await supabase
+      .from(tableName)
+      .delete()
+      .neq('id', 0); // Delete all rows
+    
+    if (deleteError) {
+      console.error(`Error clearing ${tableName} table:`, deleteError);
+      return false;
+    }
+    
+    // Insert data in batches of 50 to avoid payload limits
+    const batchSize = 50;
+    for (let i = 0; i < preparedData.length; i += batchSize) {
+      const batch = preparedData.slice(i, i + batchSize);
+      
+      const { error: insertError } = await supabase
+        .from(tableName)
+        .insert(batch);
+      
+      if (insertError) {
+        console.error(`Error inserting batch to ${tableName}:`, insertError);
+        return false;
+      }
+    }
+    
+    console.log(`Successfully synced ${preparedData.length} records to ${tableName}`);
+    return true;
+  } catch (error) {
+    console.error(`Error syncing ${tableName}:`, error);
+    return false;
+  }
 };
