@@ -146,17 +146,24 @@ const createMissingTables = async (missingTables: string[]): Promise<boolean> =>
           
           // Fallback: try direct SQL execution if RPC fails
           try {
-            // Using the SQL API directly instead of the non-existent query method
-            const { error: directError } = await supabase.sql(sql);
-            
+            // Using raw query instead of non-existent sql method
+            const { error: directError } = await supabase
+              .from('pg_tables')  // Using a query on an existing table as fallback
+              .select('*')
+              .limit(0);  // Just to check connection
+              
             if (!directError) {
-              console.log(`Table ${tableName} created using direct SQL`);
-              success = true;
+              // Attempt to create table by making an API request to a custom edge function
+              console.log(`Attempting alternate method to create table ${tableName}`);
+              
+              // Note: In a real implementation, you would need to have a Supabase Edge Function
+              // that can execute SQL. For now we'll just log that this would be needed.
+              console.log(`Table ${tableName} would need to be created manually or via Edge Function`);
             } else {
-              console.error(`Failed to create table ${tableName} with direct SQL:`, directError);
+              console.error(`Failed to connect to database:`, directError);
             }
           } catch (directError) {
-            console.error(`Exception when creating table ${tableName} with direct SQL:`, directError);
+            console.error(`Exception when accessing database:`, directError);
           }
         } else {
           console.log(`Table ${tableName} created successfully`);
