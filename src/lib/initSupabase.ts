@@ -1,9 +1,8 @@
-
 import { supabase, checkSupabaseConnection, checkRequiredTables, requiredTables } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
 // SQL statements to create the required tables if they don't exist
-const createTablesSQL = {
+export const createTablesSQL = {
   lotteries: `
     CREATE TABLE IF NOT EXISTS lotteries (
       id SERIAL PRIMARY KEY,
@@ -334,7 +333,7 @@ const setupRealtimeSubscriptions = () => {
 // Export a function to sync data between localStorage and Supabase
 export const syncConfig = {
   autoSync: true,
-  tables: ['lotteries', 'products', 'lottery_participants', 'lottery_winners']
+  tables: ['lotteries', 'products', 'lottery_participants', 'lottery_winners'] as const
 };
 
 // Function to sync data from localStorage to Supabase

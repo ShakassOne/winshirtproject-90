@@ -1,3 +1,4 @@
+
 // Import all necessary dependencies
 import React from 'react';
 import { useEffect } from 'react';
@@ -7,8 +8,8 @@ import { Client } from '@/types/client';
 
 // Let's define a proper type mapping for the client data
 type ExtendedClientData = DatabaseTables['clients'] & {
-  orderCount: number;
-  totalSpent: number;
+  orderCount?: number;
+  totalSpent?: number;
   participatedLotteries?: number[];
   wonLotteries?: number[];
 };
