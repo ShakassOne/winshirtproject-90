@@ -1,14 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2 } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL, ValidTableName } from '@/lib/initSupabase';
 import { checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
-import { showConnectionNotification, showSyncNotification } from '@/lib/notifications';
+import { showConnectionNotification, showSyncNotification, showStorageStatusNotification } from '@/lib/notifications';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const SyncSettingsManager: React.FC = () => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
@@ -16,12 +18,19 @@ const SyncSettingsManager: React.FC = () => {
   const [autoSync, setAutoSync] = useState(syncConfig.autoSync);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [localStorage, setLocalStorage] = useState<Record<string, boolean>>({});
+  const [supabaseStorage, setSupabaseStorage] = useState<Record<string, boolean>>({});
+  const [storageStats, setStorageStats] = useState<Record<string, {local: number; supabase: number}>>({});
   
-  // Check if connected to Supabase on mount
+  // Check if connected to Supabase on mount and check data existence
   useEffect(() => {
     const checkConnection = async () => {
       const connected = await checkSupabaseConnection();
       setIsConnected(connected);
+      
+      if (connected) {
+        checkDataExistence();
+      }
     };
     
     checkConnection();
@@ -31,6 +40,66 @@ const SyncSettingsManager: React.FC = () => {
     
     return () => clearInterval(intervalId);
   }, []);
+  
+  // Fonction pour vérifier l'existence de données dans chaque table
+  const checkDataExistence = async () => {
+    // Vérifier l'existence des données locales
+    const localData: Record<string, boolean> = {};
+    const localStats: Record<string, number> = {};
+    
+    for (const table of requiredTables) {
+      const storedData = localStorage.getItem(table);
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData);
+          localData[table] = Array.isArray(parsed) && parsed.length > 0;
+          localStats[table] = Array.isArray(parsed) ? parsed.length : 0;
+        } catch (e) {
+          localData[table] = false;
+          localStats[table] = 0;
+        }
+      } else {
+        localData[table] = false;
+        localStats[table] = 0;
+      }
+    }
+    
+    setLocalStorage(localData);
+    
+    // Vérifier l'existence des données Supabase si connecté
+    if (isConnected) {
+      const supabaseData: Record<string, boolean> = {};
+      const supabaseStats: Record<string, number> = {};
+      
+      for (const table of requiredTables) {
+        try {
+          const { data, error, count } = await supabase
+            .from(table)
+            .select('*', { count: 'exact', head: true });
+          
+          supabaseData[table] = !error && count !== null && count > 0;
+          supabaseStats[table] = count || 0;
+        } catch (e) {
+          supabaseData[table] = false;
+          supabaseStats[table] = 0;
+        }
+      }
+      
+      setSupabaseStorage(supabaseData);
+      
+      // Combiner les statistiques
+      const combinedStats: Record<string, {local: number; supabase: number}> = {};
+      
+      for (const table of requiredTables) {
+        combinedStats[table] = {
+          local: localStats[table] || 0,
+          supabase: supabaseStats[table] || 0
+        };
+      }
+      
+      setStorageStats(combinedStats);
+    }
+  };
   
   const handleSyncTable = async (table: ValidTableName) => {
     setIsLoading(prev => ({ ...prev, [table]: true }));
@@ -51,14 +120,30 @@ const SyncSettingsManager: React.FC = () => {
       const success = await syncData(table);
       setSyncSuccess(prev => ({ ...prev, [table]: success }));
       
+      // Récupérer les données locales pour compter les éléments
+      const localData = localStorage.getItem(table);
+      let count = 0;
+      
+      if (localData) {
+        try {
+          const parsed = JSON.parse(localData);
+          count = Array.isArray(parsed) ? parsed.length : 0;
+        } catch (e) {
+          console.error(`Erreur lors du parsing des données locales de ${table}:`, e);
+        }
+      }
+      
       if (success) {
-        showSyncNotification(table, true);
+        showSyncNotification(table, true, count, 'both');
+        
+        // Mettre à jour les statistiques
+        checkDataExistence();
       } else {
-        showSyncNotification(table, false);
+        showSyncNotification(table, false, undefined, 'local');
       }
     } catch (error) {
       console.error(`Erreur lors de la synchronisation de ${table}:`, error);
-      showSyncNotification(table, false);
+      showSyncNotification(table, false, undefined, 'local');
       setSyncSuccess(prev => ({ ...prev, [table]: false }));
     } finally {
       setIsLoading(prev => ({ ...prev, [table]: false }));
@@ -72,6 +157,9 @@ const SyncSettingsManager: React.FC = () => {
     }
     
     toast.success('Synchronisation de toutes les tables terminée');
+    
+    // Mettre à jour les statistiques
+    checkDataExistence();
   };
   
   const handleToggleAutoSync = (checked: boolean) => {
@@ -89,6 +177,11 @@ const SyncSettingsManager: React.FC = () => {
       setIsConnected(success);
       
       showConnectionNotification(success);
+      
+      if (success) {
+        // Mettre à jour les statistiques
+        await checkDataExistence();
+      }
     } catch (error) {
       console.error("Erreur lors de la tentative de connexion:", error);
       showConnectionNotification(false, error instanceof Error ? error.message : undefined);
@@ -116,6 +209,78 @@ const SyncSettingsManager: React.FC = () => {
   // Formater le nom de la table pour l'affichage
   const formatTableName = (table: string) => {
     return table.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+  
+  // Déterminer le statut de stockage d'une table
+  const getStorageStatus = (table: string) => {
+    const local = localStorage[table];
+    const supabase = supabaseStorage[table];
+    
+    if (local && supabase) {
+      return 'both';
+    } else if (local) {
+      return 'local';
+    } else if (supabase) {
+      return 'supabase';
+    } else {
+      return 'none';
+    }
+  };
+  
+  // Obtenir l'icône et la couleur pour le statut de stockage
+  const getStorageStatusIcon = (table: string) => {
+    const status = getStorageStatus(table);
+    
+    switch (status) {
+      case 'both':
+        return <Cloud className="h-4 w-4 text-green-500" title="Données présentes en local et sur Supabase" />;
+      case 'local':
+        return <CloudOff className="h-4 w-4 text-yellow-500" title="Données présentes uniquement en local" />;
+      case 'supabase':
+        return <Database className="h-4 w-4 text-blue-500" title="Données présentes uniquement sur Supabase" />;
+      case 'none':
+        return <AlertCircle className="h-4 w-4 text-red-500" title="Aucune donnée trouvée" />;
+      default:
+        return null;
+    }
+  };
+
+  // Afficher le badge de statut
+  const renderStorageStatusBadge = (table: string) => {
+    const status = getStorageStatus(table);
+    let bgColor = '';
+    let textColor = '';
+    let statusText = '';
+    
+    switch (status) {
+      case 'both':
+        bgColor = 'bg-green-500/20';
+        textColor = 'text-green-300';
+        statusText = 'Local+Supabase';
+        break;
+      case 'local':
+        bgColor = 'bg-yellow-500/20';
+        textColor = 'text-yellow-300';
+        statusText = 'Local uniquement';
+        break;
+      case 'supabase':
+        bgColor = 'bg-blue-500/20';
+        textColor = 'text-blue-300';
+        statusText = 'Supabase uniquement';
+        break;
+      case 'none':
+        bgColor = 'bg-red-500/20';
+        textColor = 'text-red-300';
+        statusText = 'Aucune donnée';
+        break;
+    }
+    
+    return (
+      <span className={`${bgColor} ${textColor} text-xs px-2 py-1 rounded-full flex items-center gap-1`}>
+        {getStorageStatusIcon(table)}
+        <span>{statusText}</span>
+      </span>
+    );
   };
   
   return (
@@ -177,7 +342,7 @@ const SyncSettingsManager: React.FC = () => {
               <div className="mt-4 text-sm text-red-200">
                 <p className="font-semibold">Instructions pour établir la connexion:</p>
                 <ol className="list-decimal pl-4 mt-2 space-y-1">
-                  <li>Vérifiez que le serveur Supabase est accessible (https://phasprgawmnctyavtygh.supabase.co)</li>
+                  <li>Vérifiez que le serveur Supabase est accessible (https://flifjrvtjphhnxcqtxwx.supabase.co)</li>
                   <li>Assurez-vous que votre clé API Supabase est valide</li>
                   <li>Cliquez sur le bouton "Établir la connexion" ci-dessus</li>
                   <li>Une fois connecté, vous pourrez synchroniser vos données</li>
@@ -190,31 +355,46 @@ const SyncSettingsManager: React.FC = () => {
           
           <div className="space-y-4 mt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {requiredTables.map(table => (
-                <Card key={table} className="bg-winshirt-space-light border border-winshirt-purple/20">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <Server className="h-4 w-4 text-winshirt-purple-light" />
-                        <span className="text-white">{formatTableName(table)}</span>
+              {requiredTables.map(table => {
+                const stats = storageStats[table] || { local: 0, supabase: 0 };
+                
+                return (
+                  <Card key={table} className="bg-winshirt-space-light border border-winshirt-purple/20">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Server className="h-4 w-4 text-winshirt-purple-light" />
+                            <span className="text-white">{formatTableName(table)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(table)}
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              disabled={isLoading[table] || !isConnected}
+                              onClick={() => handleSyncTable(table as ValidTableName)}
+                              className="h-8 border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+                            >
+                              <RefreshCw className="h-4 w-4 mr-1" />
+                              Synchroniser
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          {renderStorageStatusBadge(table)}
+                          
+                          <div className="text-xs text-gray-400">
+                            <span className="mr-3">Local: {stats.local} éléments</span>
+                            <span>Supabase: {stats.supabase} éléments</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(table)}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          disabled={isLoading[table] || !isConnected}
-                          onClick={() => handleSyncTable(table as ValidTableName)}
-                          className="h-8 border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
-                        >
-                          <RefreshCw className="h-4 w-4 mr-1" />
-                          Synchroniser
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
             
             <Button 
@@ -224,6 +404,15 @@ const SyncSettingsManager: React.FC = () => {
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Synchroniser toutes les tables
+            </Button>
+            
+            <Button
+              className="w-full mt-2 bg-winshirt-blue hover:bg-winshirt-blue/80"
+              onClick={checkDataExistence}
+              disabled={Object.values(isLoading).some(value => value)}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Vérifier l'état des données
             </Button>
           </div>
         </div>

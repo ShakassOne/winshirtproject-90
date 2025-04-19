@@ -8,7 +8,8 @@ import EmptyFormState from './form/EmptyFormState';
 import BasicLotteryInfo from './form/BasicLotteryInfo';
 import LotteryDetailsFields from './form/LotteryDetailsFields';
 import FormActions from './form/FormActions';
-import { showNotification, showFormValidation } from '@/lib/notifications';
+import { showNotification, showFormValidation, showAdminAction } from '@/lib/notifications';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface LotteryFormProps {
   isCreating: boolean;
@@ -38,6 +39,16 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
   deselectAllProducts
 }) => {
   const selectedProducts = form.watch('linkedProducts') || [];
+  const supabaseConnected = isSupabaseConfigured();
+  const storageType = supabaseConnected ? 'both' : 'local';
+
+  // Notifier lors de l'entrée dans le formulaire d'édition
+  React.useEffect(() => {
+    if (selectedLotteryId && !isCreating) {
+      const lotteryTitle = form.getValues('title') || 'inconnue';
+      showAdminAction('lottery', `Édition de la loterie "${lotteryTitle}"`, storageType);
+    }
+  }, [selectedLotteryId, isCreating]);
 
   const handleFormSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -75,10 +86,23 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
       console.log('Form is valid, submitting...');
       try {
         form.handleSubmit(onSubmit)();
-        showNotification(isCreating ? 'create' : 'update', 'lottery', true);
+        const storageType = supabaseConnected ? 'both' : 'local';
+        showNotification(isCreating ? 'create' : 'update', 'lottery', true, undefined, undefined, storageType);
+        
+        // Notification admin spécifique
+        const action = isCreating ? 'Création' : 'Mise à jour';
+        showAdminAction('lottery', `${action} de "${formValues.title}"`, storageType);
       } catch (error) {
         console.error('Error submitting form:', error);
-        showNotification(isCreating ? 'create' : 'update', 'lottery', false, error instanceof Error ? error.message : 'Erreur inconnue');
+        const storageType = supabaseConnected ? 'both' : 'local';
+        showNotification(
+          isCreating ? 'create' : 'update', 
+          'lottery', 
+          false, 
+          error instanceof Error ? error.message : 'Erreur inconnue',
+          undefined,
+          storageType
+        );
       }
     } else {
       showNotification('error', 'form', false, 'Veuillez corriger les erreurs du formulaire');
@@ -104,7 +128,10 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
           onDeselectAll={deselectAllProducts}
         />
         
-        <FormActions isCreating={isCreating} onCancel={onCancel} />
+        <FormActions isCreating={isCreating} onCancel={() => {
+          showAdminAction('lottery', 'Annulation des modifications', storageType);
+          onCancel();
+        }} />
       </form>
     </Form>
   );
