@@ -18,7 +18,7 @@ const SyncSettingsManager: React.FC = () => {
   const [autoSync, setAutoSync] = useState(syncConfig.autoSync);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
-  const [localStorage, setLocalStorage] = useState<Record<string, boolean>>({});
+  const [localStorageData, setLocalStorageData] = useState<Record<string, boolean>>({});
   const [supabaseStorage, setSupabaseStorage] = useState<Record<string, boolean>>({});
   const [storageStats, setStorageStats] = useState<Record<string, {local: number; supabase: number}>>({});
   
@@ -48,7 +48,7 @@ const SyncSettingsManager: React.FC = () => {
     const localStats: Record<string, number> = {};
     
     for (const table of requiredTables) {
-      const storedData = localStorage.getItem(table);
+      const storedData = window.localStorage.getItem(table);
       if (storedData) {
         try {
           const parsed = JSON.parse(storedData);
@@ -64,7 +64,7 @@ const SyncSettingsManager: React.FC = () => {
       }
     }
     
-    setLocalStorage(localData);
+    setLocalStorageData(localData);
     
     // Vérifier l'existence des données Supabase si connecté
     if (isConnected) {
@@ -121,7 +121,7 @@ const SyncSettingsManager: React.FC = () => {
       setSyncSuccess(prev => ({ ...prev, [table]: success }));
       
       // Récupérer les données locales pour compter les éléments
-      const localData = localStorage.getItem(table);
+      const localData = window.localStorage.getItem(table);
       let count = 0;
       
       if (localData) {
@@ -213,7 +213,7 @@ const SyncSettingsManager: React.FC = () => {
   
   // Déterminer le statut de stockage d'une table
   const getStorageStatus = (table: string) => {
-    const local = localStorage[table];
+    const local = localStorageData[table];
     const supabase = supabaseStorage[table];
     
     if (local && supabase) {
