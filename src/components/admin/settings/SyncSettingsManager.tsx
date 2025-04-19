@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2 } fro
 import { toast } from '@/lib/toast';
 import { syncConfig, syncData, forceSupabaseConnection } from '@/lib/initSupabase';
 import { checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
+import { createTablesSQL } from '@/lib/initSupabase';
 
 const SyncSettingsManager: React.FC = () => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
@@ -51,7 +51,7 @@ const SyncSettingsManager: React.FC = () => {
       }
       
       // Synchroniser la table
-      const success = await syncData(table);
+      const success = await syncData(table as keyof typeof createTablesSQL);
       
       // Mettre à jour l'état de succès
       setSyncSuccess(prev => ({ ...prev, [table]: success }));

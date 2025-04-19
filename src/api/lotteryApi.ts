@@ -704,7 +704,7 @@ export const fetchLotteryById = async (lotteryId: number): Promise<ExtendedLotte
     
     console.log(`Fetched lottery ${lotteryId} from Supabase:`, data);
     
-    const lottery = convertSupabaseLottery(data);
+    const lottery = convertSupabaseLottery(data as DatabaseTables['lotteries']);
     
     // Fetch participants and winner
     lottery.participants = await fetchParticipantsForLottery(lottery.id);

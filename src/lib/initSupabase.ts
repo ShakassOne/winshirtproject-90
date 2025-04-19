@@ -133,12 +133,14 @@ const createMissingTables = async (missingTables: string[]): Promise<boolean> =>
   let success = true;
   
   for (const tableName of missingTables) {
-    if (createTablesSQL[tableName as keyof typeof createTablesSQL]) {
-      const sql = createTablesSQL[tableName as keyof typeof createTablesSQL];
+    const sqlTable = tableName as keyof typeof createTablesSQL;
+    if (createTablesSQL[sqlTable]) {
+      const sql = createTablesSQL[sqlTable];
       console.log(`Creating table ${tableName}...`);
       
       try {
-        const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
+        // TypeScript fix: cast SQL query string to any to bypass strict typing
+        const { error } = await supabase.rpc('exec_sql', { sql_query: sql as any });
         
         if (error) {
           console.error(`Error creating table ${tableName}:`, error);
@@ -403,7 +405,7 @@ export const syncData = async (tableName: keyof typeof createTablesSQL): Promise
     
     // Clear the table first
     const { error: deleteError } = await supabase
-      .from(tableName)
+      .from(tableName as any)
       .delete()
       .neq('id', 0); // Delete all rows
     
@@ -418,7 +420,7 @@ export const syncData = async (tableName: keyof typeof createTablesSQL): Promise
       const batch = preparedData.slice(i, i + batchSize);
       
       const { error: insertError } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .insert(batch);
       
       if (insertError) {
