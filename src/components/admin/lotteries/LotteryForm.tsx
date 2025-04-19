@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Form } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
@@ -7,7 +8,7 @@ import EmptyFormState from './form/EmptyFormState';
 import BasicLotteryInfo from './form/BasicLotteryInfo';
 import LotteryDetailsFields from './form/LotteryDetailsFields';
 import FormActions from './form/FormActions';
-import { showNotification } from '@/lib/notifications';
+import { showNotification, showFormValidation } from '@/lib/notifications';
 
 interface LotteryFormProps {
   isCreating: boolean;
@@ -43,27 +44,45 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
     
     const formValues = form.getValues();
     
+    // Log pour le débogage pour voir toutes les valeurs du formulaire
+    console.log('Form values before submission:', formValues);
+    
+    // Vérifier que tous les champs obligatoires sont remplis
+    let formValid = true;
+    
     if (!formValues.title || formValues.title.trim() === '') {
-      showNotification('error', 'lottery', false, 'Le titre est requis');
-      return;
+      showFormValidation('Titre', 'Le titre est requis');
+      formValid = false;
     }
     
     if (!formValues.description || formValues.description.trim() === '') {
-      showNotification('error', 'lottery', false, 'La description est requise');
-      return;
+      showFormValidation('Description', 'La description est requise');
+      formValid = false;
     }
     
     if (!formValues.value || isNaN(Number(formValues.value)) || Number(formValues.value) <= 0) {
-      showNotification('error', 'lottery', false, 'Veuillez entrer une valeur valide');
-      return;
+      showFormValidation('Valeur', 'Veuillez entrer une valeur valide (supérieure à 0)');
+      formValid = false;
     }
     
     if (!formValues.targetParticipants || isNaN(Number(formValues.targetParticipants)) || Number(formValues.targetParticipants) < 1) {
-      showNotification('error', 'lottery', false, 'Le nombre de participants doit être d\'au moins 1');
-      return;
+      showFormValidation('Participants', 'Le nombre de participants doit être d\'au moins 1');
+      formValid = false;
     }
-    
-    form.handleSubmit(onSubmit)();
+
+    // Si le formulaire est valide, le soumettre
+    if (formValid) {
+      console.log('Form is valid, submitting...');
+      try {
+        form.handleSubmit(onSubmit)();
+        showNotification(isCreating ? 'create' : 'update', 'lottery', true);
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        showNotification(isCreating ? 'create' : 'update', 'lottery', false, error instanceof Error ? error.message : 'Erreur inconnue');
+      }
+    } else {
+      showNotification('error', 'form', false, 'Veuillez corriger les erreurs du formulaire');
+    }
   };
 
   if (!isCreating && !selectedLotteryId) {

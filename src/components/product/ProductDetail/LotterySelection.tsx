@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExtendedLottery } from '@/types/lottery';
 import { fetchLotteries } from '@/api/lotteryApi';
+import { showNotification } from '@/lib/notifications';
 
 interface LotterySelectionProps {
   tickets: number;
@@ -21,30 +22,49 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
 }) => {
   const [loadedLotteries, setLoadedLotteries] = useState<ExtendedLottery[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   useEffect(() => {
-    // Only load lotteries if they weren't provided as props
-    if (!propActiveLotteries) {
-      const loadLotteries = async () => {
-        setLoading(true);
-        try {
-          const lotteries = await fetchLotteries();
-          const activeLotteries = lotteries.filter(lottery => lottery.status === 'active');
-          setLoadedLotteries(activeLotteries);
-        } catch (error) {
-          console.error("Error loading lotteries:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
+    // Toujours recharger les loteries pour s'assurer qu'elles sont à jour
+    const loadLotteries = async () => {
+      setLoading(true);
+      setLoadError(null);
       
-      loadLotteries();
-    }
-  }, [propActiveLotteries]);
+      try {
+        console.log('Fetching fresh lotteries data...');
+        const lotteries = await fetchLotteries(true); // Force refresh
+        
+        if (!lotteries || lotteries.length === 0) {
+          console.warn('No active lotteries found or returned');
+          setLoadedLotteries([]);
+          showNotification('info', 'lottery', false, 'Aucune loterie active disponible');
+        } else {
+          console.log(`Fetched ${lotteries.length} lotteries, filtering active ones`);
+          const activeLotteries = lotteries.filter(lottery => lottery.status === 'active');
+          console.log(`Found ${activeLotteries.length} active lotteries`);
+          setLoadedLotteries(activeLotteries);
+        }
+      } catch (error) {
+        console.error("Error loading lotteries:", error);
+        setLoadError(error instanceof Error ? error.message : 'Erreur inconnue');
+        showNotification('error', 'lottery', false, 'Impossible de charger les loteries');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadLotteries();
+  }, []);
   
   // Use provided lotteries or loaded ones
   const activeLotteries = propActiveLotteries || loadedLotteries;
 
+  // Log pour le débogage
+  useEffect(() => {
+    console.log('Active lotteries in component:', activeLotteries);
+    console.log('Selected lotteries:', selectedLotteries);
+  }, [activeLotteries, selectedLotteries]);
+  
   if (!tickets || tickets <= 0) return null;
 
   return (
@@ -56,6 +76,10 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
       
       {loading ? (
         <div className="text-gray-400 text-sm">Chargement des loteries...</div>
+      ) : loadError ? (
+        <div className="text-red-400 text-sm">Erreur: {loadError}</div>
+      ) : activeLotteries.length === 0 ? (
+        <div className="text-yellow-400 text-sm">Aucune loterie active disponible</div>
       ) : (
         Array.from({ length: tickets }).map((_, index) => (
           <div key={index} className="space-y-1">

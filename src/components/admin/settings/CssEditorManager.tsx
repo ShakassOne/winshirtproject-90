@@ -7,24 +7,38 @@ import { toast } from '@/lib/toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { PaintBucket, Code, Save, Undo, RefreshCw, ArrowUpDown, Check, FileCode } from 'lucide-react';
+import { PaintBucket, Code, Save, Undo, RefreshCw, ArrowUpDown, Check, FileCode, Image, Box } from 'lucide-react';
+import { showNotification } from '@/lib/notifications';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
 
 interface CssVariable {
   name: string;
   value: string;
   originalValue: string;
   description: string;
-  category: 'colors' | 'spacing' | 'typography' | 'other';
+  category: 'colors' | 'spacing' | 'typography' | 'other' | 'backgrounds' | 'containers';
 }
 
-const CssEditorManager: React.FC = () => {
+interface CssEditorManagerProps {
+  showAdvancedSettings?: boolean;
+}
+
+const CssEditorManager: React.FC<CssEditorManagerProps> = ({ showAdvancedSettings = false }) => {
   const [cssVariables, setCssVariables] = useState<CssVariable[]>([]);
   const [activeTab, setActiveTab] = useState<string>('colors');
   const [isChanged, setIsChanged] = useState(false);
   const [cssCode, setCssCode] = useState<string>('');
   const [originalCssCode, setOriginalCssCode] = useState<string>('');
   const [isCssCodeChanged, setIsCssCodeChanged] = useState(false);
-  const [editorMode, setEditorMode] = useState<'variables' | 'code'>('variables');
+  const [editorMode, setEditorMode] = useState<'variables' | 'code'>(showAdvancedSettings ? 'code' : 'variables');
+  const [backgroundPreview, setBackgroundPreview] = useState<string>('');
+  const [backgroundOpacity, setBackgroundOpacity] = useState<number>(100);
+  const [containerRadius, setContainerRadius] = useState<number>(12);
+  const [containerBlur, setContainerBlur] = useState<number>(8);
+  const [containerOpacity, setContainerOpacity] = useState<number>(40);
+  const [containerBorder, setContainerBorder] = useState<string>('rgba(155, 135, 245, 0.3)');
   
   // Load CSS variables and custom CSS on component mount
   useEffect(() => {
@@ -33,7 +47,27 @@ const CssEditorManager: React.FC = () => {
     
     // Appliquer le CSS personnalisé dès le chargement du composant
     applyCustomCssOnLoad();
+    
+    // Charger les paramètres d'arrière-plan et de conteneur
+    loadBackgroundSettings();
   }, []);
+  
+  const loadBackgroundSettings = () => {
+    try {
+      const bgSettings = localStorage.getItem('winshirt-background-settings');
+      if (bgSettings) {
+        const settings = JSON.parse(bgSettings);
+        if (settings.backgroundImage) setBackgroundPreview(settings.backgroundImage);
+        if (settings.backgroundOpacity) setBackgroundOpacity(Number(settings.backgroundOpacity));
+        if (settings.containerRadius) setContainerRadius(Number(settings.containerRadius));
+        if (settings.containerBlur) setContainerBlur(Number(settings.containerBlur));
+        if (settings.containerOpacity) setContainerOpacity(Number(settings.containerOpacity));
+        if (settings.containerBorder) setContainerBorder(settings.containerBorder);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des paramètres d\'arrière-plan:', error);
+    }
+  };
   
   const loadCssVariables = () => {
     const root = document.documentElement;
@@ -54,15 +88,26 @@ const CssEditorManager: React.FC = () => {
     }
     
     const winshirtVariables: CssVariable[] = [
-      { name: '--winshirt-space', value: computedStyle.getPropertyValue('--winshirt-space').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-space').trim(), description: 'Couleur de fond principale', category: 'colors' },
-      { name: '--winshirt-space-light', value: computedStyle.getPropertyValue('--winshirt-space-light').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-space-light').trim(), description: 'Couleur de fond secondaire', category: 'colors' },
-      { name: '--winshirt-space-dark', value: computedStyle.getPropertyValue('--winshirt-space-dark').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-space-dark').trim(), description: 'Couleur de fond sombre', category: 'colors' },
+      // Couleurs
       { name: '--winshirt-purple', value: computedStyle.getPropertyValue('--winshirt-purple').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-purple').trim(), description: 'Couleur principale', category: 'colors' },
       { name: '--winshirt-purple-light', value: computedStyle.getPropertyValue('--winshirt-purple-light').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-purple-light').trim(), description: 'Couleur principale claire', category: 'colors' },
       { name: '--winshirt-purple-dark', value: computedStyle.getPropertyValue('--winshirt-purple-dark').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-purple-dark').trim(), description: 'Couleur principale foncée', category: 'colors' },
       { name: '--winshirt-blue', value: computedStyle.getPropertyValue('--winshirt-blue').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-blue').trim(), description: 'Couleur secondaire', category: 'colors' },
       { name: '--winshirt-blue-light', value: computedStyle.getPropertyValue('--winshirt-blue-light').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-blue-light').trim(), description: 'Couleur secondaire claire', category: 'colors' },
       { name: '--winshirt-blue-dark', value: computedStyle.getPropertyValue('--winshirt-blue-dark').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-blue-dark').trim(), description: 'Couleur secondaire foncée', category: 'colors' },
+      
+      // Arrière-plans
+      { name: '--winshirt-space', value: computedStyle.getPropertyValue('--winshirt-space').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-space').trim(), description: 'Couleur de fond principale', category: 'backgrounds' },
+      { name: '--winshirt-space-light', value: computedStyle.getPropertyValue('--winshirt-space-light').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-space-light').trim(), description: 'Couleur de fond secondaire', category: 'backgrounds' },
+      { name: '--winshirt-space-dark', value: computedStyle.getPropertyValue('--winshirt-space-dark').trim(), originalValue: computedStyle.getPropertyValue('--winshirt-space-dark').trim(), description: 'Couleur de fond sombre', category: 'backgrounds' },
+      { name: '--background-image', value: backgroundPreview || 'none', originalValue: backgroundPreview || 'none', description: 'Image d\'arrière-plan', category: 'backgrounds' },
+      { name: '--background-opacity', value: `${backgroundOpacity}%`, originalValue: `${backgroundOpacity}%`, description: 'Opacité de l\'arrière-plan', category: 'backgrounds' },
+      
+      // Conteneurs
+      { name: '--container-radius', value: `${containerRadius}px`, originalValue: `${containerRadius}px`, description: 'Rayon des coins des conteneurs', category: 'containers' },
+      { name: '--container-blur', value: `${containerBlur}px`, originalValue: `${containerBlur}px`, description: 'Flou des conteneurs (effet verre)', category: 'containers' },
+      { name: '--container-opacity', value: `${containerOpacity}%`, originalValue: `${containerOpacity}%`, description: 'Opacité des conteneurs', category: 'containers' },
+      { name: '--container-border', value: containerBorder, originalValue: containerBorder, description: 'Couleur de bordure des conteneurs', category: 'containers' },
       
       // Typography variables
       { name: '--font-size-base', value: '1rem', originalValue: '1rem', description: 'Taille de police de base', category: 'typography' },
@@ -161,16 +206,16 @@ const CssEditorManager: React.FC = () => {
         setOriginalCssCode(cssCode);
         setIsCssCodeChanged(false);
         
-        toast.success("Le code CSS personnalisé a été appliqué");
+        showNotification('success', 'system', true, "Le code CSS personnalisé a été appliqué");
       } else {
         localStorage.removeItem('winshirt-custom-css');
         setOriginalCssCode('');
         setIsCssCodeChanged(false);
-        toast.success("Le code CSS personnalisé a été réinitialisé");
+        showNotification('success', 'system', true, "Le code CSS personnalisé a été réinitialisé");
       }
     } catch (error) {
       console.error('Error applying custom CSS:', error);
-      toast.error("Erreur lors de l'application du CSS personnalisé");
+      showNotification('error', 'system', false, "Erreur lors de l'application du CSS personnalisé");
     }
   };
   
@@ -178,6 +223,69 @@ const CssEditorManager: React.FC = () => {
   const resetCustomCss = () => {
     setCssCode('');
     setIsCssCodeChanged(originalCssCode !== '');
+  };
+  
+  // Fonction pour appliquer les changements d'image d'arrière-plan
+  const applyBackgroundChange = () => {
+    try {
+      // Sauvegarder les réglages d'arrière-plan
+      const bgSettings = {
+        backgroundImage: backgroundPreview,
+        backgroundOpacity: backgroundOpacity,
+        containerRadius: containerRadius,
+        containerBlur: containerBlur,
+        containerOpacity: containerOpacity,
+        containerBorder: containerBorder,
+      };
+      
+      localStorage.setItem('winshirt-background-settings', JSON.stringify(bgSettings));
+      
+      // Générer le CSS pour l'arrière-plan
+      const backgroundCss = `
+      body {
+        background-image: url("${backgroundPreview}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-color: var(--background);
+      }
+      
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(26, 31, 44, ${(100 - backgroundOpacity) / 100});
+        z-index: -1;
+      }
+      
+      .winshirt-card {
+        border-radius: ${containerRadius}px;
+        backdrop-filter: blur(${containerBlur}px);
+        background-color: rgba(26, 31, 44, ${containerOpacity / 100});
+        border-color: ${containerBorder};
+      }
+      `;
+      
+      // Appliquer le CSS
+      const existingBgStyle = document.getElementById('winshirt-background-css');
+      if (existingBgStyle) {
+        existingBgStyle.remove();
+      }
+      
+      const styleEl = document.createElement('style');
+      styleEl.id = 'winshirt-background-css';
+      styleEl.textContent = backgroundCss;
+      document.head.appendChild(styleEl);
+      
+      showNotification('success', 'system', true, "Les paramètres d'arrière-plan ont été appliqués");
+    } catch (error) {
+      console.error('Error applying background changes:', error);
+      showNotification('error', 'system', false, "Erreur lors de l'application des changements d'arrière-plan");
+    }
   };
   
   const saveCssChanges = () => {
@@ -204,10 +312,10 @@ const CssEditorManager: React.FC = () => {
       })));
       
       setIsChanged(false);
-      toast.success("Les modifications CSS ont été appliquées");
+      showNotification('success', 'system', true, "Les modifications CSS ont été appliquées");
     } catch (error) {
       console.error('Error saving CSS changes:', error);
-      toast.error("Erreur lors de l'application des modifications CSS");
+      showNotification('error', 'system', false, "Erreur lors de l'application des modifications CSS");
     }
   };
   
@@ -228,21 +336,35 @@ const CssEditorManager: React.FC = () => {
     // Remove from localStorage
     localStorage.removeItem('winshirt-css-settings');
     localStorage.removeItem('winshirt-custom-css');
+    localStorage.removeItem('winshirt-background-settings');
+    
+    // Reset background settings
+    setBackgroundPreview('');
+    setBackgroundOpacity(100);
+    setContainerRadius(12);
+    setContainerBlur(8);
+    setContainerOpacity(40);
+    setContainerBorder('rgba(155, 135, 245, 0.3)');
+    
+    // Remove custom styles
+    const existingStyle = document.getElementById('winshirt-custom-css');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    const existingBgStyle = document.getElementById('winshirt-background-css');
+    if (existingBgStyle) {
+      existingBgStyle.remove();
+    }
     
     // Reload variables
     loadCssVariables();
     setCssCode('');
     setOriginalCssCode('');
     setIsCssCodeChanged(false);
-
-    // Supprimer le style personnalisé s'il existe
-    const existingStyle = document.getElementById('winshirt-custom-css');
-    if (existingStyle) {
-      existingStyle.remove();
-    }
     
     setIsChanged(false);
-    toast.success("Réinitialisation des styles par défaut");
+    showNotification('success', 'system', true, "Réinitialisation des styles par défaut");
   };
   
   const resetCurrentChanges = () => {
@@ -251,260 +373,341 @@ const CssEditorManager: React.FC = () => {
       value: variable.originalValue
     })));
     setIsChanged(false);
-    toast.info("Modifications annulées");
   };
   
-  // Annuler les modifications du code CSS personnalisé
-  const resetCustomCssChanges = () => {
-    setCssCode(originalCssCode);
-    setIsCssCodeChanged(false);
-    toast.info("Modifications du code CSS annulées");
+  // Filtrer les variables CSS selon l'onglet actif
+  const filteredVariables = cssVariables.filter(
+    variable => variable.category === activeTab
+  );
+  
+  // Prévisualisation de l'arrière-plan
+  const backgroundStyle = {
+    backgroundImage: backgroundPreview ? `url(${backgroundPreview})` : 'none',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    opacity: backgroundOpacity / 100,
   };
   
-  // Filter variables by category
-  const filteredVariables = cssVariables.filter(variable => variable.category === activeTab);
+  // Prévisualisation du conteneur
+  const containerStyle = {
+    borderRadius: `${containerRadius}px`,
+    backdropFilter: `blur(${containerBlur}px)`,
+    backgroundColor: `rgba(26, 31, 44, ${containerOpacity / 100})`,
+    borderColor: containerBorder,
+  };
   
   return (
     <Card className="winshirt-card">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-2">
-          <PaintBucket className="h-5 w-5" />
-          Éditeur de styles CSS
+          <Palette className="h-5 w-5" />
+          Personnalisation de l'apparence
         </CardTitle>
-        <CardDescription>
-          Personnalisez les couleurs et autres variables CSS de votre site
+        <CardDescription className="text-gray-300">
+          Personnalisez les couleurs, les polices et l'apparence générale de votre boutique
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              onClick={resetToDefault}
-              variant="outline"
-              className="border-red-500 text-red-500 hover:bg-red-500/10"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Réinitialiser tout
-            </Button>
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+          <div className="flex justify-between items-center mb-4">
+            <TabsList className="bg-winshirt-space-light border border-winshirt-purple/20">
+              <TabsTrigger value="colors">Couleurs</TabsTrigger>
+              <TabsTrigger value="backgrounds">Arrière-plan</TabsTrigger>
+              <TabsTrigger value="containers">Conteneurs</TabsTrigger>
+              <TabsTrigger value="typography">Typographie</TabsTrigger>
+              <TabsTrigger value="spacing">Espacement</TabsTrigger>
+              <TabsTrigger value="other">Autres</TabsTrigger>
+            </TabsList>
             
-            <div className="ml-auto flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className={`border-winshirt-purple/50 ${editorMode === 'variables' ? 'bg-winshirt-purple text-white' : 'text-winshirt-purple-light hover:bg-winshirt-purple/10'}`}
-                onClick={() => setEditorMode('variables')}
-              >
-                <PaintBucket className="mr-2 h-4 w-4" />
-                Variables CSS
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                className={`border-winshirt-purple/50 ${editorMode === 'code' ? 'bg-winshirt-purple text-white' : 'text-winshirt-purple-light hover:bg-winshirt-purple/10'}`}
-                onClick={() => setEditorMode('code')}
-              >
-                <FileCode className="mr-2 h-4 w-4" />
-                Éditeur CSS
-              </Button>
-            </div>
+            {showAdvancedSettings && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setEditorMode(editorMode === 'variables' ? 'code' : 'variables')}
+                  className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+                >
+                  {editorMode === 'variables' ? (
+                    <>
+                      <Code className="h-4 w-4 mr-1" />
+                      Mode code CSS
+                    </>
+                  ) : (
+                    <>
+                      <ArrowUpDown className="h-4 w-4 mr-1" />
+                      Mode variables
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
           
           {editorMode === 'variables' ? (
             <>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={saveCssChanges}
-                  disabled={!isChanged}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Enregistrer
-                </Button>
-                
-                <Button
-                  size="sm"
-                  onClick={resetCurrentChanges}
-                  disabled={!isChanged}
-                  variant="outline"
-                  className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
-                >
-                  <Undo className="mr-2 h-4 w-4" />
-                  Annuler
-                </Button>
-              </div>
+              <TabsContent value="backgrounds" className="space-y-6">
+                <div className="space-y-6">
+                  <div>
+                    <Label className="text-white mb-2 block">URL de l'image d'arrière-plan</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        className="bg-winshirt-space-light border-winshirt-purple/30 text-white"
+                        value={backgroundPreview} 
+                        onChange={(e) => setBackgroundPreview(e.target.value)}
+                        placeholder="https://exemple.com/image.jpg"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-white mb-1 block">Opacité de l'image d'arrière-plan ({backgroundOpacity}%)</Label>
+                    <Slider 
+                      value={[backgroundOpacity]} 
+                      onValueChange={values => setBackgroundOpacity(values[0])}
+                      max={100}
+                      step={1}
+                      className="py-4"
+                    />
+                  </div>
+                  
+                  <div className="mt-4">
+                    <Label className="text-white mb-2 block">Prévisualisation</Label>
+                    <div className="relative h-40 w-full rounded-lg overflow-hidden border border-winshirt-purple/30">
+                      <div className="absolute inset-0" style={backgroundStyle}></div>
+                      <div className="absolute inset-0 bg-winshirt-space" style={{ opacity: 1 - backgroundOpacity / 100 }}></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="p-4 rounded-lg glass-effect" style={containerStyle}>
+                          <p className="text-white">Prévisualisation de l'arrière-plan</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 flex justify-end">
+                    <Button 
+                      className="bg-winshirt-purple hover:bg-winshirt-purple/80"
+                      onClick={applyBackgroundChange}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Appliquer les changements d'arrière-plan
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
               
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid grid-cols-4 mb-4">
-                  <TabsTrigger value="colors">Couleurs</TabsTrigger>
-                  <TabsTrigger value="typography">Typographie</TabsTrigger>
-                  <TabsTrigger value="spacing">Espacement</TabsTrigger>
-                  <TabsTrigger value="other">Autres</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value={activeTab}>
-                  <ScrollArea className="h-[400px] pr-4">
+              <TabsContent value="containers" className="space-y-6">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-white mb-1 block">Rayon des coins ({containerRadius}px)</Label>
+                    <Slider 
+                      value={[containerRadius]} 
+                      onValueChange={values => setContainerRadius(values[0])}
+                      max={24}
+                      step={1}
+                      className="py-4"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-white mb-1 block">Niveau de flou ({containerBlur}px)</Label>
+                    <Slider 
+                      value={[containerBlur]} 
+                      onValueChange={values => setContainerBlur(values[0])}
+                      max={20}
+                      step={1}
+                      className="py-4"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-white mb-1 block">Opacité du fond ({containerOpacity}%)</Label>
+                    <Slider 
+                      value={[containerOpacity]} 
+                      onValueChange={values => setContainerOpacity(values[0])}
+                      max={100}
+                      step={1}
+                      className="py-4"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label className="text-white mb-2 block">Couleur de bordure</Label>
+                    <Input 
+                      type="text"
+                      className="bg-winshirt-space-light border-winshirt-purple/30 text-white"
+                      value={containerBorder} 
+                      onChange={(e) => setContainerBorder(e.target.value)}
+                      placeholder="rgba(155, 135, 245, 0.3)"
+                    />
+                  </div>
+                  
+                  <div className="mt-4">
+                    <Label className="text-white mb-2 block">Prévisualisation du conteneur</Label>
+                    <div className="h-40 w-full rounded-lg overflow-hidden border border-winshirt-purple/30 flex items-center justify-center">
+                      {backgroundPreview && (
+                        <div className="absolute inset-0" style={backgroundStyle}></div>
+                      )}
+                      <div className="p-6 rounded-lg winshirt-card" style={containerStyle}>
+                        <div className="text-white text-center">
+                          <h3 className="text-lg font-bold">Titre du conteneur</h3>
+                          <p className="text-sm text-gray-300">Contenu d'exemple pour la prévisualisation</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 flex justify-end">
+                    <Button 
+                      className="bg-winshirt-purple hover:bg-winshirt-purple/80"
+                      onClick={applyBackgroundChange}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Appliquer les changements de conteneur
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              {/* Autres onglets */}
+              <TabsContent value="colors" className="space-y-4">
+                <ScrollArea className="h-96">
+                  <div className="space-y-4">
+                    {filteredVariables.map((variable, index) => {
+                      const originalIndex = cssVariables.findIndex(v => v.name === variable.name);
+                      return (
+                        <div key={variable.name} className="space-y-1">
+                          <div className="flex justify-between">
+                            <Label className="text-white">{variable.description}</Label>
+                            {variable.value !== variable.originalValue && (
+                              <span className="text-xs text-winshirt-blue-light">Modifié</span>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Input 
+                              type="color" 
+                              className="w-12 h-8 p-1 bg-transparent border-winshirt-purple/30"
+                              value={variable.value} 
+                              onChange={(e) => handleInputChange(originalIndex, e.target.value)} 
+                            />
+                            <Input 
+                              className="flex-1 bg-winshirt-space-light border-winshirt-purple/30 text-white"
+                              value={variable.value} 
+                              onChange={(e) => handleInputChange(originalIndex, e.target.value)} 
+                              placeholder={variable.originalValue}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono">{variable.name}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+              
+              {/* Onglets Typography, Spacing et Other */}
+              {['typography', 'spacing', 'other'].map(tabValue => (
+                <TabsContent key={tabValue} value={tabValue} className="space-y-4">
+                  <ScrollArea className="h-96">
                     <div className="space-y-4">
                       {filteredVariables.map((variable, index) => {
-                        const actualIndex = cssVariables.findIndex(v => v.name === variable.name);
-                        const hasChanged = variable.value !== variable.originalValue;
-                        
+                        const originalIndex = cssVariables.findIndex(v => v.name === variable.name);
                         return (
-                          <div 
-                            key={variable.name} 
-                            className={`p-3 rounded-lg transition-colors ${hasChanged ? 'bg-winshirt-purple/20 border border-winshirt-purple/40' : 'bg-winshirt-space-light'}`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <Label 
-                                htmlFor={`css-var-${index}`}
-                                className={`flex items-center text-sm ${hasChanged ? 'text-winshirt-purple-light' : 'text-gray-300'}`}
-                              >
-                                {hasChanged && <Check className="mr-1 h-3 w-3 text-green-500" />}
-                                {variable.name}
-                              </Label>
-                              <span className="text-xs text-gray-400">{variable.description}</span>
+                          <div key={variable.name} className="space-y-1">
+                            <div className="flex justify-between">
+                              <Label className="text-white">{variable.description}</Label>
+                              {variable.value !== variable.originalValue && (
+                                <span className="text-xs text-winshirt-blue-light">Modifié</span>
+                              )}
                             </div>
-                            
-                            {variable.category === 'colors' ? (
-                              <div className="flex gap-3">
-                                <div 
-                                  className="w-10 h-10 rounded border border-gray-600" 
-                                  style={{ background: variable.value }}
-                                />
-                                <Input
-                                  id={`css-var-${index}`}
-                                  type="text"
-                                  value={variable.value}
-                                  onChange={(e) => handleInputChange(actualIndex, e.target.value)}
-                                  className="bg-winshirt-space border-winshirt-purple/30 flex-1"
-                                />
-                              </div>
-                            ) : (
-                              <Input
-                                id={`css-var-${index}`}
-                                type="text"
-                                value={variable.value}
-                                onChange={(e) => handleInputChange(actualIndex, e.target.value)}
-                                className="bg-winshirt-space border-winshirt-purple/30 w-full"
-                              />
-                            )}
+                            <Input 
+                              className="bg-winshirt-space-light border-winshirt-purple/30 text-white"
+                              value={variable.value} 
+                              onChange={(e) => handleInputChange(originalIndex, e.target.value)} 
+                              placeholder={variable.originalValue}
+                            />
+                            <p className="text-xs text-muted-foreground font-mono">{variable.name}</p>
                           </div>
                         );
                       })}
                     </div>
                   </ScrollArea>
                 </TabsContent>
-              </Tabs>
+              ))}
               
-              {isChanged && (
-                <div className="bg-winshirt-purple/20 p-3 rounded-lg border border-winshirt-purple/30 text-sm">
-                  <div className="flex items-center text-winshirt-purple-light mb-2">
-                    <ArrowUpDown className="h-4 w-4 mr-2" />
-                    <span className="font-medium">Changements en attente</span>
-                  </div>
-                  <p className="text-gray-300">
-                    Cliquez sur "Enregistrer" pour appliquer vos modifications ou "Annuler" pour revenir aux valeurs précédentes.
-                  </p>
+              <div className="flex justify-between mt-6">
+                <Button 
+                  variant="outline"
+                  onClick={resetCurrentChanges}
+                  disabled={!isChanged}
+                  className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+                >
+                  <Undo className="h-4 w-4 mr-1" />
+                  Annuler les changements
+                </Button>
+                <div className="space-x-2">
+                  <Button 
+                    variant="outline"
+                    onClick={resetToDefault}
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Réinitialiser tous les styles
+                  </Button>
+                  <Button 
+                    onClick={saveCssChanges}
+                    disabled={!isChanged}
+                    className="bg-winshirt-purple hover:bg-winshirt-purple/80"
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    Appliquer les modifications
+                  </Button>
                 </div>
-              )}
+              </div>
             </>
           ) : (
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={applyCustomCss}
-                  disabled={!isCssCodeChanged}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Appliquer le CSS
-                </Button>
-                
-                <Button
-                  size="sm"
-                  onClick={resetCustomCssChanges}
-                  disabled={!isCssCodeChanged}
-                  variant="outline"
-                  className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
-                >
-                  <Undo className="mr-2 h-4 w-4" />
-                  Annuler
-                </Button>
-                
-                <Button
-                  size="sm"
-                  onClick={resetCustomCss}
-                  variant="outline"
-                  className="border-red-500 text-red-500 hover:bg-red-500/10"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Vider
-                </Button>
-              </div>
-              
-              <div className="p-3 rounded-lg bg-winshirt-space-light border border-winshirt-purple/20">
-                <Label htmlFor="custom-css" className="text-sm text-gray-300 block mb-2">
-                  Code CSS personnalisé
-                </Label>
-                <Textarea
-                  id="custom-css"
-                  value={cssCode}
-                  onChange={handleCssCodeChange}
-                  placeholder="/* Ajoutez votre CSS personnalisé ici */
-.example-class {
-  color: #ff00ff;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-/* Les modifications s'appliqueront à l'ensemble du site */
-"
-                  className="font-mono text-sm bg-winshirt-space border-winshirt-purple/20 min-h-[400px] focus:border-winshirt-purple/60"
-                />
-              </div>
-              
-              {isCssCodeChanged && (
-                <div className="bg-winshirt-purple/20 p-3 rounded-lg border border-winshirt-purple/30 text-sm">
-                  <div className="flex items-center text-winshirt-purple-light mb-2">
-                    <Code className="h-4 w-4 mr-2" />
-                    <span className="font-medium">Modifications CSS en attente</span>
+              <Card className="bg-winshirt-space-light border border-winshirt-purple/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-white flex items-center text-base">
+                    <FileCode className="h-4 w-4 mr-2" />
+                    Éditeur CSS avancé
+                  </CardTitle>
+                  <CardDescription className="text-gray-400 text-xs">
+                    Utilisez cet éditeur pour définir des styles CSS personnalisés
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Textarea 
+                    value={cssCode}
+                    onChange={handleCssCodeChange}
+                    className="font-mono bg-winshirt-space border-winshirt-purple/30 text-white h-96"
+                    placeholder="/* Ajoutez ici votre CSS personnalisé */"
+                    spellCheck={false}
+                  />
+                  <div className="flex justify-between mt-4">
+                    <Button 
+                      variant="outline"
+                      onClick={resetCustomCss}
+                      disabled={!isCssCodeChanged}
+                      className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+                    >
+                      <Undo className="h-4 w-4 mr-1" />
+                      Réinitialiser
+                    </Button>
+                    <Button 
+                      onClick={applyCustomCss}
+                      disabled={!isCssCodeChanged}
+                      className="bg-winshirt-purple hover:bg-winshirt-purple/80"
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      Appliquer le CSS
+                    </Button>
                   </div>
-                  <p className="text-gray-300">
-                    Cliquez sur "Appliquer le CSS" pour mettre à jour l'apparence du site ou "Annuler" pour revenir au code précédent.
-                  </p>
-                </div>
-              )}
-              
-              <div className="bg-winshirt-space-light p-3 rounded-lg border border-winshirt-purple/20 text-sm">
-                <h3 className="font-medium text-white mb-2">Aide CSS</h3>
-                <p className="text-gray-300 mb-2">
-                  Vous pouvez ajouter du CSS personnalisé pour modifier l'apparence du site. Voici quelques exemples :
-                </p>
-                <code className="block p-2 bg-winshirt-space rounded text-xs text-gray-300 mb-2">
-                  {`/* Changer la couleur du texte des titres */
-h1, h2, h3 {
-  color: #ff9900;
-}
-
-/* Ajouter une bordure aux cartes */
-.winshirt-card {
-  border: 2px solid rgba(124, 58, 237, 0.5);
-}
-
-/* Modifier l'apparence des boutons */
-.button-primary {
-  background: linear-gradient(135deg, #7c3aed, #3a86ff);
-}`}
-                </code>
-                <p className="text-gray-300">
-                  Le CSS personnalisé s'applique à l'ensemble du site et peut remplacer les styles existants.
-                </p>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           )}
-        </div>
+        </Tabs>
       </CardContent>
     </Card>
   );

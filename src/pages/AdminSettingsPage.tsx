@@ -10,7 +10,7 @@ import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
 import CssEditorManager from '@/components/admin/settings/CssEditorManager';
 import SyncSettingsManager from '@/components/admin/settings/SyncSettingsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload, Palette, FileCode, RefreshCw } from 'lucide-react';
+import { Settings, Bell, ShieldCheck, Database, Truck, Home, Upload, Palette, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'react-router-dom';
 
@@ -66,10 +66,6 @@ const AdminSettingsPage: React.FC = () => {
                 <Palette className="h-4 w-4 mr-2" />
                 Apparence
               </TabsTrigger>
-              <TabsTrigger value="customcss" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
-                <FileCode className="h-4 w-4 mr-2" />
-                CSS avancé
-              </TabsTrigger>
               <TabsTrigger value="notifications" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
@@ -105,11 +101,7 @@ const AdminSettingsPage: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="theme" className="space-y-6">
-              <CssEditorManager />
-            </TabsContent>
-            
-            <TabsContent value="customcss" className="space-y-6">
-              <CssEditorManager />
+              <CssEditorManager showAdvancedSettings={true} />
             </TabsContent>
             
             <TabsContent value="notifications" className="space-y-6">
