@@ -233,13 +233,13 @@ const SyncSettingsManager: React.FC = () => {
     
     switch (status) {
       case 'both':
-        return <Cloud className="h-4 w-4 text-green-500" title="Données présentes en local et sur Supabase" />;
+        return <Cloud className="h-4 w-4 text-green-500" aria-label="Données présentes en local et sur Supabase" />;
       case 'local':
-        return <CloudOff className="h-4 w-4 text-yellow-500" title="Données présentes uniquement en local" />;
+        return <CloudOff className="h-4 w-4 text-yellow-500" aria-label="Données présentes uniquement en local" />;
       case 'supabase':
-        return <Database className="h-4 w-4 text-blue-500" title="Données présentes uniquement sur Supabase" />;
+        return <Database className="h-4 w-4 text-blue-500" aria-label="Données présentes uniquement sur Supabase" />;
       case 'none':
-        return <AlertCircle className="h-4 w-4 text-red-500" title="Aucune donnée trouvée" />;
+        return <AlertCircle className="h-4 w-4 text-red-500" aria-label="Aucune donnée trouvée" />;
       default:
         return null;
     }
