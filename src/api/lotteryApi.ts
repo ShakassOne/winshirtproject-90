@@ -5,6 +5,9 @@ import { DatabaseTables } from '@/types/database.types';
 
 // Function to convert Supabase lottery to ExtendedLottery type
 const convertSupabaseLottery = (lottery: DatabaseTables['lotteries']): ExtendedLottery => {
+  // Ensure the status is properly typed
+  const typedStatus = (lottery.status as "active" | "completed" | "relaunched" | "cancelled");
+  
   return {
     id: lottery.id,
     title: lottery.title,
@@ -12,7 +15,7 @@ const convertSupabaseLottery = (lottery: DatabaseTables['lotteries']): ExtendedL
     value: lottery.value,
     targetParticipants: lottery.target_participants,
     currentParticipants: lottery.current_participants,
-    status: lottery.status,
+    status: typedStatus,
     image: lottery.image || '',
     linkedProducts: lottery.linked_products || [],
     endDate: lottery.end_date,
@@ -248,7 +251,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
     console.log('Lottery created successfully in Supabase:', data);
     
     // Convert to ExtendedLottery type
-    const newLottery = convertSupabaseLottery(data);
+    const newLottery = convertSupabaseLottery(data as DatabaseTables['lotteries']);
     
     // Wait for fetchLotteries to update both storage locations
     await fetchLotteries(true);
@@ -332,7 +335,7 @@ export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedL
     console.log('Lottery updated successfully in Supabase:', data);
     
     // Convert to ExtendedLottery type
-    const updatedLottery = convertSupabaseLottery(data);
+    const updatedLottery = convertSupabaseLottery(data as DatabaseTables['lotteries']);
     
     // Preserve participants and winner from original lottery
     updatedLottery.participants = lottery.participants || [];

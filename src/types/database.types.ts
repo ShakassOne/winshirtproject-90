@@ -107,6 +107,10 @@ export interface DatabaseTables {
     address: any | null;
     created_at: string | null;
     updated_at: string | null;
+    orderCount?: number; // Optional for extended client information
+    totalSpent?: number; // Optional for extended client information
+    participatedLotteries?: number[]; // Optional extended info
+    wonLotteries?: number[]; // Optional extended info
   };
   
   pg_tables: {

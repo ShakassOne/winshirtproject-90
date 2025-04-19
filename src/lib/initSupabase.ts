@@ -336,7 +336,7 @@ export const syncConfig = {
 };
 
 // Function to sync data from localStorage to Supabase
-export const syncData = async (tableName: string): Promise<boolean> => {
+export const syncData = async (tableName: keyof typeof createTablesSQL): Promise<boolean> => {
   try {
     console.log(`Syncing ${tableName} data to Supabase...`);
     
