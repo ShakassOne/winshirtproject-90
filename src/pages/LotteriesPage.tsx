@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import LotteryCard from '../components/LotteryCard';
 import StarBackground from '../components/StarBackground';
@@ -38,7 +37,7 @@ const LotteriesPage: React.FC = () => {
     
     // Set up subscription for real-time updates
     const channel = supabase
-      .channel('public:lotteries')
+      .channel('lotteries-channel')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'lotteries' }, 
         (payload) => {
@@ -53,7 +52,6 @@ const LotteriesPage: React.FC = () => {
     };
   }, []);
   
-  // Filter lotteries based on active filter
   const safeFilteredLotteries = activeFilter === 'all' 
     ? lotteries 
     : lotteries.filter(lottery => lottery.status === activeFilter);

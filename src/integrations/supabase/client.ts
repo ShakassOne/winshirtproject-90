@@ -11,6 +11,18 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+// Define database table types for TypeScript to use
+export type Tables = Database['public']['Tables'];
+export type TablesInsert = {
+  [K in keyof Tables]: Tables[K]['Insert']
+};
+export type TablesUpdate = {
+  [K in keyof Tables]: Tables[K]['Update']
+};
+export type TablesRow = {
+  [K in keyof Tables]: Tables[K]['Row']
+};
+
 // Required tables that should be in the database
 export const requiredTables = [
   'lotteries',

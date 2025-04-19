@@ -1,18 +1,19 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
+import { DatabaseTables } from '@/types/database.types';
 
 // Function to convert Supabase lottery to ExtendedLottery type
-const convertSupabaseLottery = (lottery: any): ExtendedLottery => {
+const convertSupabaseLottery = (lottery: DatabaseTables['lotteries']): ExtendedLottery => {
   return {
     id: lottery.id,
     title: lottery.title,
-    description: lottery.description,
+    description: lottery.description || '',
     value: lottery.value,
     targetParticipants: lottery.target_participants,
     currentParticipants: lottery.current_participants,
     status: lottery.status,
-    image: lottery.image,
+    image: lottery.image || '',
     linkedProducts: lottery.linked_products || [],
     endDate: lottery.end_date,
     drawDate: lottery.draw_date,
@@ -67,8 +68,8 @@ const fetchParticipantsForLottery = async (lotteryId: number): Promise<Participa
     
     return data.map(participant => ({
       id: participant.user_id,
-      name: participant.name,
-      email: participant.email,
+      name: participant.name || '',
+      email: participant.email || '',
       avatar: participant.avatar
     }));
   } catch (error) {
@@ -95,8 +96,8 @@ const fetchWinnerForLottery = async (lotteryId: number): Promise<Participant | n
     
     return {
       id: data.user_id,
-      name: data.name,
-      email: data.email,
+      name: data.name || '',
+      email: data.email || '',
       avatar: data.avatar
     };
   } catch (error) {
