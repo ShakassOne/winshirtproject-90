@@ -1,3 +1,4 @@
+
 import { supabase, checkSupabaseConnection, checkRequiredTables, requiredTables } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
@@ -125,7 +126,7 @@ export const createTablesSQL = {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
   `
-};
+} as const;
 
 // Function to create missing tables
 const createMissingTables = async (missingTables: string[]): Promise<boolean> => {
@@ -336,8 +337,11 @@ export const syncConfig = {
   tables: ['lotteries', 'products', 'lottery_participants', 'lottery_winners'] as const
 };
 
+// Define a type for valid table names
+export type ValidTableName = keyof typeof createTablesSQL;
+
 // Function to sync data from localStorage to Supabase
-export const syncData = async (tableName: keyof typeof createTablesSQL): Promise<boolean> => {
+export const syncData = async (tableName: ValidTableName): Promise<boolean> => {
   try {
     console.log(`Syncing ${tableName} data to Supabase...`);
     
@@ -404,7 +408,7 @@ export const syncData = async (tableName: keyof typeof createTablesSQL): Promise
     
     // Clear the table first
     const { error: deleteError } = await supabase
-      .from(tableName as any)
+      .from(tableName)
       .delete()
       .neq('id', 0); // Delete all rows
     
@@ -419,7 +423,7 @@ export const syncData = async (tableName: keyof typeof createTablesSQL): Promise
       const batch = preparedData.slice(i, i + batchSize);
       
       const { error: insertError } = await supabase
-        .from(tableName as any)
+        .from(tableName)
         .insert(batch);
       
       if (insertError) {

@@ -7,10 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL } from '@/lib/initSupabase';
+import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL, ValidTableName } from '@/lib/initSupabase';
 import { checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
-
-type TableName = keyof typeof createTablesSQL;
 
 const SyncSettingsManager: React.FC = () => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
@@ -34,7 +32,7 @@ const SyncSettingsManager: React.FC = () => {
     return () => clearInterval(intervalId);
   }, []);
   
-  const handleSyncTable = async (table: TableName) => {
+  const handleSyncTable = async (table: ValidTableName) => {
     // Mettre à jour l'état de chargement
     setIsLoading(prev => ({ ...prev, [table]: true }));
     setSyncSuccess(prev => ({ ...prev, [table]: null }));
@@ -75,7 +73,7 @@ const SyncSettingsManager: React.FC = () => {
   const handleSyncAll = async () => {
     // Synchroniser toutes les tables
     for (const table of syncConfig.tables) {
-      await handleSyncTable(table as TableName);
+      await handleSyncTable(table as ValidTableName);
     }
     
     toast.success('Synchronisation de toutes les tables terminée');
@@ -215,7 +213,7 @@ const SyncSettingsManager: React.FC = () => {
                           variant="outline" 
                           size="sm" 
                           disabled={isLoading[table] || !isConnected}
-                          onClick={() => handleSyncTable(table as TableName)}
+                          onClick={() => handleSyncTable(table as ValidTableName)}
                           className="h-8 border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
                         >
                           <RefreshCw className="h-4 w-4 mr-1" />
