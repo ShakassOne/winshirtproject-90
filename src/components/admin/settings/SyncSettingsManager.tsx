@@ -8,6 +8,7 @@ import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2 } fro
 import { toast } from '@/lib/toast';
 import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL, ValidTableName } from '@/lib/initSupabase';
 import { checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
+import { showConnectionNotification, showSyncNotification } from '@/lib/notifications';
 
 const SyncSettingsManager: React.FC = () => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
@@ -32,16 +33,14 @@ const SyncSettingsManager: React.FC = () => {
   }, []);
   
   const handleSyncTable = async (table: ValidTableName) => {
-    // Mettre à jour l'état de chargement
     setIsLoading(prev => ({ ...prev, [table]: true }));
     setSyncSuccess(prev => ({ ...prev, [table]: null }));
     
     try {
-      // Vérifier si connecté à Supabase
       if (!isConnected) {
         const connected = await checkSupabaseConnection();
         if (!connected) {
-          toast.error("Impossible de se connecter à Supabase. Synchronisation impossible.");
+          showConnectionNotification(false);
           setIsLoading(prev => ({ ...prev, [table]: false }));
           setSyncSuccess(prev => ({ ...prev, [table]: false }));
           return;
@@ -49,20 +48,17 @@ const SyncSettingsManager: React.FC = () => {
         setIsConnected(true);
       }
       
-      // Synchroniser la table
       const success = await syncData(table);
-      
-      // Mettre à jour l'état de succès
       setSyncSuccess(prev => ({ ...prev, [table]: success }));
       
       if (success) {
-        toast.success(`Synchronisation de ${table} réussie`);
+        showSyncNotification(table, true);
       } else {
-        toast.error(`Échec de la synchronisation de ${table}`);
+        showSyncNotification(table, false);
       }
     } catch (error) {
       console.error(`Erreur lors de la synchronisation de ${table}:`, error);
-      toast.error(`Erreur lors de la synchronisation de ${table}`);
+      showSyncNotification(table, false);
       setSyncSuccess(prev => ({ ...prev, [table]: false }));
     } finally {
       setIsLoading(prev => ({ ...prev, [table]: false }));
@@ -92,14 +88,10 @@ const SyncSettingsManager: React.FC = () => {
       const success = await forceSupabaseConnection();
       setIsConnected(success);
       
-      if (success) {
-        toast.success("Connexion établie avec succès!");
-      } else {
-        toast.error("Impossible d'établir la connexion à Supabase");
-      }
+      showConnectionNotification(success);
     } catch (error) {
       console.error("Erreur lors de la tentative de connexion:", error);
-      toast.error("Erreur lors de la tentative de connexion à Supabase");
+      showConnectionNotification(false, error instanceof Error ? error.message : undefined);
     } finally {
       setIsConnecting(false);
     }
