@@ -334,10 +334,10 @@ const setupRealtimeSubscriptions = () => {
 // Export a function to sync data between localStorage and Supabase
 export const syncConfig = {
   autoSync: true,
-  tables: ['lotteries', 'products', 'lottery_participants', 'lottery_winners'] as const
+  tables: ['lotteries', 'products', 'lottery_participants', 'lottery_winners', 'orders', 'order_items', 'clients', 'visuals'] as const
 };
 
-// Define a type for valid table names
+// Define a type for valid table names that matches the required tables in supabase/client.ts
 export type ValidTableName = typeof syncConfig.tables[number];
 
 // Function to sync data from localStorage to Supabase

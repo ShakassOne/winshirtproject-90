@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -73,7 +72,7 @@ const SyncSettingsManager: React.FC = () => {
   const handleSyncAll = async () => {
     // Synchroniser toutes les tables
     for (const table of syncConfig.tables) {
-      await handleSyncTable(table as ValidTableName);
+      await handleSyncTable(table);
     }
     
     toast.success('Synchronisation de toutes les tables terminée');
