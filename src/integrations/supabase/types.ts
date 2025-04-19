@@ -365,7 +365,10 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      exec_sql: {
+        Args: { sql_query: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

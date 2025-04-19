@@ -338,7 +338,7 @@ export const syncConfig = {
 };
 
 // Define a type for valid table names
-export type ValidTableName = keyof typeof createTablesSQL;
+export type ValidTableName = typeof syncConfig.tables[number];
 
 // Function to sync data from localStorage to Supabase
 export const syncData = async (tableName: ValidTableName): Promise<boolean> => {
