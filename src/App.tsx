@@ -1,4 +1,3 @@
-
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -39,6 +38,9 @@ const AdminSettingsPage = lazy(() => import('@/pages/AdminSettingsPage'));
 const AdminClientsPage = lazy(() => import('@/pages/AdminClientsPage'));
 const AdminFiltersPage = lazy(() => import('@/pages/AdminFiltersPage'));
 const AdminVisualsPage = lazy(() => import('@/pages/AdminVisualsPage'));
+
+// Add import for AdminCommandesPage
+const AdminCommandesPage = lazy(() => import('@/pages/AdminCommandesPage'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -214,6 +216,7 @@ function App() {
                       </ProtectedRoute>
                     } 
                   />
+                  
                   <Route 
                     path="/admin/commandes" 
                     element={
