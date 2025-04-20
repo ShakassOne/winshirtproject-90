@@ -76,7 +76,10 @@ const CheckoutPage: React.FC = () => {
         window.location.href = result.url;
       } else {
         toast.error("Une erreur est survenue lors de l'initialisation du paiement");
-        console.error('Checkout error:', result.error);
+        // Use proper type narrowing to access the error property
+        if (!result.success) {
+          console.error('Checkout error:', result.error);
+        }
         setIsProcessing(false);
       }
     } catch (error) {
