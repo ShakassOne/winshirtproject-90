@@ -14,6 +14,33 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+// Type definition for FTP configuration
+export const ftpConfig = {
+  enabled: false,
+  uploadEndpoint: '',
+  baseUrl: ''
+};
+
+// Type definitions for HomeIntro configurations
+export interface SlideType {
+  id: number;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  buttonLink: string;
+  backgroundImage: string;
+  textColor: string;
+  order: number;
+}
+
+export interface HomeIntroConfig {
+  autoPlay: boolean;
+  showButtons: boolean;
+  showIndicators: boolean;
+  transitionTime: number;
+  slides: SlideType[];
+}
+
 // Vérifier si Supabase est configuré
 export const isSupabaseConfigured = () => {
   return SUPABASE_URL && SUPABASE_ANON_KEY;
@@ -41,6 +68,95 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     console.error("Exception lors de la vérification Supabase:", error);
     toast.error("Erreur de connexion à Supabase");
     return false;
+  }
+};
+
+// Get HomeIntro configuration from localStorage or default
+export const getHomeIntroConfig = async (): Promise<HomeIntroConfig> => {
+  try {
+    // Try to load from localStorage first
+    const storedConfig = localStorage.getItem('homeIntroConfig');
+    if (storedConfig) {
+      return JSON.parse(storedConfig);
+    }
+    
+    // If not in localStorage, return default
+    return getDefaultHomeIntroConfig();
+  } catch (error) {
+    console.error("Error loading home intro config:", error);
+    return getDefaultHomeIntroConfig();
+  }
+};
+
+// Default HomeIntro configuration
+export const getDefaultHomeIntroConfig = (): HomeIntroConfig => {
+  return {
+    autoPlay: true,
+    showButtons: true,
+    showIndicators: true,
+    transitionTime: 5000, // 5 seconds
+    slides: [
+      {
+        id: 1,
+        title: "Bienvenue sur WinShirt",
+        subtitle: "Achetez des vêtements et gagnez des lots exceptionnels",
+        buttonText: "Voir les produits",
+        buttonLink: "/products",
+        backgroundImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
+        textColor: "#FFFFFF",
+        order: 1
+      },
+      {
+        id: 2,
+        title: "Découvrez nos loteries",
+        subtitle: "Participez et tentez de remporter des prix incroyables",
+        buttonText: "Voir les loteries",
+        buttonLink: "/lotteries",
+        backgroundImage: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21",
+        textColor: "#FFFFFF",
+        order: 2
+      }
+    ]
+  };
+};
+
+// Save HomeIntro configuration
+export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<boolean> => {
+  try {
+    // Save to localStorage
+    localStorage.setItem('homeIntroConfig', JSON.stringify(config));
+    
+    // In a real implementation, we would also save to Supabase
+    // For now, just simulate success
+    return true;
+  } catch (error) {
+    console.error("Error saving home intro config:", error);
+    return false;
+  }
+};
+
+// Upload image and return URL
+export const uploadImage = async (file: File, folder: string): Promise<string | null> => {
+  try {
+    // For now, create a local URL (this would normally upload to Supabase storage)
+    const localUrl = URL.createObjectURL(file);
+    
+    // In a real implementation with Supabase:
+    // const { data, error } = await supabase.storage
+    //   .from('images')
+    //   .upload(`${folder}/${file.name}`, file);
+    
+    // if (error) {
+    //   throw error;
+    // }
+    
+    // return supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl;
+    
+    // For now, just return the local URL
+    return localUrl;
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    return null;
   }
 };
 
