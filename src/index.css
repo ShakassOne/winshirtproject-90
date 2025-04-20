@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -42,9 +41,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    /* Ensure the background image is visible */
-    background-image: none !important; 
-    background-color: transparent !important;
+    /* Important: Ensure the background color is applied forcefully */
+    background-color: rgb(26 31 44) !important; /* This is the winshirt-space color */
     position: relative;
     z-index: 0;
   }
@@ -93,10 +91,11 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--background);
+    background: rgb(26 31 44);
     z-index: -2;
   }
 
+  /* Animation for burger menu icon */
   @keyframes stars-move {
     0% {
       transform: translateY(-100vh);
@@ -106,7 +105,6 @@
     }
   }
 
-  /* Animation for burger menu icon */
   @keyframes menu-rotate {
     from { transform: rotate(0deg); }
     to { transform: rotate(90deg); }
@@ -267,8 +265,34 @@
   transform: scale(1.15);
 }
 
-/* Force Sonner toast container to be visible */
+/* Force Sonner toast container to be visible and positioned correctly */
 .sonner-toast-container {
   z-index: 9999 !important;
   position: fixed !important;
+  bottom: 20px !important; 
+  right: 20px !important;
+}
+
+.sonner-toast {
+  margin-top: 0.625rem !important;
+}
+
+/* These styles ensure toast position is fixed correctly */
+.sonner-toast-container[data-position^="bottom"] {
+  bottom: 20px !important;
+  right: 20px !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+.sonner-toast-container[data-position="bottom-right"] {
+  bottom: 20px !important;
+  right: 20px !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+/* Make sure toasts are above other UI elements */
+.sonner-toast-container .sonner-toast {
+  z-index: 9999 !important;
 }

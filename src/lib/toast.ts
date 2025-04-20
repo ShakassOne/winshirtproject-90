@@ -15,7 +15,8 @@ export const toast = {
       duration: 4000,
       ...options,
       className: "bg-winshirt-space border border-winshirt-purple/30 text-white z-50",
-      style: { zIndex: 9999 }
+      style: { zIndex: 9999 },
+      position: "bottom-right"
     });
   },
   error: (message: string, options?: ToastProps) => {
@@ -24,7 +25,8 @@ export const toast = {
       duration: 5000,
       ...options,
       className: "bg-winshirt-space border border-red-500/30 text-white z-50",
-      style: { zIndex: 9999 }
+      style: { zIndex: 9999 },
+      position: "bottom-right"
     });
   },
   info: (message: string, options?: ToastProps) => {
@@ -33,7 +35,8 @@ export const toast = {
       duration: 3000,
       ...options,
       className: "bg-winshirt-space border border-winshirt-blue/30 text-white z-50",
-      style: { zIndex: 9999 }
+      style: { zIndex: 9999 },
+      position: "bottom-right"
     });
   },
   warning: (message: string, options?: ToastProps) => {
@@ -42,7 +45,8 @@ export const toast = {
       duration: 4000,
       ...options,
       className: "bg-winshirt-space border border-yellow-500/30 text-white z-50",
-      style: { zIndex: 9999 }
+      style: { zIndex: 9999 },
+      position: "bottom-right"
     });
   },
   adminAction: (action: string, entity: string, status: string) => {
@@ -50,7 +54,8 @@ export const toast = {
     return sonnerToast.info(`Admin: ${action} ${entity} ${status}`, {
       duration: 3000,
       className: "bg-winshirt-space border border-winshirt-purple/30 text-white z-50",
-      style: { zIndex: 9999 }
+      style: { zIndex: 9999 },
+      position: "bottom-right"
     });
   },
 };
