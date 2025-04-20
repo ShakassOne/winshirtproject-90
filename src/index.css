@@ -41,12 +41,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    /* Remove the default background image to allow custom backgrounds */
+    /* Ensure the background image is visible */
     background-image: none !important; 
     background-color: transparent !important;
   }
 
-  /* Background stars effect */
+  /* Background stars effect - enhanced to make it more visible */
   .stars-container {
     position: fixed;
     width: 100%;
@@ -56,6 +56,7 @@
     background: transparent;
     overflow: hidden;
     z-index: -1;
+    display: block !important;
   }
 
   .stars-container .star {
@@ -66,6 +67,7 @@
     border-radius: 50%;
     filter: drop-shadow(0 0 6px #9b87f5);
     animation: stars-move 100s linear infinite;
+    display: block !important;
   }
 
   .stars-container .star::before {
@@ -77,6 +79,15 @@
     background: #9b87f5;
     border-radius: 50%;
     filter: drop-shadow(0 0 10px #9b87f5);
+  }
+
+  @keyframes stars-move {
+    0% {
+      transform: translateY(-100vh);
+    }
+    100% {
+      transform: translateY(100vh);
+    }
   }
 
   /* Animation for burger menu icon */

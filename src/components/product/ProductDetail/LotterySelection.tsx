@@ -49,7 +49,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
             </select>
           </div>
 
-          {/* Selected Lottery Preview avec style glassmorphism */}
+          {/* Selected Lottery Preview avec style glassmorphism amélioré */}
           {selectedLotteries[index] && (
             <div className="mt-4 winshirt-card p-4 backdrop-blur-lg border border-winshirt-purple/30">
               {activeLotteries.map((lottery) => {
@@ -96,4 +96,3 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
 };
 
 export default LotterySelection;
-

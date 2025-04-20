@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,8 @@ const SyncSettingsManager: React.FC = () => {
       
       if (connected) {
         checkDataExistence();
+        // Force call the toast to ensure it's working
+        toast.info("Connexion à Supabase établie");
       }
     };
     
@@ -110,6 +111,7 @@ const SyncSettingsManager: React.FC = () => {
         const connected = await checkSupabaseConnection();
         if (!connected) {
           showConnectionNotification(false);
+          toast.error("Impossible de se connecter à Supabase");
           setIsLoading(prev => ({ ...prev, [table]: false }));
           setSyncSuccess(prev => ({ ...prev, [table]: false }));
           return;
@@ -117,33 +119,54 @@ const SyncSettingsManager: React.FC = () => {
         setIsConnected(true);
       }
       
-      const success = await syncData(table);
-      setSyncSuccess(prev => ({ ...prev, [table]: success }));
-      
-      // Récupérer les données locales pour compter les éléments
-      const localData = window.localStorage.getItem(table);
-      let count = 0;
+      // Improved sync functionality to ensure it works properly
+      // Get data from localStorage first
+      const localData = localStorage.getItem(table);
+      let parsedData = [];
       
       if (localData) {
         try {
-          const parsed = JSON.parse(localData);
-          count = Array.isArray(parsed) ? parsed.length : 0;
+          parsedData = JSON.parse(localData);
+          console.log(`Loaded ${parsedData.length} items from localStorage for ${table}`);
         } catch (e) {
-          console.error(`Erreur lors du parsing des données locales de ${table}:`, e);
+          console.error(`Error parsing localStorage data for ${table}:`, e);
         }
       }
       
+      if (!Array.isArray(parsedData) || parsedData.length === 0) {
+        toast.warning(`Pas de données locales pour ${table}`);
+        setIsLoading(prev => ({ ...prev, [table]: false }));
+        setSyncSuccess(prev => ({ ...prev, [table]: false }));
+        return;
+      }
+      
+      // Perform synchronization
+      console.log(`Synchronizing ${parsedData.length} items to Supabase for ${table}`);
+      const success = await syncData(table);
+      setSyncSuccess(prev => ({ ...prev, [table]: success }));
+      
       if (success) {
-        showSyncNotification(table, true, count, 'both');
+        toast.success(`Synchronisation réussie pour ${table} (${parsedData.length} éléments)`);
         
-        // Mettre à jour les statistiques
-        checkDataExistence();
+        // Directly verify the sync worked by checking Supabase
+        try {
+          const { count } = await supabase
+            .from(table)
+            .select('*', { count: 'exact', head: true });
+          
+          console.log(`Verified ${count} items in Supabase for ${table}`);
+          
+          // Update the statistics
+          checkDataExistence();
+        } catch (e) {
+          console.error(`Error verifying Supabase data for ${table}:`, e);
+        }
       } else {
-        showSyncNotification(table, false, undefined, 'local');
+        toast.error(`Échec de synchronisation pour ${table}`);
       }
     } catch (error) {
       console.error(`Erreur lors de la synchronisation de ${table}:`, error);
-      showSyncNotification(table, false, undefined, 'local');
+      toast.error(`Erreur lors de la synchronisation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       setSyncSuccess(prev => ({ ...prev, [table]: false }));
     } finally {
       setIsLoading(prev => ({ ...prev, [table]: false }));
@@ -151,6 +174,8 @@ const SyncSettingsManager: React.FC = () => {
   };
   
   const handleSyncAll = async () => {
+    toast.info("Démarrage de la synchronisation de toutes les tables...");
+    
     // Synchroniser toutes les tables
     for (const table of syncConfig.tables) {
       await handleSyncTable(table);
