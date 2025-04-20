@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ExtendedLottery } from '@/types/lottery';
@@ -71,13 +71,13 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
                           </p>
                           <div className="mt-2">
                             <div className="text-sm text-gray-600">
-                              {lottery.current_participants} / {lottery.target_participants} participants
+                              {lottery.currentParticipants} / {lottery.targetParticipants} participants
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
                               <div 
                                 className="bg-winshirt-purple h-2 rounded-full" 
                                 style={{ 
-                                  width: `${(lottery.current_participants / lottery.target_participants) * 100}%` 
+                                  width: `${(lottery.currentParticipants / lottery.targetParticipants) * 100}%` 
                                 }}
                               />
                             </div>
