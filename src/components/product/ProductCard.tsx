@@ -11,7 +11,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
-    <Link to={`/product/${product.id}`} className="group">
+    <Link to={`/products/${product.id}`} className="group">
       <div className="winshirt-card overflow-hidden h-full flex flex-col hover:shadow-lg hover:shadow-winshirt-purple/20 transition-all duration-300">
         <div className="relative overflow-hidden">
           <img 

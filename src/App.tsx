@@ -38,6 +38,7 @@ const AdminLotteryEditor = lazy(() => import('@/pages/AdminLotteryEditor'));
 const AdminSettingsPage = lazy(() => import('@/pages/AdminSettingsPage'));
 const AdminClientsPage = lazy(() => import('@/pages/AdminClientsPage'));
 const AdminFiltersPage = lazy(() => import('@/pages/AdminFiltersPage'));
+const AdminVisualsPage = lazy(() => import('@/pages/AdminVisualsPage'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -113,6 +114,9 @@ function App() {
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
+                  
+                  {/* Redirection pour les chemins /product/:id vers /products/:id */}
+                  <Route path="/product/:id" element={<Navigate to={location => `/products/${location.pathname.split('/')[2]}`} replace />} />
                   
                   <Route 
                     path="/account" 
@@ -192,6 +196,14 @@ function App() {
                     element={
                       <ProtectedRoute adminOnly>
                         <AdminFiltersPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/visuals" 
+                    element={
+                      <ProtectedRoute adminOnly>
+                        <AdminVisualsPage />
                       </ProtectedRoute>
                     } 
                   />
