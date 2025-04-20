@@ -1,10 +1,10 @@
 
 // Import all necessary dependencies
-import React from 'react';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseTables } from '@/types/database.types';
 import { Client } from '@/types/client';
+import { syncProductsAndLotteries } from '@/lib/linkSynchronizer';
 
 // Let's define a proper type mapping for the client data
 type ExtendedClientData = DatabaseTables['clients'] & {
@@ -16,6 +16,9 @@ type ExtendedClientData = DatabaseTables['clients'] & {
 
 const CartPage: React.FC = () => {
   useEffect(() => {
+    // Synchroniser les liens entre produits et loteries au chargement de la page
+    syncProductsAndLotteries();
+    
     const fetchClientData = async () => {
       const { data, error } = await supabase
         .from('clients')

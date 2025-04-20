@@ -1,6 +1,7 @@
 
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
+import { StripeCheckoutResult } from '@/types/checkout';
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51abcdefghijklmnopqrstuvwxyz'; // Remplacez par votre clé publique Stripe
 
@@ -24,7 +25,7 @@ interface CheckoutItem {
 
 export const initiateStripeCheckout = async (
   items: Array<CheckoutItem>
-) => {
+): Promise<StripeCheckoutResult> => {
   try {
     // Afficher un message d'initialisation
     toast.info('Initialisation du paiement...');
@@ -38,27 +39,24 @@ export const initiateStripeCheckout = async (
     // Ici, nous simulons le processus pour la démonstration
     if (typeof window !== 'undefined' && window.Stripe) {
       // Si le script Stripe est chargé
-      handleStripeCheckout(items, amount);
+      return handleStripeCheckout(items, amount);
     } else {
       // Charger le script Stripe dynamiquement
-      loadStripeScript().then(() => {
-        handleStripeCheckout(items, amount);
-      });
+      await loadStripeScript();
+      return handleStripeCheckout(items, amount);
     }
-    
-    return { success: true };
   } catch (error) {
     console.error('Erreur lors de l\'initialisation du paiement:', error);
     toast.error('Erreur lors de l\'initialisation du paiement');
-    return { success: false, error };
+    return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' };
   }
 };
 
 // Fonction pour charger le script Stripe
 const loadStripeScript = () => {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     if (document.getElementById('stripe-script')) {
-      resolve(true);
+      resolve();
       return;
     }
     
@@ -68,7 +66,7 @@ const loadStripeScript = () => {
     script.async = true;
     
     script.onload = () => {
-      resolve(true);
+      resolve();
     };
     
     script.onerror = () => {
@@ -80,11 +78,11 @@ const loadStripeScript = () => {
 };
 
 // Fonction pour gérer le checkout avec Stripe
-const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number) => {
+const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number): StripeCheckoutResult => {
   toast.success('Simulation de paiement Stripe...');
   
   // Simulation - Dans un environnement de production, vous créeriez une session checkout avec Stripe
-  setTimeout(() => {
+  try {
     // Simuler un achat réussi
     const orderSuccessful = simulateSuccessfulOrder(items);
     
@@ -92,27 +90,36 @@ const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number) => {
       // Si la commande est réussie, enregistrer l'achat et lier à la loterie
       toast.success('Paiement réussi !');
       
-      // Rediriger vers une page de confirmation
-      setTimeout(() => {
-        window.location.href = '/account';
-      }, 1500);
+      // Dans un vrai environnement, on retournerait l'URL de redirection Stripe
+      return { 
+        success: true,
+        orderId: Date.now()
+      };
     } else {
-      toast.error('Échec du paiement');
+      return { 
+        success: false, 
+        error: 'Échec du paiement' 
+      };
     }
-  }, 1500);
+  } catch (error) {
+    console.error('Erreur lors du paiement:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur inconnue lors du paiement' 
+    };
+  }
 };
 
 // Fonction pour simuler un achat réussi
-const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
+const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
   try {
     // Récupérer l'utilisateur actuellement connecté
     const userString = localStorage.getItem('winshirt_user');
-    if (!userString) {
-      console.error('Aucun utilisateur connecté');
-      return false;
-    }
+    let user = null;
     
-    const user = JSON.parse(userString);
+    if (userString) {
+      user = JSON.parse(userString);
+    }
     
     // 1. Récupérer les loteries et les produits
     const lotteriesString = localStorage.getItem('lotteries');
@@ -133,13 +140,20 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
         const lotteryIndex = lotteries.findIndex((l: any) => l.id === item.lotteryId);
         
         if (lotteryIndex !== -1) {
-          // Créer un participant réel basé sur l'utilisateur connecté
-          const participant = {
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            name: user.name,
-            email: user.email,
-            avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
-          };
+          // Créer un participant basé sur l'utilisateur connecté ou simuler un utilisateur anonyme
+          const participant = user 
+            ? {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                name: user.name,
+                email: user.email,
+                avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+              }
+            : {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                name: "Client anonyme",
+                email: "anonymous@example.com",
+                avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+              };
           
           // Si participants n'existe pas, l'initialiser
           if (!lotteries[lotteryIndex].participants) {
@@ -188,9 +202,9 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
     
     const newOrder = {
       id: Date.now(),
-      clientId: user.id,
-      clientName: user.name,
-      clientEmail: user.email,
+      clientId: user?.id || null,
+      clientName: user?.name || 'Client anonyme',
+      clientEmail: user?.email || 'anonymous@example.com',
       orderDate: new Date().toISOString(),
       status: 'processing',
       items: items.map(item => {
@@ -231,28 +245,27 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
     localStorage.setItem('orders', JSON.stringify(orders));
     
     // 5. Enregistrer les participations de l'utilisateur
-    const participationsString = localStorage.getItem('participations') || '[]';
-    const participations = JSON.parse(participationsString);
-    
-    items.forEach(item => {
-      if (item.lotteryId) {
-        for (let i = 0; i < item.quantity; i++) {
-          participations.push({
-            id: Date.now() + Math.floor(Math.random() * 1000) + i,
-            userId: user.id,
-            lotteryId: item.lotteryId,
-            productId: item.id,
-            ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
-            date: new Date().toISOString()
-          });
+    if (user) {
+      const participationsString = localStorage.getItem('participations') || '[]';
+      const participations = JSON.parse(participationsString);
+      
+      items.forEach(item => {
+        if (item.lotteryId) {
+          for (let i = 0; i < item.quantity; i++) {
+            participations.push({
+              id: Date.now() + Math.floor(Math.random() * 1000) + i,
+              userId: user.id,
+              lotteryId: item.lotteryId,
+              productId: item.id,
+              ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
+              date: new Date().toISOString()
+            });
+          }
         }
-      }
-    });
-    
-    localStorage.setItem('participations', JSON.stringify(participations));
-    
-    // Vider le panier après achat réussi
-    localStorage.setItem('cart', '[]');
+      });
+      
+      localStorage.setItem('participations', JSON.stringify(participations));
+    }
     
     return true;
   } catch (error) {

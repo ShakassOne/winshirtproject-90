@@ -14,8 +14,9 @@ export const toast = {
     return sonnerToast.success(message, {
       duration: 4000,
       ...options,
-      className: "bg-winshirt-space border border-winshirt-purple/30 text-white z-50",
-      style: { zIndex: 9999 }
+      className: "bg-winshirt-space border border-winshirt-purple/30 text-white z-50 text-sm",
+      position: "bottom-right",
+      style: { zIndex: 9999, maxWidth: "300px" }
     });
   },
   error: (message: string, options?: ToastProps) => {
@@ -23,8 +24,9 @@ export const toast = {
     return sonnerToast.error(message, {
       duration: 5000,
       ...options,
-      className: "bg-winshirt-space border border-red-500/30 text-white z-50",
-      style: { zIndex: 9999 }
+      className: "bg-winshirt-space border border-red-500/30 text-white z-50 text-sm",
+      position: "bottom-right",
+      style: { zIndex: 9999, maxWidth: "300px" }
     });
   },
   info: (message: string, options?: ToastProps) => {
@@ -32,8 +34,9 @@ export const toast = {
     return sonnerToast.info(message, {
       duration: 3000,
       ...options,
-      className: "bg-winshirt-space border border-winshirt-blue/30 text-white z-50",
-      style: { zIndex: 9999 }
+      className: "bg-winshirt-space border border-winshirt-blue/30 text-white z-50 text-sm",
+      position: "bottom-right",
+      style: { zIndex: 9999, maxWidth: "300px" }
     });
   },
   warning: (message: string, options?: ToastProps) => {
@@ -41,16 +44,18 @@ export const toast = {
     return sonnerToast.warning(message, {
       duration: 4000,
       ...options,
-      className: "bg-winshirt-space border border-yellow-500/30 text-white z-50",
-      style: { zIndex: 9999 }
+      className: "bg-winshirt-space border border-yellow-500/30 text-white z-50 text-sm",
+      position: "bottom-right",
+      style: { zIndex: 9999, maxWidth: "300px" }
     });
   },
   adminAction: (action: string, entity: string, status: string) => {
     console.log(`Admin ${action}:`, entity, status);
     return sonnerToast.info(`Admin: ${action} ${entity} ${status}`, {
       duration: 3000,
-      className: "bg-winshirt-space border border-winshirt-purple/30 text-white z-50",
-      style: { zIndex: 9999 }
+      className: "bg-winshirt-space border border-winshirt-purple/30 text-white z-50 text-sm",
+      position: "bottom-right",
+      style: { zIndex: 9999, maxWidth: "300px" }
     });
   },
 };
