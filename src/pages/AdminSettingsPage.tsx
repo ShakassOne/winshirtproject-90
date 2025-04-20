@@ -1,7 +1,7 @@
 
 import React from 'react';
 import AdminNavigation from '@/components/admin/AdminNavigation';
-import { Settings, Tool } from 'lucide-react';
+import { Settings, Wrench } from 'lucide-react';
 
 const AdminSettingsPage: React.FC = () => {
   return (
@@ -20,7 +20,7 @@ const AdminSettingsPage: React.FC = () => {
         
         <div className="mt-6 p-4 border border-winshirt-purple/20 rounded-lg bg-winshirt-space-light/30">
           <h3 className="text-lg font-medium mb-2 flex items-center">
-            <Tool className="h-5 w-5 mr-2 text-winshirt-blue" />
+            <Wrench className="h-5 w-5 mr-2 text-winshirt-blue" />
             Paramètres à venir
           </h3>
           <ul className="list-disc pl-6 space-y-1 text-gray-300">
