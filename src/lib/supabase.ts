@@ -1,356 +1,85 @@
 
 import { createClient } from '@supabase/supabase-js';
+import { toast } from './toast';
 
-// Récupération des variables d'environnement de Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const SUPABASE_URL = "https://flifjrvtjphhnxcqtxwx.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsaWZqcnZ0anBoaG54Y3F0eHd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5OTg5OTgsImV4cCI6MjA2MDU3NDk5OH0.SfYrS-mK9plEcoutKnfpth40T-TAlu_88wdv39fLbUo";
 
-// Vérification de la présence des variables d'environnement
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("⚠️ Les variables d'environnement Supabase ne sont pas définies!");
-  console.log("Pour utiliser Supabase, vous devez définir VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY");
-}
+// Configuration explicite pour assurer la persistance de la session
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 
-// Fonction pour vérifier si Supabase est correctement configuré
-export const isSupabaseConfigured = (): boolean => {
-  return !!(supabaseUrl && 
-           supabaseAnonKey && 
-           supabaseUrl !== 'https://placeholder-project.supabase.co' && 
-           supabaseAnonKey !== 'placeholder-key-for-development-only');
+// Vérifier si Supabase est configuré
+export const isSupabaseConfigured = () => {
+  return SUPABASE_URL && SUPABASE_ANON_KEY;
 };
 
-// Création du client Supabase avec un timeout plus court pour éviter les longs délais
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder-project.supabase.co',
-  supabaseAnonKey || 'placeholder-key-for-development-only',
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    },
-    global: {
-      fetch: (...args) => {
-        // Définit un timeout plus court pour éviter les longs délais
-        const controller = new AbortController();
-        const { signal } = controller;
-        
-        // Timeout de 5 secondes
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        // @ts-ignore
-        return fetch(...args, { signal })
-          .finally(() => clearTimeout(timeoutId));
-      }
-    }
+// Fonction pour vérifier la connexion à Supabase
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    toast.error("Supabase n'est pas configuré correctement");
+    return false;
   }
-);
 
-// Configuration pour le serveur FTP/API de production
-export const ftpConfig = {
-  enabled: true, // Activé pour la production
-  uploadEndpoint: 'https://winshirt.fr/api/upload', // Endpoint de l'API pour l'upload sur votre serveur
-  baseUrl: 'https://winshirt.fr/images', // URL de base pour les images
-  apiBaseUrl: 'https://winshirt.fr/api', // URL de base pour les API sur votre serveur
-};
-
-// Configuration pour la synchronisation des données
-export const syncConfig = {
-  enabled: true, // Active la synchronisation
-  autoSync: true, // Synchronisation automatique
-  syncInterval: 3600000, // Intervalle de synchronisation en ms (1 heure)
-  tables: ['products', 'clients', 'orders', 'lotteries'], // Tables à synchroniser
-};
-
-// Fonction pour déterminer si on utilise FTP ou Supabase
-export const shouldUseFTP = (): boolean => {
-  return ftpConfig.enabled;
-};
-
-// Fonction pour gérer l'upload d'images (Supabase ou FTP)
-export const uploadImage = async (file: File, bucket: string = 'products'): Promise<string | null> => {
   try {
-    // Si FTP est activé, utiliser l'upload FTP
-    if (shouldUseFTP()) {
-      return await uploadImageToFTP(file, bucket);
-    }
+    const { data, error } = await supabase.from('pg_tables').select('tablename').limit(1);
     
-    // Sinon, utiliser Supabase Storage
-    // Vérifier si les identifiants Supabase sont disponibles
-    if (!isSupabaseConfigured()) {
-      console.error("Erreur: Impossible d'uploader l'image - identifiants Supabase manquants");
-      return null;
-    }
-    
-    // Créer un nom de fichier unique basé sur la date et le nom original
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = `${bucket}/${fileName}`;
-
-    // Upload du fichier vers Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
     if (error) {
-      console.error('Erreur lors de l\'upload vers Supabase:', error);
-      return null;
+      console.error("Erreur de connexion Supabase:", error);
+      toast.error("Impossible de se connecter à Supabase: " + error.message);
+      return false;
     }
 
-    // Récupérer l'URL publique de l'image
-    const { data: urlData } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(filePath);
-
-    return urlData.publicUrl;
+    console.log("Connexion Supabase réussie");
+    return true;
   } catch (error) {
-    console.error('Erreur lors de l\'upload:', error);
-    return null;
-  }
-};
-
-// Fonction pour uploader une image vers le serveur via une API
-export const uploadImageToFTP = async (file: File, folder: string = 'products'): Promise<string | null> => {
-  try {
-    // Créer un FormData pour l'upload
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('folder', folder);
-
-    // Envoyer la requête au serveur
-    const response = await fetch(ftpConfig.uploadEndpoint, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Erreur lors de l'upload: ${errorText}`);
-      return null;
-    }
-
-    // Récupérer l'URL de l'image uploadée
-    const result = await response.json();
-    
-    // Renvoyer l'URL complète
-    return `${ftpConfig.baseUrl}/${folder}/${result.filename}`;
-  } catch (error) {
-    console.error('Erreur lors de l\'upload:', error);
-    return null;
-  }
-};
-
-// Gestion des configurations du site
-export type SlideType = {
-  id: number;
-  title: string;
-  subtitle: string;
-  buttonText: string;
-  buttonLink: string;
-  backgroundImage: string;
-  textColor: string;
-  order: number;
-};
-
-export type HomeIntroConfig = {
-  slides: SlideType[];
-  transitionTime: number;
-  showButtons: boolean;
-  showIndicators: boolean;
-  autoPlay: boolean;
-};
-
-// Fonction pour synchroniser les données entre Supabase et le serveur
-export const syncData = async (table: string): Promise<boolean> => {
-  try {
-    if (!syncConfig.enabled) return true;
-    
-    if (isSupabaseConfigured()) {
-      console.log(`Synchronisation des données de la table ${table} en cours...`);
-      
-      // Récupérer les données de Supabase
-      const { data, error } = await supabase
-        .from(table)
-        .select('*');
-      
-      if (error) {
-        console.error(`Erreur lors de la récupération des données de ${table}:`, error);
-        return false;
-      }
-      
-      if (!data || data.length === 0) {
-        console.log(`Pas de données à synchroniser pour la table ${table}`);
-        return true;
-      }
-      
-      // Envoyer les données au serveur
-      const response = await fetch(`${ftpConfig.apiBaseUrl}/sync/${table}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Erreur lors de la synchronisation de ${table}:`, errorText);
-        return false;
-      }
-      
-      console.log(`Synchronisation de ${table} réussie`);
-      return true;
-    }
-    
-    console.warn("Supabase n'est pas configuré, impossible de synchroniser les données");
-    return false;
-  } catch (error) {
-    console.error(`Erreur lors de la synchronisation de ${table}:`, error);
+    console.error("Exception lors de la vérification Supabase:", error);
+    toast.error("Erreur de connexion à Supabase");
     return false;
   }
 };
 
-// Fonction pour récupérer la configuration de l'intro de la page d'accueil
-export const getHomeIntroConfig = async (): Promise<HomeIntroConfig | null> => {
-  try {
-    // Si FTP est activé et que nous voulons récupérer depuis le serveur
-    if (shouldUseFTP()) {
-      try {
-        // Récupérer depuis le serveur
-        const response = await fetch(`${ftpConfig.apiBaseUrl}/configs/home_intro`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          return data || getDefaultHomeIntroConfig();
-        }
-      } catch (error) {
-        console.error("Erreur lors de la récupération de la configuration depuis le serveur:", error);
-        // Fallback au localStorage puis à Supabase
-      }
-    }
-    
-    if (isSupabaseConfigured()) {
-      // Essayer de récupérer depuis Supabase
-      const { data, error } = await supabase
-        .from('configurations')
-        .select('*')
-        .eq('name', 'home_intro')
-        .single();
-      
-      if (error) {
-        console.error("Erreur lors de la récupération de la configuration:", error);
-        // Fallback au localStorage
-        return getHomeIntroConfigFromLocalStorage();
-      }
-      
-      return data?.value || getDefaultHomeIntroConfig();
-    } else {
-      // Fallback au localStorage si Supabase n'est pas configuré
-      return getHomeIntroConfigFromLocalStorage();
-    }
-  } catch (error) {
-    console.error("Erreur lors de la récupération de la configuration:", error);
-    return getHomeIntroConfigFromLocalStorage();
-  }
-};
-
-// Fonction pour enregistrer la configuration de l'intro
-export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<boolean> => {
-  try {
-    // Sauvegarder dans localStorage pour fallback
-    localStorage.setItem('home_intro_config', JSON.stringify(config));
-    
-    // Si FTP est activé, sauvegarder sur le serveur
-    if (shouldUseFTP()) {
-      try {
-        const response = await fetch(`${ftpConfig.apiBaseUrl}/configs/home_intro`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(config),
-        });
-        
-        if (!response.ok) {
-          console.error("Erreur lors de la sauvegarde de la configuration sur le serveur");
-          // Continuer avec Supabase si disponible
-        } else {
-          console.log("Configuration sauvegardée sur le serveur");
-          return true;
-        }
-      } catch (error) {
-        console.error("Erreur lors de la sauvegarde sur le serveur:", error);
-        // Continuer avec Supabase
-      }
-    }
-    
-    if (isSupabaseConfigured()) {
-      // Essayer de sauvegarder dans Supabase
-      const { error } = await supabase
-        .from('configurations')
-        .upsert({ name: 'home_intro', value: config }, { onConflict: 'name' });
-      
-      if (error) {
-        console.error("Erreur lors de la sauvegarde de la configuration:", error);
-        return false;
-      }
-      
-      return true;
-    } else {
-      // Si Supabase n'est pas configuré, confirmer que localStorage a fonctionné
-      return true;
-    }
-  } catch (error) {
-    console.error("Erreur lors de la sauvegarde de la configuration:", error);
-    return false;
-  }
-};
-
-// Fonction helper pour récupérer depuis localStorage
-const getHomeIntroConfigFromLocalStorage = (): HomeIntroConfig => {
-  try {
-    const config = localStorage.getItem('home_intro_config');
-    if (config) {
-      return JSON.parse(config);
-    }
-  } catch (error) {
-    console.error("Erreur lors de la lecture du localStorage:", error);
+// Fonction utilitaire pour convertir les clés snake_case en camelCase
+export const snakeToCamel = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(snakeToCamel);
   }
   
-  return getDefaultHomeIntroConfig();
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    
+    // Récursivement convertir les valeurs qui sont des objets
+    const newValue = value !== null && typeof value === 'object' 
+      ? snakeToCamel(value) 
+      : value;
+    
+    return { ...acc, [camelKey]: newValue };
+  }, {});
 };
 
-// Configuration par défaut de l'intro
-export const getDefaultHomeIntroConfig = (): HomeIntroConfig => {
-  return {
-    slides: [
-      {
-        id: 1,
-        title: "Achetez des vêtements, Gagnez des cadeaux incroyables",
-        subtitle: "WinShirt révolutionne le shopping en ligne. Achetez nos vêtements de qualité et participez automatiquement à nos loteries exclusives pour gagner des prix exceptionnels.",
-        buttonText: "Voir les produits",
-        buttonLink: "/products",
-        backgroundImage: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
-        textColor: "#FFFFFF",
-        order: 1
-      },
-      {
-        id: 2,
-        title: "Des loteries exclusives",
-        subtitle: "Participez à nos loteries et tentez de gagner des prix exceptionnels.",
-        buttonText: "Voir les loteries",
-        buttonLink: "/lotteries",
-        backgroundImage: "https://images.unsplash.com/photo-1493397212122-2b85dda8106b",
-        textColor: "#FFFFFF",
-        order: 2
-      }
-    ],
-    transitionTime: 5000,
-    showButtons: true,
-    showIndicators: true,
-    autoPlay: true
-  };
+// Fonction utilitaire pour convertir les clés camelCase en snake_case
+export const camelToSnake = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(camelToSnake);
+  }
+  
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    const snakeKey = key.replace(/([A-Z])/g, (_, letter) => `_${letter.toLowerCase()}`);
+    
+    // Récursivement convertir les valeurs qui sont des objets
+    const newValue = value !== null && typeof value === 'object' 
+      ? camelToSnake(value) 
+      : value;
+    
+    return { ...acc, [snakeKey]: newValue };
+  }, {});
 };

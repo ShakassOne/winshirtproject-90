@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, BrowserRouter, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { Toaster } from 'sonner';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -33,11 +34,11 @@ import AdminClientsPage from './pages/AdminClientsPage';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { Toaster } from "@/components/ui/toaster";
 import AdminNavigationHandler from './components/AdminNavigationHandler';
+import StarBackground from '@/components/StarBackground';
 
 // Supabase initialization
-import { initializeSupabase } from './lib/initSupabase';
+import { initializeSupabase, forceSupabaseConnection } from './lib/initSupabase';
 
 // ScrollToTop component to reset scroll position on route change
 function ScrollToTop() {
@@ -101,7 +102,12 @@ function App() {
         console.log("Attempting to initialize Supabase...");
         const success = await initializeSupabase();
         console.log("Supabase initialization result:", success);
-        setIsSupabaseInitialized(true);
+        setIsSupabaseInitialized(success);
+        
+        // Force connection if successful
+        if (success) {
+          await forceSupabaseConnection();
+        }
       } catch (error) {
         console.error("Error during Supabase initialization:", error);
       } finally {
@@ -128,6 +134,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
+        <StarBackground />
         <Navbar />
         <main className="bg-winshirt-space min-h-screen relative">
           <Routes>
@@ -170,7 +177,7 @@ function App() {
           </Routes>
         </main>
         <Footer />
-        <Toaster />
+        <Toaster position="top-center" richColors />
         <AdminNavigationHandler />
         
         {/* Supabase Status Indicator for Development */}

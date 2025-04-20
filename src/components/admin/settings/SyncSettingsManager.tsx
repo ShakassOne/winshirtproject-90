@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,8 +9,7 @@ import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2, Aler
 import { toast } from '@/lib/toast';
 import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL, ValidTableName } from '@/lib/initSupabase';
 import { checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
-import { showConnectionNotification, showSyncNotification, showStorageStatusNotification } from '@/lib/notifications';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, camelToSnake, snakeToCamel } from '@/lib/supabase';
 
 const SyncSettingsManager: React.FC = () => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
@@ -29,8 +29,8 @@ const SyncSettingsManager: React.FC = () => {
       
       if (connected) {
         checkDataExistence();
-        // Force call the toast to ensure it's working
-        toast.info("Connexion à Supabase établie");
+        // Show a welcome toast
+        toast.info("Connexion à Supabase établie", { duration: 3000 });
       }
     };
     
@@ -110,7 +110,6 @@ const SyncSettingsManager: React.FC = () => {
       if (!isConnected) {
         const connected = await checkSupabaseConnection();
         if (!connected) {
-          showConnectionNotification(false);
           toast.error("Impossible de se connecter à Supabase");
           setIsLoading(prev => ({ ...prev, [table]: false }));
           setSyncSuccess(prev => ({ ...prev, [table]: false }));
@@ -119,8 +118,8 @@ const SyncSettingsManager: React.FC = () => {
         setIsConnected(true);
       }
       
-      // Improved sync functionality to ensure it works properly
-      // Get data from localStorage first
+      // Améliorations pour la synchronisation
+      // Récupérer les données du localStorage
       const localData = localStorage.getItem(table);
       let parsedData = [];
       
@@ -140,27 +139,70 @@ const SyncSettingsManager: React.FC = () => {
         return;
       }
       
-      // Perform synchronization
-      console.log(`Synchronizing ${parsedData.length} items to Supabase for ${table}`);
-      const success = await syncData(table);
-      setSyncSuccess(prev => ({ ...prev, [table]: success }));
+      // Conversion des données camelCase vers snake_case pour Supabase
+      const snakeCaseData = parsedData.map(item => camelToSnake(item));
       
-      if (success) {
+      // Effacer les données existantes
+      const { error: deleteError } = await supabase
+        .from(table)
+        .delete()
+        .gt('id', 0);
+        
+      if (deleteError) {
+        console.error(`Error clearing ${table} table:`, deleteError);
+        toast.error(`Erreur lors de la suppression des données: ${deleteError.message}`);
+        setIsLoading(prev => ({ ...prev, [table]: false }));
+        setSyncSuccess(prev => ({ ...prev, [table]: false }));
+        return;
+      }
+      
+      // Insérer les nouvelles données
+      const batchSize = 25;
+      let allSuccess = true;
+      
+      for (let i = 0; i < snakeCaseData.length; i += batchSize) {
+        const batch = snakeCaseData.slice(i, i + batchSize);
+        
+        const { error: insertError } = await supabase
+          .from(table)
+          .insert(batch);
+          
+        if (insertError) {
+          console.error(`Error inserting batch to ${table}:`, insertError);
+          toast.error(`Erreur lors de l'insertion des données: ${insertError.message}`);
+          allSuccess = false;
+          break;
+        }
+      }
+      
+      setSyncSuccess(prev => ({ ...prev, [table]: allSuccess }));
+      
+      if (allSuccess) {
         toast.success(`Synchronisation réussie pour ${table} (${parsedData.length} éléments)`);
         
-        // Directly verify the sync worked by checking Supabase
-        try {
-          const { count } = await supabase
-            .from(table)
-            .select('*', { count: 'exact', head: true });
+        // Vérifier le résultat
+        const { count, error } = await supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true });
           
-          console.log(`Verified ${count} items in Supabase for ${table}`);
+        console.log(`Verified ${count} items in Supabase for ${table}`);
+        
+        // Récupérer les données depuis Supabase pour mettre à jour le localStorage
+        const { data, error: fetchError } = await supabase
+          .from(table)
+          .select('*');
           
-          // Update the statistics
-          checkDataExistence();
-        } catch (e) {
-          console.error(`Error verifying Supabase data for ${table}:`, e);
+        if (!fetchError && data) {
+          // Convertir les données snake_case en camelCase
+          const camelCaseData = data.map(item => snakeToCamel(item));
+          
+          // Mettre à jour le localStorage
+          localStorage.setItem(table, JSON.stringify(camelCaseData));
+          console.log(`Updated localStorage with ${camelCaseData.length} items for ${table}`);
         }
+        
+        // Mettre à jour les statistiques
+        checkDataExistence();
       } else {
         toast.error(`Échec de synchronisation pour ${table}`);
       }
@@ -201,15 +243,16 @@ const SyncSettingsManager: React.FC = () => {
       const success = await forceSupabaseConnection();
       setIsConnected(success);
       
-      showConnectionNotification(success);
-      
       if (success) {
+        toast.success("Connexion à Supabase établie avec succès!");
         // Mettre à jour les statistiques
         await checkDataExistence();
+      } else {
+        toast.error("Impossible de se connecter à Supabase");
       }
     } catch (error) {
       console.error("Erreur lors de la tentative de connexion:", error);
-      showConnectionNotification(false, error instanceof Error ? error.message : undefined);
+      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     } finally {
       setIsConnecting(false);
     }

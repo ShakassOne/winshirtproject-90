@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
+import LoginButton from '@/components/LoginButton';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -106,11 +106,10 @@ const Navbar: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <Link to="/login">
-                  <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full px-6 py-2">
-                    Connexion
-                  </Button>
-                </Link>
+                <LoginButton 
+                  variant="default" 
+                  className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full px-6 py-2" 
+                />
               )}
             </div>
 
@@ -182,11 +181,11 @@ const Navbar: React.FC = () => {
                       </Button>
                     </div>
                   ) : (
-                    <Link to="/login" onClick={() => setIsMenuOpen(false)} className="w-full px-8">
-                      <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full w-full">
-                        Connexion
-                      </Button>
-                    </Link>
+                    <div onClick={() => setIsMenuOpen(false)} className="w-full px-8">
+                      <LoginButton 
+                        className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full"
+                      />
+                    </div>
                   )}
                 </div>
               </div>
