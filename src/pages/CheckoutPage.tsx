@@ -1,10 +1,10 @@
 
 import React from 'react';
 
-const AdminSettingsPage: React.FC = () => {
+const CheckoutPage: React.FC = () => {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Paramètres admin</h1>
+      <h1 className="text-2xl font-bold">Paiement</h1>
       <div className="p-4 bg-winshirt-space/60 border border-winshirt-purple/30 rounded-md">
         <p>Composant en cours d'implémentation.</p>
       </div>
@@ -12,4 +12,4 @@ const AdminSettingsPage: React.FC = () => {
   );
 };
 
-export default AdminSettingsPage;
+export default CheckoutPage;

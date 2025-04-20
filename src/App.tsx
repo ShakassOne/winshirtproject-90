@@ -1,9 +1,8 @@
-
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { StarBackground } from '@/components/StarBackground';
+import StarBackground from '@/components/StarBackground';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
@@ -25,12 +24,16 @@ const AccountPage = lazy(() => import('@/pages/AccountPage'));
 const CartPage = lazy(() => import('@/pages/CartPage'));
 const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'));
 const AdminPage = lazy(() => import('@/pages/AdminPage'));
-const AdminProductsPage = lazy(() => import('@/pages/admin/AdminProductsPage'));
-const AdminLotteriesPage = lazy(() => import('@/pages/admin/AdminLotteriesPage'));
-const AdminProductEditor = lazy(() => import('@/pages/admin/AdminProductEditor'));
-const AdminLotteryEditor = lazy(() => import('@/pages/admin/AdminLotteryEditor'));
-const AdminSettingsPage = lazy(() => import('@/pages/admin/AdminSettingsPage'));
+
+// Create admin directory and pages
+const AdminProductsPage = lazy(() => import('@/pages/AdminProductsPage'));
+const AdminLotteriesPage = lazy(() => import('@/pages/AdminLotteriesPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+
+// Create placeholder admin pages for now
+const AdminProductEditor = lazy(() => import('@/pages/AdminProductEditor'));
+const AdminLotteryEditor = lazy(() => import('@/pages/AdminLotteryEditor'));
+const AdminSettingsPage = lazy(() => import('@/pages/AdminSettingsPage'));
 
 // Create a client
 const queryClient = new QueryClient({
