@@ -51,15 +51,16 @@ export const initiateStripeCheckout = async (
     // Ici, nous simulons le processus pour la démonstration
     if (typeof window !== 'undefined' && window.Stripe) {
       // Si le script Stripe est chargé
-      handleStripeCheckout(items, amount, shippingInfo);
+      return await handleStripeCheckout(items, amount, shippingInfo);
     } else {
       // Charger le script Stripe dynamiquement
-      loadStripeScript().then(() => {
-        handleStripeCheckout(items, amount, shippingInfo);
-      });
+      const stripeLoaded = await loadStripeScript();
+      if (stripeLoaded) {
+        return await handleStripeCheckout(items, amount, shippingInfo);
+      } else {
+        throw new Error("Impossible de charger Stripe");
+      }
     }
-    
-    return { success: true };
   } catch (error) {
     console.error('Erreur lors de l\'initialisation du paiement:', error);
     toast.error('Erreur lors de l\'initialisation du paiement');
@@ -69,7 +70,7 @@ export const initiateStripeCheckout = async (
 
 // Fonction pour charger le script Stripe
 const loadStripeScript = () => {
-  return new Promise((resolve, reject) => {
+  return new Promise<boolean>((resolve, reject) => {
     if (document.getElementById('stripe-script')) {
       resolve(true);
       return;
@@ -93,30 +94,75 @@ const loadStripeScript = () => {
 };
 
 // Fonction pour gérer le checkout avec Stripe
-const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number, shippingInfo?: ShippingInfo) => {
-  toast.success('Simulation de paiement Stripe...');
+const handleStripeCheckout = async (items: Array<CheckoutItem>, amount: number, shippingInfo?: ShippingInfo) => {
+  // En mode de test, simuler le processus de paiement
+  const TEST_MODE = true; // À remplacer par une vérification de l'environnement
   
-  // Simulation - Dans un environnement de production, vous créeriez une session checkout avec Stripe
-  setTimeout(() => {
-    // Simuler un achat réussi
-    const orderSuccessful = simulateSuccessfulOrder(items, shippingInfo);
+  if (TEST_MODE) {
+    // Simuler la redirection vers la page de paiement Stripe
+    const success = simulateOrderCreation(items, shippingInfo);
     
-    if (orderSuccessful) {
-      // Si la commande est réussie, enregistrer l'achat et lier à la loterie
-      toast.success('Paiement réussi !');
-      
-      // Rediriger vers une page de confirmation
-      setTimeout(() => {
-        window.location.href = '/account';
-      }, 1500);
+    if (success) {
+      return { 
+        success: true, 
+        url: '/account' // URL de test, normalement ce serait l'URL de la session Stripe
+      };
     } else {
-      toast.error('Échec du paiement');
+      return { success: false, error: 'Erreur de simulation' };
     }
-  }, 1500);
+  } else {
+    // En production, initialiser Stripe et créer une session de paiement
+    if (!window.Stripe) {
+      toast.error("Stripe n'est pas chargé");
+      return { success: false, error: "Stripe n'est pas chargé" };
+    }
+    
+    const stripe = window.Stripe(STRIPE_PUBLIC_KEY);
+    
+    // Préparer les éléments pour la session Stripe
+    const lineItems = items.map(item => ({
+      price_data: {
+        currency: 'eur',
+        product_data: {
+          name: item.name,
+          description: `${item.size || 'M'}, ${item.color || 'Noir'}${item.lotteryName ? `, Loterie: ${item.lotteryName}` : ''}`,
+        },
+        unit_amount: Math.round(item.price * 100), // Convertir en centimes
+      },
+      quantity: item.quantity,
+    }));
+    
+    // Dans un environnement réel, vous appelleriez votre backend pour créer une session Stripe
+    // Pour cette démo, nous simulons la réponse
+    const sessionId = `test_session_${Date.now()}`;
+    
+    // Stocker les informations de commande en localStorage pour les récupérer après le paiement
+    localStorage.setItem('pending_order', JSON.stringify({
+      items,
+      shippingInfo,
+      sessionId,
+      amount,
+      timestamp: Date.now()
+    }));
+    
+    // Dans un environnement réel, stripe.redirectToCheckout serait utilisé ici
+    // Simuler la redirection
+    const success = simulateOrderCreation(items, shippingInfo);
+    
+    if (success) {
+      // Simuler une redirection vers Stripe avec retour sur la page de succès
+      return { 
+        success: true, 
+        url: '/account' // URL de test, normalement ce serait l'URL de la session Stripe
+      };
+    } else {
+      return { success: false, error: "Erreur lors de la création de la session Stripe" };
+    }
+  }
 };
 
 // Fonction pour simuler un achat réussi
-const simulateSuccessfulOrder = (items: Array<CheckoutItem>, shippingInfo?: ShippingInfo) => {
+const simulateOrderCreation = (items: Array<CheckoutItem>, shippingInfo?: ShippingInfo) => {
   try {
     // Récupérer l'utilisateur actuellement connecté
     const userString = localStorage.getItem('winshirt_user');
@@ -270,6 +316,34 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>, shippingInfo?: Ship
     
     localStorage.setItem('participations', JSON.stringify(participations));
     
+    // 6. Si l'utilisateur n'est pas connecté, créer un nouvel utilisateur
+    if (!user && shippingInfo) {
+      const clients = JSON.parse(localStorage.getItem('clients') || '[]');
+      const newClient = {
+        id: customerInfo.id,
+        name: shippingInfo.name,
+        email: shippingInfo.email,
+        address: shippingInfo.address,
+        city: shippingInfo.city,
+        postalCode: shippingInfo.postalCode,
+        country: shippingInfo.country,
+        registrationDate: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        orderCount: 1,
+        totalSpent: subtotal + shippingCost
+      };
+      
+      clients.push(newClient);
+      localStorage.setItem('clients', JSON.stringify(clients));
+      
+      // Envoyer un email de bienvenue
+      simulateSendEmail(
+        shippingInfo.email,
+        "Bienvenue chez WinShirt - Votre compte a été créé",
+        `Bonjour ${shippingInfo.name},\n\nVotre compte a été créé suite à votre commande. Vous pouvez vous connecter avec l'email ${shippingInfo.email} et demander un nouveau mot de passe si nécessaire.\n\nMerci pour votre commande !\n\nL'équipe WinShirt`
+      );
+    }
+    
     // Vider le panier après achat réussi
     localStorage.setItem('cart', '[]');
     
@@ -285,19 +359,10 @@ export const setupStripe = () => {
   // Ici, vous pourriez initialiser Stripe avec votre clé publique
   // Cette fonction serait appelée au démarrage de l'application
   console.log('Stripe setup with key:', STRIPE_PUBLIC_KEY);
+  
+  // Charger le script Stripe au démarrage
+  loadStripeScript().catch(error => {
+    console.error("Erreur lors du chargement du script Stripe:", error);
+  });
 };
 
-// Documentation pour la configuration Stripe:
-/*
-Pour configurer Stripe complètement, vous devrez:
-
-1. Créer un compte Stripe (https://dashboard.stripe.com/register)
-2. Obtenir vos clés API depuis le tableau de bord Stripe (https://dashboard.stripe.com/apikeys)
-3. Remplacer STRIPE_PUBLIC_KEY par votre clé publique
-4. Pour une implémentation complète en production:
-   - Créer une fonction backend (Supabase Edge Function) pour générer des sessions de paiement
-   - Utiliser Stripe.js et les Elements pour les formulaires de carte
-   - Configurer les webhooks pour recevoir les événements de paiement
-
-Documentation Stripe: https://stripe.com/docs
-*/

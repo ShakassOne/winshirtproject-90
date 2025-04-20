@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ const CheckoutPage: React.FC = () => {
   const [postalCode, setPostalCode] = useState('');
   const [country, setCountry] = useState('France');
   const [formIsValid, setFormIsValid] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // Get cart items from localStorage
   const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -31,7 +32,7 @@ const CheckoutPage: React.FC = () => {
   const totalAmount = subtotal + shipping;
 
   // Vérifier la validité du formulaire quand les champs changent
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user) {
       // Vérifier si tous les champs requis sont remplis
       const isValid = Boolean(
@@ -55,6 +56,8 @@ const CheckoutPage: React.FC = () => {
         return;
       }
       
+      setIsProcessing(true);
+      
       // Créer un objet avec les informations de livraison
       const shippingInfo = !user ? {
         name,
@@ -65,23 +68,27 @@ const CheckoutPage: React.FC = () => {
         country
       } : undefined;
       
-      const { success, error } = await initiateStripeCheckout(cartItems, totalAmount, shippingInfo);
+      const { success, error, url } = await initiateStripeCheckout(cartItems, totalAmount, shippingInfo);
       
-      if (success) {
+      if (success && url) {
         toast.success('Redirection vers la page de paiement...');
+        // Rediriger vers Stripe
+        window.location.href = url;
       } else {
         toast.error("Une erreur est survenue lors de l'initialisation du paiement");
         console.error('Checkout error:', error);
+        setIsProcessing(false);
       }
     } catch (error) {
       toast.error("Une erreur est survenue lors de l'initialisation du paiement");
       console.error('Checkout error:', error);
+      setIsProcessing(false);
     }
   };
 
   if (cartItems.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="container mx-auto pt-28 pb-16 px-4">
         <h1 className="text-2xl font-bold">Paiement</h1>
         <div className="p-6 bg-winshirt-space/60 border border-winshirt-purple/30 rounded-md">
           <p>Votre panier est vide.</p>
@@ -97,8 +104,8 @@ const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Paiement</h1>
+    <div className="container mx-auto pt-28 pb-16 px-4">
+      <h1 className="text-2xl font-bold mb-6">Paiement</h1>
       
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
@@ -234,6 +241,9 @@ const CheckoutPage: React.FC = () => {
               <p className="text-sm text-gray-400 mb-4">
                 Le paiement est sécurisé par Stripe. Vos informations bancaires ne sont jamais stockées sur nos serveurs.
               </p>
+              <p className="text-sm text-gray-400 mb-4">
+                En cliquant sur "Payer", vous serez redirigé vers l'interface de paiement sécurisée Stripe pour finaliser votre commande.
+              </p>
               
               <div className="border-t border-winshirt-purple/30 pt-4 mt-4">
                 <div className="flex justify-between font-bold">
@@ -246,16 +256,17 @@ const CheckoutPage: React.FC = () => {
               
               <Button 
                 onClick={handleCheckout}
-                disabled={!user && !formIsValid}
+                disabled={(!user && !formIsValid) || isProcessing}
                 className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
               >
-                Payer {totalAmount.toFixed(2)} €
+                {isProcessing ? "Traitement en cours..." : `Payer ${totalAmount.toFixed(2)} €`}
               </Button>
               
               <Button 
                 variant="ghost" 
                 className="w-full mt-2 text-gray-400 hover:text-white"
                 onClick={() => navigate('/cart')}
+                disabled={isProcessing}
               >
                 Retour au panier
               </Button>
