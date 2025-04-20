@@ -28,17 +28,17 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
       </Label>
       
       {Array.from({ length: tickets }).map((_, index) => (
-        <div key={index} className="space-y-2">
-          <Label className="text-sm text-gray-400">
+        <div key={index} className="winshirt-card p-4">
+          <Label className="text-lg text-white mb-4 block">
             Ticket {index + 1}
           </Label>
           
-          {/* Dropdown styled as custom select */}
+          {/* Dropdown avec style glassmorphism */}
           <div className="relative">
             <select
               value={selectedLotteries[index] || ''}
               onChange={(e) => handleLotteryChange(e.target.value, index)}
-              className="w-full p-3 rounded-lg bg-winshirt-space-light border border-winshirt-purple/30 text-white appearance-none cursor-pointer"
+              className="w-full p-3 rounded-lg glass-effect text-white appearance-none cursor-pointer border-winshirt-purple/30"
             >
               <option value="">Choisir une loterie</option>
               {activeLotteries.map((lottery) => (
@@ -49,47 +49,45 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
             </select>
           </div>
 
-          {/* Selected Lottery Preview */}
+          {/* Selected Lottery Preview avec style glassmorphism */}
           {selectedLotteries[index] && (
-            <Card className="mt-2 bg-white">
-              <CardContent className="p-4">
-                {activeLotteries.map((lottery) => {
-                  if (lottery.id.toString() === selectedLotteries[index]) {
-                    return (
-                      <div key={lottery.id} className="flex gap-4 items-start">
-                        <img 
-                          src={lottery.image || 'https://placehold.co/100x100'} 
-                          alt={lottery.title}
-                          className="w-24 h-24 object-cover rounded-lg"
-                        />
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">
-                            {lottery.title}
-                          </h3>
-                          <p className="text-lg font-bold text-winshirt-purple">
-                            Valeur: {lottery.value}€
-                          </p>
-                          <div className="mt-2">
-                            <div className="text-sm text-gray-600">
-                              {lottery.currentParticipants} / {lottery.targetParticipants} participants
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                              <div 
-                                className="bg-winshirt-purple h-2 rounded-full" 
-                                style={{ 
-                                  width: `${(lottery.currentParticipants / lottery.targetParticipants) * 100}%` 
-                                }}
-                              />
-                            </div>
+            <div className="mt-4 winshirt-card p-4 backdrop-blur-lg border border-winshirt-purple/30">
+              {activeLotteries.map((lottery) => {
+                if (lottery.id.toString() === selectedLotteries[index]) {
+                  return (
+                    <div key={lottery.id} className="flex gap-4 items-start">
+                      <img 
+                        src={lottery.image || 'https://placehold.co/100x100'} 
+                        alt={lottery.title}
+                        className="w-24 h-24 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-white">
+                          {lottery.title}
+                        </h3>
+                        <p className="text-lg font-bold text-winshirt-purple-light">
+                          Valeur: {lottery.value}€
+                        </p>
+                        <div className="mt-2">
+                          <div className="text-sm text-gray-300">
+                            {lottery.currentParticipants} / {lottery.targetParticipants} participants
+                          </div>
+                          <div className="w-full bg-winshirt-space rounded-full h-2 mt-1">
+                            <div 
+                              className="bg-winshirt-purple h-2 rounded-full" 
+                              style={{ 
+                                width: `${(lottery.currentParticipants / lottery.targetParticipants) * 100}%` 
+                              }}
+                            />
                           </div>
                         </div>
                       </div>
-                    );
-                  }
-                  return null;
-                })}
-              </CardContent>
-            </Card>
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
           )}
         </div>
       ))}
@@ -98,3 +96,4 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
 };
 
 export default LotterySelection;
+
