@@ -68,15 +68,15 @@ const CheckoutPage: React.FC = () => {
         country
       } : undefined;
       
-      const { success, error, url } = await initiateStripeCheckout(cartItems, totalAmount, shippingInfo);
+      const result = await initiateStripeCheckout(cartItems, totalAmount, shippingInfo);
       
-      if (success && url) {
+      if (result.success && 'url' in result) {
         toast.success('Redirection vers la page de paiement...');
         // Rediriger vers Stripe
-        window.location.href = url;
+        window.location.href = result.url;
       } else {
         toast.error("Une erreur est survenue lors de l'initialisation du paiement");
-        console.error('Checkout error:', error);
+        console.error('Checkout error:', result.error);
         setIsProcessing(false);
       }
     } catch (error) {

@@ -1,4 +1,3 @@
-
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 
@@ -31,11 +30,24 @@ interface ShippingInfo {
   country: string;
 }
 
+// Define more specific return types
+interface StripeCheckoutSuccess {
+  success: true;
+  url: string;
+}
+
+interface StripeCheckoutError {
+  success: false;
+  error: any;
+}
+
+type StripeCheckoutResult = StripeCheckoutSuccess | StripeCheckoutError;
+
 export const initiateStripeCheckout = async (
   items: Array<CheckoutItem>,
   totalAmount?: number,
   shippingInfo?: ShippingInfo
-) => {
+): Promise<StripeCheckoutResult> => {
   try {
     // Afficher un message d'initialisation
     toast.info('Initialisation du paiement...');
@@ -94,7 +106,11 @@ const loadStripeScript = () => {
 };
 
 // Fonction pour gérer le checkout avec Stripe
-const handleStripeCheckout = async (items: Array<CheckoutItem>, amount: number, shippingInfo?: ShippingInfo) => {
+const handleStripeCheckout = async (
+  items: Array<CheckoutItem>, 
+  amount: number, 
+  shippingInfo?: ShippingInfo
+): Promise<StripeCheckoutResult> => {
   // En mode de test, simuler le processus de paiement
   const TEST_MODE = true; // À remplacer par une vérification de l'environnement
   
@@ -365,4 +381,3 @@ export const setupStripe = () => {
     console.error("Erreur lors du chargement du script Stripe:", error);
   });
 };
-
