@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
@@ -14,7 +15,19 @@ import {
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
-  const navigate = useNavigate();
+  
+  // Use try-catch to handle the case where this hook is used outside of a Router context
+  let navigate: (path: string) => void;
+  try {
+    navigate = useNavigate();
+  } catch (error) {
+    // Provide a fallback when not in a Router context
+    navigate = (path: string) => {
+      console.warn('Navigation attempted outside Router context: ', path);
+      // In a real app, you might want to save the intended path and redirect once the router is available
+      window.location.href = path; // Fallback to using window.location
+    };
+  }
 
   useEffect(() => {
     // Load user from localStorage on startup and check Supabase

@@ -95,8 +95,8 @@ function App() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Router>
+        <Router>
+          <AuthProvider>
             <StarBackground />
             <Suspense fallback={<LoadingSpinner />}>
               <Layout>
@@ -202,8 +202,8 @@ function App() {
               </Layout>
             </Suspense>
             <Toaster position="bottom-right" />
-          </Router>
-        </AuthProvider>
+          </AuthProvider>
+        </Router>
       </QueryClientProvider>
     </ThemeProvider>
   );
