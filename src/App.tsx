@@ -1,6 +1,6 @@
 
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import StarBackground from '@/components/StarBackground';
@@ -49,6 +49,13 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Product redirect component
+const ProductRedirect = () => {
+  const location = useLocation();
+  const productId = location.pathname.split('/')[2];
+  return <Navigate to={`/products/${productId}`} replace />;
+};
 
 function App() {
   const [constructionMode, setConstructionMode] = useState(false);
@@ -115,8 +122,8 @@ function App() {
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
                   
-                  {/* Redirection pour les chemins /product/:id vers /products/:id */}
-                  <Route path="/product/:id" element={<Navigate to={location => `/products/${location.pathname.split('/')[2]}`} replace />} />
+                  {/* Fixed redirect for product/:id to products/:id */}
+                  <Route path="/product/:id" element={<ProductRedirect />} />
                   
                   <Route 
                     path="/account" 
