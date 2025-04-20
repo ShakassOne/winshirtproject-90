@@ -22,27 +22,40 @@ interface CheckoutItem {
   color?: string;
 }
 
+interface ShippingInfo {
+  name: string;
+  email: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
 export const initiateStripeCheckout = async (
-  items: Array<CheckoutItem>
+  items: Array<CheckoutItem>,
+  totalAmount?: number,
+  shippingInfo?: ShippingInfo
 ) => {
   try {
     // Afficher un message d'initialisation
     toast.info('Initialisation du paiement...');
     
     console.log('Items for checkout:', items);
+    console.log('Total amount:', totalAmount);
+    console.log('Shipping info:', shippingInfo);
     
-    // Calculer le montant total
-    const amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculer le montant total si non fourni
+    const amount = totalAmount || items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     // Dans un environnement de production, vous appelleriez un backend
     // Ici, nous simulons le processus pour la démonstration
     if (typeof window !== 'undefined' && window.Stripe) {
       // Si le script Stripe est chargé
-      handleStripeCheckout(items, amount);
+      handleStripeCheckout(items, amount, shippingInfo);
     } else {
       // Charger le script Stripe dynamiquement
       loadStripeScript().then(() => {
-        handleStripeCheckout(items, amount);
+        handleStripeCheckout(items, amount, shippingInfo);
       });
     }
     
@@ -80,13 +93,13 @@ const loadStripeScript = () => {
 };
 
 // Fonction pour gérer le checkout avec Stripe
-const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number) => {
+const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number, shippingInfo?: ShippingInfo) => {
   toast.success('Simulation de paiement Stripe...');
   
   // Simulation - Dans un environnement de production, vous créeriez une session checkout avec Stripe
   setTimeout(() => {
     // Simuler un achat réussi
-    const orderSuccessful = simulateSuccessfulOrder(items);
+    const orderSuccessful = simulateSuccessfulOrder(items, shippingInfo);
     
     if (orderSuccessful) {
       // Si la commande est réussie, enregistrer l'achat et lier à la loterie
@@ -103,16 +116,18 @@ const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number) => {
 };
 
 // Fonction pour simuler un achat réussi
-const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
+const simulateSuccessfulOrder = (items: Array<CheckoutItem>, shippingInfo?: ShippingInfo) => {
   try {
     // Récupérer l'utilisateur actuellement connecté
     const userString = localStorage.getItem('winshirt_user');
-    if (!userString) {
-      console.error('Aucun utilisateur connecté');
-      return false;
-    }
+    const user = userString ? JSON.parse(userString) : null;
     
-    const user = JSON.parse(userString);
+    // Utiliser les informations de livraison si fournies (utilisateur non connecté)
+    const customerInfo = user || {
+      id: Date.now(), // ID temporaire pour les utilisateurs non connectés
+      name: shippingInfo?.name || 'Invité',
+      email: shippingInfo?.email || 'guest@example.com'
+    };
     
     // 1. Récupérer les loteries et les produits
     const lotteriesString = localStorage.getItem('lotteries');
@@ -136,8 +151,8 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
           // Créer un participant réel basé sur l'utilisateur connecté
           const participant = {
             id: Date.now() + Math.floor(Math.random() * 1000),
-            name: user.name,
-            email: user.email,
+            name: customerInfo.name,
+            email: customerInfo.email,
             avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
           };
           
@@ -186,11 +201,15 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
     const ordersString = localStorage.getItem('orders') || '[]';
     const orders = JSON.parse(ordersString);
     
+    // Calculer le coût d'expédition (5.99€)
+    const shippingCost = 5.99;
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
     const newOrder = {
       id: Date.now(),
-      clientId: user.id,
-      clientName: user.name,
-      clientEmail: user.email,
+      clientId: customerInfo.id,
+      clientName: customerInfo.name,
+      clientEmail: customerInfo.email,
       orderDate: new Date().toISOString(),
       status: 'processing',
       items: items.map(item => {
@@ -208,20 +227,20 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
         };
       }),
       shipping: {
-        address: '123 Rue Exemple',
-        city: 'Paris',
-        postalCode: '75000',
-        country: 'France',
+        address: shippingInfo?.address || '123 Rue Exemple',
+        city: shippingInfo?.city || 'Paris',
+        postalCode: shippingInfo?.postalCode || '75000',
+        country: shippingInfo?.country || 'France',
         method: 'Standard',
-        cost: 5.99
+        cost: shippingCost
       },
       payment: {
         method: 'Stripe',
         transactionId: 'txn_' + Date.now(),
         status: 'completed'
       },
-      subtotal: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 5.99,
+      subtotal: subtotal,
+      total: subtotal + shippingCost,
       trackingNumber: 'TRK' + Date.now(),
       notes: ''
     };
@@ -239,7 +258,7 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
         for (let i = 0; i < item.quantity; i++) {
           participations.push({
             id: Date.now() + Math.floor(Math.random() * 1000) + i,
-            userId: user.id,
+            userId: customerInfo.id,
             lotteryId: item.lotteryId,
             productId: item.id,
             ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
