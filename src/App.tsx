@@ -214,6 +214,14 @@ function App() {
                       </ProtectedRoute>
                     } 
                   />
+                  <Route 
+                    path="/admin/commandes" 
+                    element={
+                      <ProtectedRoute adminOnly>
+                        <AdminCommandesPage />
+                      </ProtectedRoute>
+                    } 
+                  />
                   
                   <Route path="/404" element={<NotFoundPage />} />
                   <Route path="*" element={<Navigate to="/404" replace />} />

@@ -4,6 +4,7 @@ import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ExtendedLottery } from '@/types/lottery';
 import { Card, CardContent } from '@/components/ui/card';
+import { useLotteries } from '@/hooks/useLotteries';
 
 interface LotterySelectionProps {
   tickets: number;
@@ -16,8 +17,13 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   tickets,
   selectedLotteries,
   handleLotteryChange,
-  activeLotteries = []
+  activeLotteries: propLotteries
 }) => {
+  const { lotteries: hookLotteries, loading } = useLotteries();
+  
+  // Utiliser les loteries passées en prop si disponibles, sinon utiliser celles du hook
+  const activeLotteries = propLotteries || hookLotteries;
+  
   if (!tickets || tickets <= 0) return null;
 
   return (
@@ -26,6 +32,8 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
         <Ticket className="h-4 w-4 mr-2" />
         Choisissez {tickets > 1 ? 'vos loteries' : 'votre loterie'}
       </Label>
+      
+      {loading && <div className="text-center p-4 text-gray-400">Chargement des loteries...</div>}
       
       {Array.from({ length: tickets }).map((_, index) => (
         <div key={index} className="winshirt-card p-4">
