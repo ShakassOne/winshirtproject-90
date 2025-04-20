@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/lib/toast';
-import { initiateStripeCheckout } from '@/lib/stripe';
+import { initiateStripeCheckout, StripeCheckoutError, StripeCheckoutSuccess } from '@/lib/stripe';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreditCard, Truck, User } from 'lucide-react';
 
@@ -76,10 +75,9 @@ const CheckoutPage: React.FC = () => {
         window.location.href = result.url;
       } else {
         toast.error("Une erreur est survenue lors de l'initialisation du paiement");
-        // Use proper type narrowing to access the error property
-        if (!result.success) {
-          console.error('Checkout error:', result.error);
-        }
+        // Explicitly cast result to StripeCheckoutError type when success is false
+        const errorResult = result as StripeCheckoutError;
+        console.error('Checkout error:', errorResult.error);
         setIsProcessing(false);
       }
     } catch (error) {

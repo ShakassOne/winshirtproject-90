@@ -31,17 +31,17 @@ interface ShippingInfo {
 }
 
 // Define more specific return types
-interface StripeCheckoutSuccess {
+export interface StripeCheckoutSuccess {
   success: true;
   url: string;
 }
 
-interface StripeCheckoutError {
+export interface StripeCheckoutError {
   success: false;
   error: any;
 }
 
-type StripeCheckoutResult = StripeCheckoutSuccess | StripeCheckoutError;
+export type StripeCheckoutResult = StripeCheckoutSuccess | StripeCheckoutError;
 
 export const initiateStripeCheckout = async (
   items: Array<CheckoutItem>,
