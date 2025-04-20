@@ -2,10 +2,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { User, Menu, X, LogOut } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginButton from '@/components/LoginButton';
-import CartIconWithCounter from '@/components/cart/CartIconWithCounter';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -86,7 +85,10 @@ const Navbar: React.FC = () => {
             
             {/* User actions à droite sur desktop */}
             <div className="hidden md:flex w-1/4 justify-end items-center space-x-6">
-              <CartIconWithCounter className="text-white hover:text-winshirt-blue-light" />
+              <Link to="/cart" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light">
+                <ShoppingCart className="h-5 w-5" />
+                <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">0</span>
+              </Link>
               
               {isAuthenticated ? (
                 <div className="flex items-center gap-4">
@@ -154,9 +156,11 @@ const Navbar: React.FC = () => {
                 </nav>
                 
                 <div className="flex flex-col space-y-4 items-center">
-                  <div onClick={() => setIsMenuOpen(false)} className="relative">
-                    <CartIconWithCounter className="flex items-center gap-2 text-white hover:text-winshirt-blue-light" />
-                  </div>
+                  <Link to="/cart" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light" onClick={() => setIsMenuOpen(false)}>
+                    <ShoppingCart className="h-5 w-5" />
+                    <span>Panier</span>
+                    <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">0</span>
+                  </Link>
                   
                   {isAuthenticated ? (
                     <div className="flex flex-col space-y-4 items-center">

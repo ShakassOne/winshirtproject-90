@@ -1,3 +1,4 @@
+
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 
@@ -21,58 +22,31 @@ interface CheckoutItem {
   color?: string;
 }
 
-interface ShippingInfo {
-  name: string;
-  email: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  country: string;
-}
-
-// Define more specific return types
-export interface StripeCheckoutSuccess {
-  success: true;
-  url: string;
-}
-
-export interface StripeCheckoutError {
-  success: false;
-  error: any;
-}
-
-export type StripeCheckoutResult = StripeCheckoutSuccess | StripeCheckoutError;
-
 export const initiateStripeCheckout = async (
-  items: Array<CheckoutItem>,
-  totalAmount?: number,
-  shippingInfo?: ShippingInfo
-): Promise<StripeCheckoutResult> => {
+  items: Array<CheckoutItem>
+) => {
   try {
     // Afficher un message d'initialisation
     toast.info('Initialisation du paiement...');
     
     console.log('Items for checkout:', items);
-    console.log('Total amount:', totalAmount);
-    console.log('Shipping info:', shippingInfo);
     
-    // Calculer le montant total si non fourni
-    const amount = totalAmount || items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculer le montant total
+    const amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     // Dans un environnement de production, vous appelleriez un backend
     // Ici, nous simulons le processus pour la démonstration
     if (typeof window !== 'undefined' && window.Stripe) {
       // Si le script Stripe est chargé
-      return await handleStripeCheckout(items, amount, shippingInfo);
+      handleStripeCheckout(items, amount);
     } else {
       // Charger le script Stripe dynamiquement
-      const stripeLoaded = await loadStripeScript();
-      if (stripeLoaded) {
-        return await handleStripeCheckout(items, amount, shippingInfo);
-      } else {
-        throw new Error("Impossible de charger Stripe");
-      }
+      loadStripeScript().then(() => {
+        handleStripeCheckout(items, amount);
+      });
     }
+    
+    return { success: true };
   } catch (error) {
     console.error('Erreur lors de l\'initialisation du paiement:', error);
     toast.error('Erreur lors de l\'initialisation du paiement');
@@ -82,7 +56,7 @@ export const initiateStripeCheckout = async (
 
 // Fonction pour charger le script Stripe
 const loadStripeScript = () => {
-  return new Promise<boolean>((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     if (document.getElementById('stripe-script')) {
       resolve(true);
       return;
@@ -106,90 +80,39 @@ const loadStripeScript = () => {
 };
 
 // Fonction pour gérer le checkout avec Stripe
-const handleStripeCheckout = async (
-  items: Array<CheckoutItem>, 
-  amount: number, 
-  shippingInfo?: ShippingInfo
-): Promise<StripeCheckoutResult> => {
-  // En mode de test, simuler le processus de paiement
-  const TEST_MODE = true; // À remplacer par une vérification de l'environnement
+const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number) => {
+  toast.success('Simulation de paiement Stripe...');
   
-  if (TEST_MODE) {
-    // Simuler la redirection vers la page de paiement Stripe
-    const success = simulateOrderCreation(items, shippingInfo);
+  // Simulation - Dans un environnement de production, vous créeriez une session checkout avec Stripe
+  setTimeout(() => {
+    // Simuler un achat réussi
+    const orderSuccessful = simulateSuccessfulOrder(items);
     
-    if (success) {
-      return { 
-        success: true, 
-        url: '/account' // URL de test, normalement ce serait l'URL de la session Stripe
-      };
+    if (orderSuccessful) {
+      // Si la commande est réussie, enregistrer l'achat et lier à la loterie
+      toast.success('Paiement réussi !');
+      
+      // Rediriger vers une page de confirmation
+      setTimeout(() => {
+        window.location.href = '/account';
+      }, 1500);
     } else {
-      return { success: false, error: 'Erreur de simulation' };
+      toast.error('Échec du paiement');
     }
-  } else {
-    // En production, initialiser Stripe et créer une session de paiement
-    if (!window.Stripe) {
-      toast.error("Stripe n'est pas chargé");
-      return { success: false, error: "Stripe n'est pas chargé" };
-    }
-    
-    const stripe = window.Stripe(STRIPE_PUBLIC_KEY);
-    
-    // Préparer les éléments pour la session Stripe
-    const lineItems = items.map(item => ({
-      price_data: {
-        currency: 'eur',
-        product_data: {
-          name: item.name,
-          description: `${item.size || 'M'}, ${item.color || 'Noir'}${item.lotteryName ? `, Loterie: ${item.lotteryName}` : ''}`,
-        },
-        unit_amount: Math.round(item.price * 100), // Convertir en centimes
-      },
-      quantity: item.quantity,
-    }));
-    
-    // Dans un environnement réel, vous appelleriez votre backend pour créer une session Stripe
-    // Pour cette démo, nous simulons la réponse
-    const sessionId = `test_session_${Date.now()}`;
-    
-    // Stocker les informations de commande en localStorage pour les récupérer après le paiement
-    localStorage.setItem('pending_order', JSON.stringify({
-      items,
-      shippingInfo,
-      sessionId,
-      amount,
-      timestamp: Date.now()
-    }));
-    
-    // Dans un environnement réel, stripe.redirectToCheckout serait utilisé ici
-    // Simuler la redirection
-    const success = simulateOrderCreation(items, shippingInfo);
-    
-    if (success) {
-      // Simuler une redirection vers Stripe avec retour sur la page de succès
-      return { 
-        success: true, 
-        url: '/account' // URL de test, normalement ce serait l'URL de la session Stripe
-      };
-    } else {
-      return { success: false, error: "Erreur lors de la création de la session Stripe" };
-    }
-  }
+  }, 1500);
 };
 
 // Fonction pour simuler un achat réussi
-const simulateOrderCreation = (items: Array<CheckoutItem>, shippingInfo?: ShippingInfo) => {
+const simulateSuccessfulOrder = (items: Array<CheckoutItem>) => {
   try {
     // Récupérer l'utilisateur actuellement connecté
     const userString = localStorage.getItem('winshirt_user');
-    const user = userString ? JSON.parse(userString) : null;
+    if (!userString) {
+      console.error('Aucun utilisateur connecté');
+      return false;
+    }
     
-    // Utiliser les informations de livraison si fournies (utilisateur non connecté)
-    const customerInfo = user || {
-      id: Date.now(), // ID temporaire pour les utilisateurs non connectés
-      name: shippingInfo?.name || 'Invité',
-      email: shippingInfo?.email || 'guest@example.com'
-    };
+    const user = JSON.parse(userString);
     
     // 1. Récupérer les loteries et les produits
     const lotteriesString = localStorage.getItem('lotteries');
@@ -213,8 +136,8 @@ const simulateOrderCreation = (items: Array<CheckoutItem>, shippingInfo?: Shippi
           // Créer un participant réel basé sur l'utilisateur connecté
           const participant = {
             id: Date.now() + Math.floor(Math.random() * 1000),
-            name: customerInfo.name,
-            email: customerInfo.email,
+            name: user.name,
+            email: user.email,
             avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
           };
           
@@ -263,15 +186,11 @@ const simulateOrderCreation = (items: Array<CheckoutItem>, shippingInfo?: Shippi
     const ordersString = localStorage.getItem('orders') || '[]';
     const orders = JSON.parse(ordersString);
     
-    // Calculer le coût d'expédition (5.99€)
-    const shippingCost = 5.99;
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
     const newOrder = {
       id: Date.now(),
-      clientId: customerInfo.id,
-      clientName: customerInfo.name,
-      clientEmail: customerInfo.email,
+      clientId: user.id,
+      clientName: user.name,
+      clientEmail: user.email,
       orderDate: new Date().toISOString(),
       status: 'processing',
       items: items.map(item => {
@@ -289,20 +208,20 @@ const simulateOrderCreation = (items: Array<CheckoutItem>, shippingInfo?: Shippi
         };
       }),
       shipping: {
-        address: shippingInfo?.address || '123 Rue Exemple',
-        city: shippingInfo?.city || 'Paris',
-        postalCode: shippingInfo?.postalCode || '75000',
-        country: shippingInfo?.country || 'France',
+        address: '123 Rue Exemple',
+        city: 'Paris',
+        postalCode: '75000',
+        country: 'France',
         method: 'Standard',
-        cost: shippingCost
+        cost: 5.99
       },
       payment: {
         method: 'Stripe',
         transactionId: 'txn_' + Date.now(),
         status: 'completed'
       },
-      subtotal: subtotal,
-      total: subtotal + shippingCost,
+      subtotal: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+      total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 5.99,
       trackingNumber: 'TRK' + Date.now(),
       notes: ''
     };
@@ -320,7 +239,7 @@ const simulateOrderCreation = (items: Array<CheckoutItem>, shippingInfo?: Shippi
         for (let i = 0; i < item.quantity; i++) {
           participations.push({
             id: Date.now() + Math.floor(Math.random() * 1000) + i,
-            userId: customerInfo.id,
+            userId: user.id,
             lotteryId: item.lotteryId,
             productId: item.id,
             ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
@@ -331,34 +250,6 @@ const simulateOrderCreation = (items: Array<CheckoutItem>, shippingInfo?: Shippi
     });
     
     localStorage.setItem('participations', JSON.stringify(participations));
-    
-    // 6. Si l'utilisateur n'est pas connecté, créer un nouvel utilisateur
-    if (!user && shippingInfo) {
-      const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-      const newClient = {
-        id: customerInfo.id,
-        name: shippingInfo.name,
-        email: shippingInfo.email,
-        address: shippingInfo.address,
-        city: shippingInfo.city,
-        postalCode: shippingInfo.postalCode,
-        country: shippingInfo.country,
-        registrationDate: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        orderCount: 1,
-        totalSpent: subtotal + shippingCost
-      };
-      
-      clients.push(newClient);
-      localStorage.setItem('clients', JSON.stringify(clients));
-      
-      // Envoyer un email de bienvenue
-      simulateSendEmail(
-        shippingInfo.email,
-        "Bienvenue chez WinShirt - Votre compte a été créé",
-        `Bonjour ${shippingInfo.name},\n\nVotre compte a été créé suite à votre commande. Vous pouvez vous connecter avec l'email ${shippingInfo.email} et demander un nouveau mot de passe si nécessaire.\n\nMerci pour votre commande !\n\nL'équipe WinShirt`
-      );
-    }
     
     // Vider le panier après achat réussi
     localStorage.setItem('cart', '[]');
@@ -375,9 +266,19 @@ export const setupStripe = () => {
   // Ici, vous pourriez initialiser Stripe avec votre clé publique
   // Cette fonction serait appelée au démarrage de l'application
   console.log('Stripe setup with key:', STRIPE_PUBLIC_KEY);
-  
-  // Charger le script Stripe au démarrage
-  loadStripeScript().catch(error => {
-    console.error("Erreur lors du chargement du script Stripe:", error);
-  });
 };
+
+// Documentation pour la configuration Stripe:
+/*
+Pour configurer Stripe complètement, vous devrez:
+
+1. Créer un compte Stripe (https://dashboard.stripe.com/register)
+2. Obtenir vos clés API depuis le tableau de bord Stripe (https://dashboard.stripe.com/apikeys)
+3. Remplacer STRIPE_PUBLIC_KEY par votre clé publique
+4. Pour une implémentation complète en production:
+   - Créer une fonction backend (Supabase Edge Function) pour générer des sessions de paiement
+   - Utiliser Stripe.js et les Elements pour les formulaires de carte
+   - Configurer les webhooks pour recevoir les événements de paiement
+
+Documentation Stripe: https://stripe.com/docs
+*/

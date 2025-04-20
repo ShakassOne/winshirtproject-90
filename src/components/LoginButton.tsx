@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,7 +16,6 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = "", variant = "de
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { isAuthenticated, user, logout, isAdmin } = useAuth();
   const [loginEnabled, setLoginEnabled] = useState(true);
-  const [constructionMode, setConstructionMode] = useState(false);
 
   const handleOpenDialog = () => {
     setIsDialogOpen(true);
@@ -36,22 +35,11 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = "", variant = "de
     localStorage.setItem('loginEnabled', checked.toString());
   };
 
-  const toggleConstructionMode = (checked: boolean) => {
-    setConstructionMode(checked);
-    // Sauvegarder la préférence dans localStorage pour la persistance
-    localStorage.setItem('constructionMode', checked.toString());
-  };
-
-  // Récupérer les préférences au chargement du composant
-  useEffect(() => {
-    const savedLoginPref = localStorage.getItem('loginEnabled');
-    if (savedLoginPref !== null) {
-      setLoginEnabled(savedLoginPref === 'true');
-    }
-
-    const savedConstructionPref = localStorage.getItem('constructionMode');
-    if (savedConstructionPref !== null) {
-      setConstructionMode(savedConstructionPref === 'true');
+  // Récupérer la préférence au chargement du composant
+  React.useEffect(() => {
+    const savedPref = localStorage.getItem('loginEnabled');
+    if (savedPref !== null) {
+      setLoginEnabled(savedPref === 'true');
     }
   }, []);
 
@@ -68,28 +56,15 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = "", variant = "de
         </Button>
         
         {isAdmin && (
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Switch 
-                id="login-toggle" 
-                checked={loginEnabled} 
-                onCheckedChange={toggleLogin}
-              />
-              <Label htmlFor="login-toggle" className="text-white text-xs">
-                {loginEnabled ? 'Login activé' : 'Login désactivé'}
-              </Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Switch 
-                id="construction-toggle" 
-                checked={constructionMode} 
-                onCheckedChange={toggleConstructionMode}
-              />
-              <Label htmlFor="construction-toggle" className="text-white text-xs">
-                {constructionMode ? 'Mode construction' : 'Mode public'}
-              </Label>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="login-toggle" 
+              checked={loginEnabled} 
+              onCheckedChange={toggleLogin}
+            />
+            <Label htmlFor="login-toggle" className="text-white text-xs">
+              {loginEnabled ? 'Login activé' : 'Login désactivé'}
+            </Label>
           </div>
         )}
       </div>
