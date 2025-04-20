@@ -1,3 +1,4 @@
+
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,6 +27,7 @@ const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'));
 const AdminPage = lazy(() => import('@/pages/AdminPage'));
 
 // Create admin directory and pages
+const AdminDashboardPage = lazy(() => import('@/pages/AdminDashboardPage'));
 const AdminProductsPage = lazy(() => import('@/pages/AdminProductsPage'));
 const AdminLotteriesPage = lazy(() => import('@/pages/AdminLotteriesPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
@@ -34,6 +36,8 @@ const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 const AdminProductEditor = lazy(() => import('@/pages/AdminProductEditor'));
 const AdminLotteryEditor = lazy(() => import('@/pages/AdminLotteryEditor'));
 const AdminSettingsPage = lazy(() => import('@/pages/AdminSettingsPage'));
+const AdminClientsPage = lazy(() => import('@/pages/AdminClientsPage'));
+const AdminFiltersPage = lazy(() => import('@/pages/AdminFiltersPage'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -128,6 +132,14 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="/admin/dashboard" 
+                    element={
+                      <ProtectedRoute adminOnly>
+                        <AdminDashboardPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
                     path="/admin/products" 
                     element={
                       <ProtectedRoute adminOnly>
@@ -164,6 +176,22 @@ function App() {
                     element={
                       <ProtectedRoute adminOnly>
                         <AdminSettingsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/clients" 
+                    element={
+                      <ProtectedRoute adminOnly>
+                        <AdminClientsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/filters" 
+                    element={
+                      <ProtectedRoute adminOnly>
+                        <AdminFiltersPage />
                       </ProtectedRoute>
                     } 
                   />
