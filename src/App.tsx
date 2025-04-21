@@ -1,6 +1,6 @@
 
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth } from '@/contexts/AuthContext';
 import { syncProductsAndLotteries } from '@/lib/linkSynchronizer';
@@ -22,7 +22,8 @@ import TermsAndConditionsPage from '@/pages/TermsAndConditionsPage';
 import CartPage from '@/pages/CartPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import ConfirmationPage from '@/pages/ConfirmationPage';
-import AdminPlaceholder from '@/pages/admin/AdminPlaceholder';
+import AdminDashboardPage from '@/pages/AdminDashboardPage';
+import AdminSettingsPage from '@/pages/AdminSettingsPage';
 
 // Import layout components
 import Navbar from '@/components/Navbar';
@@ -41,55 +42,60 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <Suspense fallback={<div>Loading...</div>}>
-        <StarBackground />
-        <Navbar />
-        <Toaster />
-        <div className="w-full">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/product/:id" element={<ProductDetailPage />} />
-            <Route path="/lotteries" element={<LotteriesPage />} />
-            <Route path="/lottery/:id" element={<LotteryDetailPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/confirmation" element={<ConfirmationPage />} />
-            <Route path="/account" element={
-              <ProtectedRoute>
-                <AccountPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/how-it-works" element={<HowItWorksPage />} />
-            <Route path="/winners" element={<PreviousWinnersPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-            <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
-            
-            {/* Admin routes with placeholder page */}
-            <Route path="/admin" element={
-              <ProtectedRoute adminOnly={true}>
-                <AdminNavigationHandler>
-                  <AdminPlaceholder />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/*" element={
-              <ProtectedRoute adminOnly={true}>
-                <AdminNavigationHandler>
-                  <AdminPlaceholder />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </div>
-        <Footer />
-      </Suspense>
-    </Router>
+    <Suspense fallback={<div>Loading...</div>}>
+      <StarBackground />
+      <Navbar />
+      <Toaster />
+      <div className="w-full">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/product/:id" element={<ProductDetailPage />} />
+          <Route path="/lotteries" element={<LotteriesPage />} />
+          <Route path="/lottery/:id" element={<LotteryDetailPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/confirmation" element={<ConfirmationPage />} />
+          <Route path="/account" element={
+            <ProtectedRoute>
+              <AccountPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/winners" element={<PreviousWinnersPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
+          
+          {/* Admin routes */}
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminDashboardPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminDashboardPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/settings" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminSettingsPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </div>
+      <Footer />
+    </Suspense>
   );
 }
 
