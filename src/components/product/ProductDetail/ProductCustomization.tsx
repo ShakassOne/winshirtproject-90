@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -52,12 +51,18 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
     setPosition(value as 'front' | 'back');
   };
 
+  // Sélectionner automatiquement la première catégorie au chargement
+  useEffect(() => {
+    if (visualCategories.length > 0 && !selectedCategoryId) {
+      handleCategoryChange(visualCategories[0].id);
+    }
+  }, [visualCategories]);
+
   return (
-    <Tabs defaultValue="preview" className="w-full">
-      {/* 1. Aperçu et Personnalisation tabs */}
+    <Tabs defaultValue="customize" className="w-full">
       <TabsList className="w-full grid grid-cols-2 mb-4">
-        <TabsTrigger value="preview">Aperçu</TabsTrigger>
         <TabsTrigger value="customize">Personnaliser</TabsTrigger>
+        <TabsTrigger value="preview">Aperçu</TabsTrigger>
       </TabsList>
       
       <TabsContent value="preview" className="mt-0">
@@ -75,7 +80,6 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
       </TabsContent>
       
       <TabsContent value="customize" className="mt-0 space-y-6">
-        {/* 2. Le Visuel du T-Shirt (VisualPositioner) */}
         <div className="mt-2">
           <VisualPositioner
             productImage={productImage}
@@ -89,7 +93,6 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
           />
         </div>
         
-        {/* 3. Recto Verso tabs */}
         <Tabs 
           defaultValue={position} 
           onValueChange={handleTabChange} 
@@ -101,39 +104,32 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
           </TabsList>
         </Tabs>
         
-        {/* 4. Sélection de la catégorie de visuels et 5. Upload côte à côte */}
-        <div className="flex flex-wrap gap-4 items-start">
-          <div className="space-y-2 flex-1 min-w-[180px]">
-            <Label className="text-white">Catégorie de visuels</Label>
-            <Select
-              value={selectedCategoryId ? selectedCategoryId.toString() : ""}
-              onValueChange={(value) => handleCategoryChange(value ? parseInt(value) : null)}
-            >
-              <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
-                <SelectValue placeholder="Choisir une catégorie" />
-              </SelectTrigger>
-              <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
-                {visualCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.id.toString()}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-4">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {visualCategories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => handleCategoryChange(category.id)}
+                className={`p-3 rounded-lg text-center transition-colors ${
+                  selectedCategoryId === category.id
+                    ? 'bg-winshirt-purple text-white'
+                    : 'bg-winshirt-space-light hover:bg-winshirt-purple/20 text-gray-300'
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
           </div>
           
-          <div className="space-y-2 mt-7">
-            <CustomVisualUploader
-              onVisualUpload={handleVisualUpload}
-              onVisualRemove={() => handleSelectVisual(null)}
-              uploadedVisual={null}
-              allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
-              buttonStyle="compact"
-            />
-          </div>
+          <CustomVisualUploader
+            onVisualUpload={handleVisualUpload}
+            onVisualRemove={() => handleSelectVisual(null)}
+            uploadedVisual={null}
+            allowedFileTypes={['.png', '.jpg', '.jpeg', '.svg', '.eps', '.ai']}
+            buttonStyle="compact"
+          />
         </div>
         
-        {/* 6. Images (VisualSelector) avec grille 4 colonnes au lieu de 3 */}
         <div className="mt-4">
           <VisualSelector
             selectedVisualId={visual?.id || null}
@@ -145,7 +141,6 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
           />
         </div>
         
-        {/* Zone d'impression si disponible */}
         {hasPrintAreas && (
           <div className="space-y-2 mt-4">
             <Label className="text-white">Zone d'impression</Label>

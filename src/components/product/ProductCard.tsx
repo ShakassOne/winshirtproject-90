@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { Palette } from 'lucide-react';
 import { ExtendedProduct } from '@/types/product';
 
 interface ProductCardProps {
@@ -21,10 +20,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           />
           
           {product.allowCustomization && (
-            <Badge className="absolute top-2 right-2 bg-winshirt-blue-light text-white flex items-center gap-1">
-              <Palette size={14} />
-              <span>Personnalisable</span>
-            </Badge>
+            <div className="absolute top-2 right-2 bg-winshirt-purple/90 backdrop-blur-sm text-white px-4 py-2 rounded-full flex items-center gap-2">
+              <img 
+                src="/lovable-uploads/489dcc92-ead0-4ef6-a14e-c805f92d5389.png" 
+                alt="Personnalisable" 
+                className="w-5 h-5"
+              />
+              <span className="text-sm font-medium">Personnalisable</span>
+            </div>
           )}
 
           {product.tickets && product.tickets > 0 && (
