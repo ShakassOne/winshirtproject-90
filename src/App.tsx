@@ -22,11 +22,13 @@ import TermsAndConditionsPage from '@/pages/TermsAndConditionsPage';
 import CartPage from '@/pages/CartPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import ConfirmationPage from '@/pages/ConfirmationPage';
+import AdminPlaceholder from '@/pages/admin/AdminPlaceholder';
 
 // Import layout components
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import StarBackground from '@/components/StarBackground';
+import AdminNavigationHandler from '@/components/AdminNavigationHandler';
 
 // Import authentication components
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -66,8 +68,21 @@ function App() {
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
             
-            {/* Admin routes temporarily disabled */}
-            <Route path="/admin/*" element={<NotFoundPage />} />
+            {/* Admin routes with placeholder page */}
+            <Route path="/admin" element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminNavigationHandler>
+                  <AdminPlaceholder />
+                </AdminNavigationHandler>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/*" element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminNavigationHandler>
+                  <AdminPlaceholder />
+                </AdminNavigationHandler>
+              </ProtectedRoute>
+            } />
             
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

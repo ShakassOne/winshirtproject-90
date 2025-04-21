@@ -4,12 +4,16 @@ import { useLocation } from 'react-router-dom';
 import AdminNavigation from './admin/AdminNavigation';
 import { supabase } from '@/integrations/supabase/client';
 
+interface AdminNavigationHandlerProps {
+  children: React.ReactNode;
+}
+
 /**
  * Ce composant est un wrapper pour AdminNavigation
  * qui contrôle si la barre de navigation admin doit être affichée
  * selon le chemin actuel et le rôle de l'utilisateur
  */
-const AdminNavigationHandler: React.FC = () => {
+const AdminNavigationHandler: React.FC<AdminNavigationHandlerProps> = ({ children }) => {
   const location = useLocation();
   const [shouldShow, setShouldShow] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -64,8 +68,12 @@ const AdminNavigationHandler: React.FC = () => {
   // Don't render anything until we know if we should show the admin navigation
   if (!isInitialized) return null;
   
-  // Always show admin nav for now
-  return <AdminNavigation />;
+  return (
+    <>
+      <AdminNavigation />
+      {children}
+    </>
+  );
 };
 
 export default AdminNavigationHandler;
