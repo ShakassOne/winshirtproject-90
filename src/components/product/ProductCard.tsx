@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ExtendedProduct } from '@/types/product';
+import { Palette } from 'lucide-react';
 
 interface ProductCardProps {
   product: ExtendedProduct;
@@ -21,42 +22,40 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           
           {product.allowCustomization && (
             <div className="absolute top-2 right-2 bg-winshirt-purple/90 backdrop-blur-sm text-white px-4 py-2 rounded-full flex items-center gap-2">
-              <img 
-                src="/lovable-uploads/489dcc92-ead0-4ef6-a14e-c805f92d5389.png" 
-                alt="Personnalisable" 
-                className="w-5 h-5"
-              />
-              <span className="text-base font-medium">Personnalisable</span>
+              <Palette className="h-5 w-5" />
+              <span className="text-lg font-medium">Personnalisable</span>
             </div>
           )}
           
-          {/* Centered custom icon */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <img 
-              src="/lovable-uploads/489dcc92-ead0-4ef6-a14e-c805f92d5389.png" 
-              alt={product.name} 
-              className="w-24 h-24 object-contain opacity-40 group-hover:opacity-60 transition-opacity duration-300"
-            />
-          </div>
+          {/* Centered custom icon only for customizable products */}
+          {product.allowCustomization && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img 
+                src="/lovable-uploads/489dcc92-ead0-4ef6-a14e-c805f92d5389.png" 
+                alt={product.name} 
+                className="w-24 h-24 object-contain opacity-40 group-hover:opacity-60 transition-opacity duration-300"
+              />
+            </div>
+          )}
 
           {product.tickets && product.tickets > 0 && (
-            <Badge className="absolute bottom-2 left-2 bg-winshirt-purple text-white text-base">
+            <Badge className="absolute bottom-2 left-2 bg-winshirt-purple text-white text-lg">
               {product.tickets} {product.tickets > 1 ? 'tickets' : 'ticket'}
             </Badge>
           )}
         </div>
         
         <div className="p-4 flex-grow flex flex-col">
-          <h3 className="text-xl font-semibold text-white mb-1">{product.name}</h3>
-          <p className="text-base text-gray-400 line-clamp-2 mb-3 flex-grow">
+          <h3 className="text-2xl font-semibold text-white mb-1">{product.name}</h3>
+          <p className="text-lg text-gray-400 line-clamp-2 mb-3 flex-grow">
             {product.description}
           </p>
           <div className="flex justify-between items-center mt-auto">
-            <span className="text-xl font-bold text-winshirt-purple-light">
+            <span className="text-2xl font-bold text-winshirt-purple-light">
               {product.price.toFixed(2)} €
             </span>
             {product.productType && (
-              <span className="text-sm text-gray-400 bg-winshirt-space-light px-2 py-1 rounded">
+              <span className="text-base text-gray-400 bg-winshirt-space-light px-2 py-1 rounded">
                 {product.productType}
               </span>
             )}

@@ -8,6 +8,7 @@ import { PrintArea } from '@/types/product';
 import VisualPositioner from '@/components/product/VisualPositioner';
 import VisualSelector from '@/components/product/VisualSelector';
 import CustomVisualUploader from '@/components/product/CustomVisualUploader';
+import { Palette } from 'lucide-react';
 
 interface ProductCustomizationProps {
   productImage: string;
@@ -62,8 +63,8 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
   return (
     <Tabs defaultValue="customize" className="w-full">
       <TabsList className="w-full grid grid-cols-2 mb-4">
-        <TabsTrigger value="customize" className="text-base">Personnaliser</TabsTrigger>
-        <TabsTrigger value="preview" className="text-base">Aperçu</TabsTrigger>
+        <TabsTrigger value="customize" className="text-xl">Personnaliser</TabsTrigger>
+        <TabsTrigger value="preview" className="text-xl">Aperçu</TabsTrigger>
       </TabsList>
       
       <TabsContent value="preview" className="mt-0">
@@ -100,8 +101,8 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
           className="w-full"
         >
           <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="front" className="text-base">Recto</TabsTrigger>
-            <TabsTrigger value="back" className="text-base">Verso</TabsTrigger>
+            <TabsTrigger value="front" className="text-xl">Recto</TabsTrigger>
+            <TabsTrigger value="back" className="text-xl">Verso</TabsTrigger>
           </TabsList>
         </Tabs>
         
@@ -111,7 +112,7 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
               <button
                 key={category.id}
                 onClick={() => handleCategoryChange(category.id)}
-                className={`p-3 rounded-lg text-center transition-colors ${
+                className={`p-3 rounded-lg text-center transition-colors text-lg ${
                   selectedCategoryId === category.id
                     ? 'bg-winshirt-purple text-white'
                     : 'bg-winshirt-space-light hover:bg-winshirt-purple/20 text-gray-300'
@@ -139,23 +140,23 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
             activePosition={position}
             hideUploader={true}
             gridCols={4}
-            autoShowVisuals={true} // New prop to ensure visuals are always shown
+            autoShowVisuals={true}
           />
         </div>
         
         {hasPrintAreas && (
           <div className="space-y-2 mt-4">
-            <Label className="text-white text-lg">Zone d'impression</Label>
+            <Label className="text-white text-xl">Zone d'impression</Label>
             <Select
               value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
               onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
             >
-              <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-base">
+              <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-lg">
                 <SelectValue placeholder="Choisir une zone d'impression" />
               </SelectTrigger>
               <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
                 {printAreas?.filter(area => area.position === position).map(area => (
-                  <SelectItem key={area.id} value={area.id.toString()} className="text-base">
+                  <SelectItem key={area.id} value={area.id.toString()} className="text-lg">
                     {area.name}
                   </SelectItem>
                 ))}
