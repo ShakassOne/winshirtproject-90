@@ -678,4 +678,43 @@ const CssEditorManager: React.FC<CssEditorManagerProps> = ({ showAdvancedSetting
                 <CardHeader className="pb-2">
                   <CardTitle className="text-white flex items-center text-base">
                     <FileCode className="h-4 w-4 mr-2" />
-                    É
+                    Éditeur de code CSS
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    className="h-96 bg-winshirt-space-dark border-winshirt-purple/20 text-white font-mono text-sm"
+                    value={cssCode}
+                    onChange={handleCssCodeChange}
+                    placeholder="/* Ajoutez votre CSS personnalisé ici */"
+                  />
+                  <div className="mt-4 flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={resetCustomCss}
+                      disabled={!cssCode}
+                      className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Réinitialiser
+                    </Button>
+                    <Button
+                      onClick={applyCustomCss}
+                      disabled={!isCssCodeChanged}
+                      className="bg-winshirt-purple hover:bg-winshirt-purple/80"
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      Appliquer le CSS
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default CssEditorManager;
