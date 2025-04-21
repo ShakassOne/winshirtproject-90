@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
-import { CheckoutFormData, StripeCheckoutError } from '@/types/checkout';
+import { CheckoutFormData, StripeCheckoutResult, StripeCheckoutError } from '@/types/checkout';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
@@ -165,7 +165,7 @@ const CheckoutPage: React.FC = () => {
       const result = await initiateStripeCheckout(checkoutItems);
       
       if (!result.success) {
-        // Type guard pour accéder à la propriété error
+        // Type assertion pour accéder à la propriété error
         const errorResult = result as StripeCheckoutError;
         toast.error(`Erreur de paiement: ${errorResult.error}`);
         setIsProcessing(false);
