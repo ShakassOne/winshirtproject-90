@@ -24,6 +24,10 @@ import CheckoutPage from '@/pages/CheckoutPage';
 import ConfirmationPage from '@/pages/ConfirmationPage';
 import AdminDashboardPage from '@/pages/AdminDashboardPage';
 import AdminSettingsPage from '@/pages/AdminSettingsPage';
+import AdminProductsPage from '@/pages/AdminProductsPage';
+import AdminLotteriesPage from '@/pages/AdminLotteriesPage';
+import AdminClientsPage from '@/pages/AdminClientsPage';
+import AdminCommandesPage from '@/pages/AdminCommandesPage';
 
 // Import layout components
 import Navbar from '@/components/Navbar';
@@ -87,6 +91,63 @@ function App() {
             <ProtectedRoute adminOnly={true}>
               <AdminNavigationHandler>
                 <AdminSettingsPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          {/* Routes manquantes ajoutées ici */}
+          <Route path="/admin/products" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminProductsPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/lotteries" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminLotteriesPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/clients" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminClientsPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/commandes" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminCommandesPage />
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/filters" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                <AdminNavigationHandler>
+                  {/* Ajout d'un import pour cette page quand elle sera créée */}
+                  <div className="pt-32 pb-16">
+                    <div className="container mx-auto px-4">
+                      <h1 className="text-3xl font-bold text-white mb-6">Gestion des filtres</h1>
+                      <p className="text-gray-400">Cette fonctionnalité sera disponible prochainement.</p>
+                    </div>
+                  </div>
+                </AdminNavigationHandler>
+              </AdminNavigationHandler>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/visuals" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminNavigationHandler>
+                {/* Ajout d'un import pour cette page quand elle sera créée */}
+                <div className="pt-32 pb-16">
+                  <div className="container mx-auto px-4">
+                    <h1 className="text-3xl font-bold text-white mb-6">Gestion des visuels</h1>
+                    <p className="text-gray-400">Cette fonctionnalité sera disponible prochainement.</p>
+                  </div>
+                </div>
               </AdminNavigationHandler>
             </ProtectedRoute>
           } />
