@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import AdminNavigationHandler from '@/components/AdminNavigationHandler';
 import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
 import ShippingSettingsManager from '@/components/admin/settings/ShippingSettingsManager';
 import TestEmailButton from '@/components/admin/settings/TestEmailButton';
@@ -175,8 +174,6 @@ const AdminSettingsPage: React.FC = () => {
           </Tabs>
         </div>
       </section>
-      
-      <AdminNavigationHandler />
     </>
   );
 };

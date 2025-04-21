@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import AdminNavigationHandler from '@/components/AdminNavigationHandler';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   LayoutDashboard, 
@@ -232,8 +231,6 @@ const AdminDashboardPage: React.FC = () => {
           </div>
         </div>
       </section>
-      
-      <AdminNavigationHandler />
     </>
   );
 };
