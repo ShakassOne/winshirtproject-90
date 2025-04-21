@@ -28,6 +28,7 @@ import AdminProductsPage from '@/pages/AdminProductsPage';
 import AdminLotteriesPage from '@/pages/AdminLotteriesPage';
 import AdminClientsPage from '@/pages/AdminClientsPage';
 import AdminCommandesPage from '@/pages/AdminCommandesPage';
+import AdminVisualsPage from '@/pages/AdminVisualsPage';
 
 // Import layout components
 import Navbar from '@/components/Navbar';
@@ -123,31 +124,10 @@ function App() {
               </AdminNavigationHandler>
             </ProtectedRoute>
           } />
-          <Route path="/admin/filters" element={
-            <ProtectedRoute adminOnly={true}>
-              <AdminNavigationHandler>
-                <AdminNavigationHandler>
-                  {/* Ajout d'un import pour cette page quand elle sera créée */}
-                  <div className="pt-32 pb-16">
-                    <div className="container mx-auto px-4">
-                      <h1 className="text-3xl font-bold text-white mb-6">Gestion des filtres</h1>
-                      <p className="text-gray-400">Cette fonctionnalité sera disponible prochainement.</p>
-                    </div>
-                  </div>
-                </AdminNavigationHandler>
-              </AdminNavigationHandler>
-            </ProtectedRoute>
-          } />
           <Route path="/admin/visuals" element={
             <ProtectedRoute adminOnly={true}>
               <AdminNavigationHandler>
-                {/* Ajout d'un import pour cette page quand elle sera créée */}
-                <div className="pt-32 pb-16">
-                  <div className="container mx-auto px-4">
-                    <h1 className="text-3xl font-bold text-white mb-6">Gestion des visuels</h1>
-                    <p className="text-gray-400">Cette fonctionnalité sera disponible prochainement.</p>
-                  </div>
-                </div>
+                <AdminVisualsPage />
               </AdminNavigationHandler>
             </ProtectedRoute>
           } />

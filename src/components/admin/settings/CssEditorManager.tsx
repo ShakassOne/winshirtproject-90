@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -226,7 +225,7 @@ const CssEditorManager: React.FC<CssEditorManagerProps> = ({ showAdvancedSetting
     setIsCssCodeChanged(originalCssCode !== '');
   };
   
-  // Fonction pour appliquer les changements d'image d'arrière-plan
+  // Modifié pour résoudre le problème d'arrière-plan
   const applyBackgroundChange = () => {
     try {
       // Sauvegarder les réglages d'arrière-plan
@@ -244,12 +243,11 @@ const CssEditorManager: React.FC<CssEditorManagerProps> = ({ showAdvancedSetting
       // Générer le CSS pour l'arrière-plan
       const backgroundCss = `
       body {
-        background-image: url("${backgroundPreview}");
-        background-size: cover;
-        background-attachment: fixed;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-color: var(--background);
+        background-image: url("${backgroundPreview}") !important;
+        background-size: cover !important;
+        background-attachment: fixed !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
       }
       
       body::before {
@@ -259,15 +257,19 @@ const CssEditorManager: React.FC<CssEditorManagerProps> = ({ showAdvancedSetting
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(26, 31, 44, ${(100 - backgroundOpacity) / 100});
+        background-color: rgba(26, 31, 44, ${(100 - backgroundOpacity) / 100}) !important;
         z-index: -1;
       }
       
       .winshirt-card {
-        border-radius: ${containerRadius}px;
-        backdrop-filter: blur(${containerBlur}px);
-        background-color: rgba(26, 31, 44, ${containerOpacity / 100});
-        border-color: ${containerBorder};
+        border-radius: ${containerRadius}px !important;
+        backdrop-filter: blur(${containerBlur}px) !important;
+        background-color: rgba(26, 31, 44, ${containerOpacity / 100}) !important;
+        border-color: ${containerBorder} !important;
+      }
+
+      #root::before {
+        background: transparent !important;
       }
       `;
       
@@ -281,6 +283,11 @@ const CssEditorManager: React.FC<CssEditorManagerProps> = ({ showAdvancedSetting
       styleEl.id = 'winshirt-background-css';
       styleEl.textContent = backgroundCss;
       document.head.appendChild(styleEl);
+      
+      // Force l'application du style en ajoutant une classe au body
+      document.body.classList.add('custom-background-applied');
+      
+      console.log('Background CSS applied:', backgroundCss);
       
       showNotification('success', 'system', true, "Les paramètres d'arrière-plan ont été appliqués");
     } catch (error) {
@@ -671,47 +678,4 @@ const CssEditorManager: React.FC<CssEditorManagerProps> = ({ showAdvancedSetting
                 <CardHeader className="pb-2">
                   <CardTitle className="text-white flex items-center text-base">
                     <FileCode className="h-4 w-4 mr-2" />
-                    Éditeur CSS avancé
-                  </CardTitle>
-                  <CardDescription className="text-gray-400 text-xs">
-                    Utilisez cet éditeur pour définir des styles CSS personnalisés
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Textarea 
-                    value={cssCode}
-                    onChange={handleCssCodeChange}
-                    className="font-mono bg-winshirt-space border-winshirt-purple/30 text-white h-96"
-                    placeholder="/* Ajoutez ici votre CSS personnalisé */"
-                    spellCheck={false}
-                  />
-                  <div className="flex justify-between mt-4">
-                    <Button 
-                      variant="outline"
-                      onClick={resetCustomCss}
-                      disabled={!isCssCodeChanged}
-                      className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
-                    >
-                      <Undo className="h-4 w-4 mr-1" />
-                      Réinitialiser
-                    </Button>
-                    <Button 
-                      onClick={applyCustomCss}
-                      disabled={!isCssCodeChanged}
-                      className="bg-winshirt-purple hover:bg-winshirt-purple/80"
-                    >
-                      <Save className="h-4 w-4 mr-1" />
-                      Appliquer le CSS
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default CssEditorManager;
+                    É
