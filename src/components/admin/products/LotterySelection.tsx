@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ExtendedLottery } from '@/types/lottery';
+import { toast } from '@/lib/toast';
 
 interface LotterySelectionProps {
   lotteries: ExtendedLottery[];
@@ -12,7 +13,7 @@ interface LotterySelectionProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   maxSelections?: number;
-  enforceMaxSelection?: boolean; // Nouveau prop pour activer/désactiver la limite
+  enforceMaxSelection?: boolean;
 }
 
 const LotterySelection: React.FC<LotterySelectionProps> = ({
@@ -22,15 +23,28 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   onSelectAll,
   onDeselectAll,
   maxSelections = 1,
-  enforceMaxSelection = false // Par défaut, pas de limite en admin
+  enforceMaxSelection = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Debug info
+  console.log('Available lotteries in admin:', lotteries);
+  console.log('Currently selected lotteries:', selectedLotteries);
 
   // Filter lotteries based on search term
   const filteredLotteries = lotteries.filter(lottery => 
     lottery.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lottery.description.toLowerCase().includes(searchTerm.toLowerCase())
+    lottery.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Handle toggle with better error messages
+  const handleToggle = (lotteryId: string) => {
+    if (enforceMaxSelection && !selectedLotteries.includes(lotteryId) && selectedLotteries.length >= maxSelections) {
+      toast.warning(`Vous ne pouvez pas sélectionner plus de ${maxSelections} loterie${maxSelections > 1 ? 's' : ''}`);
+      return;
+    }
+    onToggleLottery(lotteryId);
+  };
 
   return (
     <div>
@@ -73,42 +87,55 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
       </div>
       
       <div className="grid grid-cols-1 gap-2 mt-2 max-h-[300px] overflow-y-auto pr-2">
-        {filteredLotteries.map(lottery => {
-          const isSelected = selectedLotteries.includes(lottery.id.toString());
-          // N'appliquer la limite que si enforceMaxSelection est vrai
-          const isDisabled = enforceMaxSelection && !isSelected && selectedLotteries.length >= maxSelections;
-          
-          return (
-            <div 
-              key={lottery.id}
-              className={`p-3 rounded-lg flex items-center ${
-                isSelected 
-                  ? 'bg-winshirt-purple/30 cursor-pointer' 
-                  : isDisabled 
-                    ? 'bg-winshirt-space-light opacity-50 cursor-not-allowed' 
-                    : 'bg-winshirt-space-light cursor-pointer'
-              }`}
-              onClick={() => !isDisabled && onToggleLottery(lottery.id.toString())}
-            >
-              <div className="mr-3 flex items-center justify-center w-5 h-5">
-                {isSelected ? (
-                  <Check size={16} className="text-winshirt-purple-light" />
-                ) : (
-                  <div className={`w-4 h-4 border rounded ${isDisabled ? 'border-gray-600' : 'border-gray-400'}`} />
-                )}
+        {filteredLotteries.length > 0 ? (
+          filteredLotteries.map(lottery => {
+            const isSelected = selectedLotteries.includes(lottery.id.toString());
+            // N'appliquer la limite que si enforceMaxSelection est vrai
+            const isDisabled = enforceMaxSelection && !isSelected && selectedLotteries.length >= maxSelections;
+            
+            return (
+              <div 
+                key={lottery.id}
+                className={`p-3 rounded-lg flex items-center ${
+                  isSelected 
+                    ? 'bg-winshirt-purple/30 cursor-pointer' 
+                    : isDisabled 
+                      ? 'bg-winshirt-space-light opacity-50 cursor-not-allowed' 
+                      : 'bg-winshirt-space-light cursor-pointer'
+                }`}
+                onClick={() => !isDisabled && handleToggle(lottery.id.toString())}
+              >
+                <div className="mr-3 flex items-center justify-center w-5 h-5">
+                  {isSelected ? (
+                    <Check size={16} className="text-winshirt-purple-light" />
+                  ) : (
+                    <div className={`w-4 h-4 border rounded ${isDisabled ? 'border-gray-600' : 'border-gray-400'}`} />
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-medium text-white">{lottery.title}</h4>
+                  <p className="text-sm text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-medium text-white">{lottery.title}</h4>
-                <p className="text-sm text-gray-400">Valeur: {lottery.value.toFixed(2)} €</p>
-              </div>
-            </div>
-          );
-        })}
-        
-        {filteredLotteries.length === 0 && (
-          <p className="text-gray-400 text-center py-4">Aucune loterie ne correspond à votre recherche</p>
+            );
+          })
+        ) : (
+          <p className="text-gray-400 text-center py-4">
+            {lotteries.length === 0 
+              ? "Aucune loterie disponible. Veuillez en créer dans la section Loteries." 
+              : "Aucune loterie ne correspond à votre recherche"}
+          </p>
         )}
       </div>
+
+      {/* Debug info for troubleshooting */}
+      {lotteries.length === 0 && (
+        <div className="mt-4 p-3 bg-amber-500/20 border border-amber-500/30 rounded-md">
+          <p className="text-amber-200 text-sm">
+            Aucune loterie active trouvée. Vérifiez que vous avez créé des loteries avec le statut "active".
+          </p>
+        </div>
+      )}
     </div>
   );
 };

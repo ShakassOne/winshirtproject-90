@@ -109,7 +109,7 @@ const fetchWinnerForLottery = async (lotteryId: number): Promise<Participant | n
   }
 };
 
-// Function to fetch all lotteries - Improved with better caching
+// Function to fetch all lotteries - Improved with better caching and debug information
 export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLottery[]> => {
   try {
     console.log('Fetching lotteries from Supabase...', { forceRefresh });
@@ -124,7 +124,9 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
         const cacheAge = Date.now() - parseInt(cachedTime);
         if (cacheAge < 30000) { // 30 seconds
           console.log('Using cached lottery data (< 30 sec old)');
-          return JSON.parse(cachedData);
+          const parsedData = JSON.parse(cachedData);
+          console.log(`Retrieved ${parsedData.length} lotteries from cache`);
+          return parsedData;
         }
       }
     }
@@ -142,7 +144,7 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
         throw new Error('Supabase connection failed');
       }
       
-      console.log('Supabase connection test successful');
+      console.log('Supabase connection test successful', testData);
     } catch (testError) {
       console.error('Error testing Supabase connection:', testError);
       
@@ -150,7 +152,9 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
       const localData = localStorage.getItem('lotteries');
       if (localData) {
         console.log('Using localStorage lottery data as fallback (Supabase unavailable)');
-        return JSON.parse(localData);
+        const parsedData = JSON.parse(localData);
+        console.log(`Retrieved ${parsedData.length} lotteries from localStorage`);
+        return parsedData;
       }
       
       return [];
@@ -173,9 +177,10 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
       return [];
     }
     
-    console.log(`Fetched ${data.length} lotteries from Supabase`);
+    console.log(`Fetched ${data.length} lotteries from Supabase:`, data);
     
     const extendedLotteries = data.map(convertSupabaseLottery);
+    console.log('Converted to ExtendedLottery format:', extendedLotteries);
     
     // Fetch participants and winners for each lottery
     for (const lottery of extendedLotteries) {
@@ -193,6 +198,7 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
     
     // Also update localStorage for broader availability
     localStorage.setItem('lotteries', JSON.stringify(extendedLotteries));
+    console.log('Updated localStorage with lottery data');
     
     return extendedLotteries;
   } catch (error) {
@@ -203,7 +209,9 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
     const localData = localStorage.getItem('lotteries');
     if (localData) {
       console.log('Using localStorage lottery data as fallback');
-      return JSON.parse(localData);
+      const parsedData = JSON.parse(localData);
+      console.log(`Retrieved ${parsedData.length} lotteries from localStorage as fallback`);
+      return parsedData;
     }
     
     return [];

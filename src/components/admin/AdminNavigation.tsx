@@ -51,8 +51,8 @@ const AdminNavigation: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   
   return (
-    <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
-      <div className="bg-winshirt-space/90 backdrop-blur-md border border-winshirt-purple/30 rounded-full px-4 py-1 shadow-lg">
+    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+      <div className="bg-winshirt-space/90 backdrop-blur-md border border-winshirt-purple/30 rounded-full px-4 py-2 shadow-lg">
         <div className="flex space-x-1">
           {navLinks.map((link) => (
             <Button
@@ -63,10 +63,12 @@ const AdminNavigation: React.FC = () => {
                 isActive(link.path) ? "bg-winshirt-purple text-white hover:bg-winshirt-purple-dark" : "text-gray-400 hover:text-white"
               }`}
               onClick={() => navigate(link.path)}
+              aria-label={link.label}
+              title={link.label}
             >
               <span className="flex items-center">
                 <span>{link.icon}</span>
-                <span className="hidden md:inline ml-2">{link.label}</span>
+                <span className="hidden md:inline ml-2 whitespace-nowrap">{link.label}</span>
               </span>
             </Button>
           ))}

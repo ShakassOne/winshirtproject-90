@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ExtendedLottery } from '@/types/lottery';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 
 interface LotterySelectionProps {
   tickets: number;
@@ -18,6 +18,13 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   handleLotteryChange,
   activeLotteries = []
 }) => {
+  // Debug logs to identify issues
+  useEffect(() => {
+    console.log("Client LotterySelection - Available lotteries:", activeLotteries);
+    console.log("Client LotterySelection - Selected lotteries:", selectedLotteries);
+    console.log("Client LotterySelection - Number of tickets:", tickets);
+  }, [activeLotteries, selectedLotteries, tickets]);
+
   if (!tickets || tickets <= 0) return null;
 
   return (
@@ -33,12 +40,15 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
             Ticket {index + 1}
           </Label>
           
-          {/* Dropdown avec style glassmorphism */}
+          {/* Dropdown with improved error state */}
           <div className="relative">
             <select
               value={selectedLotteries[index] || ''}
               onChange={(e) => handleLotteryChange(e.target.value, index)}
-              className="w-full p-3 rounded-lg glass-effect text-white appearance-none cursor-pointer border-winshirt-purple/30"
+              className={`w-full p-3 rounded-lg glass-effect text-white appearance-none cursor-pointer border-winshirt-purple/30 ${
+                activeLotteries.length === 0 ? 'border-red-500/50' : ''
+              }`}
+              disabled={activeLotteries.length === 0}
             >
               <option value="">Choisir une loterie</option>
               {activeLotteries.map((lottery) => (
@@ -47,9 +57,18 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
                 </option>
               ))}
             </select>
+
+            {/* Show warning if there are no active lotteries */}
+            {activeLotteries.length === 0 && (
+              <div className="mt-2 p-3 bg-red-500/20 border border-red-500/30 rounded-md">
+                <p className="text-red-200 text-sm">
+                  Aucune loterie active disponible. Veuillez contacter l'administrateur.
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Selected Lottery Preview avec style glassmorphism amélioré */}
+          {/* Selected Lottery Preview */}
           {selectedLotteries[index] && (
             <div className="mt-4 winshirt-card p-4 backdrop-blur-lg border border-winshirt-purple/30">
               {activeLotteries.map((lottery) => {
@@ -57,7 +76,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
                   return (
                     <div key={lottery.id} className="flex gap-4 items-start">
                       <img 
-                        src={lottery.image || 'https://placehold.co/100x100'} 
+                        src={lottery.image || 'https://placehold.co/100x100'}
                         alt={lottery.title}
                         className="w-24 h-24 object-cover rounded-lg"
                       />
