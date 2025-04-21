@@ -1,3 +1,4 @@
+
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -22,32 +23,20 @@ import CartPage from '@/pages/CartPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import ConfirmationPage from '@/pages/ConfirmationPage';
 
-// Admin pages
-import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
-import AdminLotteriesPage from '@/pages/admin/AdminLotteriesPage';
-import AdminProductsPage from '@/pages/admin/AdminProductsPage';
-import AdminCommandesPage from '@/pages/admin/AdminCommandesPage';
-import AdminClientsPage from '@/pages/admin/AdminClientsPage';
-import AdminVisualsPage from '@/pages/admin/AdminVisualsPage';
-import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
-import AdminFiltersPage from '@/pages/admin/AdminFiltersPage';
-
 // Import layout components
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import StarBackground from '@/components/StarBackground';
-import AdminNavigationHandler from '@/components/AdminNavigationHandler';
 
 // Import authentication components
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 function App() {
-  const { initializeAuth } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
-    initializeAuth();
     syncProductsAndLotteries();
-  }, [initializeAuth]);
+  }, []);
 
   return (
     <Router>
@@ -76,62 +65,10 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
-            <Route path="/admin" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminDashboardPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/lotteries" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminLotteriesPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/products" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminProductsPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/orders" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminCommandesPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/clients" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminClientsPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/visuals" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminVisualsPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/settings" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminSettingsPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/filters" element={
-              <ProtectedRoute adminOnly>
-                <AdminNavigationHandler>
-                  <AdminFiltersPage />
-                </AdminNavigationHandler>
-              </ProtectedRoute>
-            } />
+            
+            {/* Admin routes temporarily disabled */}
+            <Route path="/admin/*" element={<NotFoundPage />} />
+            
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
