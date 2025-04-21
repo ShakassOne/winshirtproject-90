@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from '@/components/ui/label';
@@ -56,13 +57,13 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
     if (visualCategories.length > 0 && !selectedCategoryId) {
       handleCategoryChange(visualCategories[0].id);
     }
-  }, [visualCategories]);
+  }, [visualCategories, selectedCategoryId, handleCategoryChange]);
 
   return (
     <Tabs defaultValue="customize" className="w-full">
       <TabsList className="w-full grid grid-cols-2 mb-4">
-        <TabsTrigger value="customize">Personnaliser</TabsTrigger>
-        <TabsTrigger value="preview">Aperçu</TabsTrigger>
+        <TabsTrigger value="customize" className="text-base">Personnaliser</TabsTrigger>
+        <TabsTrigger value="preview" className="text-base">Aperçu</TabsTrigger>
       </TabsList>
       
       <TabsContent value="preview" className="mt-0">
@@ -99,8 +100,8 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
           className="w-full"
         >
           <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="front">Recto</TabsTrigger>
-            <TabsTrigger value="back">Verso</TabsTrigger>
+            <TabsTrigger value="front" className="text-base">Recto</TabsTrigger>
+            <TabsTrigger value="back" className="text-base">Verso</TabsTrigger>
           </TabsList>
         </Tabs>
         
@@ -138,22 +139,23 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
             activePosition={position}
             hideUploader={true}
             gridCols={4}
+            autoShowVisuals={true} // New prop to ensure visuals are always shown
           />
         </div>
         
         {hasPrintAreas && (
           <div className="space-y-2 mt-4">
-            <Label className="text-white">Zone d'impression</Label>
+            <Label className="text-white text-lg">Zone d'impression</Label>
             <Select
               value={selectedPrintArea ? selectedPrintArea.id.toString() : ''}
               onValueChange={(value) => handlePrintAreaChange(parseInt(value))}
             >
-              <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30">
+              <SelectTrigger className="bg-winshirt-space-light border-winshirt-purple/30 text-base">
                 <SelectValue placeholder="Choisir une zone d'impression" />
               </SelectTrigger>
               <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
                 {printAreas?.filter(area => area.position === position).map(area => (
-                  <SelectItem key={area.id} value={area.id.toString()}>
+                  <SelectItem key={area.id} value={area.id.toString()} className="text-base">
                     {area.name}
                   </SelectItem>
                 ))}

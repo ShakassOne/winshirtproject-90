@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface ProductOptionsProps {
   sizes?: string[];
@@ -24,61 +23,51 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
     <>
       {/* Size Selection */}
       {sizes && sizes.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-white">Taille</Label>
-          <RadioGroup 
-            value={selectedSize}
-            onValueChange={setSelectedSize}
-            className="flex flex-wrap gap-2"
-          >
+        <div className="space-y-3">
+          <Label className="text-white text-lg">Taille</Label>
+          <div className="flex flex-wrap gap-2">
             {sizes.map((size) => (
-              <div key={size} className="flex items-center space-x-2">
-                <RadioGroupItem
-                  value={size}
-                  id={`size-${size}`}
-                  className="text-winshirt-purple"
-                />
-                <Label
-                  htmlFor={`size-${size}`}
-                  className="text-gray-200 cursor-pointer"
-                >
-                  {size}
-                </Label>
-              </div>
+              <button
+                key={size}
+                onClick={() => setSelectedSize(size)}
+                className={`
+                  px-4 py-2 rounded-full border transition-all
+                  ${selectedSize === size 
+                    ? 'bg-winshirt-purple text-white border-winshirt-purple' 
+                    : 'bg-transparent text-gray-300 border-gray-600 hover:border-winshirt-purple/50'}
+                `}
+              >
+                {size}
+              </button>
             ))}
-          </RadioGroup>
+          </div>
         </div>
       )}
       
       {/* Color Selection */}
       {colors && colors.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-white">Couleur</Label>
-          <RadioGroup 
-            value={selectedColor}
-            onValueChange={setSelectedColor}
-            className="flex flex-wrap gap-2"
-          >
+        <div className="space-y-3">
+          <Label className="text-white text-lg">Couleur</Label>
+          <div className="flex flex-wrap gap-3">
             {colors.map((color) => (
-              <div key={color} className="flex items-center space-x-2">
-                <RadioGroupItem
-                  value={color}
-                  id={`color-${color}`}
-                  className="text-winshirt-purple"
-                />
-                <Label
-                  htmlFor={`color-${color}`}
-                  className="flex items-center cursor-pointer"
-                >
-                  <span
-                    className="w-4 h-4 mr-2 rounded-full border border-gray-600"
-                    style={{ backgroundColor: color }}
-                  ></span>
-                  <span className="text-gray-200">{color}</span>
-                </Label>
-              </div>
+              <button
+                key={color}
+                onClick={() => setSelectedColor(color)}
+                className={`
+                  w-10 h-10 rounded-full transition-all flex items-center justify-center
+                  ${selectedColor === color 
+                    ? 'ring-2 ring-offset-2 ring-offset-winshirt-space ring-winshirt-purple scale-110' 
+                    : 'hover:scale-105'}
+                `}
+              >
+                <span
+                  className="w-full h-full rounded-full"
+                  style={{ backgroundColor: color }}
+                  title={color}
+                ></span>
+              </button>
             ))}
-          </RadioGroup>
+          </div>
         </div>
       )}
     </>

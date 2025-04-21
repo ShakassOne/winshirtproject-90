@@ -11,7 +11,8 @@ interface VisualSelectorProps {
   categoryId?: number | null;
   activePosition?: 'front' | 'back';
   hideUploader?: boolean;
-  gridCols?: 2 | 3 | 4; // New prop to control grid columns
+  gridCols?: 2 | 3 | 4;
+  autoShowVisuals?: boolean; // New prop to force showing visuals immediately
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({
@@ -20,7 +21,8 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   categoryId,
   activePosition = 'front',
   hideUploader = false,
-  gridCols = 3 // Default to 3 columns if not specified
+  gridCols = 3,
+  autoShowVisuals = false
 }) => {
   const { 
     getCategories, 
@@ -49,15 +51,15 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
         const categoryVisuals = getVisualsByCategory(categoryId);
         console.log(`Loaded visuals for category ${categoryId}: ${categoryVisuals.length} visuals`);
         setVisuals(categoryVisuals);
-      } else if (allVisuals.length > 0) {
-        // Fallback: afficher tous les visuels si aucune catégorie n'est spécifiée
-        console.log(`No category specified, showing all ${allVisuals.length} visuals`);
+      } else if (autoShowVisuals || allVisuals.length > 0) {
+        // Afficher tous les visuels si aucune catégorie n'est spécifiée ou si autoShowVisuals est true
+        console.log(`Showing all ${allVisuals.length} visuals`);
         setVisuals(allVisuals);
       }
     };
     
     loadVisuals();
-  }, [categoryId, getVisualsByCategory, getVisualById, selectedVisualId, allVisuals]);
+  }, [categoryId, getVisualsByCategory, getVisualById, selectedVisualId, allVisuals, autoShowVisuals]);
   
   const handleSelectVisual = (visual: Visual) => {
     console.log(`Selected visual for ${activePosition}: ${visual.id} - ${visual.name}`);
@@ -138,7 +140,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
                   className="w-full aspect-square object-contain bg-gray-800/50"
                 />
                 <div className="p-2 text-center">
-                  <p className="text-xs truncate">{visual.name}</p>
+                  <p className="text-sm truncate">{visual.name}</p>
                 </div>
               </div>
             ))
