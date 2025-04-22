@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -54,9 +55,30 @@
 
   body {
     @apply bg-background antialiased pt-24;
-    color: hsl(var(--foreground));
   }
 
+  /* Modes clair/sombre pour les textes */
+  .dark {
+    color-scheme: dark;
+  }
+  
+  .dark body {
+    color: white;
+  }
+  
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark p,
+  .dark .text-foreground {
+    color: white !important;
+  }
+  
+  /* Mode clair */
+  body:not(.dark) {
+    color: #131313;
+  }
+  
   body:not(.dark) h1,
   body:not(.dark) h2,
   body:not(.dark) h3,
@@ -65,17 +87,12 @@
     color: #131313 !important;
   }
 
-  body:not(.dark) .text-white,
-  body:not(.dark) .dark\:text-white {
-    color: #131313 !important;
-  }
-
   /* Garde les titres/prix colorés */
   .text-winshirt-purple,
   .text-winshirt-blue,
   .text-winshirt-blue-light,
   .text-winshirt-purple-light {
-    /* inchangé, permet de conserver le bleu/violet même si en clair */
+    /* inchangé, permet de conserver le bleu/violet même si en clair */
   }
 
   /* Background stars effect - enhanced to make it more visible */
@@ -154,7 +171,15 @@
 
 @layer components {
   .nav-link {
-    @apply text-white hover:text-winshirt-blue-light transition-colors text-lg relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-winshirt-blue-light after:transition-all after:duration-300 hover:after:w-full;
+    @apply hover:text-winshirt-blue-light transition-colors text-lg relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-winshirt-blue-light after:transition-all after:duration-300 hover:after:w-full;
+  }
+
+  .dark .nav-link {
+    @apply text-white;
+  }
+
+  body:not(.dark) .nav-link {
+    @apply text-foreground;
   }
 
   .nav-link.active {
@@ -264,6 +289,44 @@
     background: linear-gradient(90deg, #9b87f5, #61dafb);
     border-radius: 4px;
   }
+  
+  /* Style pour les pastilles de taille et couleur */
+  .size-circle {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .color-circle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .color-circle-inner {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+  }
+  
+  .size-circle.selected, 
+  .color-circle.selected {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px #9b87f5, 0 0 10px rgba(155, 135, 245, 0.5);
+  }
 
   /* Override z-index for toast */
   div[role="status"] {
@@ -305,4 +368,18 @@
 .sonner-toast-container {
   z-index: 9999 !important;
   position: fixed !important;
+}
+
+/* Slider fullscreen fixes */
+.fullscreen-slider {
+  height: 100vh !important;
+  min-height: 100vh !important;
+}
+
+.dark .text-white {
+  color: white !important;
+}
+
+body:not(.dark) .text-white {
+  color: #131313 !important;
 }

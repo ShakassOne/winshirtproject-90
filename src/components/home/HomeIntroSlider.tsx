@@ -56,7 +56,7 @@ const HomeIntroSlider: React.FC = () => {
   // Affichage pendant le chargement
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-winshirt-space">
+      <div className="min-h-screen flex items-center justify-center bg-winshirt-space fullscreen-slider">
         <div className="text-white">Chargement...</div>
       </div>
     );
@@ -65,7 +65,7 @@ const HomeIntroSlider: React.FC = () => {
   // Fallback si pas de configuration
   if (!config || config.slides.length === 0) {
     return (
-      <section className="min-h-screen flex flex-col items-center justify-center text-center px-4 bg-winshirt-space">
+      <section className="min-h-screen flex flex-col items-center justify-center text-center px-4 bg-winshirt-space fullscreen-slider">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Achetez des vêtements, <br />Gagnez des cadeaux incroyables
@@ -95,12 +95,12 @@ const HomeIntroSlider: React.FC = () => {
   const currentSlide = sortedSlides[currentSlideIndex];
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+    <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden fullscreen-slider">
       {/* Slides */}
       {sortedSlides.map((slide, index) => (
         <div
           key={slide.id}
-          className={`absolute inset-0 w-full h-screen flex items-center justify-center transition-opacity duration-1000 ${
+          className={`absolute inset-0 w-full h-full flex items-center justify-center transition-opacity duration-1000 ${
             index === currentSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
           }`}
           style={{

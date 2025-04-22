@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import LotteryCard from '../components/LotteryCard';
 import StarBackground from '../components/StarBackground';
@@ -72,12 +73,13 @@ const LotteriesPage: React.FC = () => {
   
   return (
     <>
-      {hasFeaturedLotteries && (
-        <FeaturedLotterySlider lotteries={lotteries} />
-      )}
+      <div className="mt-[-6rem]"> {/* Ajustement pour le slider en plein écran */}
+        {hasFeaturedLotteries && (
+          <FeaturedLotterySlider lotteries={lotteries} />
+        )}
+      </div>
       
       <StarBackground />
-      {/* section qui suit, si le slider est là : pt-0 sinon pt-32 */}
       <section className={`${hasFeaturedLotteries ? 'pt-0' : 'pt-32'} pb-24`}>
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">

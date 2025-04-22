@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LotteryCard from '../components/LotteryCard';
@@ -82,8 +83,10 @@ const HomePage: React.FC = () => {
       {/* Admin Navigation */}
       <AdminNavigation />
       
-      {/* Hero Section avec slider configurable */}
-      <HomeIntroSlider />
+      {/* Hero Section avec slider configurable en plein écran */}
+      <div className="mt-[-6rem]">
+        <HomeIntroSlider />
+      </div>
       
       {/* Featured Lottery Section */}
       <section className="py-20 relative overflow-hidden">
@@ -151,7 +154,7 @@ const HomePage: React.FC = () => {
               <div className="w-16 h-16 bg-winshirt-purple/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-2xl font-bold text-winshirt-purple-light">1</span>
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Achetez un produit</h3>
+              <h3 className="text-xl font-bold mb-4">Achetez un produit</h3>
               <p className="text-gray-400">
                 Parcourez notre collection de vêtements et trouvez celui qui vous plaît.
               </p>
@@ -161,7 +164,7 @@ const HomePage: React.FC = () => {
               <div className="w-16 h-16 bg-winshirt-blue/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-2xl font-bold text-winshirt-blue-light">2</span>
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Participez automatiquement</h3>
+              <h3 className="text-xl font-bold mb-4">Participez automatiquement</h3>
               <p className="text-gray-400">
                 Chaque achat vous inscrit automatiquement à la loterie liée au produit.
               </p>
@@ -171,7 +174,7 @@ const HomePage: React.FC = () => {
               <div className="w-16 h-16 bg-winshirt-purple/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-2xl font-bold text-winshirt-purple-light">3</span>
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Gagnez des prix incroyables</h3>
+              <h3 className="text-xl font-bold mb-4">Gagnez des prix incroyables</h3>
               <p className="text-gray-400">
                 Une fois le seuil de participants atteint, un gagnant est tiré au sort.
               </p>
@@ -188,10 +191,10 @@ const HomePage: React.FC = () => {
         </div>
       </section>
       
-      {/* Stats Section - NOUVELLE SECTION */}
+      {/* Stats Section */}
       <StatsSection />
       
-      {/* Winners Carousel - NOUVELLE SECTION */}
+      {/* Winners Carousel */}
       <section className="py-20 relative bg-winshirt-space/20">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue text-center">

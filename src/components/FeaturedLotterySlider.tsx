@@ -105,7 +105,7 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
   };
 
   return (
-    <div className="relative w-full h-screen bg-gradient-to-b from-winshirt-space to-winshirt-space-dark overflow-hidden">
+    <div className="relative w-full h-screen bg-gradient-to-b from-winshirt-space to-winshirt-space-dark overflow-hidden fullscreen-slider">
       {/* Background image with overlay */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-winshirt-space/40 to-winshirt-space z-10"></div>
@@ -120,7 +120,7 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
       {/* Content */}
       <div className="relative z-20 container mx-auto h-full flex flex-col justify-center px-4">
         <div className="max-w-4xl animate-fade-in">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white">
             {currentLottery.title}
           </h1>
           
