@@ -96,6 +96,13 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     setSelectedVisual(customVisual);
     onSelectVisual(customVisual);
   };
+  
+  // This is the function that was missing - needed to handle visual removal from the uploader
+  const handleVisualRemove = () => {
+    setUploadedVisual(null);
+    setSelectedVisual(null);
+    onSelectVisual(null);
+  };
 
   // Configure grid columns classes based on gridCols prop
   const gridColumnsClass = 
