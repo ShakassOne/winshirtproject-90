@@ -323,7 +323,7 @@
   
   .size-circle.selected, 
   .color-circle.selected {
-    transform: scale(1.1);\
+    transform: scale(1.1);
     box-shadow: 0 0 0 2px #9b87f5, 0 0 10px rgba(155, 135, 245, 0.5);
   }
 
