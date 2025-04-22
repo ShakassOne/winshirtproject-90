@@ -24,17 +24,17 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
     <>
       {/* Size Selection */}
       {sizes && sizes.length > 0 && (
-        <div className="space-y-3">
-          <Label className="text-white text-xl">Taille</Label>
-          <div className="flex flex-wrap gap-3">
+        <div className="space-y-2">
+          <Label className="text-lg">Taille</Label>
+          <div className="flex flex-wrap gap-2">
             {sizes.map((size) => (
               <button
                 key={size}
                 onClick={() => setSelectedSize(size)}
                 className={`
-                  w-12 h-12 rounded-full flex items-center justify-center transition-all
+                  w-10 h-10 rounded-full flex items-center justify-center transition-all text-sm
                   ${selectedSize === size 
-                    ? 'bg-winshirt-purple text-white ring-2 ring-offset-2 ring-offset-winshirt-space ring-winshirt-purple' 
+                    ? 'bg-winshirt-purple text-white ring-2 ring-offset-1 ring-offset-winshirt-space ring-winshirt-purple' 
                     : 'bg-transparent text-gray-300 border border-gray-600 hover:border-winshirt-purple/50 hover:bg-winshirt-purple/20'}
                 `}
               >
@@ -47,18 +47,18 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
       
       {/* Color Selection */}
       {colors && colors.length > 0 && (
-        <div className="space-y-3">
-          <Label className="text-white text-xl">Couleur</Label>
-          <div className="flex flex-wrap gap-4">
+        <div className="space-y-2">
+          <Label className="text-lg">Couleur</Label>
+          <div className="flex flex-wrap gap-3">
             {colors.map((color) => (
               <button
                 key={color}
                 onClick={() => setSelectedColor(color)}
                 className={`
-                  w-12 h-12 rounded-full transition-all flex items-center justify-center
+                  w-10 h-10 rounded-full transition-all flex items-center justify-center
                   ${selectedColor === color 
-                    ? 'ring-2 ring-offset-2 ring-offset-winshirt-space ring-winshirt-purple transform scale-110' 
-                    : 'hover:scale-110 border-2 border-transparent'}
+                    ? 'ring-2 ring-offset-1 ring-offset-winshirt-space ring-winshirt-purple transform scale-110' 
+                    : 'hover:scale-105 border-2 border-transparent'}
                 `}
                 title={color}
               >
@@ -68,7 +68,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
                 >
                   {selectedColor === color && (
                     <Check 
-                      className={`w-5 h-5 ${getContrastColor(color) === 'white' ? 'text-white' : 'text-black'}`} 
+                      className={`w-4 h-4 ${getContrastColor(color) === 'white' ? 'text-white' : 'text-black'}`} 
                     />
                   )}
                 </span>

@@ -63,6 +63,18 @@
     font-size: 1.2rem; /* Base font size increase */
   }
 
+  /* Light theme */
+  .light {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+  }
+  
+  /* Dark theme */
+  .dark {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+  }
+
   /* Background stars effect - enhanced to make it more visible */
   .stars-container {
     position: fixed !important;
@@ -131,10 +143,10 @@
     to { transform: rotate(0deg); }
   }
 
-  h1 { @apply text-5xl md:text-6xl font-bold; }
-  h2 { @apply text-4xl md:text-5xl font-semibold; }
-  h3 { @apply text-3xl md:text-4xl font-semibold; }
-  p { @apply text-xl md:text-2xl; }
+  h1 { @apply text-4xl md:text-5xl font-bold; }
+  h2 { @apply text-3xl md:text-4xl font-semibold; }
+  h3 { @apply text-2xl md:text-3xl font-semibold; }
+  p { @apply text-base md:text-lg; }
 }
 
 @layer components {

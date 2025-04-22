@@ -12,7 +12,7 @@ interface VisualSelectorProps {
   activePosition?: 'front' | 'back';
   hideUploader?: boolean;
   gridCols?: 2 | 3 | 4;
-  autoShowVisuals?: boolean; // New prop to force showing visuals immediately
+  autoShowVisuals?: boolean;
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({
@@ -22,7 +22,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   activePosition = 'front',
   hideUploader = false,
   gridCols = 3,
-  autoShowVisuals = true // Default to true to show visuals immediately
+  autoShowVisuals = true
 }) => {
   const { 
     getCategories, 
@@ -55,7 +55,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
       }
     }
     
-    // Load visuals based on category or all visuals
+    // Always show visuals even if no category is selected
     if (categoryId) {
       const categoryVisuals = getVisualsByCategory(categoryId);
       console.log(`Loaded visuals for category ${categoryId}: ${categoryVisuals.length} visuals`);
