@@ -38,8 +38,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
         
         <div className="p-4 flex-grow flex flex-col">
-          <h3 className="text-lg font-semibold text-white mb-1">{product.name}</h3>
-          <p className="text-sm text-gray-400 line-clamp-2 mb-3 flex-grow">
+          <h3 className="text-lg font-semibold text-foreground dark:text-white mb-1">{product.name}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-3 flex-grow">
             {product.description}
           </p>
           <div className="flex justify-between items-center mt-auto">
@@ -47,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               {product.price.toFixed(2)} €
             </span>
             {product.productType && (
-              <span className="text-xs text-gray-400 bg-winshirt-space-light px-2 py-1 rounded">
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                 {product.productType}
               </span>
             )}
