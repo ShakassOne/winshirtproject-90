@@ -57,22 +57,51 @@
     @apply bg-background antialiased pt-24;
   }
 
-  /* Modes clair/sombre pour les textes */
-  .dark {
-    color-scheme: dark;
-  }
-  
-  .dark body {
-    color: white;
-  }
-  
-  .dark h1,
-  .dark h2,
-  .dark h3,
-  .dark p,
-  .dark .text-theme-content {
-    color: white !important;
-  }
+  /* Modification des règles pour le mode sombre */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  color: white !important; /* Force la couleur du texte en blanc */
+}
+
+/* Modification pour s'assurer que TOUS les textes sont en blanc en mode sombre */
+.dark *:not(.text-winshirt-purple, .text-winshirt-blue, .text-winshirt-blue-light, .text-winshirt-purple-light) {
+  color: white !important;
+}
+
+/* Exceptions spécifiques pour les éléments qui doivent rester colorés */
+.dark .text-winshirt-purple,
+.dark .text-winshirt-blue,
+.dark .text-winshirt-blue-light,
+.dark .text-winshirt-purple-light {
+  /* Conserver leurs couleurs spécifiques */
+}
+
+/* Ajouter des sélecteurs plus spécifiques pour les éléments problématiques */
+.dark input,
+.dark select,
+.dark textarea,
+.dark .dropdown-item,
+.dark .modal-content,
+.dark label {
+  color: white !important;
+}
+
+/* Pour les éléments qui doivent avoir un fond sombre mais du texte blanc */
+.dark .bg-white,
+.dark .bg-card {
+  background-color: hsl(var(--card)) !important;
+  color: white !important;
+}
+
+/* Pour cibler des composants spécifiques qui peuvent être problématiques */
+.dark [role="combobox"],
+.dark [role="listbox"],
+.dark [role="option"] {
+  color: white !important;
+}
   
   /* Mode clair */
   body:not(.dark) {
