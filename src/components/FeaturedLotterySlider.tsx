@@ -120,7 +120,7 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
       {/* Content */}
       <div className="relative z-20 container mx-auto h-full flex flex-col justify-center px-4">
         <div className="max-w-4xl animate-fade-in">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 white-text">
             {currentLottery.title}
           </h1>
           
@@ -129,7 +129,7 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
           </p>
           
           <div className="flex items-center gap-6 mb-8">
-            <div className="bg-winshirt-purple/20 border border-winshirt-purple/40 rounded-lg px-6 py-3 text-white">
+            <div className="bg-winshirt-purple/20 border border-winshirt-purple/40 rounded-lg px-6 py-3 white-text">
               <span className="text-xl font-semibold">{currentLottery.value.toFixed(2)} €</span>
             </div>
             
@@ -148,19 +148,19 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
               </div>
               <div className="flex gap-4">
                 <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
-                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.days)}</div>
+                  <div className="text-3xl font-bold white-text">{formatNumber(countdown.days)}</div>
                   <div className="text-xs text-winshirt-purple-light">JOURS</div>
                 </div>
                 <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
-                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.hours)}</div>
+                  <div className="text-3xl font-bold white-text">{formatNumber(countdown.hours)}</div>
                   <div className="text-xs text-winshirt-purple-light">HEURES</div>
                 </div>
                 <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
-                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.minutes)}</div>
+                  <div className="text-3xl font-bold white-text">{formatNumber(countdown.minutes)}</div>
                   <div className="text-xs text-winshirt-purple-light">MINUTES</div>
                 </div>
                 <div className="bg-winshirt-space-light/70 backdrop-blur-sm rounded-lg px-4 py-3 text-center min-w-[80px]">
-                  <div className="text-3xl font-bold text-white">{formatNumber(countdown.seconds)}</div>
+                  <div className="text-3xl font-bold white-text">{formatNumber(countdown.seconds)}</div>
                   <div className="text-xs text-winshirt-purple-light">SECONDES</div>
                 </div>
               </div>
@@ -185,7 +185,7 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
           </div>
           
           <Button 
-            className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-full text-lg px-8 py-6 mt-4"
+            className="bg-winshirt-purple hover:bg-winshirt-purple-dark white-text rounded-full text-lg px-8 py-6 mt-4"
             onClick={() => handleOpenLottery(currentLottery.id)}
           >
             Participer <ArrowRight className="ml-2" />

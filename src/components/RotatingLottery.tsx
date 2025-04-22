@@ -71,12 +71,12 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
                       alt={lottery.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-4 right-4 bg-winshirt-blue-dark/80 text-white px-4 py-1.5 rounded-full text-base font-medium z-20">
+                    <div className="absolute top-4 right-4 bg-winshirt-blue-dark/80 white-text px-4 py-1.5 rounded-full text-base font-medium z-20">
                       {lottery.value.toFixed(2)} €
                     </div>
                     
                     {/* Lottery details overlay */}
-                    <div className="absolute bottom-0 left-0 w-full p-5 text-white z-20">
+                    <div className="absolute bottom-0 left-0 w-full p-5 white-text z-20">
                       <h3 className="text-xl font-semibold">{lottery.title}</h3>
                       <p className="text-base text-gray-200 mt-2 line-clamp-2">{lottery.description}</p>
                       
@@ -137,7 +137,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
               }}
               className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all text-lg ${
                 activeIndex === index 
-                ? 'border-winshirt-purple bg-winshirt-purple/20 text-white' 
+                ? 'border-winshirt-purple bg-winshirt-purple/20 white-text' 
                 : 'border-gray-400/50 text-gray-400'
               }`}
               aria-label={`Aller à la diapositive ${index + 1}`}

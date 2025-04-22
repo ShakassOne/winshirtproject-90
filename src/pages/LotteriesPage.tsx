@@ -65,7 +65,7 @@ const LotteriesPage: React.FC = () => {
       <>
         <StarBackground />
         <div className="pt-32 pb-24 flex justify-center items-center">
-          <div className="text-white text-xl">Chargement des loteries...</div>
+          <div className="white-text text-xl">Chargement des loteries...</div>
         </div>
       </>
     );
@@ -93,28 +93,28 @@ const LotteriesPage: React.FC = () => {
           <div className="flex flex-wrap justify-center gap-2 mb-10">
             <Button
               variant={activeFilter === 'all' ? 'default' : 'outline'}
-              className={activeFilter === 'all' ? 'bg-winshirt-blue hover:bg-winshirt-blue-dark' : 'border-winshirt-blue-light/30 text-white'}
+              className={activeFilter === 'all' ? 'bg-winshirt-blue hover:bg-winshirt-blue-dark' : 'border-winshirt-blue-light/30 white-text'}
               onClick={() => setActiveFilter('all')}
             >
               Toutes
             </Button>
             <Button
               variant={activeFilter === 'active' ? 'default' : 'outline'}
-              className={activeFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'border-green-600/30 text-white'}
+              className={activeFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'border-green-600/30 white-text'}
               onClick={() => setActiveFilter('active')}
             >
               Actives
             </Button>
             <Button
               variant={activeFilter === 'completed' ? 'default' : 'outline'}
-              className={activeFilter === 'completed' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-600/30 text-white'}
+              className={activeFilter === 'completed' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-600/30 white-text'}
               onClick={() => setActiveFilter('completed')}
             >
               Terminées
             </Button>
             <Button
               variant={activeFilter === 'relaunched' ? 'default' : 'outline'}
-              className={activeFilter === 'relaunched' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-600/30 text-white'}
+              className={activeFilter === 'relaunched' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-600/30 white-text'}
               onClick={() => setActiveFilter('relaunched')}
             >
               Relancées

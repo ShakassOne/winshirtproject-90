@@ -57,7 +57,7 @@ const HomeIntroSlider: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-winshirt-space fullscreen-slider">
-        <div className="text-white">Chargement...</div>
+        <div className="white-text">Chargement...</div>
       </div>
     );
   }
@@ -133,7 +133,7 @@ const HomeIntroSlider: React.FC = () => {
         <>
           <Button
             onClick={goToPrevSlide}
-            className="absolute left-5 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full h-12 w-12 text-white"
+            className="absolute left-5 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full h-12 w-12 white-text"
             size="icon"
             variant="outline"
           >
@@ -141,7 +141,7 @@ const HomeIntroSlider: React.FC = () => {
           </Button>
           <Button
             onClick={goToNextSlide}
-            className="absolute right-5 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full h-12 w-12 text-white"
+            className="absolute right-5 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full h-12 w-12 white-text"
             size="icon"
             variant="outline"
           >
@@ -169,7 +169,7 @@ const HomeIntroSlider: React.FC = () => {
       {/* Scroll down arrow */}
       <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-20">
         <svg 
-          className="animate-bounce w-6 h-6 text-white" 
+          className="animate-bounce w-6 h-6 white-text" 
           fill="none" 
           strokeLinecap="round" 
           strokeLinejoin="round" 
