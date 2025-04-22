@@ -53,7 +53,29 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased pt-24;
+    @apply bg-background antialiased pt-24;
+    color: hsl(var(--foreground));
+  }
+
+  body:not(.dark) h1,
+  body:not(.dark) h2,
+  body:not(.dark) h3,
+  body:not(.dark) p,
+  body:not(.dark) .text-foreground {
+    color: #131313 !important;
+  }
+
+  body:not(.dark) .text-white,
+  body:not(.dark) .dark\:text-white {
+    color: #131313 !important;
+  }
+
+  /* Garde les titres/prix colorés */
+  .text-winshirt-purple,
+  .text-winshirt-blue,
+  .text-winshirt-blue-light,
+  .text-winshirt-purple-light {
+    /* inchangé, permet de conserver le bleu/violet même si en clair */
   }
 
   /* Background stars effect - enhanced to make it more visible */

@@ -72,14 +72,13 @@ const LotteriesPage: React.FC = () => {
   
   return (
     <>
-      {/* Show featured lottery slider if there are any featured lotteries */}
       {hasFeaturedLotteries && (
         <FeaturedLotterySlider lotteries={lotteries} />
       )}
       
       <StarBackground />
-      
-      <section className={`${hasFeaturedLotteries ? 'pt-16' : 'pt-32'} pb-24`}>
+      {/* section qui suit, si le slider est là : pt-0 sinon pt-32 */}
+      <section className={`${hasFeaturedLotteries ? 'pt-0' : 'pt-32'} pb-24`}>
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Nos Loteries
@@ -148,5 +147,4 @@ const LotteriesPage: React.FC = () => {
     </>
   );
 };
-
 export default LotteriesPage;
