@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -69,7 +70,7 @@
   .dark h2,
   .dark h3,
   .dark p,
-  .dark .text-foreground {
+  .dark .text-theme-content {
     color: white !important;
   }
   
@@ -82,7 +83,7 @@
   body:not(.dark) h2,
   body:not(.dark) h3,
   body:not(.dark) p,
-  body:not(.dark) .text-foreground {
+  body:not(.dark) .text-theme-content {
     color: #131313 !important;
   }
 
@@ -178,7 +179,7 @@
   }
 
   body:not(.dark) .nav-link {
-    @apply text-foreground;
+    color: hsl(var(--foreground));
   }
 
   .nav-link.active {
@@ -330,6 +331,11 @@
   /* Override z-index for toast */
   div[role="status"] {
     z-index: 9999 !important;
+  }
+
+  /* Text theme utility class */
+  .text-theme-content {
+    color: hsl(var(--foreground));
   }
 }
 
