@@ -416,5 +416,5 @@
 }
 
 body:not(.dark) .white-text {
-  color: #131313 !important;
+  color: #131313 ;
 }
