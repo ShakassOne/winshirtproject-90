@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
@@ -20,7 +21,7 @@ const Navbar: React.FC = () => {
             WinShirt
           </Link>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-6">
             <Link to="/shop" className="text-white hover:text-winshirt-purple">
               Shop
             </Link>
