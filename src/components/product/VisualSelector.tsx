@@ -11,8 +11,7 @@ interface VisualSelectorProps {
   categoryId?: number | null;
   activePosition?: 'front' | 'back';
   hideUploader?: boolean;
-  gridCols?: 2 | 3 | 4;
-  autoShowVisuals?: boolean;
+  gridCols?: 2 | 3 | 4; // New prop to control grid columns
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({
@@ -21,8 +20,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   categoryId,
   activePosition = 'front',
   hideUploader = false,
-  gridCols = 3,
-  autoShowVisuals = true
+  gridCols = 3 // Default to 3 columns if not specified
 }) => {
   const { 
     getCategories, 
@@ -35,41 +33,35 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   const [uploadedVisual, setUploadedVisual] = useState<{ file: File; previewUrl: string } | null>(null);
   const [selectedVisual, setSelectedVisual] = useState<Visual | null>(null);
   
-  // Initialize visuals immediately on component mount
+  // Initialize visuals when categoryId changes
   useEffect(() => {
-    loadVisuals();
-  }, []);
-  
-  // Update visuals when categoryId changes
-  useEffect(() => {
-    loadVisuals();
-  }, [categoryId, allVisuals]);
-  
-  // Load visuals based on category or show all if no category
-  const loadVisuals = () => {
-    // If we have a selected visual, find it
-    if (selectedVisualId !== null) {
-      const visual = getVisualById(selectedVisualId);
-      if (visual) {
-        setSelectedVisual(visual);
+    const loadVisuals = async () => {
+      // Si nous avons un visuel sélectionné, trouvons-le
+      if (selectedVisualId !== null) {
+        const visual = getVisualById(selectedVisualId);
+        if (visual) {
+          setSelectedVisual(visual);
+        }
       }
-    }
+      
+      // Si une catégorie est spécifiée, charger les visuels correspondants
+      if (categoryId) {
+        const categoryVisuals = getVisualsByCategory(categoryId);
+        console.log(`Loaded visuals for category ${categoryId}: ${categoryVisuals.length} visuals`);
+        setVisuals(categoryVisuals);
+      } else if (allVisuals.length > 0) {
+        // Fallback: afficher tous les visuels si aucune catégorie n'est spécifiée
+        console.log(`No category specified, showing all ${allVisuals.length} visuals`);
+        setVisuals(allVisuals);
+      }
+    };
     
-    // Always show visuals even if no category is selected
-    if (categoryId) {
-      const categoryVisuals = getVisualsByCategory(categoryId);
-      console.log(`Loaded visuals for category ${categoryId}: ${categoryVisuals.length} visuals`);
-      setVisuals(categoryVisuals);
-    } else {
-      // Show all visuals if no category is specified
-      console.log(`Showing all ${allVisuals.length} visuals`);
-      setVisuals(allVisuals);
-    }
-  };
+    loadVisuals();
+  }, [categoryId, getVisualsByCategory, getVisualById, selectedVisualId, allVisuals]);
   
   const handleSelectVisual = (visual: Visual) => {
     console.log(`Selected visual for ${activePosition}: ${visual.id} - ${visual.name}`);
-    // Reset uploaded visual if a predefined visual is selected
+    // Réinitialiser le visuel uploadé si un visuel prédéfini est sélectionné
     setUploadedVisual(null);
     setSelectedVisual(visual);
     onSelectVisual(visual);
@@ -82,13 +74,13 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   };
 
   const handleVisualUpload = (file: File, previewUrl: string) => {
-    // Create a custom visual based on the uploaded file
+    // Créer un visuel personnalisé basé sur le fichier uploadé
     const customVisual: Visual = {
-      id: -Date.now(), // Negative ID to distinguish custom visuals
+      id: -Date.now(), // ID négatif pour distinguer les visuels personnalisés
       name: file.name,
       description: 'Visuel personnalisé',
       image: previewUrl,
-      categoryId: -1, // Special category for uploads
+      categoryId: -1, // Catégorie spéciale pour les uploads
       categoryName: 'Uploads personnalisés'
     };
     
@@ -96,8 +88,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     setSelectedVisual(customVisual);
     onSelectVisual(customVisual);
   };
-  
-  // This is the function that was missing - needed to handle visual removal from the uploader
+
   const handleVisualRemove = () => {
     setUploadedVisual(null);
     setSelectedVisual(null);
@@ -147,7 +138,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
                   className="w-full aspect-square object-contain bg-gray-800/50"
                 />
                 <div className="p-2 text-center">
-                  <p className="text-sm truncate">{visual.name}</p>
+                  <p className="text-xs truncate">{visual.name}</p>
                 </div>
               </div>
             ))

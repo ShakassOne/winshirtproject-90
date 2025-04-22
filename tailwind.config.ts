@@ -70,20 +70,6 @@ export default {
 						light: '#2A2F3C',
 					},
 				},
-				// Light theme colors
-				light: {
-					DEFAULT: '#f5f7fa',
-					foreground: '#1A1F2C',
-					card: '#ffffff',
-					muted: '#f0f2f5'
-				},
-				// Dark theme colors  
-				dark: {
-					DEFAULT: '#121722',
-					foreground: '#f5f7fa',
-					card: '#1A1F2C', 
-					muted: '#2A2F3C'
-				}
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -125,12 +111,7 @@ export default {
 				'stars-move': 'stars-move 100s linear infinite',
 			},
 			backgroundImage: {
-				// Light theme backgrounds
-				'light-solid': '#f5f7fa',
-				'light-gradient': 'linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%)',
-				// Dark theme backgrounds
 				'space-gradient': 'linear-gradient(to bottom, #1A1F2C, #2D0A45)',
-				'space-solid': '#121722',
 				'card-gradient': 'linear-gradient(to bottom right, rgba(155, 135, 245, 0.2), rgba(51, 195, 240, 0.2))',
 			},
 		}
