@@ -22,7 +22,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   activePosition = 'front',
   hideUploader = false,
   gridCols = 3,
-  autoShowVisuals = false
+  autoShowVisuals = true // Default to true to show visuals immediately
 }) => {
   const { 
     getCategories, 
@@ -35,35 +35,41 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   const [uploadedVisual, setUploadedVisual] = useState<{ file: File; previewUrl: string } | null>(null);
   const [selectedVisual, setSelectedVisual] = useState<Visual | null>(null);
   
-  // Initialize visuals when categoryId changes
+  // Initialize visuals immediately on component mount
   useEffect(() => {
-    const loadVisuals = async () => {
-      // Si nous avons un visuel sélectionné, trouvons-le
-      if (selectedVisualId !== null) {
-        const visual = getVisualById(selectedVisualId);
-        if (visual) {
-          setSelectedVisual(visual);
-        }
-      }
-      
-      // Si une catégorie est spécifiée, charger les visuels correspondants
-      if (categoryId) {
-        const categoryVisuals = getVisualsByCategory(categoryId);
-        console.log(`Loaded visuals for category ${categoryId}: ${categoryVisuals.length} visuals`);
-        setVisuals(categoryVisuals);
-      } else if (autoShowVisuals || allVisuals.length > 0) {
-        // Afficher tous les visuels si aucune catégorie n'est spécifiée ou si autoShowVisuals est true
-        console.log(`Showing all ${allVisuals.length} visuals`);
-        setVisuals(allVisuals);
-      }
-    };
-    
     loadVisuals();
-  }, [categoryId, getVisualsByCategory, getVisualById, selectedVisualId, allVisuals, autoShowVisuals]);
+  }, []);
+  
+  // Update visuals when categoryId changes
+  useEffect(() => {
+    loadVisuals();
+  }, [categoryId, allVisuals]);
+  
+  // Load visuals based on category or show all if no category
+  const loadVisuals = () => {
+    // If we have a selected visual, find it
+    if (selectedVisualId !== null) {
+      const visual = getVisualById(selectedVisualId);
+      if (visual) {
+        setSelectedVisual(visual);
+      }
+    }
+    
+    // Load visuals based on category or all visuals
+    if (categoryId) {
+      const categoryVisuals = getVisualsByCategory(categoryId);
+      console.log(`Loaded visuals for category ${categoryId}: ${categoryVisuals.length} visuals`);
+      setVisuals(categoryVisuals);
+    } else {
+      // Show all visuals if no category is specified
+      console.log(`Showing all ${allVisuals.length} visuals`);
+      setVisuals(allVisuals);
+    }
+  };
   
   const handleSelectVisual = (visual: Visual) => {
     console.log(`Selected visual for ${activePosition}: ${visual.id} - ${visual.name}`);
-    // Réinitialiser le visuel uploadé si un visuel prédéfini est sélectionné
+    // Reset uploaded visual if a predefined visual is selected
     setUploadedVisual(null);
     setSelectedVisual(visual);
     onSelectVisual(visual);
@@ -76,25 +82,19 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
   };
 
   const handleVisualUpload = (file: File, previewUrl: string) => {
-    // Créer un visuel personnalisé basé sur le fichier uploadé
+    // Create a custom visual based on the uploaded file
     const customVisual: Visual = {
-      id: -Date.now(), // ID négatif pour distinguer les visuels personnalisés
+      id: -Date.now(), // Negative ID to distinguish custom visuals
       name: file.name,
       description: 'Visuel personnalisé',
       image: previewUrl,
-      categoryId: -1, // Catégorie spéciale pour les uploads
+      categoryId: -1, // Special category for uploads
       categoryName: 'Uploads personnalisés'
     };
     
     setUploadedVisual({ file, previewUrl });
     setSelectedVisual(customVisual);
     onSelectVisual(customVisual);
-  };
-
-  const handleVisualRemove = () => {
-    setUploadedVisual(null);
-    setSelectedVisual(null);
-    onSelectVisual(null);
   };
 
   // Configure grid columns classes based on gridCols prop

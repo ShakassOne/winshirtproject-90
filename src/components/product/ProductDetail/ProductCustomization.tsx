@@ -53,7 +53,7 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
     setPosition(value as 'front' | 'back');
   };
 
-  // Sélectionner automatiquement la première catégorie au chargement
+  // Automatically select the first category on load
   useEffect(() => {
     if (visualCategories.length > 0 && !selectedCategoryId) {
       handleCategoryChange(visualCategories[0].id);
@@ -63,8 +63,8 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
   return (
     <Tabs defaultValue="customize" className="w-full">
       <TabsList className="w-full grid grid-cols-2 mb-4">
-        <TabsTrigger value="customize" className="text-xl">Personnaliser</TabsTrigger>
-        <TabsTrigger value="preview" className="text-xl">Aperçu</TabsTrigger>
+        <TabsTrigger value="customize" className="text-xl py-3">Personnaliser</TabsTrigger>
+        <TabsTrigger value="preview" className="text-xl py-3">Aperçu</TabsTrigger>
       </TabsList>
       
       <TabsContent value="preview" className="mt-0">
@@ -101,8 +101,8 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
           className="w-full"
         >
           <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="front" className="text-xl">Recto</TabsTrigger>
-            <TabsTrigger value="back" className="text-xl">Verso</TabsTrigger>
+            <TabsTrigger value="front" className="text-xl py-2">Recto</TabsTrigger>
+            <TabsTrigger value="back" className="text-xl py-2">Verso</TabsTrigger>
           </TabsList>
         </Tabs>
         

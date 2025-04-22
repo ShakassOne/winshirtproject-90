@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Palette } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Dialog,
@@ -9,9 +9,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface ThemeToggleProps {
   className?: string;
@@ -153,7 +152,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
         onClick={() => setIsOpen(true)}
         className="fixed top-4 right-16 z-50 rounded-full bg-winshirt-space/80 backdrop-blur-sm border border-winshirt-purple/30"
       >
-        <Palette className="h-6 w-6 text-winshirt-purple-light" />
+        <Sun className="h-6 w-6 text-winshirt-purple-light" />
       </Button>
       
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -180,14 +179,14 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div 
-                  className="bg-light-solid h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
+                  className="bg-white h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
                   onClick={() => updateBackgroundType('light', 'solid')}
                   style={{ borderColor: backgroundType.light === 'solid' ? '#7E69AB' : 'transparent' }}
                 >
                   <span className="text-black font-medium">Couleur unie</span>
                 </div>
                 <div 
-                  className="bg-light-gradient h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
+                  className="bg-gradient-to-br from-gray-100 to-gray-200 h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
                   onClick={() => updateBackgroundType('light', 'gradient')}
                   style={{ borderColor: backgroundType.light === 'gradient' ? '#7E69AB' : 'transparent' }}
                 >
@@ -213,14 +212,14 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div 
-                  className="bg-space-solid h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
+                  className="bg-black h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
                   onClick={() => updateBackgroundType('dark', 'solid')}
                   style={{ borderColor: backgroundType.dark === 'solid' ? '#7E69AB' : 'transparent' }}
                 >
                   <span className="text-white font-medium">Couleur unie</span>
                 </div>
                 <div 
-                  className="bg-space-gradient h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
+                  className="bg-gradient-to-br from-winshirt-space to-purple-900 h-24 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all"
                   onClick={() => updateBackgroundType('dark', 'gradient')}
                   style={{ borderColor: backgroundType.dark === 'gradient' ? '#7E69AB' : 'transparent' }}
                 >

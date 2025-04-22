@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockProducts, mockLotteries } from '@/data/mockData';
@@ -9,6 +8,7 @@ import { Visual, VisualCategory } from '@/types/visual';
 import StarBackground from '@/components/StarBackground';
 import { useVisualSelector } from '@/hooks/useVisualSelector';
 import { useVisuals } from '@/data/mockVisuals';
+import ThemeToggle from '@/components/ThemeToggle';
 
 // Import refactored components
 import ProductGallery from '@/components/product/ProductDetail/ProductGallery';
@@ -166,6 +166,7 @@ const ProductDetailPage: React.FC = () => {
     return (
       <div className="pt-32 pb-8 text-center">
         <h1 className="text-2xl text-white">Chargement du produit...</h1>
+        <ThemeToggle />
       </div>
     );
   }
@@ -175,6 +176,7 @@ const ProductDetailPage: React.FC = () => {
       <div className="pt-32 pb-8 text-center">
         <h1 className="text-2xl text-white">Produit non trouvé</h1>
         <AddToCartButton onClick={() => navigate('/products')} />
+        <ThemeToggle />
       </div>
     );
   }
@@ -260,6 +262,7 @@ const ProductDetailPage: React.FC = () => {
   return (
     <>
       <StarBackground />
+      <ThemeToggle />
       
       <section className="pt-32 pb-16">
         <div className="container mx-auto px-4 md:px-8">
