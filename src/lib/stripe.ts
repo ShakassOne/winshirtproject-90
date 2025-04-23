@@ -2,6 +2,7 @@ import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
 import { ExtendedLottery } from '@/types/lottery';
+import { supabase } from '@/integrations/supabase/client';
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51abcdefghijklmnopqrstuvwxyz'; // Remplacez par votre clé publique Stripe
 
@@ -120,16 +121,60 @@ const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number): Strip
 };
 
 // Fonction pour simuler un achat réussi
-const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
+const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<boolean> => {
   try {
+    // Récupérer l'utilisateur actuellement connecté
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // 1. Créer ou mettre à jour le compte client
+    if (user) {
+      const { error: clientError } = await supabase
+        .from('clients')
+        .upsert({
+          id: user.id,
+          name: user.user_metadata.full_name || user.email?.split('@')[0],
+          email: user.email,
+          created_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        });
+      
+      if (clientError) {
+        console.error('Erreur lors de la création du compte client:', clientError);
+        return false;
+      }
+    }
+    
+    // 2. Mettre à jour les loteries
+    const lotteryUpdates = items.flatMap(item => 
+      (item.selectedLotteries || []).map(lottery => ({
+        id: lottery.id,
+        currentParticipants: item.quantity
+      }))
+    );
+    
+    for (const update of lotteryUpdates) {
+      const { error } = await supabase
+        .from('lotteries')
+        .update({ 
+          current_participants: supabase.sql`current_participants + ${update.currentParticipants}`
+        })
+        .eq('id', update.id);
+      
+      if (error) {
+        console.error(`Erreur lors de la mise à jour de la loterie ${update.id}:`, error);
+        return false;
+      }
+    }
+    
     console.log("Simulant une commande réussie avec les articles:", items);
     
     // Récupérer l'utilisateur actuellement connecté
     const userString = localStorage.getItem('winshirt_user');
-    let user = null;
+    let userLocal = null;
     
     if (userString) {
-      user = JSON.parse(userString);
+      userLocal = JSON.parse(userString);
     }
     
     // 1. Récupérer les loteries et les produits
@@ -156,11 +201,11 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
             console.log(`Mise à jour de la loterie ID:${selectedLottery.id}, index:${lotteryIndex}, participants actuels:${lotteries[lotteryIndex].currentParticipants}`);
             
             // Créer un participant basé sur l'utilisateur connecté ou simuler un utilisateur anonyme
-            const participant = user 
+            const participant = userLocal 
               ? {
                   id: Date.now() + Math.floor(Math.random() * 1000),
-                  name: user.name,
-                  email: user.email,
+                  name: userLocal.name,
+                  email: userLocal.email,
                   avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
                 }
               : {
@@ -226,9 +271,9 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
     
     const newOrder = {
       id: Date.now(),
-      clientId: user?.id || null,
-      clientName: lastOrderDetails?.customerInfo?.fullName || user?.name || 'Client anonyme',
-      clientEmail: lastOrderDetails?.customerInfo?.email || user?.email || 'anonymous@example.com',
+      clientId: userLocal?.id || null,
+      clientName: lastOrderDetails?.customerInfo?.fullName || userLocal?.name || 'Client anonyme',
+      clientEmail: lastOrderDetails?.customerInfo?.email || userLocal?.email || 'anonymous@example.com',
       orderDate: new Date().toISOString(),
       status: 'processing',
       items: items.map(item => {
@@ -287,7 +332,7 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
     localStorage.setItem('orders', JSON.stringify(orders));
     
     // 5. Enregistrer les participations de l'utilisateur
-    if (user) {
+    if (userLocal) {
       const participationsString = localStorage.getItem('participations') || '[]';
       const participations = JSON.parse(participationsString);
       
@@ -297,7 +342,7 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
             for (let i = 0; i < item.quantity; i++) {
               participations.push({
                 id: Date.now() + Math.floor(Math.random() * 1000) + i,
-                userId: user.id,
+                userId: userLocal.id,
                 lotteryId: selectedLottery.id,
                 productId: item.id,
                 ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
