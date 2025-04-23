@@ -12,6 +12,23 @@ export interface OrderItem {
   size?: string;
   color?: string;
   lotteriesEntries?: number[];
+  visualDesign?: {
+    visualId: number;
+    visualName: string;
+    visualImage: string;
+    settings?: {
+      position?: {
+        x: number;
+        y: number;
+      };
+      size?: {
+        width: number;
+        height: number;
+      };
+      opacity?: number;
+    };
+    printAreaId?: number | null;
+  } | null;
 }
 
 export interface Order {
