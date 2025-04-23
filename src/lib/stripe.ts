@@ -156,12 +156,13 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     );
     
     for (const update of lotteryUpdates) {
-      const { error } = await supabase
-        .from('lotteries')
-        .update({ 
-          current_participants: supabase.rpc('increment', { row_id: update.id, num_increment: update.currentParticipants, field_name: 'current_participants' })
-        })
-        .eq('id', update.id);
+      // Corrected: Use the REST API to call a database function
+      const { error } = await supabase.rpc('increment', { 
+        row_id: update.id, 
+        num_increment: update.currentParticipants, 
+        field_name: 'current_participants',
+        table_name: 'lotteries'
+      });
       
       if (error) {
         console.error(`Erreur lors de la mise à jour de la loterie ${update.id}:`, error);
