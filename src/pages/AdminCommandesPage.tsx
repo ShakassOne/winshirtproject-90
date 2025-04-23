@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { Order, OrderStatus, DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
@@ -665,10 +664,6 @@ const AdminCommandesPage: React.FC = () => {
           {selectedOrder ? (
             <OrderDetails 
               order={selectedOrder} 
-              onBack={() => setSelectedOrder(null)} 
-              onStatusChange={updateOrderStatus}
-              onUpdateDelivery={updateDeliveryInfo}
-              onAddDeliveryHistoryEntry={addDeliveryHistoryEntry}
             />
           ) : (
             <div className="space-y-6">
@@ -855,14 +850,4 @@ const AdminCommandesPage: React.FC = () => {
           {invoiceOrder && (
             <InvoiceModal 
               order={invoiceOrder} 
-              isOpen={!!invoiceOrder} 
-              onClose={() => setInvoiceOrder(null)}
-            />
-          )}
-        </div>
-      </section>
-    </>
-  );
-};
-
-export default AdminCommandesPage;
+              isOpen={!!

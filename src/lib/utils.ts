@@ -23,6 +23,19 @@ export function formatDate(dateString: string): string {
 }
 
 /**
+ * Format a number into a currency string (EUR)
+ * @param amount - The amount to format
+ * @returns Formatted currency string
+ */
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2
+  }).format(amount);
+}
+
+/**
  * Determines if a color is light or dark
  * @param color - CSS color string (hex, rgb, etc.)
  * @returns boolean - true if the color is light, false if dark

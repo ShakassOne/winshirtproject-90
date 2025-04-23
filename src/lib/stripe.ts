@@ -1,3 +1,4 @@
+
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
@@ -128,15 +129,16 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     
     // 1. Créer ou mettre à jour le compte client
     if (user) {
+      // Pour la table clients dans Supabase, utiliser user_id comme colonne pour l'ID d'utilisateur
       const { error: clientError } = await supabase
         .from('clients')
         .upsert({
-          id: user.id,
+          user_id: user.id,
           name: user.user_metadata.full_name || user.email?.split('@')[0],
           email: user.email,
           created_at: new Date().toISOString()
         }, {
-          onConflict: 'id'
+          onConflict: 'user_id'
         });
       
       if (clientError) {
@@ -157,7 +159,7 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
       const { error } = await supabase
         .from('lotteries')
         .update({ 
-          current_participants: supabase.sql`current_participants + ${update.currentParticipants}`
+          current_participants: supabase.rpc('increment', { row_id: update.id, num_increment: update.currentParticipants, field_name: 'current_participants' })
         })
         .eq('id', update.id);
       
@@ -369,18 +371,3 @@ export const setupStripe = () => {
   // Cette fonction serait appelée au démarrage de l'application
   console.log('Stripe setup with key:', STRIPE_PUBLIC_KEY);
 };
-
-// Documentation pour la configuration Stripe:
-/*
-Pour configurer Stripe complètement, vous devrez:
-
-1. Créer un compte Stripe (https://dashboard.stripe.com/register)
-2. Obtenir vos clés API depuis le tableau de bord Stripe (https://dashboard.stripe.com/apikeys)
-3. Remplacer STRIPE_PUBLIC_KEY par votre clé publique
-4. Pour une implémentation complète en production:
-   - Créer une fonction backend (Supabase Edge Function) pour générer des sessions de paiement
-   - Utiliser Stripe.js et les Elements pour les formulaires de carte
-   - Configurer les webhooks pour recevoir les événements de paiement
-
-Documentation Stripe: https://stripe.com/docs
-*/

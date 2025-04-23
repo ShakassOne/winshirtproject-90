@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Order } from '@/types/order';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,10 @@ import Image from '@/components/ui/image';
 
 interface OrderDetailsProps {
   order: Order;
+  onBack?: () => void;
+  onStatusChange?: (orderId: number, newStatus: string) => void;
+  onUpdateDelivery?: (orderId: number, deliveryData: Partial<Order['delivery']>) => void;
+  onAddDeliveryHistoryEntry?: (orderId: number, entry: any) => void;
 }
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
@@ -109,12 +114,6 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
                   <Mail className="h-4 w-4 mr-2 text-gray-500" />
                   <span>{order.clientEmail}</span>
                 </div>
-                {order.clientPhone && (
-                  <div className="flex items-center">
-                    <Phone className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>{order.clientPhone}</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -227,7 +226,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
                   <div className="md:w-1/4">
                     <p className="font-medium mb-2">{item.productName}</p>
                     <div className="aspect-square w-full max-w-[150px] overflow-hidden rounded-md">
-                      <img 
+                      <Image 
                         src={item.productImage} 
                         alt={item.productName} 
                         className="w-full h-full object-cover"
