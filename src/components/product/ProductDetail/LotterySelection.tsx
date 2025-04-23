@@ -18,13 +18,14 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   handleLotteryChange,
   activeLotteries = []
 }) => {
-  // Debug logs to identify issues
+  // Enhanced debug logs
   useEffect(() => {
-    console.log("Client LotterySelection - Available lotteries:", activeLotteries);
-    console.log("Client LotterySelection - Selected lotteries:", selectedLotteries);
-    console.log("Client LotterySelection - Number of tickets:", tickets);
+    console.log("LotterySelection - Component mounted");
+    console.log("Available lotteries:", activeLotteries);
+    console.log("Selected lotteries:", selectedLotteries);
+    console.log("Number of tickets:", tickets);
     
-    // Check localStorage for testing
+    // Check localStorage for comparison
     try {
       const localStorageLotteries = localStorage.getItem('lotteries');
       console.log("Local Storage Lotteries:", localStorageLotteries ? JSON.parse(localStorageLotteries) : null);
