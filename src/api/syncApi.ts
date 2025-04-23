@@ -1,17 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
-
-export type TableName = 
-  | 'lotteries' 
-  | 'lottery_participants' 
-  | 'lottery_winners' 
-  | 'products' 
-  | 'visuals' 
-  | 'orders' 
-  | 'order_items' 
-  | 'clients'
-  | 'site_settings';
+import { TableName } from '@/hooks/useSyncData';
 
 // Convertir les clés camelCase en snake_case
 export const camelToSnake = (obj: any): any => {

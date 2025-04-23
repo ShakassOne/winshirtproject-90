@@ -1,9 +1,10 @@
-
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
 import { ExtendedLottery } from '@/types/lottery';
 import { supabase } from '@/integrations/supabase/client';
+import { TableName } from '@/hooks/useSyncData';
+import { Json } from '@/integrations/supabase/types';
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51abcdefghijklmnopqrstuvwxyz'; // Remplacez par votre clé publique Stripe
 
@@ -325,7 +326,7 @@ export const setupStripe = () => {
 export const clearAllData = async (): Promise<boolean> => {
   try {
     // Liste des tables à vider dans l'ordre pour éviter les problèmes de clés étrangères
-    const tables = [
+    const tables: TableName[] = [
       'order_items',
       'orders',
       'lottery_winners',
@@ -338,8 +339,9 @@ export const clearAllData = async (): Promise<boolean> => {
     ];
     
     for (const table of tables) {
+      // Using type assertion to fix the TypeScript error
       const { error } = await supabase
-        .from(table)
+        .from(table as any)
         .delete()
         .gt('id', 0);  // Utiliser gt au lieu de neq pour éviter les erreurs
       

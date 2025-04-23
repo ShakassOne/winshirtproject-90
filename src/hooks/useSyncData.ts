@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
@@ -11,7 +10,8 @@ export type TableName =
   | 'visuals'
   | 'orders'
   | 'order_items'
-  | 'clients';
+  | 'clients'
+  | 'site_settings';
 
 export const useSyncData = () => {
   const [syncStatus, setSyncStatus] = useState<Record<TableName, 'idle' | 'loading' | 'success' | 'error'>>({
