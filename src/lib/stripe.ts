@@ -1,3 +1,4 @@
+
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
@@ -156,12 +157,12 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     
     for (const update of lotteryUpdates) {
       try {
-        // Appel direct de la fonction d'incrémentation via RPC
-        const { data, error } = await supabase.rpc('increment', { 
-          row_id: update.id, 
-          num_increment: update.currentParticipants, 
-          field_name: 'current_participants',
-          table_name: 'lotteries'
+        // Créer la requête SQL qui va appeler la fonction increment
+        const incrementQuery = `SELECT increment(${update.id}, ${update.currentParticipants}, 'current_participants', 'lotteries')`;
+        
+        // Appel de la fonction exec_sql RPC avec notre requête SQL
+        const { data, error } = await supabase.rpc('exec_sql', { 
+          sql_query: incrementQuery 
         });
         
         if (error) {
