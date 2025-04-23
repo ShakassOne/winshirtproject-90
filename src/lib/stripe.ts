@@ -1,4 +1,3 @@
-
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
@@ -334,13 +333,13 @@ export const clearAllData = async (): Promise<boolean> => {
       'products',
       'visuals',
       'clients'
-    ];
+    ] as const;
     
     for (const table of tables) {
       const { error } = await supabase
         .from(table)
         .delete()
-        .neq('id', 0); // Supprime toutes les lignes
+        .neq('id', 0);
       
       if (error) {
         console.error(`Erreur lors de la suppression des données de ${table}:`, error);

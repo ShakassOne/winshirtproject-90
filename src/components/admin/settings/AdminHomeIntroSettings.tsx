@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Home, Edit, Save } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from '@/lib/toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 
 const AdminHomeIntroSettings = () => {
   const [title, setTitle] = useState('Changer le monde avec des vêtements');
@@ -16,34 +14,17 @@ const AdminHomeIntroSettings = () => {
     'Participez à nos loteries pour gagner des vêtements uniques tout en soutenant des initiatives qui font la différence. Chaque ticket acheté est une chance de gagner et un geste pour la planète.'
   );
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const { saveHomeIntroSettings, isSaving } = useSiteSettings();
 
   const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      
-      // Dans un environnement réel, vous sauvegarderiez dans Supabase
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert({
-          key: 'home_intro',
-          value: { title, subtitle, description },
-          created_at: new Date().toISOString(),
-        }, { 
-          onConflict: 'key' 
-        });
+    const success = await saveHomeIntroSettings({
+      title,
+      subtitle,
+      description
+    });
 
-      if (error) {
-        throw error;
-      }
-
-      toast.success('Paramètres de page d\'accueil sauvegardés');
+    if (success) {
       setIsEditing(false);
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      toast.error('Erreur lors de la sauvegarde des paramètres');
-    } finally {
-      setIsSaving(false);
     }
   };
 
