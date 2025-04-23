@@ -1,4 +1,3 @@
-
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
@@ -22,6 +21,7 @@ interface CheckoutItem {
   lotteryName?: string;
   size?: string;
   color?: string;
+  image?: string; // Add missing image property here
   selectedLotteries?: Array<{id: number, name: string}>;
   visualDesign?: {
     visualId: number;
