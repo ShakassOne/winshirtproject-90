@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { toast } from '@/lib/toast';
+import { Json } from '@/integrations/supabase/types';
 
 interface HomeIntroSettings {
   title: string;
@@ -18,7 +19,7 @@ export const useSiteSettings = () => {
       const { error } = await supabase
         .from('site_settings')
         .update({ 
-          value: settings,
+          value: settings as unknown as Json,
           updated_at: new Date().toISOString()
         })
         .eq('key', 'home_intro');
