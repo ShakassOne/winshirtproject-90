@@ -3,10 +3,11 @@ import React from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { HomeIcon, Settings, Database, Image, BellDot, RefreshCw } from 'lucide-react';
+import { HomeIcon, Settings, Database, Image, BellDot, RefreshCw, Shield } from 'lucide-react';
 import AdminHomeIntroSettings from '@/components/admin/settings/AdminHomeIntroSettings';
 import DatabaseControls from '@/components/admin/settings/DatabaseControls';
 import SyncSettingsManager from '@/components/admin/settings/SyncSettingsManager';
+import SecuritySettingsManager from '@/components/admin/settings/SecuritySettingsManager';
 
 const AdminSettingsPage: React.FC = () => {
   return (
@@ -22,6 +23,9 @@ const AdminSettingsPage: React.FC = () => {
             <TabsList className="mb-8">
               <TabsTrigger value="sync" className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4" /> Synchronisation
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" /> Sécurité
               </TabsTrigger>
               <TabsTrigger value="database" className="flex items-center gap-2">
                 <Database className="h-4 w-4" /> Base de données
@@ -42,6 +46,10 @@ const AdminSettingsPage: React.FC = () => {
             
             <TabsContent value="sync">
               <SyncSettingsManager />
+            </TabsContent>
+            
+            <TabsContent value="security">
+              <SecuritySettingsManager />
             </TabsContent>
             
             <TabsContent value="database">

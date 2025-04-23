@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
@@ -23,15 +24,21 @@ export const useSyncData = () => {
     orders: 'idle',
     order_items: 'idle',
     clients: 'idle',
-    site_settings: 'idle' // Added the missing table in the initial state
+    site_settings: 'idle'
   });
 
   const checkConnection = async (): Promise<boolean> => {
     try {
+      console.log("Vérification de la connexion Supabase...");
       const { data, error } = await supabase.from('pg_tables').select('*').limit(1);
-      return !error;
+      if (error) {
+        console.error("Erreur de connexion:", error);
+        return false;
+      }
+      console.log("Connexion Supabase établie:", data);
+      return true;
     } catch (error) {
-      console.error("Erreur lors de la vérification de connexion:", error);
+      console.error("Exception lors de la vérification de connexion:", error);
       return false;
     }
   };
@@ -40,7 +47,9 @@ export const useSyncData = () => {
     try {
       const storedData = localStorage.getItem(tableName);
       if (!storedData) return [];
-      return JSON.parse(storedData);
+      const parsedData = JSON.parse(storedData);
+      console.log(`Données locales pour ${tableName}:`, parsedData);
+      return parsedData;
     } catch (error) {
       console.error(`Erreur lors de la récupération des données locales pour ${tableName}:`, error);
       return [];
@@ -49,12 +58,17 @@ export const useSyncData = () => {
 
   const getSupabaseData = async (tableName: TableName): Promise<{data: any[] | null; count: number}> => {
     try {
+      console.log(`Récupération des données Supabase pour ${tableName}...`);
       const { data, error, count } = await supabase
         .from(tableName)
         .select('*', { count: 'exact' });
       
-      if (error) throw error;
+      if (error) {
+        console.error(`Erreur Supabase pour ${tableName}:`, error);
+        throw error;
+      }
       
+      console.log(`Données Supabase pour ${tableName}:`, data);
       return { data, count: count || 0 };
     } catch (error) {
       console.error(`Erreur lors de la récupération des données Supabase pour ${tableName}:`, error);
@@ -90,15 +104,27 @@ export const useSyncData = () => {
       const localData = getLocalData(tableName);
       
       if (!localData.length) {
+        console.log(`Pas de données locales à synchroniser pour ${tableName}`);
         toast.warning(`Pas de données locales à synchroniser pour ${tableName}`);
-        setSyncStatus(prev => ({ ...prev, [tableName]: 'error' }));
+        setSyncStatus(prev => ({ ...prev, [tableName]: 'idle' }));
         return false;
       }
       
       console.log(`Synchronisation de ${localData.length} éléments pour ${tableName}`);
       
+      // Vérifier la connexion avant de continuer
+      const isConnected = await checkConnection();
+      if (!isConnected) {
+        console.error("Pas de connexion à Supabase");
+        toast.error("Impossible de se connecter à Supabase");
+        setSyncStatus(prev => ({ ...prev, [tableName]: 'error' }));
+        return false;
+      }
+      
       // Convertir les données en format snake_case pour Supabase
       const snakeCaseData = localData.map(item => camelToSnake(item));
+      
+      console.log(`Données converties pour ${tableName}:`, snakeCaseData);
       
       // Supprimer les données existantes dans Supabase
       const { error: deleteError } = await supabase
@@ -119,6 +145,7 @@ export const useSyncData = () => {
       
       for (let i = 0; i < snakeCaseData.length; i += batchSize) {
         const batch = snakeCaseData.slice(i, i + batchSize);
+        console.log(`Insertion du lot ${i/batchSize + 1} pour ${tableName}:`, batch);
         
         const { error: insertError } = await supabase
           .from(tableName)
@@ -172,12 +199,25 @@ export const useSyncData = () => {
     setSyncStatus(prev => ({ ...prev, [tableName]: 'loading' }));
     
     try {
+      // Vérifier la connexion avant de continuer
+      const isConnected = await checkConnection();
+      if (!isConnected) {
+        console.error("Pas de connexion à Supabase");
+        toast.error("Impossible de se connecter à Supabase");
+        setSyncStatus(prev => ({ ...prev, [tableName]: 'error' }));
+        return false;
+      }
+      
       // Récupérer les données de Supabase
+      console.log(`Récupération des données depuis Supabase pour ${tableName}...`);
       const { data, error } = await supabase
         .from(tableName)
         .select('*');
       
-      if (error) throw error;
+      if (error) {
+        console.error(`Erreur lors de la récupération des données depuis Supabase pour ${tableName}:`, error);
+        throw error;
+      }
       
       if (!data || data.length === 0) {
         toast.warning(`Pas de données Supabase à synchroniser pour ${tableName}`);
@@ -185,11 +225,14 @@ export const useSyncData = () => {
         return false;
       }
       
+      console.log(`Données récupérées depuis Supabase pour ${tableName}:`, data);
+      
       // Convertir les données en format camelCase pour le localStorage
       const camelCaseData = data.map(item => snakeToCamel(item));
       
       // Sauvegarder dans le localStorage
       localStorage.setItem(tableName, JSON.stringify(camelCaseData));
+      console.log(`Données locales mises à jour pour ${tableName}:`, camelCaseData);
       
       toast.success(`Synchronisation locale réussie pour ${tableName} (${data.length} éléments)`);
       setSyncStatus(prev => ({ ...prev, [tableName]: 'success' }));
@@ -214,14 +257,18 @@ export const useSyncData = () => {
       'order_items',
       'clients',
       'visuals',
-      'site_settings' // Make sure this table is also included in the list
+      'site_settings'
     ];
     
     let allSuccess = true;
     
     for (const table of tables) {
+      console.log(`Synchronisation de la table ${table} vers Supabase...`);
       const success = await syncToSupabase(table);
-      if (!success) allSuccess = false;
+      if (!success) {
+        console.error(`Échec de la synchronisation de ${table}`);
+        allSuccess = false;
+      }
     }
     
     if (allSuccess) {

@@ -7,11 +7,14 @@ import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { clearAllData } from '@/lib/stripe';
 import { syncAllTablesToSupabase, checkSupabaseConnection } from '@/api/syncApi';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const DatabaseControls = () => {
   const [isClearing, setIsClearing] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  const [lastError, setLastError] = useState<string | null>(null);
   
   const handleClearAllData = async () => {
     if (!confirm('ATTENTION: Cette action va supprimer TOUTES les données de la base. Cette opération est irréversible. Êtes-vous sûr de vouloir continuer ?')) {
@@ -20,6 +23,7 @@ const DatabaseControls = () => {
     
     try {
       setIsClearing(true);
+      setLastError(null);
       const success = await clearAllData();
       if (success) {
         toast.success('Toutes les données ont été supprimées avec succès');
@@ -28,6 +32,7 @@ const DatabaseControls = () => {
       }
     } catch (error) {
       console.error('Erreur:', error);
+      setLastError(error instanceof Error ? error.message : 'Erreur inconnue lors de la suppression');
       toast.error('Une erreur est survenue lors de la suppression des données');
     } finally {
       setIsClearing(false);
@@ -37,16 +42,21 @@ const DatabaseControls = () => {
   const handleCheckConnection = async () => {
     try {
       setIsChecking(true);
+      setLastError(null);
       
       // Test direct connection to Supabase
+      console.log("Vérification de la connexion à Supabase...");
       const { data, error } = await supabase.from('pg_tables').select('*').limit(1);
       
       if (error) {
         console.error("Erreur de connexion à Supabase:", error);
+        setConnectionStatus('disconnected');
+        setLastError(error.message);
         toast.error(`Erreur de connexion: ${error.message}`);
         return;
       }
       
+      setConnectionStatus('connected');
       toast.success('Connexion à Supabase établie avec succès');
       
       // Vérifier les tables
@@ -57,12 +67,18 @@ const DatabaseControls = () => {
           
       if (tableError) {
         toast.error('Erreur lors de la vérification des tables');
-      } else {
+        setLastError(tableError.message);
+      } else if (tableData && tableData.length > 0) {
         const tables = tableData.map(row => row.tablename).join(', ');
         toast.info(`Tables disponibles: ${tables}`);
+        console.log("Tables disponibles:", tableData);
+      } else {
+        toast.warning("Aucune table trouvée dans le schéma public");
       }
     } catch (error) {
       console.error('Erreur:', error);
+      setConnectionStatus('disconnected');
+      setLastError(error instanceof Error ? error.message : 'Erreur inconnue');
       toast.error('Une erreur est survenue lors de la vérification de la connexion');
     } finally {
       setIsChecking(false);
@@ -72,6 +88,16 @@ const DatabaseControls = () => {
   const handleSyncAllData = async () => {
     try {
       setIsSyncing(true);
+      setLastError(null);
+      
+      // Vérifier d'abord la connexion
+      const isConnected = await checkSupabaseConnection();
+      if (!isConnected) {
+        toast.error("Impossible de se connecter à Supabase. Vérifiez votre connexion Internet.");
+        setLastError("Échec de connexion à Supabase");
+        return;
+      }
+      
       const success = await syncAllTablesToSupabase();
       
       if (success) {
@@ -81,11 +107,17 @@ const DatabaseControls = () => {
       }
     } catch (error) {
       console.error('Erreur:', error);
+      setLastError(error instanceof Error ? error.message : 'Erreur inconnue');
       toast.error('Une erreur est survenue lors de la synchronisation');
     } finally {
       setIsSyncing(false);
     }
   };
+  
+  // Vérifier la connexion au chargement du composant
+  React.useEffect(() => {
+    handleCheckConnection();
+  }, []);
   
   return (
     <Card className="winshirt-card">
@@ -97,10 +129,26 @@ const DatabaseControls = () => {
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {connectionStatus === 'disconnected' && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              Connexion à Supabase impossible. Vérifiez votre connexion Internet et les paramètres Supabase.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {lastError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              Dernière erreur: {lastError}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="flex flex-col gap-2">
           <Button 
             variant="outline" 
-            className="flex items-center gap-2"
+            className={`flex items-center gap-2 ${connectionStatus === 'connected' ? 'border-green-500/20 text-green-500' : ''}`}
             onClick={handleCheckConnection}
             disabled={isChecking}
           >
@@ -118,7 +166,7 @@ const DatabaseControls = () => {
             variant="secondary"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
             onClick={handleSyncAllData}
-            disabled={isSyncing}
+            disabled={isSyncing || connectionStatus !== 'connected'}
           >
             <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'Synchronisation en cours...' : 'Synchroniser toutes les données vers Supabase'}
@@ -143,7 +191,7 @@ const DatabaseControls = () => {
           <div className="flex items-start gap-2 mt-1 p-2 bg-red-900/20 border border-red-500/30 rounded-md">
             <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
             <p className="text-sm text-red-300">
-              ATTENTION: Cette action va supprimer toutes les données des tables dans Supabase. Cette opération est irréversible.
+              ATTENTION: Cette action va supprimer toutes les données des tables dans Supabase ET dans le stockage local. Cette opération est irréversible.
             </p>
           </div>
         </div>
