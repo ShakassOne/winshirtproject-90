@@ -157,8 +157,8 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     
     for (const update of lotteryUpdates) {
       try {
-        // Mettre à jour directement la loterie avec la nouvelle valeur de current_participants
-        const { error } = await supabase
+        // Récupérer la loterie actuelle
+        const { data, error } = await supabase
           .from('lotteries')
           .select('current_participants')
           .eq('id', update.id)
@@ -169,13 +169,13 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
           continue;
         }
         
-        // Incrémentation directe
+        // Calculer la nouvelle valeur
+        const newParticipants = (data.current_participants || 0) + update.currentParticipants;
+        
+        // Mettre à jour directement avec la nouvelle valeur
         const { error: updateError } = await supabase
           .from('lotteries')
-          .update({ current_participants: supabase.rpc('increment', { 
-            x: update.currentParticipants, 
-            y: update.currentParticipants 
-          }) })
+          .update({ current_participants: newParticipants })
           .eq('id', update.id);
         
         if (updateError) {
@@ -190,24 +190,26 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     
     // 3. Créer la commande dans Supabase
     let orderId = Date.now();
-    const { data: orderData, error: orderError } = await supabase
+    const orderData = {
+      user_id: user ? parseInt(user.id.substring(0, 8), 16) : null, // Convertir UUID en nombre
+      status: 'processing',
+      total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 5.99,
+      shipping_address: {
+        address: '123 Rue Exemple',
+        city: 'Paris',
+        postalCode: '75000',
+        country: 'France'
+      },
+      shipping_method: 'standard',
+      shipping_cost: 5.99,
+      payment_method: 'Stripe',
+      payment_status: 'completed',
+      created_at: new Date().toISOString()
+    };
+    
+    const { data: orderResult, error: orderError } = await supabase
       .from('orders')
-      .insert({
-        user_id: user?.id || null,
-        status: 'processing',
-        total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 5.99,
-        shipping_address: {
-          address: '123 Rue Exemple',
-          city: 'Paris',
-          postalCode: '75000',
-          country: 'France'
-        },
-        shipping_method: 'standard',
-        shipping_cost: 5.99,
-        payment_method: 'Stripe',
-        payment_status: 'completed',
-        created_at: new Date().toISOString()
-      })
+      .insert(orderData)
       .select('id')
       .single();
     
@@ -216,12 +218,12 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
       return false;
     }
     
-    orderId = orderData.id;
+    orderId = orderResult.id;
     
     // 4. Ajouter les articles de la commande
     const orderItems = items.map(item => ({
       order_id: orderId,
-      product_id: item.id,
+      product_id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
       quantity: item.quantity,
       price: item.price,
       customization: item.visualDesign ? {
@@ -248,9 +250,11 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
         if (item.selectedLotteries && item.selectedLotteries.length > 0) {
           for (const selectedLottery of item.selectedLotteries) {
             for (let i = 0; i < item.quantity; i++) {
+              const userId = parseInt(user.id.substring(0, 8), 16);
+              
               const participantData = {
                 lottery_id: selectedLottery.id,
-                user_id: parseInt(user.id.substring(0, 8), 16),
+                user_id: userId,
                 name: user.user_metadata.full_name || user.email?.split('@')[0],
                 email: user.email,
                 avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
