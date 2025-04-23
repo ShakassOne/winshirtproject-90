@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -85,7 +86,6 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
     });
   };
   
-  // Removed duplicate declaration - kept only one version of each function
   const getOrderStatusOptions = () => {
     return [
       { value: 'pending', label: 'En attente' },
@@ -160,6 +160,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
     return statusMap[status] || status;
   };
   
+  // Fonction utilitaire pour vérifier si une image est personnalisée
+  const isCustomImage = (image: string) => {
+    return !image.includes('placehold.co') && image !== 'https://placehold.co/600x400/png';
+  };
+  
+  // Vérifier si au moins un produit a un visuel personnalisé
+  const hasAnyCustomVisual = order.items.some(item => item.visualDesign !== null && item.visualDesign !== undefined);
+  
   return (
     <div className="winshirt-card p-6">
       <div className="flex items-center justify-between mb-6">
@@ -227,7 +235,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                       className="w-full h-full object-cover"
                     />
                     {/* Badge indiquant si c'est une image personnalisée */}
-                    {item.productImage && !item.productImage.includes('placehold.co') && item.productImage !== 'https://placehold.co/600x400/png' && (
+                    {isCustomImage(item.productImage) && (
                       <Badge className="absolute bottom-0 right-0 bg-winshirt-purple/80 text-white text-xs px-1 py-0">
                         Perso
                       </Badge>
@@ -248,35 +256,74 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                         {(item.price * item.quantity).toFixed(2)} €
                       </div>
                     </div>
+                    
+                    {/* Afficher si le produit participe à des loteries */}
+                    {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
+                      <div className="mt-1 text-xs text-winshirt-blue-light">
+                        Participation à {item.lotteriesEntries.length} loterie(s)
+                      </div>
+                    )}
+                    
+                    {/* Afficher si le produit a un design personnalisé */}
+                    {item.visualDesign && (
+                      <div className="mt-1 text-xs text-winshirt-purple-light">
+                        Design: {item.visualDesign.visualName}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </ScrollArea>
             
-            {/* Image personnalisée en grand format */}
-            {order.items.some(item => item.productImage && !item.productImage.includes('placehold.co') && item.productImage !== 'https://placehold.co/600x400/png') && (
+            {/* Visuels personnalisés en grand format */}
+            {(hasAnyCustomVisual || order.items.some(item => isCustomImage(item.productImage))) && (
               <div className="mt-4 border-t border-winshirt-purple/20 pt-4">
                 <h3 className="text-md font-medium text-white mb-3 flex items-center">
                   <Image size={16} className="mr-2" />
                   Visuel(s) personnalisé(s)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Affichage des visuels personnalisés de chaque produit */}
                   {order.items
-                    .filter(item => item.productImage && !item.productImage.includes('placehold.co') && item.productImage !== 'https://placehold.co/600x400/png')
+                    .filter(item => item.visualDesign)
                     .map((item, idx) => (
-                      <div key={idx} className="border border-winshirt-purple/30 rounded-md p-2">
+                      <div key={`visual-${idx}`} className="border border-winshirt-purple/30 rounded-md p-2">
+                        <p className="text-sm text-gray-400 mb-2">{item.productName} - {item.visualDesign?.visualName}</p>
+                        <img
+                          src={item.visualDesign?.visualImage}
+                          alt={`Visuel pour ${item.productName}`}
+                          className="w-full object-contain rounded-md mb-2"
+                          style={{ maxHeight: '300px' }}
+                        />
+                        <a
+                          href={item.visualDesign?.visualImage}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-winshirt-purple-light block text-center"
+                        >
+                          Voir en plein écran
+                        </a>
+                      </div>
+                    ))
+                  }
+                  
+                  {/* Affichage des images de produits personnalisées */}
+                  {order.items
+                    .filter(item => isCustomImage(item.productImage) && !item.visualDesign)
+                    .map((item, idx) => (
+                      <div key={`product-image-${idx}`} className="border border-winshirt-purple/30 rounded-md p-2">
                         <p className="text-sm text-gray-400 mb-2">{item.productName}</p>
                         <img
                           src={item.productImage}
-                          alt={`Visuel personnalisé pour ${item.productName}`}
-                          className="w-full object-contain rounded-md"
+                          alt={`Image produit ${item.productName}`}
+                          className="w-full object-contain rounded-md mb-2"
                           style={{ maxHeight: '300px' }}
                         />
                         <a
                           href={item.productImage}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-winshirt-purple-light mt-2 block text-center"
+                          className="text-xs text-winshirt-purple-light block text-center"
                         >
                           Voir en plein écran
                         </a>

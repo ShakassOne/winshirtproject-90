@@ -73,16 +73,14 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = "", variant = "de
 
   return (
     <>
-      {loginEnabled && (
-        <Button 
-          variant={variant} 
-          className={`flex items-center gap-2 ${className}`}
-          onClick={handleOpenDialog}
-        >
-          <User className="h-4 w-4" />
-          <span>Connexion</span>
-        </Button>
-      )}
+      <Button 
+        variant={variant} 
+        className={`flex items-center gap-2 ${className}`}
+        onClick={handleOpenDialog}
+      >
+        <User className="h-4 w-4" />
+        <span>Connexion</span>
+      </Button>
       
       <LoginDialog isOpen={isDialogOpen} onClose={handleCloseDialog} />
     </>

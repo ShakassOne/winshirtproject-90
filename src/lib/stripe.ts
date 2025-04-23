@@ -232,12 +232,11 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
       orderDate: new Date().toISOString(),
       status: 'processing',
       items: items.map(item => {
-        const product = products.find((p: any) => p.id.toString() === item.id.toString());
         return {
           id: Date.now() + Math.floor(Math.random() * 1000),
           productId: item.id,
           productName: item.name,
-          productImage: item.image || product?.image || 'https://placehold.co/600x400/png',
+          productImage: item.image || 'https://placehold.co/600x400/png',
           quantity: item.quantity,
           price: item.price,
           size: item.size || 'M',
