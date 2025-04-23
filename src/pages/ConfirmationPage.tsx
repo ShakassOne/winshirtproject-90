@@ -66,41 +66,13 @@ const ConfirmationPage: React.FC = () => {
 
     try {
       const details = JSON.parse(orderDetailsString);
-      
-      // Récupérer le panier qui devrait contenir les informations des visuels
-      const cartString = localStorage.getItem('cart');
-      if (cartString) {
-        const cart = JSON.parse(cartString);
-        // Fusionner les informations des visuels du panier avec les orderItems
-        if (details.orderItems && Array.isArray(details.orderItems)) {
-          details.orderItems = details.orderItems.map((item: any) => {
-            // Chercher l'article correspondant dans le panier pour récupérer les visuels
-            const cartItem = cart.find((c: any) => c.productId === item.productId);
-            if (cartItem && cartItem.visualDesign) {
-              item.visualDesign = cartItem.visualDesign;
-            }
-            return item;
-          });
-        }
-      }
-      
       setOrderDetails(details);
-      
-      // Vider le panier après confirmation réussie
-      localStorage.setItem('cart', '[]');
       
       // Afficher un toast de succès
       toast.success('Commande confirmée avec succès !');
       
-      // Gérer la création de compte si nécessaire
-      const pendingRegistrationString = localStorage.getItem('pendingRegistration');
-      if (pendingRegistrationString) {
-        const registration = JSON.parse(pendingRegistrationString);
-        // Ici, vous pourriez implémenter la logique de création de compte
-        console.log('Création de compte en attente:', registration);
-        // Une fois le compte créé, supprimer les données temporaires
-        localStorage.removeItem('pendingRegistration');
-      }
+      // Vider le panier après confirmation réussie
+      localStorage.setItem('cart', '[]');
     } catch (error) {
       console.error('Erreur lors de la récupération des détails de la commande:', error);
       toast.error('Erreur lors de la récupération des détails de la commande');
@@ -180,34 +152,60 @@ const ConfirmationPage: React.FC = () => {
             
             <div className="space-y-4">
               {orderDetails.orderItems.map((item, index) => (
-                <div key={index} className="flex items-start space-x-4 py-3">
-                  <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-700">
-                    <img
-                      src={item.image || "https://placehold.co/100x100/png"}
-                      alt={item.name}
-                      className="h-full w-full object-cover object-center"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{item.name || item.productName}</p>
-                    <p className="text-xs text-gray-400">
-                      {item.size && `Taille: ${item.size}`}
-                      {item.color && item.size && ' | '}
-                      {item.color && `Couleur: ${item.color}`}
+                <div key={index} className="py-3">
+                  <div className="flex items-start space-x-4 mb-2">
+                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-700">
+                      <img
+                        src={item.image}
+                        alt={item.name || "Produit"}
+                        className="h-full w-full object-cover object-center"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {item.size && `Taille: ${item.size}`}
+                        {item.color && item.size && ' | '}
+                        {item.color && `Couleur: ${item.color}`}
+                      </p>
+                      <p className="text-xs text-gray-400">Qté: {item.quantity}</p>
+                      
+                      {/* Afficher les informations sur les loteries */}
+                      {item.selectedLotteries && item.selectedLotteries.length > 0 && (
+                        <div className="flex items-center mt-1 text-xs text-winshirt-purple-light">
+                          <span>Loteries: {item.selectedLotteries.map((lottery: any) => lottery.name).join(', ')}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-white">
+                      {(item.price * item.quantity).toFixed(2)} €
                     </p>
-                    <p className="text-xs text-gray-400">Qté: {item.quantity}</p>
-                    
-                    {/* Afficher les informations sur le visuel s'il y en a un */}
-                    {item.visualDesign && (
-                      <div className="flex items-center mt-1 text-xs text-winshirt-purple-light">
-                        <Image size={12} className="mr-1" />
-                        <span>Visuel personnalisé: {item.visualDesign.visualName}</span>
-                      </div>
-                    )}
                   </div>
-                  <p className="text-sm font-medium text-white">
-                    {(item.price * item.quantity).toFixed(2)} €
-                  </p>
+                  
+                  {/* Afficher le visuel personnalisé s'il existe */}
+                  {item.visualDesign && (
+                    <div className="mt-2 p-3 bg-winshirt-blue/10 rounded-lg border border-winshirt-blue/30">
+                      <p className="text-sm font-medium text-winshirt-purple-light flex items-center mb-2">
+                        <Image size={14} className="mr-1" />
+                        Visuel personnalisé: {item.visualDesign.visualName}
+                      </p>
+                      
+                      <div className="flex items-center justify-center bg-black/20 rounded-lg p-2">
+                        <img 
+                          src={item.visualDesign.visualImage} 
+                          alt="Visuel personnalisé" 
+                          className="h-24 object-contain"
+                        />
+                      </div>
+                      
+                      <p className="text-xs text-gray-400 mt-2">
+                        Position: {item.visualDesign.settings?.position ? 
+                          `${item.visualDesign.settings.position.x.toFixed(0)}% horizontalement, ${item.visualDesign.settings.position.y.toFixed(0)}% verticalement` : 
+                          'Centrée'
+                        }
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
 

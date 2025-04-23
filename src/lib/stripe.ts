@@ -122,6 +122,8 @@ const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number): Strip
 // Fonction pour simuler un achat réussi
 const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
   try {
+    console.log("Simulant une commande réussie avec les articles:", items);
+    
     // Récupérer l'utilisateur actuellement connecté
     const userString = localStorage.getItem('winshirt_user');
     let user = null;
@@ -151,6 +153,8 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
           const lotteryIndex = lotteries.findIndex((l: ExtendedLottery) => l.id === selectedLottery.id);
           
           if (lotteryIndex !== -1) {
+            console.log(`Mise à jour de la loterie ID:${selectedLottery.id}, index:${lotteryIndex}, participants actuels:${lotteries[lotteryIndex].currentParticipants}`);
+            
             // Créer un participant basé sur l'utilisateur connecté ou simuler un utilisateur anonyme
             const participant = user 
               ? {
@@ -176,8 +180,9 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
               lotteries[lotteryIndex].participants.push({...participant, id: participant.id + i});
               // Incrémenter le nombre de participants
               lotteries[lotteryIndex].currentParticipants += 1;
-              console.log(`Loterie ${lotteries[lotteryIndex].title}: Participants augmentés à ${lotteries[lotteryIndex].currentParticipants}`);
             }
+            
+            console.log(`Loterie ${lotteries[lotteryIndex].title} mise à jour: Participants maintenant à ${lotteries[lotteryIndex].currentParticipants}`);
             
             // Vérifier si la loterie a atteint le nombre cible de participants
             if (lotteries[lotteryIndex].currentParticipants >= lotteries[lotteryIndex].targetParticipants) {
@@ -200,6 +205,8 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
                 });
               }
             }
+          } else {
+            console.error(`Loterie non trouvée avec l'ID ${selectedLottery.id}`);
           }
         });
       }
@@ -208,6 +215,7 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
     // 3. Enregistrer les loteries mises à jour
     localStorage.setItem('lotteries', JSON.stringify(lotteries));
     sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
+    console.log("Loteries mises à jour et sauvegardées:", lotteries);
     
     // 4. Enregistrer la commande pour l'utilisateur actuel
     const lastOrderDetailsString = localStorage.getItem('lastOrderDetails');
@@ -229,7 +237,7 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
           id: Date.now() + Math.floor(Math.random() * 1000),
           productId: item.id,
           productName: item.name,
-          productImage: product?.image || 'https://placehold.co/600x400/png',
+          productImage: item.image || product?.image || 'https://placehold.co/600x400/png',
           quantity: item.quantity,
           price: item.price,
           size: item.size || 'M',
@@ -261,11 +269,22 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
       subtotal: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
       total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (lastOrderDetails?.shippingCost || 5.99),
       trackingNumber: 'TRK' + Date.now(),
-      notes: lastOrderDetails?.orderNotes || ''
+      notes: lastOrderDetails?.orderNotes || '',
+      delivery: {
+        status: 'preparing',
+        estimatedDeliveryDate: (() => {
+          const date = new Date();
+          const method = lastOrderDetails?.shippingMethod || 'standard';
+          if (method === 'express') date.setDate(date.getDate() + 2);
+          else if (method === 'priority') date.setDate(date.getDate() + 1);
+          else date.setDate(date.getDate() + 5);
+          return date.toISOString();
+        })()
+      }
     };
     
     orders.push(newOrder);
-    
+    console.log("Nouvelle commande créée:", newOrder);
     localStorage.setItem('orders', JSON.stringify(orders));
     
     // 5. Enregistrer les participations de l'utilisateur

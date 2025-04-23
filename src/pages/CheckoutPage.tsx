@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -17,7 +16,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
-import { ShoppingCart, CreditCard, Truck, User } from 'lucide-react';
+import { ShoppingCart, CreditCard, Truck, User, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Schéma de validation du formulaire de checkout
 const checkoutSchema = z.object({
@@ -56,12 +56,14 @@ const checkoutSchema = z.object({
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, register } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [subtotal, setSubtotal] = useState(0);
   const [shippingCost, setShippingCost] = useState(5.99);
   const [total, setTotal] = useState(0);
+  // Recommander la création de compte si l'utilisateur n'est pas connecté
+  const [shouldCreateAccount, setShouldCreateAccount] = useState(false);
 
   // Définir les options de livraison
   const shippingOptions = [
@@ -78,7 +80,7 @@ const CheckoutPage: React.FC = () => {
         fullName: user?.name || '',
         email: user?.email || '',
         phone: user?.phone || '',
-        createAccount: false,
+        createAccount: !isAuthenticated, // Suggérer la création de compte si non connecté
       },
       shippingAddress: {
         address: '',
@@ -98,6 +100,14 @@ const CheckoutPage: React.FC = () => {
   // Observer le changement sur createAccount pour rendre le champ password requis
   const createAccount = form.watch('customerInfo.createAccount');
   const selectedShippingMethod = form.watch('shippingMethod');
+
+  // Mettre à jour la suggestion de création de compte quand l'état d'authentification change
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setShouldCreateAccount(true);
+      form.setValue('customerInfo.createAccount', true);
+    }
+  }, [isAuthenticated, form]);
 
   // Charger le panier lors de l'initialisation
   useEffect(() => {
@@ -149,16 +159,29 @@ const CheckoutPage: React.FC = () => {
     setIsProcessing(true);
 
     try {
+      // Si l'utilisateur veut créer un compte et n'est pas déjà connecté
+      if (data.customerInfo.createAccount && !isAuthenticated && data.customerInfo.password) {
+        try {
+          // Tentative de création de compte avant de finaliser la commande
+          await register(data.customerInfo.fullName, data.customerInfo.email, data.customerInfo.password);
+          toast.success('Compte créé avec succès!');
+        } catch (error) {
+          console.error('Erreur lors de la création du compte:', error);
+          toast.error('Erreur lors de la création du compte. Vérifiez si cet email existe déjà ou réessayez plus tard.');
+          // Continue avec la commande malgré l'échec de création de compte
+        }
+      }
+
       // Préparer les éléments pour le checkout
       const checkoutItems = cartItems.map(item => ({
         id: item.id,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        lotteryId: item.lotteryId,
-        lotteryName: item.lotteryName,
+        selectedLotteries: item.selectedLotteries,
         size: item.size,
-        color: item.color
+        color: item.color,
+        visualDesign: item.visualDesign // Inclure les informations de design visuel
       }));
 
       // Appel à la fonction de paiement Stripe
@@ -170,16 +193,6 @@ const CheckoutPage: React.FC = () => {
         toast.error(`Erreur de paiement: ${errorResult.error}`);
         setIsProcessing(false);
         return;
-      }
-
-      // Si l'utilisateur veut créer un compte et n'est pas déjà connecté
-      if (data.customerInfo.createAccount && !isAuthenticated) {
-        // Stocker les données temporairement (vous pourriez enregistrer l'utilisateur ici)
-        localStorage.setItem('pendingRegistration', JSON.stringify({
-          name: data.customerInfo.fullName,
-          email: data.customerInfo.email,
-          password: data.customerInfo.password
-        }));
       }
 
       // Sauvegarder les informations de commande
@@ -220,6 +233,15 @@ const CheckoutPage: React.FC = () => {
       <h1 className="text-3xl font-bold text-white mb-6 flex items-center">
         <ShoppingCart className="mr-2" /> Finaliser votre commande
       </h1>
+
+      {shouldCreateAccount && !isAuthenticated && (
+        <Alert variant="default" className="mb-6 bg-winshirt-purple/10 border-winshirt-purple">
+          <AlertCircle className="h-4 w-4 text-winshirt-purple-light" />
+          <AlertDescription className="text-white">
+            Créez un compte pour suivre facilement vos commandes et participer aux loteries
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Formulaire de checkout */}
@@ -528,7 +550,7 @@ const CheckoutPage: React.FC = () => {
                 <div key={index} className="flex items-start space-x-4 py-3">
                   <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-700">
                     <img
-                      src={item.image || "https://placehold.co/100x100/png"}
+                      src={item.image}
                       alt={item.name}
                       className="h-full w-full object-cover object-center"
                     />
@@ -541,6 +563,12 @@ const CheckoutPage: React.FC = () => {
                       {item.color && `Couleur: ${item.color}`}
                     </p>
                     <p className="text-xs text-gray-400">Qté: {item.quantity}</p>
+                    {item.visualDesign && (
+                      <p className="text-xs text-winshirt-purple-light">Personnalisé</p>
+                    )}
+                    {item.selectedLotteries && item.selectedLotteries.length > 0 && (
+                      <p className="text-xs text-winshirt-purple-light">Loterie incluse</p>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-white">
                     {(item.price * item.quantity).toFixed(2)} €
