@@ -1,29 +1,56 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ExtendedLottery } from '@/types/lottery';
 import { Card } from '@/components/ui/card';
+import { getActiveLotteries } from '@/services/lotteryService';
 
 interface LotterySelectionProps {
   tickets: number;
   selectedLotteries: string[];
   handleLotteryChange: (lotteryId: string, index: number) => void;
-  activeLotteries?: ExtendedLottery[];
 }
 
 const LotterySelection: React.FC<LotterySelectionProps> = ({
   tickets,
   selectedLotteries,
-  handleLotteryChange,
-  activeLotteries = []
+  handleLotteryChange
 }) => {
-  // Enhanced debug logs
+  const [activeLotteries, setActiveLotteries] = useState<ExtendedLottery[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Chargement des loteries actives depuis le service centralisé
   useEffect(() => {
     console.log("LotterySelection - Component mounted");
-    console.log("Available lotteries:", activeLotteries);
-    console.log("Selected lotteries:", selectedLotteries);
-    console.log("Number of tickets:", tickets);
+    
+    const loadActiveLotteries = async () => {
+      setIsLoading(true);
+      try {
+        const lotteries = await getActiveLotteries(true); // Force refresh
+        console.log("LotterySelection - Loteries actives chargées:", lotteries);
+        setActiveLotteries(lotteries);
+        
+        // Vérification de la cohérence des données sélectionnées
+        if (selectedLotteries.length > 0) {
+          console.log("LotterySelection - Vérification des loteries sélectionnées:", selectedLotteries);
+          const validLotteryIds = lotteries.map(l => l.id.toString());
+          const invalidSelections = selectedLotteries.filter(id => id && !validLotteryIds.includes(id));
+          
+          if (invalidSelections.length > 0) {
+            console.warn("LotterySelection - Certaines loteries sélectionnées ne sont pas valides:", invalidSelections);
+          }
+        }
+      } catch (error) {
+        console.error("LotterySelection - Erreur lors du chargement des loteries:", error);
+        setErrorMessage("Impossible de charger les loteries disponibles");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadActiveLotteries();
     
     // Check localStorage for comparison
     try {
@@ -32,9 +59,37 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     } catch (error) {
       console.error("Error checking localStorage:", error);
     }
-  }, [activeLotteries, selectedLotteries, tickets]);
+  }, [selectedLotteries]);
 
   if (!tickets || tickets <= 0) return null;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Label className="text-theme-content flex items-center">
+          <Ticket className="h-4 w-4 mr-2" />
+          Chargement des loteries...
+        </Label>
+        <div className="winshirt-card p-4 flex items-center justify-center h-24 animate-pulse">
+          <p className="text-theme-content opacity-70">Chargement en cours...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="space-y-4">
+        <Label className="text-theme-content flex items-center">
+          <Ticket className="h-4 w-4 mr-2" />
+          Erreur
+        </Label>
+        <div className="winshirt-card p-4 flex items-center justify-center border border-red-500/30">
+          <p className="text-red-400">{errorMessage}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

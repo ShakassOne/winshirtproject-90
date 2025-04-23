@@ -1,57 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import LotteryCard from '../components/LotteryCard';
 import StarBackground from '../components/StarBackground';
 import { Button } from '@/components/ui/button';
-import { ExtendedLottery } from '@/types/lottery';
 import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
-import { fetchLotteries } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useLotteries } from '@/services/lotteryService';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
-  
-  // Load lotteries from Supabase with force refresh
-  useEffect(() => {
-    const loadLotteries = async () => {
-      setIsLoading(true);
-      try {
-        // Force refresh to ensure we have the latest data
-        const lotteriesData = await fetchLotteries(true);
-        console.log("Loaded lotteries:", lotteriesData);
-        setLotteries(lotteriesData);
-        setIsConnected(true);
-      } catch (error) {
-        console.error('Error loading lotteries:', error);
-        toast.error("Erreur lors du chargement des loteries");
-        setIsConnected(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadLotteries();
-    
-    // Set up subscription for real-time updates
-    const channel = supabase
-      .channel('lotteries-channel')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'lotteries' }, 
-        (payload) => {
-          console.log("Lottery data changed, reloading...", payload);
-          loadLotteries();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  const { lotteries, loading, error, refreshLotteries } = useLotteries();
   
   const safeFilteredLotteries = activeFilter === 'all' 
     ? lotteries 
@@ -60,12 +19,40 @@ const LotteriesPage: React.FC = () => {
   // Check if there are featured lotteries
   const hasFeaturedLotteries = lotteries.some(lottery => lottery.featured);
   
-  if (isLoading) {
+  const handleDebug = () => {
+    try {
+      const localStorageLotteries = localStorage.getItem('lotteries');
+      console.log('Contenu du localStorage (lotteries):', localStorageLotteries ? JSON.parse(localStorageLotteries) : null);
+      toast.info("Données des loteries affichées dans la console");
+    } catch (error) {
+      console.error("Erreur lors de la lecture du localStorage:", error);
+      toast.error("Erreur lors de la lecture du localStorage");
+    }
+  };
+  
+  if (loading) {
     return (
       <>
         <StarBackground />
         <div className="pt-32 pb-24 flex justify-center items-center">
-          <div className="white-text text-xl">Chargement des loteries...</div>
+          <div className="flex items-center gap-2 text-xl text-white">
+            <Loader2 className="h-6 w-6 animate-spin text-winshirt-blue" />
+            Chargement des loteries...
+          </div>
+        </div>
+      </>
+    );
+  }
+  
+  if (error) {
+    return (
+      <>
+        <StarBackground />
+        <div className="pt-32 pb-24 flex flex-col items-center justify-center">
+          <div className="text-red-400 text-xl mb-4">Erreur lors du chargement des loteries</div>
+          <Button onClick={refreshLotteries} variant="outline" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" /> Réessayer
+          </Button>
         </div>
       </>
     );
@@ -73,7 +60,7 @@ const LotteriesPage: React.FC = () => {
   
   return (
     <>
-      <div className="mt-[-6rem]"> {/* Ajustement pour le slider en plein écran */}
+      <div className="mt-[-6rem]"> 
         {hasFeaturedLotteries && (
           <FeaturedLotterySlider lotteries={lotteries} />
         )}
@@ -82,9 +69,31 @@ const LotteriesPage: React.FC = () => {
       <StarBackground />
       <section className={`${hasFeaturedLotteries ? 'pt-0' : 'pt-32'} pb-24`}>
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
-            Nos Loteries
-          </h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-4xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
+              Nos Loteries
+            </h1>
+            
+            <div className="flex gap-2">
+              <Button 
+                onClick={refreshLotteries} 
+                variant="outline"
+                className="text-winshirt-blue border-winshirt-blue/40"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
+              </Button>
+              
+              <Button
+                onClick={handleDebug}
+                variant="outline"
+                size="sm"
+                className="text-winshirt-purple border-winshirt-purple/40"
+              >
+                Debug
+              </Button>
+            </div>
+          </div>
+          
           <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
             Participez à nos loteries exclusives et tentez de gagner des prix exceptionnels.
           </p>
@@ -124,11 +133,6 @@ const LotteriesPage: React.FC = () => {
           {/* Connection Status */}
           <div className="mb-6 text-center text-sm text-gray-500">
             {lotteries.length} loterie{lotteries.length !== 1 ? 's' : ''} chargée{lotteries.length !== 1 ? 's' : ''}
-            {isConnected !== null && (
-              <span className="ml-2">
-                ({isConnected ? '✓ connecté à Supabase' : '✗ mode hors-ligne'})
-              </span>
-            )}
           </div>
           
           {/* Lotteries Grid */}
