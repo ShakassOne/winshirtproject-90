@@ -155,16 +155,21 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     );
     
     for (const update of lotteryUpdates) {
-      // Build a SQL query that will call the increment function
-      const incrementQuery = `SELECT increment(${update.id}, ${update.currentParticipants}, 'current_participants', 'lotteries')`;
-      
-      // Call exec_sql RPC with our query
-      const { error } = await supabase.rpc('exec_sql', { 
-        sql_query: incrementQuery 
-      });
-      
-      if (error) {
-        console.error(`Erreur lors de la mise à jour de la loterie ${update.id}:`, error);
+      try {
+        // Appel direct de la fonction d'incrémentation via RPC
+        const { data, error } = await supabase.rpc('increment', { 
+          row_id: update.id, 
+          num_increment: update.currentParticipants, 
+          field_name: 'current_participants',
+          table_name: 'lotteries'
+        });
+        
+        if (error) {
+          console.error(`Erreur lors de la mise à jour de la loterie ${update.id}:`, error);
+          return false;
+        }
+      } catch (error) {
+        console.error(`Exception lors de la mise à jour de la loterie ${update.id}:`, error);
         return false;
       }
     }
