@@ -22,7 +22,7 @@ export const checkRLSStatus = async (): Promise<string[]> => {
     // Filtrer les tables qui n'ont pas RLS activé
     const tablesWithoutRLS = data
       .filter(table => !table.rowsecurity)
-      .map(table => table.tablename);
+      .map(table => table.tablename as string); // Add type assertion here
     
     return tablesWithoutRLS;
   } catch (error) {
