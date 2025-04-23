@@ -156,7 +156,8 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     );
     
     for (const update of lotteryUpdates) {
-      // Corrected: Use the REST API to call a database function
+      // Call the increment function using RPC
+      // Make sure the function name and parameters match what's defined in your database
       const { error } = await supabase.rpc('increment', { 
         row_id: update.id, 
         num_increment: update.currentParticipants, 
