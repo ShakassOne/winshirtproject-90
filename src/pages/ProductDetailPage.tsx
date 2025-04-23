@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockProducts, mockLotteries } from '@/data/mockData';
@@ -316,7 +315,6 @@ const ProductDetailPage: React.FC = () => {
                     tickets={product.tickets}
                     selectedLotteries={selectedLotteries}
                     handleLotteryChange={handleLotteryChange}
-                    activeLotteries={activeLotteries}
                   />
                 )}
                 
