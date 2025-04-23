@@ -7,12 +7,13 @@ import LotteryForm from '@/components/admin/lotteries/LotteryForm';
 import { useLotteryForm } from '@/hooks/useLotteryForm';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Gift } from 'lucide-react';
+import { Gift, Database } from 'lucide-react';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 
 const AdminLotteriesPage: React.FC = () => {
   // Création de deux loteries spéciales
@@ -67,6 +68,25 @@ const AdminLotteriesPage: React.FC = () => {
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   const [isLoading, setIsLoading] = useState(true);
   
+  // Ajout d'une fonction pour vérifier le localStorage
+  const checkLocalStorage = () => {
+    try {
+      const storedLotteries = localStorage.getItem('lotteries');
+      console.log('Contenu du localStorage (lotteries):', storedLotteries ? JSON.parse(storedLotteries) : null);
+      
+      // Afficher dans un toast pour plus de visibilité
+      if (storedLotteries) {
+        const parsedLotteries = JSON.parse(storedLotteries);
+        toast.success(`${parsedLotteries.length} loteries trouvées dans localStorage`);
+      } else {
+        toast.error('Aucune loterie trouvée dans localStorage');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la lecture du localStorage:', error);
+      toast.error('Erreur lors de la lecture du localStorage');
+    }
+  };
+
   // Chargement des données depuis toutes les sources, optimisé
   useEffect(() => {
     const loadData = async () => {
@@ -223,6 +243,18 @@ const AdminLotteriesPage: React.FC = () => {
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Bouton de débogage pour vérifier le localStorage */}
+          <div className="mb-6">
+            <Button 
+              variant="outline" 
+              onClick={checkLocalStorage}
+              className="flex items-center gap-2"
+            >
+              <Database className="h-4 w-4" />
+              Vérifier loteries dans localStorage
+            </Button>
+          </div>
 
           <ResizablePanelGroup direction="horizontal" className="min-h-[600px]">
             {/* Lottery List - Default 40% width, can be resized */}

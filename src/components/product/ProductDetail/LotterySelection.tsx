@@ -23,20 +23,28 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     console.log("Client LotterySelection - Available lotteries:", activeLotteries);
     console.log("Client LotterySelection - Selected lotteries:", selectedLotteries);
     console.log("Client LotterySelection - Number of tickets:", tickets);
+    
+    // Check localStorage for testing
+    try {
+      const localStorageLotteries = localStorage.getItem('lotteries');
+      console.log("Local Storage Lotteries:", localStorageLotteries ? JSON.parse(localStorageLotteries) : null);
+    } catch (error) {
+      console.error("Error checking localStorage:", error);
+    }
   }, [activeLotteries, selectedLotteries, tickets]);
 
   if (!tickets || tickets <= 0) return null;
 
   return (
     <div className="space-y-4">
-      <Label className="text-white flex items-center">
+      <Label className="text-theme-content flex items-center">
         <Ticket className="h-4 w-4 mr-2" />
         Choisissez {tickets > 1 ? 'vos loteries' : 'votre loterie'}
       </Label>
       
       {Array.from({ length: tickets }).map((_, index) => (
         <div key={index} className="winshirt-card p-4">
-          <Label className="text-lg text-white mb-4 block">
+          <Label className="text-lg mb-4 block text-theme-content">
             Ticket {index + 1}
           </Label>
           
@@ -45,7 +53,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
             <select
               value={selectedLotteries[index] || ''}
               onChange={(e) => handleLotteryChange(e.target.value, index)}
-              className={`w-full p-3 rounded-lg glass-effect text-white appearance-none cursor-pointer border-winshirt-purple/30 ${
+              className={`w-full p-3 rounded-lg bg-card text-theme-content appearance-none cursor-pointer border border-input ${
                 activeLotteries.length === 0 ? 'border-red-500/50' : ''
               }`}
               disabled={activeLotteries.length === 0}
@@ -70,7 +78,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
 
           {/* Selected Lottery Preview */}
           {selectedLotteries[index] && (
-            <div className="mt-4 winshirt-card p-4 backdrop-blur-lg border border-winshirt-purple/30">
+            <div className="mt-4 winshirt-card p-4 backdrop-blur-lg border border-input">
               {activeLotteries.map((lottery) => {
                 if (lottery.id.toString() === selectedLotteries[index]) {
                   return (
@@ -81,17 +89,17 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
                         className="w-24 h-24 object-cover rounded-lg"
                       />
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-white">
+                        <h3 className="text-xl font-semibold text-theme-content">
                           {lottery.title}
                         </h3>
                         <p className="text-lg font-bold text-winshirt-purple-light">
                           Valeur: {lottery.value}€
                         </p>
                         <div className="mt-2">
-                          <div className="text-sm text-gray-300">
+                          <div className="text-sm text-muted-foreground">
                             {lottery.currentParticipants} / {lottery.targetParticipants} participants
                           </div>
-                          <div className="w-full bg-winshirt-space rounded-full h-2 mt-1">
+                          <div className="w-full bg-muted rounded-full h-2 mt-1">
                             <div 
                               className="bg-winshirt-purple h-2 rounded-full" 
                               style={{ 
