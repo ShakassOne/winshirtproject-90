@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockProducts, mockLotteries } from '@/data/mockData';
+import { mockProducts } from '@/data/mockData';
 import { toast } from '@/lib/toast';
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +9,7 @@ import { Visual, VisualCategory } from '@/types/visual';
 import StarBackground from '@/components/StarBackground';
 import { useVisualSelector } from '@/hooks/useVisualSelector';
 import { useVisuals } from '@/data/mockVisuals';
+import { getActiveLotteries } from '@/services/lotteryService';
 
 // Import refactored components
 import ProductGallery from '@/components/product/ProductDetail/ProductGallery';
@@ -178,7 +180,7 @@ const ProductDetailPage: React.FC = () => {
     );
   }
   
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!selectedSize) {
       toast.error("Veuillez sélectionner une taille");
       return;
@@ -201,9 +203,12 @@ const ProductDetailPage: React.FC = () => {
     const cartString = localStorage.getItem('cart');
     const cart = cartString ? JSON.parse(cartString) : [];
     
+    // Récupérer les loteries actives pour avoir les informations complètes
+    const activeLotteries = await getActiveLotteries(true);
+    
     // Obtenir les informations des loteries sélectionnées
     const selectedLotteriesInfo = selectedLotteries.map(lotteryId => {
-      const lottery = mockLotteries.find(l => l.id.toString() === lotteryId);
+      const lottery = activeLotteries.find(l => l.id.toString() === lotteryId);
       return {
         id: parseInt(lotteryId),
         name: lottery?.title || "Loterie inconnue"
@@ -243,9 +248,6 @@ const ProductDetailPage: React.FC = () => {
       navigate('/cart');
     }, 1500);
   };
-  
-  // Récupérer les loteries actives
-  const activeLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
   
   // Préparer les images pour le carrousel
   const productImages = [product.image];

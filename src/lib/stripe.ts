@@ -2,6 +2,7 @@
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
+import { ExtendedLottery } from '@/types/lottery';
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51abcdefghijklmnopqrstuvwxyz'; // Remplacez par votre clé publique Stripe
 
@@ -21,6 +22,14 @@ interface CheckoutItem {
   lotteryName?: string;
   size?: string;
   color?: string;
+  selectedLotteries?: Array<{id: number, name: string}>;
+  visualDesign?: {
+    visualId: number;
+    visualName: string;
+    visualImage: string;
+    settings: any;
+    printAreaId: number | null;
+  } | null;
 }
 
 export const initiateStripeCheckout = async (
@@ -130,65 +139,69 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
       return false;
     }
     
-    const lotteries = JSON.parse(lotteriesString);
+    const lotteries = JSON.parse(lotteriesString) as ExtendedLottery[];
     const products = JSON.parse(productsString);
     
     // 2. Pour chaque article acheté, mettre à jour les participants de la loterie associée
     items.forEach(item => {
-      if (item.lotteryId) {
-        // Trouver la loterie
-        const lotteryIndex = lotteries.findIndex((l: any) => l.id === item.lotteryId);
-        
-        if (lotteryIndex !== -1) {
-          // Créer un participant basé sur l'utilisateur connecté ou simuler un utilisateur anonyme
-          const participant = user 
-            ? {
-                id: Date.now() + Math.floor(Math.random() * 1000),
-                name: user.name,
-                email: user.email,
-                avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+      // Vérifier si l'article a des loteries sélectionnées
+      if (item.selectedLotteries && item.selectedLotteries.length > 0) {
+        item.selectedLotteries.forEach(selectedLottery => {
+          // Trouver la loterie
+          const lotteryIndex = lotteries.findIndex((l: ExtendedLottery) => l.id === selectedLottery.id);
+          
+          if (lotteryIndex !== -1) {
+            // Créer un participant basé sur l'utilisateur connecté ou simuler un utilisateur anonyme
+            const participant = user 
+              ? {
+                  id: Date.now() + Math.floor(Math.random() * 1000),
+                  name: user.name,
+                  email: user.email,
+                  avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+                }
+              : {
+                  id: Date.now() + Math.floor(Math.random() * 1000),
+                  name: "Client anonyme",
+                  email: "anonymous@example.com",
+                  avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+                };
+            
+            // Si participants n'existe pas, l'initialiser
+            if (!lotteries[lotteryIndex].participants) {
+              lotteries[lotteryIndex].participants = [];
+            }
+            
+            // Ajouter le participant à la loterie (pour chaque quantité achetée)
+            for (let i = 0; i < item.quantity; i++) {
+              lotteries[lotteryIndex].participants.push({...participant, id: participant.id + i});
+              // Incrémenter le nombre de participants
+              lotteries[lotteryIndex].currentParticipants += 1;
+              console.log(`Loterie ${lotteries[lotteryIndex].title}: Participants augmentés à ${lotteries[lotteryIndex].currentParticipants}`);
+            }
+            
+            // Vérifier si la loterie a atteint le nombre cible de participants
+            if (lotteries[lotteryIndex].currentParticipants >= lotteries[lotteryIndex].targetParticipants) {
+              // Si oui, programmer un tirage automatique dans 24 heures
+              if (!lotteries[lotteryIndex].drawDate) {
+                const drawDate = new Date();
+                drawDate.setDate(drawDate.getDate() + 1); // +24 heures
+                lotteries[lotteryIndex].drawDate = drawDate.toISOString();
+                
+                // Notifier les administrateurs qu'une loterie a atteint son objectif
+                const adminEmails = localStorage.getItem('admin_notification_emails');
+                const emails = adminEmails ? JSON.parse(adminEmails) : ['admin@winshirt.com'];
+                
+                emails.forEach((email: string) => {
+                  simulateSendEmail(
+                    email,
+                    "Loterie complète - Tirage programmé",
+                    `La loterie "${lotteries[lotteryIndex].title}" a atteint son objectif de ${lotteries[lotteryIndex].targetParticipants} participants. Un tirage est programmé pour le ${new Date(lotteries[lotteryIndex].drawDate).toLocaleString('fr-FR')}.`
+                  );
+                });
               }
-            : {
-                id: Date.now() + Math.floor(Math.random() * 1000),
-                name: "Client anonyme",
-                email: "anonymous@example.com",
-                avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
-              };
-          
-          // Si participants n'existe pas, l'initialiser
-          if (!lotteries[lotteryIndex].participants) {
-            lotteries[lotteryIndex].participants = [];
-          }
-          
-          // Ajouter le participant à la loterie (pour chaque quantité achetée)
-          for (let i = 0; i < item.quantity; i++) {
-            lotteries[lotteryIndex].participants.push({...participant, id: participant.id + i});
-            // Incrémenter le nombre de participants
-            lotteries[lotteryIndex].currentParticipants += 1;
-          }
-          
-          // Vérifier si la loterie a atteint le nombre cible de participants
-          if (lotteries[lotteryIndex].currentParticipants >= lotteries[lotteryIndex].targetParticipants) {
-            // Si oui, programmer un tirage automatique dans 24 heures
-            if (!lotteries[lotteryIndex].drawDate) {
-              const drawDate = new Date();
-              drawDate.setDate(drawDate.getDate() + 1); // +24 heures
-              lotteries[lotteryIndex].drawDate = drawDate.toISOString();
-              
-              // Notifier les administrateurs qu'une loterie a atteint son objectif
-              const adminEmails = localStorage.getItem('admin_notification_emails');
-              const emails = adminEmails ? JSON.parse(adminEmails) : ['admin@winshirt.com'];
-              
-              emails.forEach((email: string) => {
-                simulateSendEmail(
-                  email,
-                  "Loterie complète - Tirage programmé",
-                  `La loterie "${lotteries[lotteryIndex].title}" a atteint son objectif de ${lotteries[lotteryIndex].targetParticipants} participants. Un tirage est programmé pour le ${new Date(lotteries[lotteryIndex].drawDate).toLocaleString('fr-FR')}.`
-                );
-              });
             }
           }
-        }
+        });
       }
     });
     
@@ -197,14 +210,17 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
     sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
     
     // 4. Enregistrer la commande pour l'utilisateur actuel
+    const lastOrderDetailsString = localStorage.getItem('lastOrderDetails');
+    const lastOrderDetails = lastOrderDetailsString ? JSON.parse(lastOrderDetailsString) : null;
+    
     const ordersString = localStorage.getItem('orders') || '[]';
     const orders = JSON.parse(ordersString);
     
     const newOrder = {
       id: Date.now(),
       clientId: user?.id || null,
-      clientName: user?.name || 'Client anonyme',
-      clientEmail: user?.email || 'anonymous@example.com',
+      clientName: lastOrderDetails?.customerInfo?.fullName || user?.name || 'Client anonyme',
+      clientEmail: lastOrderDetails?.customerInfo?.email || user?.email || 'anonymous@example.com',
       orderDate: new Date().toISOString(),
       status: 'processing',
       items: items.map(item => {
@@ -218,10 +234,18 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
           price: item.price,
           size: item.size || 'M',
           color: item.color || 'Noir',
-          lotteriesEntries: item.lotteryId ? [item.lotteryId] : []
+          lotteriesEntries: item.selectedLotteries ? item.selectedLotteries.map(l => l.id) : [],
+          visualDesign: item.visualDesign || null // Conserver les informations du visuel
         };
       }),
-      shipping: {
+      shipping: lastOrderDetails?.shippingAddress ? {
+        address: lastOrderDetails.shippingAddress.address,
+        city: lastOrderDetails.shippingAddress.city,
+        postalCode: lastOrderDetails.shippingAddress.postalCode,
+        country: lastOrderDetails.shippingAddress.country,
+        method: lastOrderDetails.shippingMethod || 'Standard',
+        cost: lastOrderDetails.shippingCost || 5.99
+      } : {
         address: '123 Rue Exemple',
         city: 'Paris',
         postalCode: '75000',
@@ -235,9 +259,9 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
         status: 'completed'
       },
       subtotal: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 5.99,
+      total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (lastOrderDetails?.shippingCost || 5.99),
       trackingNumber: 'TRK' + Date.now(),
-      notes: ''
+      notes: lastOrderDetails?.orderNotes || ''
     };
     
     orders.push(newOrder);
@@ -250,17 +274,19 @@ const simulateSuccessfulOrder = (items: Array<CheckoutItem>): boolean => {
       const participations = JSON.parse(participationsString);
       
       items.forEach(item => {
-        if (item.lotteryId) {
-          for (let i = 0; i < item.quantity; i++) {
-            participations.push({
-              id: Date.now() + Math.floor(Math.random() * 1000) + i,
-              userId: user.id,
-              lotteryId: item.lotteryId,
-              productId: item.id,
-              ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
-              date: new Date().toISOString()
-            });
-          }
+        if (item.selectedLotteries && item.selectedLotteries.length > 0) {
+          item.selectedLotteries.forEach(selectedLottery => {
+            for (let i = 0; i < item.quantity; i++) {
+              participations.push({
+                id: Date.now() + Math.floor(Math.random() * 1000) + i,
+                userId: user.id,
+                lotteryId: selectedLottery.id,
+                productId: item.id,
+                ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
+                date: new Date().toISOString()
+              });
+            }
+          });
         }
       });
       

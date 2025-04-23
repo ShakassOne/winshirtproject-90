@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle, Package, ShoppingBag, Truck } from 'lucide-react';
+import { CheckCircle, Package, ShoppingBag, Truck, Image } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/lib/toast';
 
@@ -33,7 +33,24 @@ const ConfirmationPage: React.FC = () => {
   const [orderId] = useState(`WS-${Date.now().toString().slice(-6)}`);
   const [estimatedDeliveryDate] = useState(() => {
     const date = new Date();
-    date.setDate(date.getDate() + 5); // Standard delivery by default
+    // Calculer la date de livraison en fonction de la méthode de livraison dans lastOrderDetails
+    const lastOrderDetailsString = localStorage.getItem('lastOrderDetails');
+    if (lastOrderDetailsString) {
+      try {
+        const details = JSON.parse(lastOrderDetailsString);
+        if (details.shippingMethod === 'express') {
+          date.setDate(date.getDate() + 2); // Express delivery
+        } else if (details.shippingMethod === 'priority') {
+          date.setDate(date.getDate() + 1); // Priority delivery
+        } else {
+          date.setDate(date.getDate() + 5); // Standard delivery by default
+        }
+      } catch (e) {
+        date.setDate(date.getDate() + 5); // Standard delivery by default if error
+      }
+    } else {
+      date.setDate(date.getDate() + 5); // Standard delivery by default
+    }
     return date.toLocaleDateString('fr-FR');
   });
 
@@ -49,6 +66,24 @@ const ConfirmationPage: React.FC = () => {
 
     try {
       const details = JSON.parse(orderDetailsString);
+      
+      // Récupérer le panier qui devrait contenir les informations des visuels
+      const cartString = localStorage.getItem('cart');
+      if (cartString) {
+        const cart = JSON.parse(cartString);
+        // Fusionner les informations des visuels du panier avec les orderItems
+        if (details.orderItems && Array.isArray(details.orderItems)) {
+          details.orderItems = details.orderItems.map((item: any) => {
+            // Chercher l'article correspondant dans le panier pour récupérer les visuels
+            const cartItem = cart.find((c: any) => c.productId === item.productId);
+            if (cartItem && cartItem.visualDesign) {
+              item.visualDesign = cartItem.visualDesign;
+            }
+            return item;
+          });
+        }
+      }
+      
       setOrderDetails(details);
       
       // Vider le panier après confirmation réussie
@@ -154,13 +189,21 @@ const ConfirmationPage: React.FC = () => {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                    <p className="text-sm font-medium text-white truncate">{item.name || item.productName}</p>
                     <p className="text-xs text-gray-400">
                       {item.size && `Taille: ${item.size}`}
                       {item.color && item.size && ' | '}
                       {item.color && `Couleur: ${item.color}`}
                     </p>
                     <p className="text-xs text-gray-400">Qté: {item.quantity}</p>
+                    
+                    {/* Afficher les informations sur le visuel s'il y en a un */}
+                    {item.visualDesign && (
+                      <div className="flex items-center mt-1 text-xs text-winshirt-purple-light">
+                        <Image size={12} className="mr-1" />
+                        <span>Visuel personnalisé: {item.visualDesign.visualName}</span>
+                      </div>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-white">
                     {(item.price * item.quantity).toFixed(2)} €
