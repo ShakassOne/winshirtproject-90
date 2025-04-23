@@ -1,20 +1,33 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Home, Edit, Save } from 'lucide-react';
+import { Home, Edit, Save, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 
 const AdminHomeIntroSettings = () => {
-  const [title, setTitle] = useState('Changer le monde avec des vêtements');
-  const [subtitle, setSubtitle] = useState('Gagnez des produits exclusifs et soutenez des causes qui comptent');
-  const [description, setDescription] = useState(
-    'Participez à nos loteries pour gagner des vêtements uniques tout en soutenant des initiatives qui font la différence. Chaque ticket acheté est une chance de gagner et un geste pour la planète.'
-  );
+  const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [description, setDescription] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const { saveHomeIntroSettings, isSaving } = useSiteSettings();
+  
+  const { 
+    homeIntroSettings, 
+    saveHomeIntroSettings, 
+    loadHomeIntroSettings,
+    isSaving, 
+    isLoading 
+  } = useSiteSettings();
+  
+  // Charger les paramètres au montage du composant
+  useEffect(() => {
+    setTitle(homeIntroSettings.title);
+    setSubtitle(homeIntroSettings.subtitle);
+    setDescription(homeIntroSettings.description);
+  }, [homeIntroSettings]);
 
   const handleSave = async () => {
     const success = await saveHomeIntroSettings({
@@ -25,6 +38,8 @@ const AdminHomeIntroSettings = () => {
 
     if (success) {
       setIsEditing(false);
+      // Recharger les paramètres pour s'assurer que tout est à jour
+      await loadHomeIntroSettings();
     }
   };
 
@@ -40,8 +55,11 @@ const AdminHomeIntroSettings = () => {
           size="sm"
           className="flex items-center gap-1"
           onClick={() => setIsEditing(!isEditing)}
+          disabled={isLoading}
         >
-          {isEditing ? (
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : isEditing ? (
             <>Annuler</>
           ) : (
             <>
@@ -84,7 +102,11 @@ const AdminHomeIntroSettings = () => {
               onClick={handleSave}
               disabled={isSaving}
             >
-              <Save className="h-4 w-4" />
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Save className="h-4 w-4 mr-1" />
+              )}
               {isSaving ? 'Sauvegarde en cours...' : 'Sauvegarder les changements'}
             </Button>
           </>

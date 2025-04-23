@@ -339,7 +339,7 @@ export const clearAllData = async (): Promise<boolean> => {
       const { error } = await supabase
         .from(table)
         .delete()
-        .neq('id', 0);
+        .gt('id', 0);  // Utiliser gt au lieu de neq pour éviter les erreurs
       
       if (error) {
         console.error(`Erreur lors de la suppression des données de ${table}:`, error);

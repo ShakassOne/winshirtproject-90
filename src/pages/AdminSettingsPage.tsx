@@ -3,9 +3,10 @@ import React from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { HomeIcon, Settings, Database, Image, BellDot } from 'lucide-react';
+import { HomeIcon, Settings, Database, Image, BellDot, RefreshCw } from 'lucide-react';
 import AdminHomeIntroSettings from '@/components/admin/settings/AdminHomeIntroSettings';
 import DatabaseControls from '@/components/admin/settings/DatabaseControls';
+import SyncSettingsManager from '@/components/admin/settings/SyncSettingsManager';
 
 const AdminSettingsPage: React.FC = () => {
   return (
@@ -17,13 +18,16 @@ const AdminSettingsPage: React.FC = () => {
         <div className="container mx-auto px-4 md:px-8">
           <h1 className="text-3xl font-bold text-white mb-8">Paramètres</h1>
           
-          <Tabs defaultValue="database">
+          <Tabs defaultValue="sync">
             <TabsList className="mb-8">
-              <TabsTrigger value="home-intro" className="flex items-center gap-2">
-                <HomeIcon className="h-4 w-4" /> Page d'accueil
+              <TabsTrigger value="sync" className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" /> Synchronisation
               </TabsTrigger>
               <TabsTrigger value="database" className="flex items-center gap-2">
                 <Database className="h-4 w-4" /> Base de données
+              </TabsTrigger>
+              <TabsTrigger value="home-intro" className="flex items-center gap-2">
+                <HomeIcon className="h-4 w-4" /> Page d'accueil
               </TabsTrigger>
               <TabsTrigger value="media" className="flex items-center gap-2">
                 <Image className="h-4 w-4" /> Médias
@@ -36,14 +40,18 @@ const AdminSettingsPage: React.FC = () => {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="home-intro">
-              <AdminHomeIntroSettings />
+            <TabsContent value="sync">
+              <SyncSettingsManager />
             </TabsContent>
             
             <TabsContent value="database">
               <div className="grid grid-cols-1 gap-6">
                 <DatabaseControls />
               </div>
+            </TabsContent>
+            
+            <TabsContent value="home-intro">
+              <AdminHomeIntroSettings />
             </TabsContent>
             
             <TabsContent value="media">

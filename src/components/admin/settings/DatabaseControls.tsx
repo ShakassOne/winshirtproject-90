@@ -6,10 +6,12 @@ import { AlertTriangle, Database, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { supabase, checkSupabaseConnection } from '@/integrations/supabase/client';
 import { clearAllData } from '@/lib/stripe';
+import { syncAllTablesToSupabase } from '@/api/syncApi';
 
 const DatabaseControls = () => {
   const [isClearing, setIsClearing] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const handleClearAllData = async () => {
     if (!confirm('ATTENTION: Cette action va supprimer TOUTES les données de la base. Cette opération est irréversible. Êtes-vous sûr de vouloir continuer ?')) {
@@ -63,6 +65,24 @@ const DatabaseControls = () => {
     }
   };
   
+  const handleSyncAllData = async () => {
+    try {
+      setIsSyncing(true);
+      const success = await syncAllTablesToSupabase();
+      
+      if (success) {
+        toast.success('Toutes les données ont été synchronisées avec succès');
+      } else {
+        toast.warning('Certaines tables n\'ont pas pu être synchronisées');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Une erreur est survenue lors de la synchronisation');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+  
   return (
     <Card className="winshirt-card">
       <CardHeader>
@@ -86,6 +106,22 @@ const DatabaseControls = () => {
           
           <div className="text-sm text-gray-400 mt-1">
             Vérifie la connexion à Supabase et liste les tables disponibles
+          </div>
+        </div>
+        
+        <div className="flex flex-col gap-2">
+          <Button 
+            variant="secondary"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            onClick={handleSyncAllData}
+            disabled={isSyncing}
+          >
+            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Synchronisation en cours...' : 'Synchroniser toutes les données vers Supabase'}
+          </Button>
+          
+          <div className="text-sm text-gray-400 mt-1">
+            Transfère toutes les données du stockage local vers Supabase
           </div>
         </div>
         
