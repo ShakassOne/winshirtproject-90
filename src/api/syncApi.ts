@@ -10,7 +10,8 @@ export type TableName =
   | 'visuals' 
   | 'orders' 
   | 'order_items' 
-  | 'clients';
+  | 'clients'
+  | 'site_settings';
 
 // Convertir les clés camelCase en snake_case
 export const camelToSnake = (obj: any): any => {
@@ -68,44 +69,50 @@ export const syncTableToSupabase = async (tableName: TableName): Promise<boolean
       toast.warning(`Pas de données valides pour ${tableName}`);
       return false;
     }
-    
-    // Convertir en snake_case pour Supabase
-    const snakeCaseData = localData.map(item => camelToSnake(item));
-    
-    // Supprimer données existantes
-    const { error: deleteError } = await supabase
-      .from(tableName)
-      .delete()
-      .gt('id', 0);
+
+    try {
+      // Convertir en snake_case pour Supabase
+      const snakeCaseData = localData.map(item => camelToSnake(item));
       
-    if (deleteError) {
-      console.error(`Erreur lors de la suppression des données: ${deleteError.message}`);
-      toast.error(`Échec de la suppression: ${deleteError.message}`);
-      return false;
-    }
-    
-    // Insérer par lots
-    const batchSize = 25;
-    let success = true;
-    
-    for (let i = 0; i < snakeCaseData.length; i += batchSize) {
-      const batch = snakeCaseData.slice(i, i + batchSize);
-      
-      const { error: insertError } = await supabase
+      // Supprimer données existantes pour cette table
+      const { error: deleteError } = await supabase
         .from(tableName)
-        .insert(batch);
+        .delete()
+        .gt('id', 0);
         
-      if (insertError) {
-        console.error(`Erreur lors de l'insertion: ${insertError.message}`);
-        toast.error(`Échec de l'insertion: ${insertError.message}`);
-        success = false;
-        break;
+      if (deleteError) {
+        console.error(`Erreur lors de la suppression des données: ${deleteError.message}`);
+        toast.error(`Échec de la suppression: ${deleteError.message}`);
+        return false;
       }
-    }
-    
-    if (success) {
-      toast.success(`Synchronisation réussie pour ${tableName}`);
-      return true;
+      
+      // Insérer par lots de 20
+      const batchSize = 20;
+      let success = true;
+      
+      for (let i = 0; i < snakeCaseData.length; i += batchSize) {
+        const batch = snakeCaseData.slice(i, i + batchSize);
+        
+        const { error: insertError } = await supabase
+          .from(tableName)
+          .insert(batch);
+          
+        if (insertError) {
+          console.error(`Erreur lors de l'insertion: ${insertError.message}`);
+          toast.error(`Échec de l'insertion: ${insertError.message}`);
+          success = false;
+          break;
+        }
+      }
+      
+      if (success) {
+        toast.success(`Synchronisation réussie pour ${tableName}`);
+        return true;
+      }
+    } catch (error) {
+      console.error(`Erreur interne: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      toast.error(`Erreur interne: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      return false;
     }
     
     return false;
@@ -125,7 +132,8 @@ export const syncAllTablesToSupabase = async (): Promise<boolean> => {
     'orders',
     'order_items',
     'clients',
-    'visuals'
+    'visuals',
+    'site_settings'
   ];
   
   let allSuccess = true;
@@ -147,12 +155,19 @@ export const syncAllTablesToSupabase = async (): Promise<boolean> => {
 // Vérifier la connexion à Supabase
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    console.log("Checking Supabase connection...");
+    const { data, error } = await supabase
       .from('pg_tables')
       .select('tablename')
       .limit(1);
       
-    return !error;
+    if (error) {
+      console.error("Erreur lors de la vérification Supabase:", error);
+      return false;
+    }
+    
+    console.log("Supabase connection check successful:", data);
+    return true;
   } catch (error) {
     console.error("Erreur de connexion à Supabase:", error);
     return false;
@@ -169,7 +184,8 @@ export const getDataStatistics = async (): Promise<Record<TableName, { local: nu
     'orders',
     'order_items',
     'clients',
-    'visuals'
+    'visuals',
+    'site_settings'
   ];
   
   const stats: Record<TableName, { local: number; supabase: number }> = {} as any;

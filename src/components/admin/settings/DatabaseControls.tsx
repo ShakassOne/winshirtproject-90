@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Database, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { supabase, checkSupabaseConnection } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { clearAllData } from '@/lib/stripe';
-import { syncAllTablesToSupabase } from '@/api/syncApi';
+import { syncAllTablesToSupabase, checkSupabaseConnection } from '@/api/syncApi';
 
 const DatabaseControls = () => {
   const [isClearing, setIsClearing] = useState(false);
@@ -37,25 +37,29 @@ const DatabaseControls = () => {
   const handleCheckConnection = async () => {
     try {
       setIsChecking(true);
-      const isConnected = await checkSupabaseConnection();
       
-      if (isConnected) {
-        toast.success('Connexion à Supabase établie avec succès');
-        
-        // Vérifier les tables
-        const { data, error } = await supabase
-          .from('pg_tables')
-          .select('tablename')
-          .eq('schemaname', 'public');
+      // Test direct connection to Supabase
+      const { data, error } = await supabase.from('pg_tables').select('*').limit(1);
+      
+      if (error) {
+        console.error("Erreur de connexion à Supabase:", error);
+        toast.error(`Erreur de connexion: ${error.message}`);
+        return;
+      }
+      
+      toast.success('Connexion à Supabase établie avec succès');
+      
+      // Vérifier les tables
+      const { data: tableData, error: tableError } = await supabase
+        .from('pg_tables')
+        .select('tablename')
+        .eq('schemaname', 'public');
           
-        if (error) {
-          toast.error('Erreur lors de la vérification des tables');
-        } else {
-          const tables = data.map(row => row.tablename).join(', ');
-          toast.info(`Tables disponibles: ${tables}`);
-        }
+      if (tableError) {
+        toast.error('Erreur lors de la vérification des tables');
       } else {
-        toast.error('Impossible de se connecter à Supabase');
+        const tables = tableData.map(row => row.tablename).join(', ');
+        toast.info(`Tables disponibles: ${tables}`);
       }
     } catch (error) {
       console.error('Erreur:', error);

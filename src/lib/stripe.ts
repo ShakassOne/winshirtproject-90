@@ -1,3 +1,4 @@
+
 import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult } from '@/types/checkout';
@@ -332,8 +333,9 @@ export const clearAllData = async (): Promise<boolean> => {
       'lotteries',
       'products',
       'visuals',
-      'clients'
-    ] as const;
+      'clients',
+      'site_settings'
+    ];
     
     for (const table of tables) {
       const { error } = await supabase

@@ -11,6 +11,7 @@ import { toast } from '@/lib/toast';
 import { useSyncData, TableName } from '@/hooks/useSyncData';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/integrations/supabase/client';
 
 const SyncSettingsManager = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -46,13 +47,27 @@ const SyncSettingsManager = () => {
   }, []);
   
   const verifyConnection = async () => {
-    setIsCheckingConnection(true);
-    const connected = await checkConnection();
-    setIsConnected(connected);
-    setIsCheckingConnection(false);
-    
-    if (connected) {
-      toast.success("Connexion à Supabase établie");
+    try {
+      setIsCheckingConnection(true);
+      
+      // Test direct connection to Supabase
+      const { data, error } = await supabase.from('pg_tables').select('*').limit(1);
+      
+      if (error) {
+        console.error("Erreur de connexion à Supabase:", error);
+        toast.error(`Erreur de connexion: ${error.message}`);
+        setIsConnected(false);
+      } else {
+        setIsConnected(true);
+        toast.success("Connexion à Supabase établie");
+        console.log("Connexion à Supabase réussie:", data);
+      }
+    } catch (err) {
+      console.error("Exception lors de la vérification de connexion:", err);
+      toast.error("Une erreur s'est produite lors de la vérification de la connexion");
+      setIsConnected(false);
+    } finally {
+      setIsCheckingConnection(false);
     }
   };
   
@@ -268,7 +283,7 @@ const SyncSettingsManager = () => {
           
           <div className="flex flex-col md:flex-row gap-4">
             <Button 
-              className="flex items-center gap-2" 
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700" 
               onClick={handleSyncAllData} 
               disabled={!isConnected || isLoading}
               size="lg"

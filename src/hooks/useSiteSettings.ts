@@ -56,12 +56,33 @@ export const useSiteSettings = () => {
     }
   };
 
+  const createHomeIntroSettingsIfNotExists = async () => {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('id')
+      .eq('key', 'home_intro')
+      .single();
+    
+    if (error && error.code === 'PGRST116') { // Code pour "aucune ligne trouvée"
+      // Créer l'entrée si elle n'existe pas
+      await supabase
+        .from('site_settings')
+        .insert({
+          key: 'home_intro',
+          value: homeIntroSettings as unknown as Json
+        });
+    }
+  };
+
   const saveHomeIntroSettings = async (settings: HomeIntroSettings) => {
     try {
       setIsSaving(true);
       
       // Sauvegarder dans localStorage pour fallback
       localStorage.setItem('homeIntroSettings', JSON.stringify(settings));
+      
+      // Vérifier si l'entrée existe déjà, sinon la créer
+      await createHomeIntroSettingsIfNotExists();
       
       const { error } = await supabase
         .from('site_settings')

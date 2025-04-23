@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
-import { camelToSnake, snakeToCamel } from '@/lib/supabase';
 
 export type TableName = 
   | 'lotteries'
@@ -62,6 +61,26 @@ export const useSyncData = () => {
     }
   };
 
+  // Convertir les clés camelCase en snake_case pour Supabase
+  const camelToSnake = (obj: any): any => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(camelToSnake);
+    }
+    
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      const snakeKey = key.replace(/([A-Z])/g, (_, letter) => `_${letter.toLowerCase()}`);
+      
+      // Récursivement convertir les valeurs qui sont des objets
+      const newValue = value !== null && typeof value === 'object' 
+        ? camelToSnake(value) 
+        : value;
+      
+      return { ...acc, [snakeKey]: newValue };
+    }, {});
+  };
+
   const syncToSupabase = async (tableName: TableName): Promise<boolean> => {
     setSyncStatus(prev => ({ ...prev, [tableName]: 'loading' }));
     
@@ -74,6 +93,8 @@ export const useSyncData = () => {
         setSyncStatus(prev => ({ ...prev, [tableName]: 'error' }));
         return false;
       }
+      
+      console.log(`Synchronisation de ${localData.length} éléments pour ${tableName}`);
       
       // Convertir les données en format snake_case pour Supabase
       const snakeCaseData = localData.map(item => camelToSnake(item));
@@ -91,8 +112,8 @@ export const useSyncData = () => {
         return false;
       }
       
-      // Insérer les nouvelles données par lots de 25
-      const batchSize = 25;
+      // Insérer les nouvelles données par lots de 20
+      const batchSize = 20;
       let allSuccess = true;
       
       for (let i = 0; i < snakeCaseData.length; i += batchSize) {
@@ -103,8 +124,8 @@ export const useSyncData = () => {
           .insert(batch);
         
         if (insertError) {
-          console.error(`Erreur lors de l'insertion des données pour ${tableName}:`, insertError);
-          toast.error(`Échec de l'insertion des données: ${insertError.message}`);
+          console.error(`Erreur lors de l'insertion:`, insertError);
+          toast.error(`Échec de l'insertion: ${insertError.message}`);
           allSuccess = false;
           break;
         }
@@ -124,6 +145,26 @@ export const useSyncData = () => {
       setSyncStatus(prev => ({ ...prev, [tableName]: 'error' }));
       return false;
     }
+  };
+
+  // Convertir les clés snake_case en camelCase
+  const snakeToCamel = (obj: any): any => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(snakeToCamel);
+    }
+    
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      
+      // Récursivement convertir les valeurs qui sont des objets
+      const newValue = value !== null && typeof value === 'object' 
+        ? snakeToCamel(value) 
+        : value;
+      
+      return { ...acc, [camelKey]: newValue };
+    }, {});
   };
 
   const syncFromSupabase = async (tableName: TableName): Promise<boolean> => {
@@ -184,7 +225,7 @@ export const useSyncData = () => {
     if (allSuccess) {
       toast.success("Toutes les données ont été synchronisées avec succès");
     } else {
-      toast.error("Certaines tables n'ont pas pu être synchronisées");
+      toast.warning("Certaines tables n'ont pas pu être synchronisées");
     }
     
     return allSuccess;
