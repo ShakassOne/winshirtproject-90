@@ -22,7 +22,8 @@ export const useSyncData = () => {
     visuals: 'idle',
     orders: 'idle',
     order_items: 'idle',
-    clients: 'idle'
+    clients: 'idle',
+    site_settings: 'idle' // Added the missing table in the initial state
   });
 
   const checkConnection = async (): Promise<boolean> => {
@@ -212,7 +213,8 @@ export const useSyncData = () => {
       'orders',
       'order_items',
       'clients',
-      'visuals'
+      'visuals',
+      'site_settings' // Make sure this table is also included in the list
     ];
     
     let allSuccess = true;

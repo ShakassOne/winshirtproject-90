@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +37,8 @@ const SyncSettingsManager = () => {
     'orders',
     'order_items',
     'clients',
-    'visuals'
+    'visuals',
+    'site_settings' // Include site_settings in the list
   ];
   
   useEffect(() => {
