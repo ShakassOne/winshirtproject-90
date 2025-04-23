@@ -23,7 +23,7 @@ interface CheckoutItem {
   lotteryName?: string;
   size?: string;
   color?: string;
-  image?: string; // Add missing image property here
+  image?: string;
   selectedLotteries?: Array<{id: number, name: string}>;
   visualDesign?: {
     visualId: number;
@@ -121,7 +121,7 @@ const handleStripeCheckout = (items: Array<CheckoutItem>, amount: number): Strip
   }
 };
 
-// Fonction pour simuler un achat réussi
+// Fonction pour simuler un achat réussi - Utilise Supabase au lieu de localStorage
 const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<boolean> => {
   try {
     // Récupérer l'utilisateur actuellement connecté
@@ -147,7 +147,7 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
       }
     }
     
-    // 2. Mettre à jour les loteries
+    // 2. Mettre à jour les loteries sélectionnées
     const lotteryUpdates = items.flatMap(item => 
       (item.selectedLotteries || []).map(lottery => ({
         id: lottery.id,
@@ -157,211 +157,150 @@ const simulateSuccessfulOrder = async (items: Array<CheckoutItem>): Promise<bool
     
     for (const update of lotteryUpdates) {
       try {
-        // Créer la requête SQL qui va appeler la fonction increment
-        const incrementQuery = `SELECT increment(${update.id}, ${update.currentParticipants}, 'current_participants', 'lotteries')`;
-        
-        // Appel de la fonction exec_sql RPC avec notre requête SQL
-        const { data, error } = await supabase.rpc('exec_sql', { 
-          sql_query: incrementQuery 
-        });
-        
+        // Mettre à jour directement la loterie avec la nouvelle valeur de current_participants
+        const { error } = await supabase
+          .from('lotteries')
+          .select('current_participants')
+          .eq('id', update.id)
+          .single();
+          
         if (error) {
-          console.error(`Erreur lors de la mise à jour de la loterie ${update.id}:`, error);
-          return false;
+          console.error(`Erreur lors de la récupération de la loterie ${update.id}:`, error);
+          continue;
+        }
+        
+        // Incrémentation directe
+        const { error: updateError } = await supabase
+          .from('lotteries')
+          .update({ current_participants: supabase.rpc('increment', { 
+            x: update.currentParticipants, 
+            y: update.currentParticipants 
+          }) })
+          .eq('id', update.id);
+        
+        if (updateError) {
+          console.error(`Erreur lors de la mise à jour de la loterie ${update.id}:`, updateError);
         }
       } catch (error) {
         console.error(`Exception lors de la mise à jour de la loterie ${update.id}:`, error);
-        return false;
       }
     }
     
     console.log("Simulant une commande réussie avec les articles:", items);
     
-    // Récupérer l'utilisateur actuellement connecté
-    const userString = localStorage.getItem('winshirt_user');
-    let userLocal = null;
+    // 3. Créer la commande dans Supabase
+    let orderId = Date.now();
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user?.id || null,
+        status: 'processing',
+        total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 5.99,
+        shipping_address: {
+          address: '123 Rue Exemple',
+          city: 'Paris',
+          postalCode: '75000',
+          country: 'France'
+        },
+        shipping_method: 'standard',
+        shipping_cost: 5.99,
+        payment_method: 'Stripe',
+        payment_status: 'completed',
+        created_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
     
-    if (userString) {
-      userLocal = JSON.parse(userString);
-    }
-    
-    // 1. Récupérer les loteries et les produits
-    const lotteriesString = localStorage.getItem('lotteries');
-    const productsString = localStorage.getItem('products');
-    
-    if (!lotteriesString || !productsString) {
-      console.error('Données des loteries ou produits manquantes');
+    if (orderError) {
+      console.error('Erreur lors de la création de la commande:', orderError);
       return false;
     }
     
-    const lotteries = JSON.parse(lotteriesString) as ExtendedLottery[];
-    const products = JSON.parse(productsString);
+    orderId = orderData.id;
     
-    // 2. Pour chaque article acheté, mettre à jour les participants de la loterie associée
-    items.forEach(item => {
-      // Vérifier si l'article a des loteries sélectionnées
-      if (item.selectedLotteries && item.selectedLotteries.length > 0) {
-        item.selectedLotteries.forEach(selectedLottery => {
-          // Trouver la loterie
-          const lotteryIndex = lotteries.findIndex((l: ExtendedLottery) => l.id === selectedLottery.id);
-          
-          if (lotteryIndex !== -1) {
-            console.log(`Mise à jour de la loterie ID:${selectedLottery.id}, index:${lotteryIndex}, participants actuels:${lotteries[lotteryIndex].currentParticipants}`);
-            
-            // Créer un participant basé sur l'utilisateur connecté ou simuler un utilisateur anonyme
-            const participant = userLocal 
-              ? {
-                  id: Date.now() + Math.floor(Math.random() * 1000),
-                  name: userLocal.name,
-                  email: userLocal.email,
-                  avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
-                }
-              : {
-                  id: Date.now() + Math.floor(Math.random() * 1000),
-                  name: "Client anonyme",
-                  email: "anonymous@example.com",
-                  avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
-                };
-            
-            // Si participants n'existe pas, l'initialiser
-            if (!lotteries[lotteryIndex].participants) {
-              lotteries[lotteryIndex].participants = [];
-            }
-            
-            // Ajouter le participant à la loterie (pour chaque quantité achetée)
+    // 4. Ajouter les articles de la commande
+    const orderItems = items.map(item => ({
+      order_id: orderId,
+      product_id: item.id,
+      quantity: item.quantity,
+      price: item.price,
+      customization: item.visualDesign ? {
+        visualId: item.visualDesign.visualId,
+        visualName: item.visualDesign.visualName,
+        visualImage: item.visualDesign.visualImage,
+        settings: item.visualDesign.settings,
+        printAreaId: item.visualDesign.printAreaId
+      } : null,
+    }));
+    
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+    
+    if (itemsError) {
+      console.error('Erreur lors de l\'ajout des articles de la commande:', itemsError);
+      return false;
+    }
+    
+    // 5. Ajouter les participants à la loterie
+    if (user) {
+      for (const item of items) {
+        if (item.selectedLotteries && item.selectedLotteries.length > 0) {
+          for (const selectedLottery of item.selectedLotteries) {
             for (let i = 0; i < item.quantity; i++) {
-              lotteries[lotteryIndex].participants.push({...participant, id: participant.id + i});
-              // Incrémenter le nombre de participants
-              lotteries[lotteryIndex].currentParticipants += 1;
-            }
-            
-            console.log(`Loterie ${lotteries[lotteryIndex].title} mise à jour: Participants maintenant à ${lotteries[lotteryIndex].currentParticipants}`);
-            
-            // Vérifier si la loterie a atteint le nombre cible de participants
-            if (lotteries[lotteryIndex].currentParticipants >= lotteries[lotteryIndex].targetParticipants) {
-              // Si oui, programmer un tirage automatique dans 24 heures
-              if (!lotteries[lotteryIndex].drawDate) {
+              const participantData = {
+                lottery_id: selectedLottery.id,
+                user_id: parseInt(user.id.substring(0, 8), 16),
+                name: user.user_metadata.full_name || user.email?.split('@')[0],
+                email: user.email,
+                avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
+              };
+              
+              const { error: participantError } = await supabase
+                .from('lottery_participants')
+                .insert(participantData);
+              
+              if (participantError) {
+                console.error('Erreur lors de l\'ajout du participant:', participantError);
+              }
+              
+              // Vérifier si la loterie a atteint le nombre cible de participants
+              const { data: lottery, error: lotteryError } = await supabase
+                .from('lotteries')
+                .select('current_participants, target_participants')
+                .eq('id', selectedLottery.id)
+                .single();
+              
+              if (!lotteryError && lottery && lottery.current_participants >= lottery.target_participants) {
+                // Si oui, programmer un tirage automatique dans 24 heures
                 const drawDate = new Date();
                 drawDate.setDate(drawDate.getDate() + 1); // +24 heures
-                lotteries[lotteryIndex].drawDate = drawDate.toISOString();
                 
-                // Notifier les administrateurs qu'une loterie a atteint son objectif
-                const adminEmails = localStorage.getItem('admin_notification_emails');
-                const emails = adminEmails ? JSON.parse(adminEmails) : ['admin@winshirt.com'];
+                const { error: updateLotteryError } = await supabase
+                  .from('lotteries')
+                  .update({ draw_date: drawDate.toISOString() })
+                  .eq('id', selectedLottery.id)
+                  .is('draw_date', null);
                 
-                emails.forEach((email: string) => {
-                  simulateSendEmail(
-                    email,
-                    "Loterie complète - Tirage programmé",
-                    `La loterie "${lotteries[lotteryIndex].title}" a atteint son objectif de ${lotteries[lotteryIndex].targetParticipants} participants. Un tirage est programmé pour le ${new Date(lotteries[lotteryIndex].drawDate).toLocaleString('fr-FR')}.`
-                  );
-                });
+                if (updateLotteryError) {
+                  console.error('Erreur lors de la mise à jour de la date de tirage:', updateLotteryError);
+                } else {
+                  // Notifier les administrateurs qu'une loterie a atteint son objectif
+                  const adminEmails = ['admin@winshirt.com'];
+                  
+                  adminEmails.forEach(email => {
+                    simulateSendEmail(
+                      email,
+                      "Loterie complète - Tirage programmé",
+                      `La loterie "${selectedLottery.name}" a atteint son objectif de ${lottery.target_participants} participants. Un tirage est programmé pour le ${new Date(drawDate).toLocaleString('fr-FR')}.`
+                    );
+                  });
+                }
               }
             }
-          } else {
-            console.error(`Loterie non trouvée avec l'ID ${selectedLottery.id}`);
           }
-        });
-      }
-    });
-    
-    // 3. Enregistrer les loteries mises à jour
-    localStorage.setItem('lotteries', JSON.stringify(lotteries));
-    sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
-    console.log("Loteries mises à jour et sauvegardées:", lotteries);
-    
-    // 4. Enregistrer la commande pour l'utilisateur actuel
-    const lastOrderDetailsString = localStorage.getItem('lastOrderDetails');
-    const lastOrderDetails = lastOrderDetailsString ? JSON.parse(lastOrderDetailsString) : null;
-    
-    const ordersString = localStorage.getItem('orders') || '[]';
-    const orders = JSON.parse(ordersString);
-    
-    const newOrder = {
-      id: Date.now(),
-      clientId: userLocal?.id || null,
-      clientName: lastOrderDetails?.customerInfo?.fullName || userLocal?.name || 'Client anonyme',
-      clientEmail: lastOrderDetails?.customerInfo?.email || userLocal?.email || 'anonymous@example.com',
-      orderDate: new Date().toISOString(),
-      status: 'processing',
-      items: items.map(item => {
-        return {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          productId: item.id,
-          productName: item.name,
-          productImage: item.image || 'https://placehold.co/600x400/png',
-          quantity: item.quantity,
-          price: item.price,
-          size: item.size || 'M',
-          color: item.color || 'Noir',
-          lotteriesEntries: item.selectedLotteries ? item.selectedLotteries.map(l => l.id) : [],
-          visualDesign: item.visualDesign || null // Conserver les informations du visuel
-        };
-      }),
-      shipping: lastOrderDetails?.shippingAddress ? {
-        address: lastOrderDetails.shippingAddress.address,
-        city: lastOrderDetails.shippingAddress.city,
-        postalCode: lastOrderDetails.shippingAddress.postalCode,
-        country: lastOrderDetails.shippingAddress.country,
-        method: lastOrderDetails.shippingMethod || 'Standard',
-        cost: lastOrderDetails.shippingCost || 5.99
-      } : {
-        address: '123 Rue Exemple',
-        city: 'Paris',
-        postalCode: '75000',
-        country: 'France',
-        method: 'Standard',
-        cost: 5.99
-      },
-      payment: {
-        method: 'Stripe',
-        transactionId: 'txn_' + Date.now(),
-        status: 'completed'
-      },
-      subtotal: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (lastOrderDetails?.shippingCost || 5.99),
-      trackingNumber: 'TRK' + Date.now(),
-      notes: lastOrderDetails?.orderNotes || '',
-      delivery: {
-        status: 'preparing',
-        estimatedDeliveryDate: (() => {
-          const date = new Date();
-          const method = lastOrderDetails?.shippingMethod || 'standard';
-          if (method === 'express') date.setDate(date.getDate() + 2);
-          else if (method === 'priority') date.setDate(date.getDate() + 1);
-          else date.setDate(date.getDate() + 5);
-          return date.toISOString();
-        })()
-      }
-    };
-    
-    orders.push(newOrder);
-    console.log("Nouvelle commande créée:", newOrder);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    
-    // 5. Enregistrer les participations de l'utilisateur
-    if (userLocal) {
-      const participationsString = localStorage.getItem('participations') || '[]';
-      const participations = JSON.parse(participationsString);
-      
-      items.forEach(item => {
-        if (item.selectedLotteries && item.selectedLotteries.length > 0) {
-          item.selectedLotteries.forEach(selectedLottery => {
-            for (let i = 0; i < item.quantity; i++) {
-              participations.push({
-                id: Date.now() + Math.floor(Math.random() * 1000) + i,
-                userId: userLocal.id,
-                lotteryId: selectedLottery.id,
-                productId: item.id,
-                ticketNumber: `T${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
-                date: new Date().toISOString()
-              });
-            }
-          });
         }
-      });
-      
-      localStorage.setItem('participations', JSON.stringify(participations));
+      }
     }
     
     return true;
@@ -376,4 +315,40 @@ export const setupStripe = () => {
   // Ici, vous pourriez initialiser Stripe avec votre clé publique
   // Cette fonction serait appelée au démarrage de l'application
   console.log('Stripe setup with key:', STRIPE_PUBLIC_KEY);
+};
+
+// Fonction utilitaire pour supprimer toutes les données de Supabase
+export const clearAllData = async (): Promise<boolean> => {
+  try {
+    // Liste des tables à vider dans l'ordre pour éviter les problèmes de clés étrangères
+    const tables = [
+      'order_items',
+      'orders',
+      'lottery_winners',
+      'lottery_participants',
+      'lotteries',
+      'products',
+      'visuals',
+      'clients'
+    ];
+    
+    for (const table of tables) {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .neq('id', 0); // Supprime toutes les lignes
+      
+      if (error) {
+        console.error(`Erreur lors de la suppression des données de ${table}:`, error);
+        return false;
+      }
+    }
+    
+    toast.success('Toutes les données ont été supprimées avec succès');
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la suppression de toutes les données:', error);
+    toast.error('Erreur lors de la suppression des données');
+    return false;
+  }
 };
