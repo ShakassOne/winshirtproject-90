@@ -49,6 +49,32 @@ const formatLotteryForSupabase = (lottery: Omit<ExtendedLottery, 'id'> | Extende
   };
 };
 
+// Test Supabase connection and log result
+export const testSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    console.log('Testing Supabase connection...');
+    
+    const { data, error } = await supabase
+      .from('pg_tables')
+      .select('tablename')
+      .limit(1);
+    
+    if (error) {
+      console.error('Supabase connection test failed:', error);
+      toast.error("Erreur de connexion à Supabase: " + error.message);
+      return false;
+    }
+    
+    console.log('Supabase connection test successful:', data);
+    toast.success("Connexion à Supabase établie");
+    return true;
+  } catch (error) {
+    console.error('Error testing Supabase connection:', error);
+    toast.error("Impossible de se connecter à Supabase");
+    return false;
+  }
+};
+
 // Function to fetch participants for a lottery
 const fetchParticipantsForLottery = async (lotteryId: number): Promise<Participant[]> => {
   try {
@@ -110,35 +136,19 @@ const fetchWinnerForLottery = async (lotteryId: number): Promise<Participant | n
   }
 };
 
-// Function to fetch all lotteries - Improved with direct Supabase access only
+// Function to fetch all lotteries - optimized to only use Supabase
 export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLottery[]> => {
   try {
     console.log('Fetching lotteries from Supabase...', { forceRefresh });
     
-    // Always get data directly from Supabase
-    // First check if Supabase is available
-    console.log('Testing Supabase connection...');
-    try {
-      const { data: testData, error: testError } = await supabase
-        .from('pg_tables')
-        .select('tablename')
-        .limit(1);
-        
-      if (testError) {
-        console.error('Supabase connection test failed:', testError);
-        throw new Error('Supabase connection failed');
-      }
-      
-      console.log('Supabase connection test successful', testData);
-      toast.info("Connexion à Supabase établie");
-    } catch (testError) {
-      console.error('Error testing Supabase connection:', testError);
-      toast.error("Impossible de se connecter à Supabase");
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de récupérer les loteries: Connexion à Supabase échouée");
       return [];
     }
     
-    // Fetch real data from Supabase
-    console.log('Fetching lotteries from Supabase...');
+    // Fetch lotteries from Supabase
     const { data, error } = await supabase
       .from('lotteries')
       .select('*')
@@ -150,7 +160,7 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
       return [];
     }
     
-    if (!data) {
+    if (!data || data.length === 0) {
       console.log('No lottery data returned from Supabase');
       return [];
     }
@@ -178,10 +188,17 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
   }
 };
 
-// New function to fetch a lottery by ID
+// Function to fetch a lottery by ID
 export const fetchLotteryById = async (lotteryId: number): Promise<ExtendedLottery | null> => {
   try {
     console.log(`Fetching lottery with ID ${lotteryId}...`);
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de récupérer la loterie: Connexion à Supabase échouée");
+      return null;
+    }
     
     const { data, error } = await supabase
       .from('lotteries')
@@ -221,10 +238,17 @@ export const fetchLotteryById = async (lotteryId: number): Promise<ExtendedLotte
   }
 };
 
-// New function to add a participant to a lottery
+// Function to add a participant to a lottery
 export const addLotteryParticipant = async (lotteryId: number, participant: Participant): Promise<boolean> => {
   try {
     console.log(`Adding participant to lottery ${lotteryId}:`, participant);
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible d'ajouter un participant: Connexion à Supabase échouée");
+      return false;
+    }
     
     // First check if the participant already exists
     const { data: existingParticipant, error: existingError } = await supabase
@@ -288,6 +312,7 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
     }
     
     console.log(`Successfully added participant to lottery ${lotteryId}`);
+    toast.success("Participation enregistrée avec succès !");
     return true;
   } catch (error) {
     console.error('Error adding lottery participant:', error);
@@ -296,10 +321,17 @@ export const addLotteryParticipant = async (lotteryId: number, participant: Part
   }
 };
 
-// Function to create a new lottery - with direct Supabase usage only
+// Function to create a new lottery
 export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promise<ExtendedLottery | null> => {
   try {
     console.log('Creating lottery in Supabase:', lottery);
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de créer une loterie: Connexion à Supabase échouée");
+      return null;
+    }
     
     // Format lottery data for Supabase
     const formattedLottery = formatLotteryForSupabase(lottery);
@@ -345,10 +377,17 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
   }
 };
 
-// Function to update an existing lottery - with direct Supabase usage only
+// Function to update an existing lottery
 export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedLottery | null> => {
   try {
     console.log('Updating lottery in Supabase:', lottery);
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de mettre à jour la loterie: Connexion à Supabase échouée");
+      return null;
+    }
     
     const formattedLottery = formatLotteryForSupabase(lottery);
     
@@ -397,10 +436,17 @@ export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedL
   }
 };
 
-// Function to delete a lottery - with direct Supabase usage only
+// Function to delete a lottery
 export const deleteLottery = async (id: number): Promise<boolean> => {
   try {
     console.log(`Deleting lottery with ID ${id}...`);
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de supprimer la loterie: Connexion à Supabase échouée");
+      return false;
+    }
     
     const { error } = await supabase
       .from('lotteries')
@@ -414,6 +460,7 @@ export const deleteLottery = async (id: number): Promise<boolean> => {
     }
     
     console.log(`Successfully deleted lottery with ID ${id}`);
+    toast.success("Loterie supprimée avec succès");
     return true;
   } catch (error) {
     console.error(`Error deleting lottery with ID ${id}:`, error);
@@ -422,10 +469,17 @@ export const deleteLottery = async (id: number): Promise<boolean> => {
   }
 };
 
-// Function to toggle lottery featured status - with direct Supabase usage only
+// Function to toggle lottery featured status
 export const toggleLotteryFeatured = async (id: number, featured: boolean): Promise<boolean> => {
   try {
     console.log(`Toggling featured status for lottery with ID ${id} to ${featured}...`);
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de modifier le statut vedette: Connexion à Supabase échouée");
+      return false;
+    }
     
     const { error } = await supabase
       .from('lotteries')
@@ -439,6 +493,7 @@ export const toggleLotteryFeatured = async (id: number, featured: boolean): Prom
     }
     
     console.log(`Successfully toggled featured status for lottery with ID ${id} to ${featured}`);
+    toast.success(featured ? "Loterie mise en vedette" : "Loterie retirée des vedettes");
     return true;
   } catch (error) {
     console.error(`Error toggling featured status for lottery with ID ${id}:`, error);
@@ -447,10 +502,17 @@ export const toggleLotteryFeatured = async (id: number, featured: boolean): Prom
   }
 };
 
-// Function to update lottery winner - with direct Supabase usage only
+// Function to update lottery winner
 export const updateLotteryWinner = async (lotteryId: number, winner: Participant): Promise<boolean> => {
   try {
     console.log(`Updating winner for lottery with ID ${lotteryId}:`, winner);
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de désigner un gagnant: Connexion à Supabase échouée");
+      return false;
+    }
     
     // First, update lottery status to completed
     const { error: lotteryError } = await supabase
@@ -512,10 +574,80 @@ export const updateLotteryWinner = async (lotteryId: number, winner: Participant
     }
     
     console.log(`Successfully set winner for lottery with ID ${lotteryId}`);
+    toast.success(`${winner.name} a été désigné(e) comme gagnant(e) !`);
     return true;
   } catch (error) {
     console.error(`Error setting winner for lottery with ID ${lotteryId}:`, error);
     toast.error(`Erreur lors de la désignation du gagnant: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return false;
+  }
+};
+
+// Export the function to clear all lottery data from Supabase
+export const clearAllLotteryData = async (): Promise<boolean> => {
+  try {
+    console.log("Clearing all lottery data from Supabase...");
+    
+    // Test connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de supprimer les données: Connexion à Supabase échouée");
+      return false;
+    }
+    
+    // Delete all winners first (due to foreign key constraints)
+    const { error: winnersError } = await supabase
+      .from('lottery_winners')
+      .delete()
+      .neq('id', 0);
+    
+    if (winnersError) {
+      console.error("Error clearing lottery winners:", winnersError);
+      toast.error(`Erreur lors de la suppression des gagnants: ${winnersError.message}`);
+      return false;
+    }
+    
+    // Delete all participants next
+    const { error: participantsError } = await supabase
+      .from('lottery_participants')
+      .delete()
+      .neq('id', 0);
+    
+    if (participantsError) {
+      console.error("Error clearing lottery participants:", participantsError);
+      toast.error(`Erreur lors de la suppression des participants: ${participantsError.message}`);
+      return false;
+    }
+    
+    // Finally delete all lotteries
+    const { error: lotteriesError } = await supabase
+      .from('lotteries')
+      .delete()
+      .neq('id', 0);
+    
+    if (lotteriesError) {
+      console.error("Error clearing lotteries:", lotteriesError);
+      toast.error(`Erreur lors de la suppression des loteries: ${lotteriesError.message}`);
+      return false;
+    }
+    
+    console.log("Successfully cleared all lottery data from Supabase");
+    toast.success("Toutes les données des loteries ont été supprimées avec succès");
+    
+    // Also clear any localStorage data to ensure total cleanup
+    try {
+      localStorage.removeItem('lotteries');
+      localStorage.removeItem('lottery_participants');
+      localStorage.removeItem('lottery_winners');
+      console.log("Local storage data for lotteries cleared");
+    } catch (e) {
+      console.log("No local storage data to clear");
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error clearing lottery data:", error);
+    toast.error(`Erreur lors de la suppression des données: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     return false;
   }
 };

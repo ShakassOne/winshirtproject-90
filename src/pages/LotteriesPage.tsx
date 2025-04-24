@@ -19,17 +19,6 @@ const LotteriesPage: React.FC = () => {
   // Check if there are featured lotteries
   const hasFeaturedLotteries = lotteries.some(lottery => lottery.featured);
   
-  const handleDebug = () => {
-    try {
-      const localStorageLotteries = localStorage.getItem('lotteries');
-      console.log('Contenu du localStorage (lotteries):', localStorageLotteries ? JSON.parse(localStorageLotteries) : null);
-      toast.info("Données des loteries affichées dans la console");
-    } catch (error) {
-      console.error("Erreur lors de la lecture du localStorage:", error);
-      toast.error("Erreur lors de la lecture du localStorage");
-    }
-  };
-  
   if (loading) {
     return (
       <>
@@ -81,15 +70,6 @@ const LotteriesPage: React.FC = () => {
                 className="text-winshirt-blue border-winshirt-blue/40"
               >
                 <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
-              </Button>
-              
-              <Button
-                onClick={handleDebug}
-                variant="outline"
-                size="sm"
-                className="text-winshirt-purple border-winshirt-purple/40"
-              >
-                Debug
               </Button>
             </div>
           </div>

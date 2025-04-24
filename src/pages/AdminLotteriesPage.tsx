@@ -8,13 +8,12 @@ import LotteryForm from '@/components/admin/lotteries/LotteryForm';
 import { useLotteryForm } from '@/hooks/useLotteryForm';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Gift, Database } from 'lucide-react';
-import { fetchLotteries, deleteLottery } from '@/api/lotteryApi';
+import { Gift, Database, Loader2 } from 'lucide-react';
+import { fetchLotteries, clearAllLotteryData } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 
 const AdminLotteriesPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
@@ -22,36 +21,14 @@ const AdminLotteriesPage: React.FC = () => {
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fonction pour tout effacer sur Supabase
-  const clearSupabaseData = async () => {
-    try {
-      toast.info("Suppression des données en cours...");
-      
-      const { error: deleteError } = await supabase
-        .from('lotteries')
-        .delete()
-        .neq('id', 0);
-      
-      if (deleteError) {
-        console.error("Erreur lors de la suppression des loteries:", deleteError);
-        toast.error("Erreur lors de la suppression des données");
-        return;
-      }
-      
-      toast.success("Toutes les données ont été supprimées");
-      // Recharger les données
-      loadData();
-    } catch (error) {
-      console.error("Erreur lors de la suppression des données:", error);
-      toast.error("Erreur lors de la suppression des données");
-    }
-  };
-
   // Chargement des données depuis Supabase uniquement
   const loadData = async () => {
     setIsLoading(true);
     
     try {
+      // Effacer toutes les données existantes au chargement
+      await clearAllLotteryData();
+      
       // Forcer le rafraîchissement des données pour s'assurer qu'elles sont à jour
       const apiLotteries = await fetchLotteries(true);
       
@@ -82,7 +59,7 @@ const AdminLotteriesPage: React.FC = () => {
   
   useEffect(() => {
     // Exécuter la fonction de suppression des données au chargement initial
-    clearSupabaseData();
+    loadData();
     
     // Set up subscription for real-time updates
     const channel = supabase
@@ -148,7 +125,10 @@ const AdminLotteriesPage: React.FC = () => {
       <>
         <StarBackground />
         <div className="pt-32 pb-24 flex justify-center items-center">
-          <div className="text-white text-xl">Chargement des loteries...</div>
+          <div className="flex items-center gap-2 text-xl text-white">
+            <Loader2 className="h-6 w-6 animate-spin text-winshirt-blue" />
+            Chargement des loteries...
+          </div>
         </div>
       </>
     );

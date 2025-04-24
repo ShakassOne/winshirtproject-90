@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { ExtendedLottery } from '@/types/lottery';
-import { fetchLotteries } from '@/api/lotteryApi';
+import { fetchLotteries, testSupabaseConnection } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
 
 /**
@@ -18,6 +18,13 @@ export const useLotteries = (activeOnly: boolean = false) => {
       try {
         setLoading(true);
         console.log("lotteryService: Chargement des loteries...");
+        
+        // Vérifier d'abord la connexion à Supabase
+        const isConnected = await testSupabaseConnection();
+        if (!isConnected) {
+          setError(new Error('Impossible de se connecter à Supabase'));
+          return;
+        }
         
         const allLotteries = await fetchLotteries(true); // Force refresh pour éviter les problèmes de cache
         console.log("lotteryService: Loteries récupérées:", allLotteries);
@@ -46,6 +53,14 @@ export const useLotteries = (activeOnly: boolean = false) => {
   const refreshLotteries = async () => {
     try {
       setLoading(true);
+      
+      // Vérifier d'abord la connexion à Supabase
+      const isConnected = await testSupabaseConnection();
+      if (!isConnected) {
+        setError(new Error('Impossible de se connecter à Supabase'));
+        return;
+      }
+      
       const allLotteries = await fetchLotteries(true);
       
       if (activeOnly) {
