@@ -3,6 +3,7 @@
 import { TableName } from '@/hooks/useSyncData';
 import { supabase } from '@/integrations/supabase/client';
 import { StripeCheckoutResult } from '@/types/checkout';
+import { toast } from '@/lib/toast';
 
 // Fonction pour formater le prix en euros
 export const formatPrice = (price: number): string => {
@@ -57,14 +58,22 @@ export const clearAllData = async (): Promise<boolean> => {
     // Effacer les données de Supabase
     for (const table of tables) {
       console.log(`Suppression des données de la table ${table} dans Supabase...`);
-      const { error } = await supabase
-        .from(table as any) // Utiliser une assertion de type pour éviter l'erreur TypeScript
-        .delete()
-        .gt('id', 0);
-        
-      if (error) {
-        console.error(`Erreur lors de la suppression des données de ${table}:`, error);
-        // Continuer avec les autres tables même s'il y a une erreur
+      try {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .gt('id', 0);
+          
+        if (error) {
+          console.error(`Erreur lors de la suppression des données de ${table}:`, error);
+          toast.error(`Erreur Supabase: ${error.message}`);
+          // Continuer avec les autres tables même s'il y a une erreur
+        } else {
+          toast.success(`Table ${table} nettoyée dans Supabase`);
+        }
+      } catch (tableError) {
+        console.error(`Exception lors de la suppression des données de ${table}:`, tableError);
+        // Continuer avec les autres tables
       }
     }
     
@@ -77,6 +86,7 @@ export const clearAllData = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Erreur lors de la suppression de toutes les données:", error);
+    toast.error(`Erreur globale: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     return false;
   }
 };
