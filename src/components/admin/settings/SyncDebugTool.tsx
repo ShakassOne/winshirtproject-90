@@ -1,16 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/lib/toast';
-import { checkSupabaseConnection, checkRequiredTables, requiredTables, syncLocalDataToSupabase } from '@/integrations/supabase/client';
+import { checkSupabaseConnection, checkRequiredTables, requiredTables, syncLocalDataToSupabase, ValidTableName } from '@/integrations/supabase/client';
 import { Database, RefreshCcw, AlertCircle, CheckCircle, ServerCrash } from 'lucide-react';
 
 const SyncDebugTool: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
-  const [tablesStatus, setTablesStatus] = useState<{exists: boolean; missing: string[]}>({ exists: false, missing: [] });
+  const [tablesStatus, setTablesStatus] = useState<{exists: boolean; missing: readonly string[]}>({ exists: false, missing: [] });
   const [isSyncing, setSyncing] = useState(false);
   const [syncResults, setSyncResults] = useState<Record<string, boolean>>({});
   const [localDataCounts, setLocalDataCounts] = useState<Record<string, number>>({});
@@ -54,7 +53,7 @@ const SyncDebugTool: React.FC = () => {
     setLocalDataCounts(counts);
   };
 
-  const handleForceSync = async (table: string) => {
+  const handleForceSync = async (table: ValidTableName) => {
     try {
       setSyncing(true);
       
@@ -89,7 +88,7 @@ const SyncDebugTool: React.FC = () => {
     
     for (const table of requiredTables) {
       try {
-        const success = await syncLocalDataToSupabase(table);
+        const success = await syncLocalDataToSupabase(table as ValidTableName);
         results[table] = success;
       } catch (e) {
         results[table] = false;
@@ -208,7 +207,7 @@ const SyncDebugTool: React.FC = () => {
                     size="sm"  
                     className="h-7 px-2 text-xs border-winshirt-blue/30 text-winshirt-blue hover:bg-winshirt-blue/10"
                     disabled={isSyncing || !isConnected || (localDataCounts[table] || 0) === 0}
-                    onClick={() => handleForceSync(table)}
+                    onClick={() => handleForceSync(table as ValidTableName)}
                   >
                     {syncResults[table] === true ? "✓" : "Sync"}
                   </Button>

@@ -75,7 +75,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
 };
 
 // Function to check if all required tables exist in the database
-export const checkRequiredTables = async (): Promise<{ exists: boolean; missing: string[] }> => {
+export const checkRequiredTables = async (): Promise<{ exists: boolean; missing: readonly string[] }> => {
   try {
     console.log("Checking required tables...");
     // Get all tables in the public schema
