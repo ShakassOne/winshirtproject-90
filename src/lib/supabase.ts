@@ -1,9 +1,9 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { toast } from './toast';
 
-export const SUPABASE_URL = "https://flifjrvtjphhnxcqtxwx.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsaWZqcnZ0anBoaG54Y3F0eHd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5OTg5OTgsImV4cCI6MjA2MDU3NDk5OH0.SfYrS-mK9plEcoutKnfpth40T-TAlu_88wdv39fLbUo";
+// Utiliser les mêmes informations que dans src/integrations/supabase/client.ts
+export const SUPABASE_URL = "https://uwgclposhhdovfjnazlp.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3Z2NscG9zaGhkb3Zmam5hemxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTA4MzEsImV4cCI6MjA2MTA2NjgzMX0.wZBdCERqRHdWQMCZvFSbJBSMoXQHvpK49Jz_m4dx4cc";
 
 // Configuration explicite pour assurer la persistance de la session
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -54,7 +54,12 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
   }
 
   try {
-    const { data, error } = await supabase.from('pg_tables').select('tablename').limit(1);
+    // Utiliser la même requête que dans l'autre module pour vérifier la connexion
+    const { data, error } = await supabase
+      .from('pg_tables')
+      .select('tablename')
+      .eq('schemaname', 'public')
+      .limit(1);
     
     if (error) {
       console.error("Erreur de connexion Supabase:", error);
