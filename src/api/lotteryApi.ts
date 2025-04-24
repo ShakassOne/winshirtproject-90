@@ -120,8 +120,8 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
     console.log('Testing Supabase connection...');
     try {
       const { data: testData, error: testError } = await supabase
-        .from('lotteries')
-        .select('id')
+        .from('pg_tables')
+        .select('tablename')
         .limit(1);
         
       if (testError) {
@@ -130,6 +130,7 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
       }
       
       console.log('Supabase connection test successful', testData);
+      toast.info("Connexion à Supabase établie");
     } catch (testError) {
       console.error('Error testing Supabase connection:', testError);
       toast.error("Impossible de se connecter à Supabase");
@@ -174,6 +175,124 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
     console.error('Error fetching lotteries:', error);
     toast.error("Erreur lors de la récupération des loteries.");
     return [];
+  }
+};
+
+// New function to fetch a lottery by ID
+export const fetchLotteryById = async (lotteryId: number): Promise<ExtendedLottery | null> => {
+  try {
+    console.log(`Fetching lottery with ID ${lotteryId}...`);
+    
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('*')
+      .eq('id', lotteryId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error(`Error fetching lottery with ID ${lotteryId}:`, error);
+      toast.error(`Erreur lors de la récupération de la loterie: ${error.message}`);
+      return null;
+    }
+    
+    if (!data) {
+      console.log(`No lottery found with ID ${lotteryId}`);
+      return null;
+    }
+    
+    console.log(`Fetched lottery with ID ${lotteryId}:`, data);
+    
+    // Convert to ExtendedLottery type
+    const lottery = convertSupabaseLottery(data as DatabaseTables['lotteries']);
+    
+    // Fetch participants and winner
+    lottery.participants = await fetchParticipantsForLottery(lottery.id);
+    lottery.currentParticipants = lottery.participants.length;
+    
+    if (lottery.status === 'completed') {
+      lottery.winner = await fetchWinnerForLottery(lottery.id);
+    }
+    
+    return lottery;
+  } catch (error) {
+    console.error(`Error fetching lottery with ID ${lotteryId}:`, error);
+    toast.error(`Erreur lors de la récupération de la loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return null;
+  }
+};
+
+// New function to add a participant to a lottery
+export const addLotteryParticipant = async (lotteryId: number, participant: Participant): Promise<boolean> => {
+  try {
+    console.log(`Adding participant to lottery ${lotteryId}:`, participant);
+    
+    // First check if the participant already exists
+    const { data: existingParticipant, error: existingError } = await supabase
+      .from('lottery_participants')
+      .select('*')
+      .eq('lottery_id', lotteryId)
+      .eq('user_id', participant.id)
+      .maybeSingle();
+      
+    if (existingError) {
+      console.error('Error checking existing participant:', existingError);
+      toast.error(`Erreur lors de la vérification de participation: ${existingError.message}`);
+      return false;
+    }
+    
+    if (existingParticipant) {
+      console.log('Participant already exists for this lottery');
+      toast.info("Vous participez déjà à cette loterie");
+      return true; // Already participating, consider it a success
+    }
+    
+    // Add the participant
+    const { error } = await supabase
+      .from('lottery_participants')
+      .insert({
+        lottery_id: lotteryId,
+        user_id: participant.id,
+        name: participant.name,
+        email: participant.email,
+        avatar: participant.avatar
+      });
+      
+    if (error) {
+      console.error('Error adding participant:', error);
+      toast.error(`Erreur lors de l'ajout du participant: ${error.message}`);
+      return false;
+    }
+    
+    // Update the lottery's current_participants count
+    const { data: lottery, error: fetchError } = await supabase
+      .from('lotteries')
+      .select('current_participants')
+      .eq('id', lotteryId)
+      .maybeSingle();
+      
+    if (fetchError || !lottery) {
+      console.error('Error fetching lottery for participant count update:', fetchError);
+      return true; // At least the participant was added
+    }
+    
+    const newCount = (lottery.current_participants || 0) + 1;
+    
+    const { error: updateError } = await supabase
+      .from('lotteries')
+      .update({ current_participants: newCount })
+      .eq('id', lotteryId);
+      
+    if (updateError) {
+      console.error('Error updating participant count:', updateError);
+      return true; // At least the participant was added
+    }
+    
+    console.log(`Successfully added participant to lottery ${lotteryId}`);
+    return true;
+  } catch (error) {
+    console.error('Error adding lottery participant:', error);
+    toast.error(`Erreur lors de l'ajout du participant: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return false;
   }
 };
 
