@@ -127,6 +127,9 @@ export const createTablesSQL = {
   `
 } as const;
 
+// Re-export the ValidTableName type for use in other files
+export { ValidTableName };
+
 // Function to create missing tables
 const createMissingTables = async (missingTables: readonly string[]): Promise<boolean> => {
   let success = true;
@@ -330,13 +333,12 @@ const setupRealtimeSubscriptions = () => {
   // We don't need to unsubscribe because these channels should last for the entire app lifetime
 };
 
-// Export a function to sync data between localStorage and Supabase
+// Sync config definition
 export const syncConfig = {
   autoSync: true,
   tables: ['lotteries', 'products', 'lottery_participants', 'lottery_winners', 'orders', 'order_items', 'clients', 'visuals'] as const
 };
 
-// Define a type for valid table names that matches the required tables in supabase/client.ts
 // Function to sync data from localStorage to Supabase
 export const syncData = async (tableName: ValidTableName): Promise<boolean> => {
   try {

@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL, ValidTableName } from '@/lib/initSupabase';
-import { checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
+import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL } from '@/lib/initSupabase';
+import { checkSupabaseConnection, requiredTables, ValidTableName } from '@/integrations/supabase/client';
 import { supabase, camelToSnake, snakeToCamel } from '@/lib/supabase';
 
 const SyncSettingsManager: React.FC = () => {
