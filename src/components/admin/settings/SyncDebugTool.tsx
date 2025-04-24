@@ -5,7 +5,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/lib/toast';
 import { checkSupabaseConnection, checkRequiredTables, requiredTables, syncLocalDataToSupabase, ValidTableName } from '@/integrations/supabase/client';
-import { Database, RefreshCcw, AlertCircle, CheckCircle, ServerCrash, Code } from 'lucide-react';
+import { Database, RefreshCcw, AlertCircle, CheckCircle, ServerCrash, Code, Loader2, XCircle, Cloud, CloudOff } from 'lucide-react';
 import { SUPABASE_URL } from '@/lib/supabase';
 
 const SyncDebugTool: React.FC = () => {
@@ -15,6 +15,9 @@ const SyncDebugTool: React.FC = () => {
   const [syncResults, setSyncResults] = useState<Record<string, boolean>>({});
   const [localDataCounts, setLocalDataCounts] = useState<Record<string, number>>({});
   const [connectionDetails, setConnectionDetails] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
+  const [localStorageData, setLocalStorageData] = useState<Record<string, boolean>>({});
+  const [supabaseStorage, setSupabaseStorage] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkConnection();
@@ -44,6 +47,7 @@ const SyncDebugTool: React.FC = () => {
 
   const checkLocalStorageData = () => {
     const counts: Record<string, number> = {};
+    const localData: Record<string, boolean> = {};
     
     requiredTables.forEach(table => {
       const data = localStorage.getItem(table);
@@ -51,6 +55,7 @@ const SyncDebugTool: React.FC = () => {
         try {
           const parsed = JSON.parse(data);
           counts[table] = Array.isArray(parsed) ? parsed.length : 1;
+          localData[table] = Array.isArray(parsed) && parsed.length > 0;
           
           // Afficher les premières données pour le débogage
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -59,13 +64,16 @@ const SyncDebugTool: React.FC = () => {
         } catch (e) {
           console.error(`Erreur lors de l'analyse des données pour ${table}:`, e);
           counts[table] = 0;
+          localData[table] = false;
         }
       } else {
         counts[table] = 0;
+        localData[table] = false;
       }
     });
     
     setLocalDataCounts(counts);
+    setLocalStorageData(localData);
   };
 
   const handleForceSync = async (table: ValidTableName) => {
