@@ -1,4 +1,3 @@
-
 import { supabase, checkSupabaseConnection, checkRequiredTables, requiredTables, ValidTableName } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
@@ -338,8 +337,6 @@ export const syncConfig = {
 };
 
 // Define a type for valid table names that matches the required tables in supabase/client.ts
-export type ValidTableName = typeof syncConfig.tables[number];
-
 // Function to sync data from localStorage to Supabase
 export const syncData = async (tableName: ValidTableName): Promise<boolean> => {
   try {
@@ -439,4 +436,3 @@ export const syncData = async (tableName: ValidTableName): Promise<boolean> => {
     return false;
   }
 };
-
