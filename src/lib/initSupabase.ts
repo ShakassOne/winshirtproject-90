@@ -128,7 +128,7 @@ export const createTablesSQL = {
 } as const;
 
 // Re-export the ValidTableName type for use in other files
-export { ValidTableName };
+export type { ValidTableName };
 
 // Function to create missing tables
 const createMissingTables = async (missingTables: readonly string[]): Promise<boolean> => {
