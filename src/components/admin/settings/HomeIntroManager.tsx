@@ -69,7 +69,7 @@ const HomeIntroManager: React.FC = () => {
   const handleAddSlide = () => {
     if (!config) return;
 
-    const newSlideId = Math.max(0, ...config.slides.map(s => s.id)) + 1;
+    const newSlideId = Math.max(0, ...config.slides.map(s => Number(s.id))) + 1;
     const newSlide: SlideType = {
       id: newSlideId,
       title: "Nouveau slide",
@@ -78,6 +78,7 @@ const HomeIntroManager: React.FC = () => {
       buttonLink: "/",
       backgroundImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
       textColor: "#FFFFFF",
+      description: "",
       order: config.slides.length + 1
     };
 
@@ -134,7 +135,7 @@ const HomeIntroManager: React.FC = () => {
   // Upload d'image pour le background
   const handleImageUpload = async (id: number, file: File) => {
     try {
-      const imageUrl = await uploadImage(file, 'slides');
+      const imageUrl = await uploadImage(file);
       if (imageUrl) {
         handleUpdateSlide(id, 'backgroundImage', imageUrl);
         toast.success("Image téléchargée avec succès");
@@ -176,7 +177,7 @@ const HomeIntroManager: React.FC = () => {
     newSlides[newIndex].order = temp;
 
     // Trier par ordre
-    newSlides.sort((a, b) => a.order - b.order);
+    newSlides.sort((a, b) => (a.order || 0) - (b.order || 0));
 
     setConfig({
       ...config,
@@ -263,9 +264,9 @@ const HomeIntroManager: React.FC = () => {
               
               {config.showIndicators && (
                 <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                  {config.slides.map((slide, index) => (
+                  {config.slides.map((_, index) => (
                     <div 
-                      key={slide.id}
+                      key={index}
                       className={`h-2 w-2 rounded-full ${index === 0 ? 'bg-white' : 'bg-white/50'}`}
                     />
                   ))}
@@ -311,7 +312,7 @@ const HomeIntroManager: React.FC = () => {
                               e.stopPropagation();
                               handleMoveSlide(slide.id, 'up');
                             }}
-                            disabled={slide.order === 1}
+                            disabled={(slide.order || 0) === 1}
                           >
                             <Move className="h-4 w-4 rotate-90" />
                           </Button>
@@ -357,7 +358,7 @@ const HomeIntroManager: React.FC = () => {
                         <Label htmlFor="subtitle" className="text-white">Sous-titre</Label>
                         <Input
                           id="subtitle"
-                          value={activeSlide.subtitle}
+                          value={activeSlide.subtitle || ''}
                           onChange={(e) => handleUpdateSlide(activeSlide.id, 'subtitle', e.target.value)}
                           className="bg-winshirt-space border-winshirt-purple/30 text-white"
                         />
@@ -368,7 +369,7 @@ const HomeIntroManager: React.FC = () => {
                           <Label htmlFor="buttonText" className="text-white">Texte du bouton</Label>
                           <Input
                             id="buttonText"
-                            value={activeSlide.buttonText}
+                            value={activeSlide.buttonText || ''}
                             onChange={(e) => handleUpdateSlide(activeSlide.id, 'buttonText', e.target.value)}
                             className="bg-winshirt-space border-winshirt-purple/30 text-white"
                           />
@@ -378,7 +379,7 @@ const HomeIntroManager: React.FC = () => {
                           <Label htmlFor="buttonLink" className="text-white">Lien du bouton</Label>
                           <Input
                             id="buttonLink"
-                            value={activeSlide.buttonLink}
+                            value={activeSlide.buttonLink || ''}
                             onChange={(e) => handleUpdateSlide(activeSlide.id, 'buttonLink', e.target.value)}
                             className="bg-winshirt-space border-winshirt-purple/30 text-white"
                           />
@@ -391,13 +392,13 @@ const HomeIntroManager: React.FC = () => {
                           <Input
                             id="textColor"
                             type="text"
-                            value={activeSlide.textColor}
+                            value={activeSlide.textColor || '#FFFFFF'}
                             onChange={(e) => handleUpdateSlide(activeSlide.id, 'textColor', e.target.value)}
                             className="bg-winshirt-space border-winshirt-purple/30 text-white"
                           />
                           <Input
                             type="color"
-                            value={activeSlide.textColor}
+                            value={activeSlide.textColor || '#FFFFFF'}
                             onChange={(e) => handleUpdateSlide(activeSlide.id, 'textColor', e.target.value)}
                             className="w-12 h-10 p-1"
                           />
@@ -477,7 +478,7 @@ const HomeIntroManager: React.FC = () => {
                             </div>
                           </div>
                           <Input
-                            value={activeSlide.backgroundImage}
+                            value={activeSlide.backgroundImage || ''}
                             onChange={(e) => handleUpdateSlide(activeSlide.id, 'backgroundImage', e.target.value)}
                             className="bg-winshirt-space border-winshirt-purple/30 text-white"
                             placeholder="URL de l'image de fond"
@@ -501,10 +502,10 @@ const HomeIntroManager: React.FC = () => {
                 <div className="space-y-6">
                   <div>
                     <Label className="text-white mb-4 flex justify-between">
-                      <span>Temps de transition (secondes): {config.transitionTime / 1000}</span>
+                      <span>Temps de transition (secondes): {(config.transitionTime || 5000) / 1000}</span>
                     </Label>
                     <Slider
-                      value={[config.transitionTime / 1000]}
+                      value={[(config.transitionTime || 5000) / 1000]}
                       min={1}
                       max={15}
                       step={1}
@@ -514,13 +515,13 @@ const HomeIntroManager: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="autoPlay" className="text-white">
+                    <Label htmlFor="autoplay" className="text-white">
                       Lecture automatique
                     </Label>
                     <Switch
-                      id="autoPlay"
-                      checked={config.autoPlay}
-                      onCheckedChange={(checked) => handleSettingsChange('autoPlay', checked)}
+                      id="autoplay"
+                      checked={config.autoplay}
+                      onCheckedChange={(checked) => handleSettingsChange('autoplay', checked)}
                     />
                   </div>
                   
@@ -530,7 +531,7 @@ const HomeIntroManager: React.FC = () => {
                     </Label>
                     <Switch
                       id="showButtons"
-                      checked={config.showButtons}
+                      checked={config.showButtons || false}
                       onCheckedChange={(checked) => handleSettingsChange('showButtons', checked)}
                     />
                   </div>
@@ -541,7 +542,7 @@ const HomeIntroManager: React.FC = () => {
                     </Label>
                     <Switch
                       id="showIndicators"
-                      checked={config.showIndicators}
+                      checked={config.showIndicators || false}
                       onCheckedChange={(checked) => handleSettingsChange('showIndicators', checked)}
                     />
                   </div>

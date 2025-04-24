@@ -1,5 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { Json } from '@/integrations/supabase/types';
 
 // Vérification de la configuration Supabase
 export const isSupabaseConfigured = async (): Promise<boolean> => {
@@ -94,10 +96,10 @@ export { supabase } from '@/integrations/supabase/client';
 
 // Types for HomeIntroManager and related components
 export interface SlideType {
-  id: string;
+  id: number; // Changed from string to number
   title: string;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;
   ctaText?: string;
   ctaLink?: string;
   // Additional properties used in HomeIntroManager
@@ -112,25 +114,36 @@ export interface SlideType {
 export interface HomeIntroConfig {
   slides: SlideType[];
   showArrows: boolean;
-  autoplay: boolean;
+  autoplay: boolean; // Consistent naming
   interval: number;
   showIndicators?: boolean;
+  showButtons?: boolean; // Added missing property
+  transitionTime?: number; // Added missing property
 }
 
 export const getDefaultHomeIntroConfig = (): HomeIntroConfig => ({
   slides: [
     {
-      id: '1',
+      id: 1, // Changed from string to number
       title: 'Bienvenue sur WinShirt',
       description: 'Découvrez nos loteries et produits exclusifs',
       imageUrl: 'https://placehold.co/600x400/png?text=WinShirt',
       ctaText: 'Voir les loteries',
-      ctaLink: '/lotteries'
+      ctaLink: '/lotteries',
+      backgroundImage: 'https://placehold.co/600x400/png?text=WinShirt', 
+      textColor: '#FFFFFF',
+      subtitle: 'Découvrez nos loteries et produits exclusifs',
+      buttonText: 'Voir les loteries',
+      buttonLink: '/lotteries',
+      order: 1
     }
   ],
   showArrows: true,
   autoplay: true,
-  interval: 5000
+  interval: 5000,
+  showButtons: true,
+  showIndicators: true,
+  transitionTime: 5000
 });
 
 export const getHomeIntroConfig = async (): Promise<HomeIntroConfig> => {
@@ -152,7 +165,14 @@ export const getHomeIntroConfig = async (): Promise<HomeIntroConfig> => {
       return getDefaultHomeIntroConfig();
     }
     
-    return data.value as HomeIntroConfig;
+    // Cast the data.value to HomeIntroConfig after known structure validation
+    const rawValue = data.value as any;
+    // Validate that it has the minimum required structure
+    if (rawValue && Array.isArray(rawValue.slides)) {
+      return rawValue as HomeIntroConfig;
+    }
+    
+    return getDefaultHomeIntroConfig();
   } catch (error) {
     console.error('Error in getHomeIntroConfig:', error);
     return getDefaultHomeIntroConfig();
@@ -178,7 +198,7 @@ export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<bool
       // Update existing config
       const { error } = await supabase
         .from('site_settings')
-        .update({ value: config })
+        .update({ value: config as unknown as Json })
         .eq('key', 'home_intro_config');
       
       if (error) {
@@ -189,7 +209,7 @@ export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<bool
       // Insert new config
       const { error } = await supabase
         .from('site_settings')
-        .insert({ key: 'home_intro_config', value: config });
+        .insert({ key: 'home_intro_config', value: config as unknown as Json });
       
       if (error) {
         console.error('Error inserting home intro config:', error);
@@ -206,7 +226,7 @@ export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<bool
   }
 };
 
-export const uploadImage = async (file: File): Promise<string> => {
+export const uploadImage = async (file: File, folder?: string): Promise<string> => {
   // This is a placeholder function that would normally handle image uploads
   // Since we don't have actual storage implementation yet, we'll return a placeholder
   return URL.createObjectURL(file);
@@ -226,7 +246,7 @@ export const defaultFtpConfig = {
 };
 
 // FTP Config interface for FtpSettingsManager
-export interface ftpConfig {
+export interface FtpConfig {
   host: string;
   port: number;
   username: string;
@@ -239,8 +259,8 @@ export interface ftpConfig {
 }
 
 // Create an instance of the config to use as a value
-export const ftpConfig = { ...defaultFtpConfig };
+export const ftpConfigInstance = { ...defaultFtpConfig };
 
-export const getDefaultFtpConfig = (): ftpConfig => ({
+export const getDefaultFtpConfig = (): FtpConfig => ({
   ...defaultFtpConfig
 });
