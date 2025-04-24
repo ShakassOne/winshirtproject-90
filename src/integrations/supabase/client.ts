@@ -10,7 +10,15 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
+
+console.log("Supabase client initialized with URL:", SUPABASE_URL);
 
 // Define database table types for TypeScript to use
 export type Tables = Database['public']['Tables'];
@@ -39,6 +47,7 @@ export const requiredTables = [
 // Function to check if Supabase connection is working
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
+    console.log("Testing Supabase connection...");
     // Try a simple query to see if the connection works
     const result = await supabase
       .from('pg_tables')
@@ -49,7 +58,13 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     console.log('Supabase connection check result:', result);
     
     // Return true if there's no error
-    return !result.error;
+    if (!result.error) {
+      console.log("Supabase connection successful");
+      return true;
+    } else {
+      console.error("Supabase connection error:", result.error);
+      return false;
+    }
   } catch (error) {
     console.error('Error checking Supabase connection:', error);
     return false;
@@ -59,6 +74,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
 // Function to check if all required tables exist in the database
 export const checkRequiredTables = async (): Promise<{ exists: boolean; missing: string[] }> => {
   try {
+    console.log("Checking required tables...");
     // Get all tables in the public schema
     const { data, error } = await supabase
       .from('pg_tables')
@@ -72,9 +88,11 @@ export const checkRequiredTables = async (): Promise<{ exists: boolean; missing:
     
     // Extract table names
     const existingTables = data.map(row => row.tablename);
+    console.log("Existing tables:", existingTables);
     
     // Find missing tables
     const missingTables = requiredTables.filter(table => !existingTables.includes(table));
+    console.log("Missing tables:", missingTables);
     
     return {
       exists: missingTables.length === 0,
@@ -83,5 +101,68 @@ export const checkRequiredTables = async (): Promise<{ exists: boolean; missing:
   } catch (error) {
     console.error('Error checking required tables:', error);
     return { exists: false, missing: requiredTables };
+  }
+};
+
+// Function to force a sync of local data to Supabase
+export const syncLocalDataToSupabase = async (tableName: string): Promise<boolean> => {
+  try {
+    console.log(`Starting sync of ${tableName} to Supabase...`);
+    
+    // Get data from localStorage
+    const localData = localStorage.getItem(tableName);
+    if (!localData) {
+      console.log(`No local data found for ${tableName}`);
+      return false;
+    }
+    
+    // Parse local data
+    const items = JSON.parse(localData);
+    if (!Array.isArray(items) || items.length === 0) {
+      console.log(`No valid items found in local storage for ${tableName}`);
+      return false;
+    }
+    
+    console.log(`Found ${items.length} items in localStorage for ${tableName}`);
+    
+    // Function to convert camelCase to snake_case
+    const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    
+    // Convert items to Supabase format (camelCase to snake_case)
+    const formattedItems = items.map(item => {
+      const formattedItem: Record<string, any> = {};
+      
+      Object.entries(item).forEach(([key, value]) => {
+        // Skip special fields like participants or winner which aren't in the database schema
+        if (key === 'participants' || key === 'winner') return;
+        
+        // Convert camelCase keys to snake_case
+        const snakeKey = camelToSnake(key);
+        formattedItem[snakeKey] = value;
+      });
+      
+      return formattedItem;
+    });
+    
+    console.log(`Formatted items for Supabase:`, formattedItems[0]);
+    
+    // Attempt to upsert data to Supabase
+    const { error } = await supabase
+      .from(tableName)
+      .upsert(formattedItems, { 
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
+    
+    if (error) {
+      console.error(`Error upserting data to ${tableName}:`, error);
+      return false;
+    }
+    
+    console.log(`Successfully synced ${formattedItems.length} items to ${tableName}`);
+    return true;
+  } catch (error) {
+    console.error(`Error syncing ${tableName} to Supabase:`, error);
+    return false;
   }
 };
