@@ -51,14 +51,6 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     };
     
     loadActiveLotteries();
-    
-    // Check localStorage for comparison
-    try {
-      const localStorageLotteries = localStorage.getItem('lotteries');
-      console.log("Local Storage Lotteries:", localStorageLotteries ? JSON.parse(localStorageLotteries) : null);
-    } catch (error) {
-      console.error("Error checking localStorage:", error);
-    }
   }, [selectedLotteries]);
 
   if (!tickets || tickets <= 0) return null;
