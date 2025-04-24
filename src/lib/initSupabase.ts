@@ -1,5 +1,5 @@
 
-import { supabase, checkSupabaseConnection, checkRequiredTables, requiredTables } from '@/integrations/supabase/client';
+import { supabase, checkSupabaseConnection, checkRequiredTables, requiredTables, ValidTableName } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
 // SQL statements to create the required tables if they don't exist
@@ -129,7 +129,7 @@ export const createTablesSQL = {
 } as const;
 
 // Function to create missing tables
-const createMissingTables = async (missingTables: string[]): Promise<boolean> => {
+const createMissingTables = async (missingTables: readonly string[]): Promise<boolean> => {
   let success = true;
   
   for (const tableName of missingTables) {
@@ -439,3 +439,4 @@ export const syncData = async (tableName: ValidTableName): Promise<boolean> => {
     return false;
   }
 };
+
