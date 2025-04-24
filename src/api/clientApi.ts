@@ -4,6 +4,14 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { Client } from '@/types/client';
 import { toast } from '@/lib/toast';
 
+// Interface for the address structure in the database
+interface AddressJson {
+  street?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 // Fonction pour sauvegarder les clients dans le localStorage (fallback)
 const saveClientsToLocalStorage = (clients: Client[]) => {
   try {
@@ -32,22 +40,27 @@ export const fetchClients = async (): Promise<Client[]> => {
     if (error) throw error;
     
     // Convertir les données au format Client
-    const clients: Client[] = data.map(item => ({
-      id: item.id,
-      name: item.name || '',
-      email: item.email || '',
-      phone: item.phone || '',
-      address: item.address?.street || '',
-      city: item.address?.city || '',
-      postalCode: item.address?.postalCode || '',
-      country: item.address?.country || '',
-      registrationDate: item.created_at,
-      lastLogin: item.updated_at,
-      orderCount: 0, // Ces valeurs seront calculées plus tard
-      totalSpent: 0,
-      participatedLotteries: [],
-      wonLotteries: []
-    }));
+    const clients: Client[] = data.map(item => {
+      // Safely cast address to our expected structure
+      const address = item.address as AddressJson || {};
+      
+      return {
+        id: item.id,
+        name: item.name || '',
+        email: item.email || '',
+        phone: item.phone || '',
+        address: address.street || '',
+        city: address.city || '',
+        postalCode: address.postalCode || '',
+        country: address.country || '',
+        registrationDate: item.created_at,
+        lastLogin: item.updated_at,
+        orderCount: 0, // Ces valeurs seront calculées plus tard
+        totalSpent: 0,
+        participatedLotteries: [],
+        wonLotteries: []
+      };
+    });
     
     // Enrichir les données avec des informations supplémentaires
     for (let i = 0; i < clients.length; i++) {
@@ -149,16 +162,19 @@ export const createClient = async (client: Omit<Client, 'id' | 'registrationDate
     
     if (error) throw error;
     
+    // Cast address to our expected structure
+    const address = data.address as AddressJson || {};
+    
     // Conversion des données reçues en format Client
     const createdClient: Client = {
       id: data.id,
       name: data.name || '',
       email: data.email || '',
       phone: data.phone || '',
-      address: data.address?.street || '',
-      city: data.address?.city || '',
-      postalCode: data.address?.postalCode || '',
-      country: data.address?.country || '',
+      address: address.street || '',
+      city: address.city || '',
+      postalCode: address.postalCode || '',
+      country: address.country || '',
       registrationDate: data.created_at,
       lastLogin: data.updated_at,
       orderCount: 0,
@@ -222,16 +238,19 @@ export const updateClient = async (client: Client): Promise<Client | null> => {
     
     if (error) throw error;
     
+    // Cast address to our expected structure
+    const address = data.address as AddressJson || {};
+    
     // Conversion des données reçues en format Client
     const updatedClient: Client = {
       id: data.id,
       name: data.name || '',
       email: data.email || '',
       phone: data.phone || '',
-      address: data.address?.street || '',
-      city: data.address?.city || '',
-      postalCode: data.address?.postalCode || '',
-      country: data.address?.country || '',
+      address: address.street || '',
+      city: address.city || '',
+      postalCode: address.postalCode || '',
+      country: address.country || '',
       registrationDate: data.created_at,
       lastLogin: data.updated_at,
       orderCount: client.orderCount,

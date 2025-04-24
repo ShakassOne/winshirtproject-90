@@ -9,11 +9,37 @@ import { toast } from '@/lib/toast';
 import { 
   createLottery, 
   updateLottery, 
-  deleteLottery, 
-  toggleLotteryFeatured, 
+  deleteLottery,
   updateLotteryWinner,
   fetchLotteries 
 } from '@/api/lotteryApi';
+
+// Function to toggle a lottery's featured status
+const toggleLotteryFeatured = async (lotteryId: number, featured: boolean): Promise<boolean> => {
+  try {
+    // Find the lottery to update
+    const allLotteries = await fetchLotteries();
+    const lottery = allLotteries.find(l => l.id === lotteryId);
+    
+    if (!lottery) {
+      toast.error("Loterie non trouvée");
+      return false;
+    }
+    
+    // Update the lottery with featured status
+    const updatedLottery = {
+      ...lottery,
+      featured
+    };
+    
+    const result = await updateLottery(updatedLottery);
+    return result !== null;
+  } catch (error) {
+    console.error("Erreur lors de la modification du statut vedette:", error);
+    toast.error(`Erreur lors de la modification du statut vedette: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return false;
+  }
+};
 
 const formSchema = z.object({
   title: z.string().min(2, {

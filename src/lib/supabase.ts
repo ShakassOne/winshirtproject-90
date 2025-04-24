@@ -89,3 +89,137 @@ export const snakeToCamel = (obj: any): any => {
     return { ...acc, [camelKey]: newValue };
   }, {});
 };
+
+// Re-export supabase from client to maintain compatibility
+export { supabase } from '@/integrations/supabase/client';
+
+// Types for HomeIntroManager and related components
+export interface SlideType {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  ctaText?: string;
+  ctaLink?: string;
+}
+
+export interface HomeIntroConfig {
+  slides: SlideType[];
+  showArrows: boolean;
+  autoplay: boolean;
+  interval: number;
+}
+
+export const getDefaultHomeIntroConfig = (): HomeIntroConfig => ({
+  slides: [
+    {
+      id: '1',
+      title: 'Bienvenue sur WinShirt',
+      description: 'Découvrez nos loteries et produits exclusifs',
+      imageUrl: 'https://placehold.co/600x400/png?text=WinShirt',
+      ctaText: 'Voir les loteries',
+      ctaLink: '/lotteries'
+    }
+  ],
+  showArrows: true,
+  autoplay: true,
+  interval: 5000
+});
+
+export const getHomeIntroConfig = async (): Promise<HomeIntroConfig> => {
+  try {
+    const isConnected = await isSupabaseConfigured();
+    if (!isConnected) {
+      const storedConfig = localStorage.getItem('homeIntroConfig');
+      return storedConfig ? JSON.parse(storedConfig) : getDefaultHomeIntroConfig();
+    }
+    
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'home_intro_config')
+      .single();
+    
+    if (error || !data) {
+      console.error('Error fetching home intro config:', error);
+      return getDefaultHomeIntroConfig();
+    }
+    
+    return data.value as HomeIntroConfig;
+  } catch (error) {
+    console.error('Error in getHomeIntroConfig:', error);
+    return getDefaultHomeIntroConfig();
+  }
+};
+
+export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<boolean> => {
+  try {
+    const isConnected = await isSupabaseConfigured();
+    if (!isConnected) {
+      localStorage.setItem('homeIntroConfig', JSON.stringify(config));
+      return true;
+    }
+    
+    // Check if the config already exists
+    const { data: existing } = await supabase
+      .from('site_settings')
+      .select('id')
+      .eq('key', 'home_intro_config')
+      .maybeSingle();
+    
+    if (existing) {
+      // Update existing config
+      const { error } = await supabase
+        .from('site_settings')
+        .update({ value: config })
+        .eq('key', 'home_intro_config');
+      
+      if (error) {
+        console.error('Error updating home intro config:', error);
+        return false;
+      }
+    } else {
+      // Insert new config
+      const { error } = await supabase
+        .from('site_settings')
+        .insert({ key: 'home_intro_config', value: config });
+      
+      if (error) {
+        console.error('Error inserting home intro config:', error);
+        return false;
+      }
+    }
+    
+    // Update localStorage as backup
+    localStorage.setItem('homeIntroConfig', JSON.stringify(config));
+    return true;
+  } catch (error) {
+    console.error('Error in saveHomeIntroConfig:', error);
+    return false;
+  }
+};
+
+export const uploadImage = async (file: File): Promise<string> => {
+  // This is a placeholder function that would normally handle image uploads
+  // Since we don't have actual storage implementation yet, we'll return a placeholder
+  return URL.createObjectURL(file);
+};
+
+// FTP Config interface for FtpSettingsManager
+export interface ftpConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  secure: boolean;
+  basePath: string;
+}
+
+export const getDefaultFtpConfig = (): ftpConfig => ({
+  host: '',
+  port: 21,
+  username: '',
+  password: '',
+  secure: true,
+  basePath: '/'
+});

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { isSupabaseConfigured, snakeToCamel, camelToSnake } from '@/lib/supabase';
 import { ExtendedLottery, Participant } from '@/types/lottery';
@@ -82,6 +81,25 @@ export const fetchLotteries = async (forceRefresh: boolean = false): Promise<Ext
     // Fallback au localStorage
     const storedLotteries = localStorage.getItem('lotteries');
     return storedLotteries ? JSON.parse(storedLotteries) : [];
+  }
+};
+
+// Fonction pour récupérer une loterie par son ID
+export const fetchLotteryById = async (lotteryId: number): Promise<ExtendedLottery | null> => {
+  try {
+    const allLotteries = await fetchLotteries();
+    const lottery = allLotteries.find(l => l.id === lotteryId);
+    
+    if (!lottery) {
+      toast.error("Loterie non trouvée");
+      return null;
+    }
+    
+    return lottery;
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la loterie:", error);
+    toast.error(`Erreur lors de la récupération de la loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return null;
   }
 };
 
@@ -447,6 +465,78 @@ export const selectLotteryWinner = async (lotteryId: number, winner: Participant
   } catch (error) {
     console.error("Erreur lors de la désignation du gagnant:", error);
     toast.error(`Erreur lors de la désignation du gagnant: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return false;
+  }
+};
+
+// Fonction pour mettre à jour le gagnant d'une loterie
+export const updateLotteryWinner = async (lotteryId: number, winner: Participant): Promise<boolean> => {
+  try {
+    // D'abord, vérifier si la loterie existe
+    const lottery = await fetchLotteryById(lotteryId);
+    if (!lottery) {
+      toast.error("Loterie non trouvée");
+      return false;
+    }
+
+    // Appeler selectLotteryWinner qui contient déjà la logique pour désigner un gagnant
+    const success = await selectLotteryWinner(lotteryId, winner);
+    
+    if (success) {
+      toast.success("Gagnant mis à jour avec succès");
+    }
+    
+    return success;
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du gagnant:", error);
+    toast.error(`Erreur lors de la mise à jour du gagnant: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return false;
+  }
+};
+
+// Fonction pour activer/désactiver la mise en avant d'une loterie
+export const toggleLotteryFeatured = async (lotteryId: number, featured: boolean): Promise<boolean> => {
+  try {
+    const isConnected = await isSupabaseConfigured();
+    
+    if (!isConnected) {
+      // Fallback au localStorage
+      const storedLotteries = localStorage.getItem('lotteries');
+      let lotteries = storedLotteries ? JSON.parse(storedLotteries) : [];
+      
+      lotteries = lotteries.map((l: ExtendedLottery) => {
+        if (l.id === lotteryId) {
+          return {
+            ...l,
+            featured
+          };
+        }
+        return l;
+      });
+      
+      localStorage.setItem('lotteries', JSON.stringify(lotteries));
+      
+      toast.success(`Loterie ${featured ? 'mise en avant' : 'retirée des mises en avant'} avec succès (stockage local)`);
+      return true;
+    }
+    
+    // Mise à jour dans Supabase
+    const { error } = await supabase
+      .from('lotteries')
+      .update({ featured })
+      .eq('id', lotteryId);
+    
+    if (error) throw error;
+    
+    // Mise à jour du localStorage
+    const lotteries = await fetchLotteries(true);
+    localStorage.setItem('lotteries', JSON.stringify(lotteries));
+    
+    toast.success(`Loterie ${featured ? 'mise en avant' : 'retirée des mises en avant'} avec succès`);
+    return true;
+  } catch (error) {
+    console.error("Erreur lors de la modification du statut vedette:", error);
+    toast.error(`Erreur lors de la modification du statut vedette: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     return false;
   }
 };
