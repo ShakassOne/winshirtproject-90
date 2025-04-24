@@ -42,7 +42,10 @@ export const requiredTables = [
   'orders',
   'order_items',
   'clients'
-];
+] as const;
+
+// Define the type for valid table names
+export type ValidTableName = typeof requiredTables[number];
 
 // Function to check if Supabase connection is working
 export const checkSupabaseConnection = async (): Promise<boolean> => {
@@ -105,7 +108,7 @@ export const checkRequiredTables = async (): Promise<{ exists: boolean; missing:
 };
 
 // Function to force a sync of local data to Supabase
-export const syncLocalDataToSupabase = async (tableName: string): Promise<boolean> => {
+export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
   try {
     console.log(`Starting sync of ${tableName} to Supabase...`);
     

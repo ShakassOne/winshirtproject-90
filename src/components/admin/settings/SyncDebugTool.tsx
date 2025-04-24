@@ -205,7 +205,7 @@ const SyncDebugTool: React.FC = () => {
                   <span className="text-gray-400">{localDataCounts[table] || 0} éléments</span>
                   <Button 
                     variant="outline" 
-                    size="xs" 
+                    size="sm"  
                     className="h-7 px-2 text-xs border-winshirt-blue/30 text-winshirt-blue hover:bg-winshirt-blue/10"
                     disabled={isSyncing || !isConnected || (localDataCounts[table] || 0) === 0}
                     onClick={() => handleForceSync(table)}
