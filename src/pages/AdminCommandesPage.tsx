@@ -664,11 +664,11 @@ const AdminCommandesPage: React.FC = () => {
           
           {selectedOrder ? (
             <OrderDetails 
-              order={selectedOrder}
+              order={selectedOrder} 
+              onBack={() => setSelectedOrder(null)} 
               onStatusChange={updateOrderStatus}
               onUpdateDelivery={updateDeliveryInfo}
               onAddDeliveryHistoryEntry={addDeliveryHistoryEntry}
-              onBack={() => setSelectedOrder(null)}
             />
           ) : (
             <div className="space-y-6">

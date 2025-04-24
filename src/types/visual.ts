@@ -30,7 +30,4 @@ export interface ProductVisualSettings {
     height: number;
   };
   opacity: number;
-  
-  // Make it compatible with JSON by adding an index signature
-  [key: string]: any;
 }

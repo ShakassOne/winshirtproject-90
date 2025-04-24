@@ -44,11 +44,11 @@ const HomeIntroSlider: React.FC = () => {
 
   // Défilement automatique
   useEffect(() => {
-    if (!config || !config.autoplay) return;
+    if (!config || !config.autoPlay) return;
     
     const interval = setInterval(() => {
       goToNextSlide();
-    }, config.transitionTime || config.interval);
+    }, config.transitionTime);
     
     return () => clearInterval(interval);
   }, [config, goToNextSlide]);
@@ -91,7 +91,7 @@ const HomeIntroSlider: React.FC = () => {
   }
 
   // Tri des slides par ordre
-  const sortedSlides = [...config.slides].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const sortedSlides = [...config.slides].sort((a, b) => a.order - b.order);
   const currentSlide = sortedSlides[currentSlideIndex];
 
   return (
@@ -118,7 +118,7 @@ const HomeIntroSlider: React.FC = () => {
               {slide.subtitle}
             </p>
             {slide.buttonText && (
-              <Link to={slide.buttonLink || '#'}>
+              <Link to={slide.buttonLink}>
                 <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
                   {slide.buttonText}
                 </Button>

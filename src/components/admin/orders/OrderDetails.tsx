@@ -1,399 +1,453 @@
 
-import React from 'react';
-import { Order } from '@/types/order';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useState } from 'react';
+import { formatDate } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { formatCurrency } from '@/lib/utils';
-import { 
-  Package, 
-  Truck, 
-  CreditCard, 
-  Calendar, 
-  MapPin, 
-  User, 
-  Mail, 
-  Phone, 
-  FileText, 
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import Image from '@/components/ui/image';
+import { Order, OrderStatus, DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
+import { ArrowLeft, Box, CalendarClock, ChevronDown, CreditCard, MapPin, Truck, Image } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import DeliveryTracking from './DeliveryTracking';
+import { toast } from '@/lib/toast';
 
 interface OrderDetailsProps {
   order: Order;
-  onBack?: () => void;
-  onStatusChange?: (orderId: number, newStatus: string) => void;
-  onUpdateDelivery?: (orderId: number, deliveryData: Partial<Order['delivery']>) => void;
-  onAddDeliveryHistoryEntry?: (orderId: number, entry: any) => void;
+  onBack: () => void;
+  onStatusChange: (orderId: number, newStatus: OrderStatus) => void;
+  onUpdateDelivery: (orderId: number, deliveryData: Partial<Order['delivery']>) => void;
+  onAddDeliveryHistoryEntry: (orderId: number, entry: DeliveryHistoryEntry) => void;
 }
 
-const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-500';
-      case 'processing': return 'bg-blue-500';
-      case 'shipped': return 'bg-purple-500';
-      case 'delivered': return 'bg-green-500';
-      case 'cancelled': return 'bg-red-500';
-      case 'refunded': return 'bg-gray-500';
-      default: return 'bg-gray-500';
+const OrderDetails: React.FC<OrderDetailsProps> = ({ 
+  order, 
+  onBack, 
+  onStatusChange,
+  onUpdateDelivery,
+  onAddDeliveryHistoryEntry
+}) => {
+  const [trackingInfo, setTrackingInfo] = useState({
+    carrier: order.delivery?.carrier || '',
+    trackingNumber: order.delivery?.trackingNumber || '',
+    trackingUrl: order.delivery?.trackingUrl || ''
+  });
+  
+  const [newHistoryEntry, setNewHistoryEntry] = useState({
+    status: 'preparing' as DeliveryStatus,
+    location: '',
+    description: ''
+  });
+  
+  const handleDeliveryInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTrackingInfo({
+      ...trackingInfo,
+      [e.target.name]: e.target.value
+    });
+  };
+  
+  const handleUpdateDeliveryInfo = () => {
+    onUpdateDelivery(order.id, trackingInfo);
+  };
+  
+  const handleAddHistoryEntry = () => {
+    if (!newHistoryEntry.description) {
+      toast.error("Veuillez ajouter une description pour cette mise à jour");
+      return;
     }
+    
+    const entry: DeliveryHistoryEntry = {
+      date: new Date().toISOString(),
+      status: newHistoryEntry.status,
+      location: newHistoryEntry.location,
+      description: newHistoryEntry.description
+    };
+    
+    onAddDeliveryHistoryEntry(order.id, entry);
+    
+    // Reset form
+    setNewHistoryEntry({
+      status: 'preparing',
+      location: '',
+      description: ''
+    });
   };
-
-  const getDeliveryStatusColor = (status: string) => {
+  
+  const getOrderStatusOptions = () => {
+    return [
+      { value: 'pending', label: 'En attente' },
+      { value: 'processing', label: 'En traitement' },
+      { value: 'shipped', label: 'Expédiée' },
+      { value: 'delivered', label: 'Livrée' },
+      { value: 'cancelled', label: 'Annulée' },
+      { value: 'refunded', label: 'Remboursée' }
+    ];
+  };
+  
+  const getDeliveryStatusOptions = () => {
+    return [
+      { value: 'preparing', label: 'En préparation' },
+      { value: 'ready_to_ship', label: 'Prêt à expédier' },
+      { value: 'in_transit', label: 'En transit' },
+      { value: 'out_for_delivery', label: 'En cours de livraison' },
+      { value: 'delivered', label: 'Livré' },
+      { value: 'failed', label: 'Échec de livraison' },
+      { value: 'returned', label: 'Retourné' }
+    ];
+  };
+  
+  const getStatusBadge = (status: OrderStatus) => {
+    let color;
+    let label;
+    
     switch (status) {
-      case 'preparing': return 'bg-yellow-500';
-      case 'ready_to_ship': return 'bg-blue-500';
-      case 'in_transit': return 'bg-purple-500';
-      case 'out_for_delivery': return 'bg-indigo-500';
-      case 'delivered': return 'bg-green-500';
-      case 'failed': return 'bg-red-500';
-      case 'returned': return 'bg-gray-500';
-      default: return 'bg-gray-500';
+      case 'pending':
+        color = "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
+        label = "En attente";
+        break;
+      case 'processing':
+        color = "bg-blue-500/20 text-blue-500 border-blue-500/30";
+        label = "En traitement";
+        break;
+      case 'shipped':
+        color = "bg-purple-500/20 text-purple-500 border-purple-500/30";
+        label = "Expédiée";
+        break;
+      case 'delivered':
+        color = "bg-green-500/20 text-green-500 border-green-500/30";
+        label = "Livrée";
+        break;
+      case 'cancelled':
+        color = "bg-red-500/20 text-red-500 border-red-500/30";
+        label = "Annulée";
+        break;
+      case 'refunded':
+        color = "bg-orange-500/20 text-orange-500 border-orange-500/30";
+        label = "Remboursée";
+        break;
+      default:
+        color = "bg-gray-500/20 text-gray-500 border-gray-500/30";
+        label = status;
     }
+    
+    return <Badge className={`${color} border`}>{label}</Badge>;
   };
-
-  const getDeliveryStatusIcon = (status: string) => {
-    switch (status) {
-      case 'delivered': return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'failed': return <XCircle className="h-5 w-5 text-red-500" />;
-      case 'in_transit': 
-      case 'out_for_delivery': 
-        return <Truck className="h-5 w-5 text-blue-500" />;
-      default: return <AlertCircle className="h-5 w-5 text-yellow-500" />;
-    }
+  
+  const getDeliveryStatusLabel = (status: DeliveryStatus): string => {
+    const statusMap: Record<DeliveryStatus, string> = {
+      preparing: 'En préparation',
+      ready_to_ship: 'Prêt à expédier',
+      in_transit: 'En transit',
+      out_for_delivery: 'En cours de livraison',
+      delivered: 'Livré',
+      failed: 'Échec de livraison',
+      returned: 'Retourné'
+    };
+    
+    return statusMap[status] || status;
   };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Non définie';
-    return format(new Date(dateString), 'PPP', { locale: fr });
+  
+  // Fonction utilitaire pour vérifier si une image est personnalisée
+  const isCustomImage = (image: string) => {
+    return !image.includes('placehold.co') && image !== 'https://placehold.co/600x400/png';
   };
-
+  
+  // Vérifier si au moins un produit a un visuel personnalisé
+  const hasAnyCustomVisual = order.items.some(item => item.visualDesign !== null && item.visualDesign !== undefined);
+  
   return (
-    <Card className="shadow-md">
-      <CardHeader className="bg-gray-50 dark:bg-gray-800">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-xl">
-            Commande #{order.id}
-          </CardTitle>
-          <Badge className={`${getStatusColor(order.status)}`}>
-            {order.status === 'pending' ? 'En attente' :
-             order.status === 'processing' ? 'En traitement' :
-             order.status === 'shipped' ? 'Expédiée' :
-             order.status === 'delivered' ? 'Livrée' :
-             order.status === 'cancelled' ? 'Annulée' :
-             order.status === 'refunded' ? 'Remboursée' : 'Inconnue'}
-          </Badge>
+    <div className="winshirt-card p-6">
+      <div className="flex items-center justify-between mb-6">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-winshirt-purple/30 text-white"
+          onClick={onBack}
+        >
+          <ArrowLeft size={16} className="mr-2" />
+          Retour
+        </Button>
+        
+        <div>
+          {getStatusBadge(order.status)}
         </div>
-        <div className="flex items-center text-sm text-gray-500 mt-2">
-          <Calendar className="h-4 w-4 mr-1" />
-          <span>Commandé le {formatDate(order.orderDate)}</span>
-        </div>
-      </CardHeader>
+      </div>
       
-      <CardContent className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Client Information */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg flex items-center">
-              <User className="h-5 w-5 mr-2" />
-              Informations client
-            </h3>
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <User className="h-4 w-4 mr-2 text-gray-500" />
-                  <span>{order.clientName}</span>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                  <span>{order.clientEmail}</span>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Order Info */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-white mb-1">
+                Commande #{order.id}
+              </h1>
+              <div className="flex items-center text-gray-400">
+                <CalendarClock size={14} className="mr-1" />
+                <span>{formatDate(order.orderDate)}</span>
               </div>
-            </div>
-          </div>
-
-          {/* Shipping Information */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg flex items-center">
-              <MapPin className="h-5 w-5 mr-2" />
-              Adresse de livraison
-            </h3>
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-              <div className="space-y-1">
-                <p>{order.shipping.address}</p>
-                <p>{order.shipping.postalCode} {order.shipping.city}</p>
-                <p>{order.shipping.country}</p>
-                <div className="flex items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <Truck className="h-4 w-4 mr-2 text-gray-500" />
-                  <span>Méthode: {order.shipping.method}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Delivery Status */}
-        <div className="mt-8">
-          <h3 className="font-semibold text-lg flex items-center mb-4">
-            <Truck className="h-5 w-5 mr-2" />
-            Statut de livraison
-          </h3>
-          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                {getDeliveryStatusIcon(order.delivery.status)}
-                <span className="ml-2">
-                  {order.delivery.status === 'preparing' ? 'En préparation' :
-                   order.delivery.status === 'ready_to_ship' ? 'Prêt à expédier' :
-                   order.delivery.status === 'in_transit' ? 'En transit' :
-                   order.delivery.status === 'out_for_delivery' ? 'En cours de livraison' :
-                   order.delivery.status === 'delivered' ? 'Livré' :
-                   order.delivery.status === 'failed' ? 'Échec de livraison' :
-                   order.delivery.status === 'returned' ? 'Retourné' : 'Inconnu'}
-                </span>
-              </div>
-              <Badge className={`${getDeliveryStatusColor(order.delivery.status)}`}>
-                {order.delivery.status}
-              </Badge>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <p className="text-sm text-gray-500">Date de livraison estimée</p>
-                <p>{formatDate(order.delivery.estimatedDeliveryDate)}</p>
-              </div>
-              {order.delivery.actualDeliveryDate && (
-                <div>
-                  <p className="text-sm text-gray-500">Date de livraison réelle</p>
-                  <p>{formatDate(order.delivery.actualDeliveryDate)}</p>
-                </div>
-              )}
-              {order.delivery.carrier && (
-                <div>
-                  <p className="text-sm text-gray-500">Transporteur</p>
-                  <p>{order.delivery.carrier}</p>
-                </div>
-              )}
-              {order.delivery.trackingNumber && (
-                <div>
-                  <p className="text-sm text-gray-500">Numéro de suivi</p>
-                  <p>{order.delivery.trackingNumber}</p>
-                </div>
-              )}
+            <div>
+              <Select
+                value={order.status}
+                onValueChange={(value) => onStatusChange(order.id, value as OrderStatus)}
+              >
+                <SelectTrigger className="w-40 bg-winshirt-space-light border-winshirt-purple/30">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent className="bg-winshirt-space border-winshirt-purple/30">
+                  {getOrderStatusOptions().map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            
-            {order.delivery.history && order.delivery.history.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p className="font-medium mb-2">Historique de livraison</p>
-                <div className="space-y-3">
-                  {order.delivery.history.map((entry, index) => (
-                    <div key={index} className="flex items-start">
-                      <div className="mr-3 mt-1">
-                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+          </div>
+          
+          {/* Order Items */}
+          <div className="bg-winshirt-space-light/40 rounded-md p-4">
+            <h2 className="text-lg font-medium text-white mb-3">Détails des produits</h2>
+            <ScrollArea className="h-[300px]">
+              {order.items.map(item => (
+                <div 
+                  key={item.id}
+                  className="flex items-start py-3 border-b border-winshirt-purple/10 last:border-0"
+                >
+                  <div className="relative w-20 h-20 rounded-md overflow-hidden mr-3 flex-shrink-0">
+                    <img 
+                      src={item.productImage} 
+                      alt={item.productName} 
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Badge indiquant si c'est une image personnalisée */}
+                    {isCustomImage(item.productImage) && (
+                      <Badge className="absolute bottom-0 right-0 bg-winshirt-purple/80 text-white text-xs px-1 py-0">
+                        Perso
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex-grow">
+                    <div className="font-medium text-white">{item.productName}</div>
+                    <div className="text-sm text-gray-400">
+                      {item.size && `Taille: ${item.size}`}
+                      {item.size && item.color && ` · `}
+                      {item.color && `Couleur: ${item.color}`}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <div className="text-winshirt-purple-light">
+                        {item.price.toFixed(2)} € × {item.quantity}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{formatDate(entry.date)}</p>
-                        <p className="text-sm text-gray-500">{entry.description}</p>
-                        {entry.location && (
-                          <p className="text-xs text-gray-400">{entry.location}</p>
-                        )}
+                      <div className="font-medium text-white">
+                        {(item.price * item.quantity).toFixed(2)} €
                       </div>
                     </div>
-                  ))}
+                    
+                    {/* Afficher si le produit participe à des loteries */}
+                    {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
+                      <div className="mt-1 text-xs text-winshirt-blue-light">
+                        Participation à {item.lotteriesEntries.length} loterie(s)
+                      </div>
+                    )}
+                    
+                    {/* Afficher si le produit a un design personnalisé */}
+                    {item.visualDesign && (
+                      <div className="mt-1 text-xs text-winshirt-purple-light">
+                        Design: {item.visualDesign.visualName}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+            
+            {/* Visuels personnalisés en grand format */}
+            {(hasAnyCustomVisual || order.items.some(item => isCustomImage(item.productImage))) && (
+              <div className="mt-4 border-t border-winshirt-purple/20 pt-4">
+                <h3 className="text-md font-medium text-white mb-3 flex items-center">
+                  <Image size={16} className="mr-2" />
+                  Visuel(s) personnalisé(s)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Affichage des visuels personnalisés de chaque produit */}
+                  {order.items
+                    .filter(item => item.visualDesign)
+                    .map((item, idx) => (
+                      <div key={`visual-${idx}`} className="border border-winshirt-purple/30 rounded-md p-2">
+                        <p className="text-sm text-gray-400 mb-2">{item.productName} - {item.visualDesign?.visualName}</p>
+                        <img
+                          src={item.visualDesign?.visualImage}
+                          alt={`Visuel pour ${item.productName}`}
+                          className="w-full object-contain rounded-md mb-2"
+                          style={{ maxHeight: '300px' }}
+                        />
+                        <a
+                          href={item.visualDesign?.visualImage}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-winshirt-purple-light block text-center"
+                        >
+                          Voir en plein écran
+                        </a>
+                      </div>
+                    ))
+                  }
+                  
+                  {/* Affichage des images de produits personnalisées */}
+                  {order.items
+                    .filter(item => isCustomImage(item.productImage) && !item.visualDesign)
+                    .map((item, idx) => (
+                      <div key={`product-image-${idx}`} className="border border-winshirt-purple/30 rounded-md p-2">
+                        <p className="text-sm text-gray-400 mb-2">{item.productName}</p>
+                        <img
+                          src={item.productImage}
+                          alt={`Image produit ${item.productName}`}
+                          className="w-full object-contain rounded-md mb-2"
+                          style={{ maxHeight: '300px' }}
+                        />
+                        <a
+                          href={item.productImage}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-winshirt-purple-light block text-center"
+                        >
+                          Voir en plein écran
+                        </a>
+                      </div>
+                    ))
+                  }
                 </div>
               </div>
             )}
+            
+            {/* Order Summary */}
+            <div className="mt-4 border-t border-winshirt-purple/20 pt-4">
+              <div className="flex justify-between text-gray-400 mb-2">
+                <span>Sous-total:</span>
+                <span>{order.subtotal.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between text-gray-400 mb-2">
+                <span>Frais de livraison:</span>
+                <span>{order.shipping.cost.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between text-lg font-medium text-white">
+                <span>Total:</span>
+                <span>{order.total.toFixed(2)} €</span>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Order Items */}
-        <div className="mt-8">
-          <h3 className="font-semibold text-lg flex items-center mb-4">
-            <Package className="h-5 w-5 mr-2" />
-            Articles commandés
-          </h3>
           
-          <div className="space-y-6">
-            {order.items.map((item) => (
-              <div key={item.id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="md:w-1/4">
-                    <p className="font-medium mb-2">{item.productName}</p>
-                    <div className="aspect-square w-full max-w-[150px] overflow-hidden rounded-md">
-                      <Image 
-                        src={item.productImage} 
-                        alt={item.productName} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="mt-2 text-sm">
-                      <p>Quantité: {item.quantity}</p>
-                      {item.size && <p>Taille: {item.size}</p>}
-                      {item.color && <p>Couleur: {item.color}</p>}
-                      <p className="font-medium mt-1">{formatCurrency(item.price)} / unité</p>
-                    </div>
-                  </div>
-                  
-                  {/* Visuel personnalisé */}
-                  {item.visualDesign && (
-                    <div className="md:w-3/4">
-                      <p className="font-medium mb-2">Personnalisation: {item.visualDesign.visualName}</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Visuel recto */}
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Recto</h4>
-                          <div className="aspect-square w-full max-w-[300px] overflow-hidden rounded-md bg-white">
-                            <Image 
-                              src={item.visualDesign.visualImage} 
-                              alt="Visuel recto" 
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                        </div>
-                        
-                        {/* Visuel verso */}
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Verso</h4>
-                          <div className="aspect-square w-full max-w-[300px] overflow-hidden rounded-md bg-white">
-                            <Image 
-                              src={item.productImage} 
-                              alt="Visuel verso" 
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {item.visualDesign.settings && (
-                        <div className="mt-2 text-sm">
-                          <p className="font-medium">Paramètres d'impression:</p>
-                          <div className="grid grid-cols-2 gap-2 mt-1">
-                            {item.visualDesign.settings.position && (
-                              <p>Position: X: {item.visualDesign.settings.position.x}, Y: {item.visualDesign.settings.position.y}</p>
-                            )}
-                            {item.visualDesign.settings.size && (
-                              <p>Taille: {item.visualDesign.settings.size.width} x {item.visualDesign.settings.size.height}</p>
-                            )}
-                            {item.visualDesign.settings.opacity !== undefined && (
-                              <p>Opacité: {item.visualDesign.settings.opacity * 100}%</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Loteries liées */}
-                {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium">Participations aux loteries:</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {item.lotteriesEntries.map((lotteryId) => (
-                        <Badge key={lotteryId} variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                          Loterie #{lotteryId}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* Delivery Tracking */}
+          <DeliveryTracking 
+            delivery={order.delivery}
+            onUpdateDeliveryInfo={handleUpdateDeliveryInfo}
+            trackingInfo={trackingInfo}
+            onTrackingInfoChange={handleDeliveryInfoChange}
+            newHistoryEntry={newHistoryEntry}
+            setNewHistoryEntry={setNewHistoryEntry}
+            onAddHistoryEntry={handleAddHistoryEntry}
+            statusOptions={getDeliveryStatusOptions()}
+          />
         </div>
-
-        {/* Payment Information */}
-        <div className="mt-8">
-          <h3 className="font-semibold text-lg flex items-center mb-4">
-            <CreditCard className="h-5 w-5 mr-2" />
-            Informations de paiement
-          </h3>
-          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        {/* Right Column - Customer & Shipping Info */}
+        <div className="space-y-6">
+          {/* Customer Info */}
+          <div className="bg-winshirt-space-light/40 rounded-md p-4">
+            <h2 className="text-lg font-medium text-white mb-3">Client</h2>
+            <div className="space-y-3">
               <div>
-                <p className="text-sm text-gray-500">Méthode de paiement</p>
-                <p>{order.payment.method}</p>
+                <div className="text-gray-400 text-sm">Nom</div>
+                <div className="text-white">{order.clientName}</div>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Statut du paiement</p>
-                <Badge className={
-                  order.payment.status === 'completed' ? 'bg-green-500' :
-                  order.payment.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
-                }>
-                  {order.payment.status === 'completed' ? 'Complété' :
-                   order.payment.status === 'pending' ? 'En attente' : 'Échoué'}
-                </Badge>
+                <div className="text-gray-400 text-sm">Email</div>
+                <div className="text-white">{order.clientEmail}</div>
+              </div>
+              <div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full mt-2 border-winshirt-purple text-winshirt-purple-light hover:bg-winshirt-purple/10"
+                >
+                  Voir le profil client
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Shipping Info */}
+          <div className="bg-winshirt-space-light/40 rounded-md p-4">
+            <h2 className="text-lg font-medium text-white mb-3 flex items-center">
+              <MapPin size={16} className="mr-2" />
+              Adresse de livraison
+            </h2>
+            <div className="text-gray-300">
+              <p>{order.shipping.address}</p>
+              <p>{order.shipping.postalCode} {order.shipping.city}</p>
+              <p>{order.shipping.country}</p>
+            </div>
+            <div className="mt-3 pt-3 border-t border-winshirt-purple/20">
+              <div className="text-gray-400 text-sm">Méthode de livraison</div>
+              <div className="text-white">{order.shipping.method}</div>
+            </div>
+          </div>
+          
+          {/* Payment Info */}
+          <div className="bg-winshirt-space-light/40 rounded-md p-4">
+            <h2 className="text-lg font-medium text-white mb-3 flex items-center">
+              <CreditCard size={16} className="mr-2" />
+              Paiement
+            </h2>
+            <div className="space-y-2">
+              <div>
+                <div className="text-gray-400 text-sm">Méthode</div>
+                <div className="text-white">{order.payment.method}</div>
               </div>
               {order.payment.transactionId && (
                 <div>
-                  <p className="text-sm text-gray-500">ID de transaction</p>
-                  <p>{order.payment.transactionId}</p>
+                  <div className="text-gray-400 text-sm">Transaction</div>
+                  <div className="text-white">{order.payment.transactionId}</div>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* Order Summary */}
-        <div className="mt-8">
-          <h3 className="font-semibold text-lg flex items-center mb-4">
-            <FileText className="h-5 w-5 mr-2" />
-            Récapitulatif de la commande
-          </h3>
-          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Sous-total</span>
-                <span>{formatCurrency(order.subtotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Frais de livraison</span>
-                <span>{formatCurrency(order.shipping.cost)}</span>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex justify-between font-semibold">
-                <span>Total</span>
-                <span>{formatCurrency(order.total)}</span>
+              <div>
+                <div className="text-gray-400 text-sm">Statut</div>
+                <div className="text-white capitalize">{order.payment.status}</div>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Notes */}
-        {order.notes && (
-          <div className="mt-8">
-            <h3 className="font-semibold text-lg flex items-center mb-4">
-              <FileText className="h-5 w-5 mr-2" />
-              Notes
-            </h3>
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-              <p>{order.notes}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Invoice Link */}
-        {order.invoiceUrl && (
-          <div className="mt-8 flex justify-end">
-            <a 
-              href={order.invoiceUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          
+          {/* Notes */}
+          <div className="bg-winshirt-space-light/40 rounded-md p-4">
+            <h2 className="text-lg font-medium text-white mb-3">Notes</h2>
+            <Textarea 
+              placeholder="Ajouter des notes sur cette commande..."
+              className="bg-winshirt-space-light border-winshirt-purple/30 min-h-[100px]"
+              value={order.notes || ''}
+            />
+            <Button 
+              className="w-full mt-3 bg-winshirt-purple hover:bg-winshirt-purple-dark"
             >
-              <FileText className="h-4 w-4 mr-2" />
-              Voir la facture
-            </a>
+              Enregistrer les notes
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      </div>
+    </div>
   );
 };
 

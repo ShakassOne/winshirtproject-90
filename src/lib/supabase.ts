@@ -1,77 +1,166 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/lib/toast';
-import { Json } from '@/integrations/supabase/types';
+import { createClient } from '@supabase/supabase-js';
+import { toast } from './toast';
 
-// Vérification de la configuration Supabase
-export const isSupabaseConfigured = async (): Promise<boolean> => {
+export const SUPABASE_URL = "https://flifjrvtjphhnxcqtxwx.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsaWZqcnZ0anBoaG54Y3F0eHd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5OTg5OTgsImV4cCI6MjA2MDU3NDk5OH0.SfYrS-mK9plEcoutKnfpth40T-TAlu_88wdv39fLbUo";
+
+// Configuration explicite pour assurer la persistance de la session
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
+
+// Type definition for FTP configuration
+export const ftpConfig = {
+  enabled: false,
+  uploadEndpoint: '',
+  baseUrl: ''
+};
+
+// Type definitions for HomeIntro configurations
+export interface SlideType {
+  id: number;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  buttonLink: string;
+  backgroundImage: string;
+  textColor: string;
+  order: number;
+}
+
+export interface HomeIntroConfig {
+  autoPlay: boolean;
+  showButtons: boolean;
+  showIndicators: boolean;
+  transitionTime: number;
+  slides: SlideType[];
+}
+
+// Vérifier si Supabase est configuré
+export const isSupabaseConfigured = () => {
+  return SUPABASE_URL && SUPABASE_ANON_KEY;
+};
+
+// Fonction pour vérifier la connexion à Supabase
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    toast.error("Supabase n'est pas configuré correctement");
+    return false;
+  }
+
   try {
-    const { data, error } = await supabase
-      .from('pg_tables')
-      .select('tablename')
-      .eq('schemaname', 'public')
-      .limit(1);
+    const { data, error } = await supabase.from('pg_tables').select('tablename').limit(1);
     
-    return !error && data && data.length > 0;
+    if (error) {
+      console.error("Erreur de connexion Supabase:", error);
+      toast.error("Impossible de se connecter à Supabase: " + error.message);
+      return false;
+    }
+
+    console.log("Connexion Supabase réussie");
+    return true;
   } catch (error) {
-    console.error("Erreur lors de la vérification de Supabase:", error);
+    console.error("Exception lors de la vérification Supabase:", error);
+    toast.error("Erreur de connexion à Supabase");
     return false;
   }
 };
 
-// Fonction pour vérifier si les tables requises existent
-export const checkRequiredTables = async (): Promise<{ exists: boolean; missing: string[] }> => {
+// Get HomeIntro configuration from localStorage or default
+export const getHomeIntroConfig = async (): Promise<HomeIntroConfig> => {
   try {
-    const requiredTables = ['clients', 'products', 'lotteries', 'orders', 'visuals', 'lottery_participants', 'lottery_winners', 'order_items', 'site_settings'];
-    
-    // Get all tables in the public schema
-    const { data, error } = await supabase
-      .from('pg_tables')
-      .select('tablename')
-      .eq('schemaname', 'public');
-    
-    if (error) {
-      console.error('Erreur lors de la vérification des tables requises:', error);
-      return { exists: false, missing: requiredTables };
+    // Try to load from localStorage first
+    const storedConfig = localStorage.getItem('homeIntroConfig');
+    if (storedConfig) {
+      return JSON.parse(storedConfig);
     }
     
-    // Extract table names
-    const existingTables = data.map(row => row.tablename);
-    
-    // Find missing tables
-    const missingTables = requiredTables.filter(table => !existingTables.includes(table));
-    
-    return {
-      exists: missingTables.length === 0,
-      missing: missingTables
-    };
+    // If not in localStorage, return default
+    return getDefaultHomeIntroConfig();
   } catch (error) {
-    console.error('Erreur lors de la vérification des tables requises:', error);
-    return { exists: false, missing: ['clients', 'products', 'lotteries', 'orders', 'visuals'] };
+    console.error("Error loading home intro config:", error);
+    return getDefaultHomeIntroConfig();
   }
 };
 
-// Convertir les clés camelCase en snake_case pour Supabase
-export const camelToSnake = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  
-  if (Array.isArray(obj)) {
-    return obj.map(camelToSnake);
-  }
-  
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const snakeKey = key.replace(/([A-Z])/g, (_, letter) => `_${letter.toLowerCase()}`);
-    
-    // Récursivement convertir les valeurs qui sont des objets
-    const newValue = value !== null && typeof value === 'object' 
-      ? camelToSnake(value) 
-      : value;
-    
-    return { ...acc, [snakeKey]: newValue };
-  }, {});
+// Default HomeIntro configuration
+export const getDefaultHomeIntroConfig = (): HomeIntroConfig => {
+  return {
+    autoPlay: true,
+    showButtons: true,
+    showIndicators: true,
+    transitionTime: 5000, // 5 seconds
+    slides: [
+      {
+        id: 1,
+        title: "Bienvenue sur WinShirt",
+        subtitle: "Achetez des vêtements et gagnez des lots exceptionnels",
+        buttonText: "Voir les produits",
+        buttonLink: "/products",
+        backgroundImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
+        textColor: "#FFFFFF",
+        order: 1
+      },
+      {
+        id: 2,
+        title: "Découvrez nos loteries",
+        subtitle: "Participez et tentez de remporter des prix incroyables",
+        buttonText: "Voir les loteries",
+        buttonLink: "/lotteries",
+        backgroundImage: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21",
+        textColor: "#FFFFFF",
+        order: 2
+      }
+    ]
+  };
 };
 
-// Convertir les clés snake_case en camelCase
+// Save HomeIntro configuration
+export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<boolean> => {
+  try {
+    // Save to localStorage
+    localStorage.setItem('homeIntroConfig', JSON.stringify(config));
+    
+    // In a real implementation, we would also save to Supabase
+    // For now, just simulate success
+    return true;
+  } catch (error) {
+    console.error("Error saving home intro config:", error);
+    return false;
+  }
+};
+
+// Upload image and return URL
+export const uploadImage = async (file: File, folder: string): Promise<string | null> => {
+  try {
+    // For now, create a local URL (this would normally upload to Supabase storage)
+    const localUrl = URL.createObjectURL(file);
+    
+    // In a real implementation with Supabase:
+    // const { data, error } = await supabase.storage
+    //   .from('images')
+    //   .upload(`${folder}/${file.name}`, file);
+    
+    // if (error) {
+    //   throw error;
+    // }
+    
+    // return supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl;
+    
+    // For now, just return the local URL
+    return localUrl;
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    return null;
+  }
+};
+
+// Fonction utilitaire pour convertir les clés snake_case en camelCase
 export const snakeToCamel = (obj: any): any => {
   if (obj === null || typeof obj !== 'object') return obj;
   
@@ -91,176 +180,22 @@ export const snakeToCamel = (obj: any): any => {
   }, {});
 };
 
-// Re-export supabase from client to maintain compatibility
-export { supabase } from '@/integrations/supabase/client';
-
-// Types for HomeIntroManager and related components
-export interface SlideType {
-  id: number; // Changed from string to number
-  title: string;
-  description: string;
-  imageUrl?: string;
-  ctaText?: string;
-  ctaLink?: string;
-  // Additional properties used in HomeIntroManager
-  order?: number;
-  backgroundImage?: string;
-  textColor?: string;
-  subtitle?: string;
-  buttonText?: string;
-  buttonLink?: string;
-}
-
-export interface HomeIntroConfig {
-  slides: SlideType[];
-  showArrows: boolean;
-  autoplay: boolean; // Consistent naming
-  interval: number;
-  showIndicators?: boolean;
-  showButtons?: boolean; // Added missing property
-  transitionTime?: number; // Added missing property
-}
-
-export const getDefaultHomeIntroConfig = (): HomeIntroConfig => ({
-  slides: [
-    {
-      id: 1, // Changed from string to number
-      title: 'Bienvenue sur WinShirt',
-      description: 'Découvrez nos loteries et produits exclusifs',
-      imageUrl: 'https://placehold.co/600x400/png?text=WinShirt',
-      ctaText: 'Voir les loteries',
-      ctaLink: '/lotteries',
-      backgroundImage: 'https://placehold.co/600x400/png?text=WinShirt', 
-      textColor: '#FFFFFF',
-      subtitle: 'Découvrez nos loteries et produits exclusifs',
-      buttonText: 'Voir les loteries',
-      buttonLink: '/lotteries',
-      order: 1
-    }
-  ],
-  showArrows: true,
-  autoplay: true,
-  interval: 5000,
-  showButtons: true,
-  showIndicators: true,
-  transitionTime: 5000
-});
-
-export const getHomeIntroConfig = async (): Promise<HomeIntroConfig> => {
-  try {
-    const isConnected = await isSupabaseConfigured();
-    if (!isConnected) {
-      const storedConfig = localStorage.getItem('homeIntroConfig');
-      return storedConfig ? JSON.parse(storedConfig) : getDefaultHomeIntroConfig();
-    }
-    
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', 'home_intro_config')
-      .single();
-    
-    if (error || !data) {
-      console.error('Error fetching home intro config:', error);
-      return getDefaultHomeIntroConfig();
-    }
-    
-    // Cast the data.value to HomeIntroConfig after known structure validation
-    const rawValue = data.value as any;
-    // Validate that it has the minimum required structure
-    if (rawValue && Array.isArray(rawValue.slides)) {
-      return rawValue as HomeIntroConfig;
-    }
-    
-    return getDefaultHomeIntroConfig();
-  } catch (error) {
-    console.error('Error in getHomeIntroConfig:', error);
-    return getDefaultHomeIntroConfig();
+// Fonction utilitaire pour convertir les clés camelCase en snake_case
+export const camelToSnake = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(camelToSnake);
   }
-};
-
-export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<boolean> => {
-  try {
-    const isConnected = await isSupabaseConfigured();
-    if (!isConnected) {
-      localStorage.setItem('homeIntroConfig', JSON.stringify(config));
-      return true;
-    }
+  
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    const snakeKey = key.replace(/([A-Z])/g, (_, letter) => `_${letter.toLowerCase()}`);
     
-    // Check if the config already exists
-    const { data: existing } = await supabase
-      .from('site_settings')
-      .select('id')
-      .eq('key', 'home_intro_config')
-      .maybeSingle();
+    // Récursivement convertir les valeurs qui sont des objets
+    const newValue = value !== null && typeof value === 'object' 
+      ? camelToSnake(value) 
+      : value;
     
-    if (existing) {
-      // Update existing config
-      const { error } = await supabase
-        .from('site_settings')
-        .update({ value: config as unknown as Json })
-        .eq('key', 'home_intro_config');
-      
-      if (error) {
-        console.error('Error updating home intro config:', error);
-        return false;
-      }
-    } else {
-      // Insert new config
-      const { error } = await supabase
-        .from('site_settings')
-        .insert({ key: 'home_intro_config', value: config as unknown as Json });
-      
-      if (error) {
-        console.error('Error inserting home intro config:', error);
-        return false;
-      }
-    }
-    
-    // Update localStorage as backup
-    localStorage.setItem('homeIntroConfig', JSON.stringify(config));
-    return true;
-  } catch (error) {
-    console.error('Error in saveHomeIntroConfig:', error);
-    return false;
-  }
+    return { ...acc, [snakeKey]: newValue };
+  }, {});
 };
-
-export const uploadImage = async (file: File, folder?: string): Promise<string> => {
-  // This is a placeholder function that would normally handle image uploads
-  // Since we don't have actual storage implementation yet, we'll return a placeholder
-  return URL.createObjectURL(file);
-};
-
-// Default FTP configuration value
-export const defaultFtpConfig = {
-  host: '',
-  port: 21,
-  username: '',
-  password: '',
-  secure: true,
-  basePath: '/',
-  enabled: false,
-  uploadEndpoint: '',
-  baseUrl: ''
-};
-
-// FTP Config interface for FtpSettingsManager
-export interface FtpConfig {
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  secure: boolean;
-  basePath: string;
-  enabled: boolean;
-  uploadEndpoint: string;
-  baseUrl: string;
-}
-
-// Create an instance of the config to use as a value
-export const ftpConfigInstance = { ...defaultFtpConfig };
-
-export const getDefaultFtpConfig = (): FtpConfig => ({
-  ...defaultFtpConfig
-});
