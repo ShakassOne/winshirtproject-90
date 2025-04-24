@@ -20,16 +20,20 @@ export const ensureStringId = (id: string | number): string => {
 // Find a slide by ID with proper type handling
 export const findSlideById = (slides: SlideType[], id: string | number): SlideType | undefined => {
   const stringId = ensureStringId(id);
-  return slides.find(slide => slide.id === stringId);
+  return slides.find(slide => ensureStringId(slide.id) === stringId);
 };
 
-// Get the highest order value from slides
+// Get the highest order value from slides with robust type handling
 export const getMaxOrder = (slides: SlideType[]): number => {
   if (!slides.length) return 0;
   
   const maxOrder = Math.max(...slides
-    .filter(slide => slide.order !== undefined)
-    .map(slide => slide.order as number));
+    .map(slide => {
+      // Ensure order is converted to a number, defaulting to 0 if undefined
+      const order = slide.order ?? 0;
+      return typeof order === 'string' ? parseInt(order, 10) : order;
+    })
+    .filter(order => !isNaN(order)));
   
-  return isNaN(maxOrder) ? 0 : maxOrder;
+  return maxOrder > 0 ? maxOrder : 0;
 };
