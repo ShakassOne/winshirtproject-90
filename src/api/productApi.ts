@@ -1,6 +1,6 @@
-
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, snakeToCamel, camelToSnake } from '@/lib/supabase';
 import { ExtendedProduct } from '@/types/product';
+import { ProductVisualSettings } from '@/types/visual';
 import { toast } from '@/lib/toast';
 
 // Helper function to save products to localStorage
@@ -21,14 +21,16 @@ const getNextProductId = (products: ExtendedProduct[]): number => {
 
 // Fonction pour récupérer tous les produits
 export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
-  // Vérifier si Supabase est configuré
-  if (!isSupabaseConfigured()) {
-    console.log('Supabase n\'est pas configuré. Utilisation du localStorage uniquement.');
-    const storedProducts = localStorage.getItem('products');
-    return storedProducts ? JSON.parse(storedProducts) : [];
-  }
-
   try {
+    // Vérifier si Supabase est configuré
+    const isConnected = await isSupabaseConfigured();
+    
+    if (!isConnected) {
+      console.log('Supabase n\'est pas configuré. Utilisation du localStorage uniquement.');
+      const storedProducts = localStorage.getItem('products');
+      return storedProducts ? JSON.parse(storedProducts) : [];
+    }
+
     const { data, error } = await supabase
       .from('products')
       .select('*');
@@ -37,6 +39,11 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
     
     // Convertir les données au format ExtendedProduct
     const products: ExtendedProduct[] = data.map(item => {
+      const visualSettings = item.default_visual_settings ? 
+        (typeof item.default_visual_settings === 'string' ? 
+          JSON.parse(item.default_visual_settings) : 
+          item.default_visual_settings) as ProductVisualSettings : undefined;
+      
       return {
         id: item.id,
         name: item.name,
@@ -56,7 +63,7 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
         deliveryPrice: item.delivery_price,
         allowCustomization: item.allow_customization,
         defaultVisualId: item.default_visual_id,
-        defaultVisualSettings: item.default_visual_settings,
+        defaultVisualSettings: visualSettings,
         visualCategoryId: item.visual_category_id
       };
     });
@@ -84,9 +91,10 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
 
 // Fonction pour créer un nouveau produit
 export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promise<ExtendedProduct | null> => {
-  // Si Supabase n'est pas configuré, utiliser localStorage
-  if (!isSupabaseConfigured()) {
-    try {
+  try {
+    // Si Supabase n'est pas configuré, utiliser localStorage
+    const isConnected = await isSupabaseConfigured();
+    if (!isConnected) {
       const storedProducts = localStorage.getItem('products');
       const products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
       
@@ -101,14 +109,12 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       
       toast.success("Produit créé avec succès (stockage local)");
       return newProduct;
-    } catch (error) {
-      console.error('Erreur lors de la création du produit en local:', error);
-      toast.error("Erreur lors de la création du produit");
-      return null;
     }
-  }
 
-  try {
+    // Prepare the visual settings to be JSON compatible
+    const visualSettingsJson = product.defaultVisualSettings ? 
+      camelToSnake(product.defaultVisualSettings) : null;
+
     const { data, error } = await supabase
       .from('products')
       .insert({
@@ -129,13 +135,19 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
         delivery_price: product.deliveryPrice,
         allow_customization: product.allowCustomization,
         default_visual_id: product.defaultVisualId,
-        default_visual_settings: product.defaultVisualSettings,
+        default_visual_settings: visualSettingsJson,
         visual_category_id: product.visualCategoryId
       })
       .select()
       .single();
     
     if (error) throw error;
+    
+    // Parse the visual settings from the result
+    const visualSettings = data.default_visual_settings ? 
+      (typeof data.default_visual_settings === 'string' ? 
+        JSON.parse(data.default_visual_settings) : 
+        data.default_visual_settings) as ProductVisualSettings : undefined;
     
     // Convertir au format ExtendedProduct
     const createdProduct: ExtendedProduct = {
@@ -157,7 +169,7 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       deliveryPrice: data.delivery_price,
       allowCustomization: data.allow_customization,
       defaultVisualId: data.default_visual_id,
-      defaultVisualSettings: data.default_visual_settings,
+      defaultVisualSettings: visualSettings,
       visualCategoryId: data.visual_category_id
     };
     
@@ -196,9 +208,10 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
 
 // Fonction pour mettre à jour un produit existant
 export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
-  // Si Supabase n'est pas configuré, utiliser localStorage
-  if (!isSupabaseConfigured()) {
-    try {
+  try {
+    // Si Supabase n'est pas configuré, utiliser localStorage
+    const isConnected = await isSupabaseConfigured();
+    if (!isConnected) {
       const storedProducts = localStorage.getItem('products');
       let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
       
@@ -207,14 +220,12 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       
       toast.success("Produit mis à jour avec succès (stockage local)");
       return product;
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du produit en local:', error);
-      toast.error("Erreur lors de la mise à jour du produit");
-      return null;
     }
-  }
 
-  try {
+    // Convert the visual settings to be JSON compatible
+    const visualSettingsJson = product.defaultVisualSettings ? 
+      camelToSnake(product.defaultVisualSettings) : null;
+
     const { data, error } = await supabase
       .from('products')
       .update({
@@ -235,7 +246,7 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
         delivery_price: product.deliveryPrice,
         allow_customization: product.allowCustomization,
         default_visual_id: product.defaultVisualId,
-        default_visual_settings: product.defaultVisualSettings,
+        default_visual_settings: visualSettingsJson,
         visual_category_id: product.visualCategoryId
       })
       .eq('id', product.id)
@@ -243,6 +254,12 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       .single();
     
     if (error) throw error;
+    
+    // Parse the visual settings from the result
+    const visualSettings = data.default_visual_settings ? 
+      (typeof data.default_visual_settings === 'string' ? 
+        JSON.parse(data.default_visual_settings) : 
+        data.default_visual_settings) as ProductVisualSettings : undefined;
     
     // Convertir au format ExtendedProduct
     const updatedProduct: ExtendedProduct = {
@@ -264,7 +281,7 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       deliveryPrice: data.delivery_price,
       allowCustomization: data.allow_customization,
       defaultVisualId: data.default_visual_id,
-      defaultVisualSettings: data.default_visual_settings,
+      defaultVisualSettings: visualSettings,
       visualCategoryId: data.visual_category_id
     };
     

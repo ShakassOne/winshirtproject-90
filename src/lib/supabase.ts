@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
@@ -101,6 +100,13 @@ export interface SlideType {
   imageUrl: string;
   ctaText?: string;
   ctaLink?: string;
+  // Additional properties used in HomeIntroManager
+  order?: number;
+  backgroundImage?: string;
+  textColor?: string;
+  subtitle?: string;
+  buttonText?: string;
+  buttonLink?: string;
 }
 
 export interface HomeIntroConfig {
@@ -108,6 +114,7 @@ export interface HomeIntroConfig {
   showArrows: boolean;
   autoplay: boolean;
   interval: number;
+  showIndicators?: boolean;
 }
 
 export const getDefaultHomeIntroConfig = (): HomeIntroConfig => ({
@@ -205,6 +212,19 @@ export const uploadImage = async (file: File): Promise<string> => {
   return URL.createObjectURL(file);
 };
 
+// Default FTP configuration value
+export const defaultFtpConfig = {
+  host: '',
+  port: 21,
+  username: '',
+  password: '',
+  secure: true,
+  basePath: '/',
+  enabled: false,
+  uploadEndpoint: '',
+  baseUrl: ''
+};
+
 // FTP Config interface for FtpSettingsManager
 export interface ftpConfig {
   host: string;
@@ -213,13 +233,14 @@ export interface ftpConfig {
   password: string;
   secure: boolean;
   basePath: string;
+  enabled: boolean;
+  uploadEndpoint: string;
+  baseUrl: string;
 }
 
+// Create an instance of the config to use as a value
+export const ftpConfig = { ...defaultFtpConfig };
+
 export const getDefaultFtpConfig = (): ftpConfig => ({
-  host: '',
-  port: 21,
-  username: '',
-  password: '',
-  secure: true,
-  basePath: '/'
+  ...defaultFtpConfig
 });

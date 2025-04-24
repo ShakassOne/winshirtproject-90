@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Upload, Server, Globe, Save } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { ftpConfig } from '@/lib/supabase';
+import { ftpConfig as ftpConfigDefault } from '@/lib/supabase';
 import { Label } from '@/components/ui/label';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
@@ -20,9 +19,9 @@ const FtpSettingsManager: React.FC = () => {
 
   const form = useForm({
     defaultValues: {
-      enabled: ftpConfig.enabled,
-      uploadEndpoint: ftpConfig.uploadEndpoint,
-      baseUrl: ftpConfig.baseUrl
+      enabled: ftpConfigDefault.enabled,
+      uploadEndpoint: ftpConfigDefault.uploadEndpoint,
+      baseUrl: ftpConfigDefault.baseUrl
     }
   });
 
@@ -50,7 +49,7 @@ const FtpSettingsManager: React.FC = () => {
       localStorage.setItem('ftpSettings', JSON.stringify(data));
       
       // Mettre à jour la configuration globale
-      Object.assign(ftpConfig, data);
+      Object.assign(ftpConfigDefault, data);
       
       toast.success("Paramètres FTP sauvegardés avec succès");
     } catch (error) {
