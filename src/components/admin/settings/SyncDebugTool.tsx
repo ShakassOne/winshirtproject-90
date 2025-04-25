@@ -45,16 +45,16 @@ const SyncDebugTool: React.FC = () => {
       if (connected) {
         // Vérifier les données dans chaque table
         await checkTablesData();
-        toast.success("Connecté à Supabase", { position: "bottom-right" });
+        toast.success("Connecté à Supabase", { position: "top-right" });
       } else {
         setConnectionError("Impossible d'établir une connexion à Supabase");
-        toast.error("Non connecté à Supabase", { position: "bottom-right" });
+        toast.error("Non connecté à Supabase", { position: "top-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la vérification de la connexion:", error);
       setConnectionError(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       setIsConnected(false);
-      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
     } finally {
       setIsLoading(false);
     }
@@ -124,16 +124,16 @@ const SyncDebugTool: React.FC = () => {
       setIsConnected(connected);
       
       if (connected) {
-        toast.success("Connexion à Supabase établie avec succès", { position: "bottom-right" });
+        toast.success("Connexion à Supabase établie avec succès", { position: "top-right" });
         await checkTablesData();
       } else {
         setConnectionError("Impossible d'établir une connexion à Supabase");
-        toast.error("Échec de la connexion à Supabase", { position: "bottom-right" });
+        toast.error("Échec de la connexion à Supabase", { position: "top-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la tentative de connexion forcée:", error);
       setConnectionError(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
     } finally {
       setIsLoading(false);
     }
@@ -233,7 +233,7 @@ const SyncDebugTool: React.FC = () => {
         </div>
         
         {connectionError && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-4 w-full">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Erreur de connexion</AlertTitle>
             <AlertDescription>{connectionError}</AlertDescription>

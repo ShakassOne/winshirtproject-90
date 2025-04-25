@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,15 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { syncConfig, syncData, forceSupabaseConnection, createTablesSQL } from '@/lib/initSupabase';
+import { syncConfig, syncData, forceSupabaseConnection } from '@/lib/initSupabase';
 import { checkSupabaseConnection, requiredTables, ValidTableName } from '@/integrations/supabase/client';
 import { supabase, camelToSnake, snakeToCamel } from '@/lib/supabase';
 
-const SyncSettingsManager: React.FC = () => {
+interface SyncSettingsManagerProps {
+  isInitiallyConnected?: boolean;
+}
+
+const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ isInitiallyConnected = false }) => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const [syncSuccess, setSyncSuccess] = useState<Record<string, boolean | null>>({});
   const [autoSync, setAutoSync] = useState(syncConfig.autoSync);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnected, setIsConnected] = useState<boolean>(isInitiallyConnected);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [localStorageData, setLocalStorageData] = useState<Record<string, boolean>>({});
   const [supabaseStorage, setSupabaseStorage] = useState<Record<string, boolean>>({});
@@ -24,23 +27,33 @@ const SyncSettingsManager: React.FC = () => {
   // Check if connected to Supabase on mount and check data existence
   useEffect(() => {
     const checkConnection = async () => {
+      // Essayer d'abord de lire l'état de connexion du localStorage pour la cohérence
+      const storedConnectionState = localStorage.getItem('supabase_connected');
+      const initialConnected = storedConnectionState === 'true' || isInitiallyConnected;
+      
+      setIsConnected(initialConnected);
+      
+      // Puis vérifier la connexion réelle
       const connected = await checkSupabaseConnection();
       setIsConnected(connected);
+      localStorage.setItem('supabase_connected', connected ? 'true' : 'false');
       
       if (connected) {
         checkDataExistence();
-        // Show a welcome toast
-        toast.info("Connexion à Supabase établie", { duration: 3000 });
+        // Afficher un toast uniquement si l'état a changé
+        if (!initialConnected) {
+          toast.info("Connexion à Supabase établie", { position: "top-right", duration: 3000 });
+        }
       }
     };
     
     checkConnection();
     
-    // Check connection every 30 seconds
-    const intervalId = setInterval(checkConnection, 30000);
+    // Check connection every 60 seconds (reduced from 30s to reduce load)
+    const intervalId = setInterval(checkConnection, 60000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [isInitiallyConnected]);
   
   // Fonction pour vérifier l'existence de données dans chaque table
   const checkDataExistence = async () => {
@@ -107,18 +120,19 @@ const SyncSettingsManager: React.FC = () => {
     setSyncSuccess(prev => ({ ...prev, [table]: null }));
     
     try {
+      // Vérifier d'abord si nous sommes connectés à Supabase
       if (!isConnected) {
         const connected = await checkSupabaseConnection();
         if (!connected) {
-          toast.error("Impossible de se connecter à Supabase");
+          toast.error("Impossible de se connecter à Supabase", { position: "top-right" });
           setIsLoading(prev => ({ ...prev, [table]: false }));
           setSyncSuccess(prev => ({ ...prev, [table]: false }));
           return;
         }
         setIsConnected(true);
+        localStorage.setItem('supabase_connected', 'true');
       }
       
-      // Améliorations pour la synchronisation
       // Récupérer les données du localStorage
       const localData = localStorage.getItem(table);
       let parsedData = [];
@@ -133,7 +147,7 @@ const SyncSettingsManager: React.FC = () => {
       }
       
       if (!Array.isArray(parsedData) || parsedData.length === 0) {
-        toast.warning(`Pas de données locales pour ${table}`);
+        toast.warning(`Pas de données locales pour ${table}`, { position: "top-right" });
         setIsLoading(prev => ({ ...prev, [table]: false }));
         setSyncSuccess(prev => ({ ...prev, [table]: false }));
         return;
@@ -150,7 +164,7 @@ const SyncSettingsManager: React.FC = () => {
         
       if (deleteError) {
         console.error(`Error clearing ${table} table:`, deleteError);
-        toast.error(`Erreur lors de la suppression des données: ${deleteError.message}`);
+        toast.error(`Erreur lors de la suppression des données: ${deleteError.message}`, { position: "top-right" });
         setIsLoading(prev => ({ ...prev, [table]: false }));
         setSyncSuccess(prev => ({ ...prev, [table]: false }));
         return;
@@ -169,7 +183,7 @@ const SyncSettingsManager: React.FC = () => {
           
         if (insertError) {
           console.error(`Error inserting batch to ${table}:`, insertError);
-          toast.error(`Erreur lors de l'insertion des données: ${insertError.message}`);
+          toast.error(`Erreur lors de l'insertion des données: ${insertError.message}`, { position: "top-right" });
           allSuccess = false;
           break;
         }
@@ -178,7 +192,7 @@ const SyncSettingsManager: React.FC = () => {
       setSyncSuccess(prev => ({ ...prev, [table]: allSuccess }));
       
       if (allSuccess) {
-        toast.success(`Synchronisation réussie pour ${table} (${parsedData.length} éléments)`);
+        toast.success(`Synchronisation réussie pour ${table} (${parsedData.length} éléments)`, { position: "top-right" });
         
         // Vérifier le résultat
         const { count, error } = await supabase
@@ -204,11 +218,11 @@ const SyncSettingsManager: React.FC = () => {
         // Mettre à jour les statistiques
         checkDataExistence();
       } else {
-        toast.error(`Échec de synchronisation pour ${table}`);
+        toast.error(`Échec de synchronisation pour ${table}`, { position: "top-right" });
       }
     } catch (error) {
       console.error(`Erreur lors de la synchronisation de ${table}:`, error);
-      toast.error(`Erreur lors de la synchronisation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      toast.error(`Erreur lors de la synchronisation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
       setSyncSuccess(prev => ({ ...prev, [table]: false }));
     } finally {
       setIsLoading(prev => ({ ...prev, [table]: false }));
@@ -216,14 +230,14 @@ const SyncSettingsManager: React.FC = () => {
   };
   
   const handleSyncAll = async () => {
-    toast.info("Démarrage de la synchronisation de toutes les tables...");
+    toast.info("Démarrage de la synchronisation de toutes les tables...", { position: "top-right" });
     
     // Synchroniser toutes les tables
     for (const table of syncConfig.tables) {
       await handleSyncTable(table);
     }
     
-    toast.success('Synchronisation de toutes les tables terminée');
+    toast.success('Synchronisation de toutes les tables terminée', { position: "top-right" });
     
     // Mettre à jour les statistiques
     checkDataExistence();
@@ -233,7 +247,7 @@ const SyncSettingsManager: React.FC = () => {
     setAutoSync(checked);
     // Ici, dans une version future, on pourrait sauvegarder cette préférence
     // dans la configuration générale
-    toast.success(`Synchronisation automatique ${checked ? 'activée' : 'désactivée'}`);
+    toast.success(`Synchronisation automatique ${checked ? 'activée' : 'désactivée'}`, { position: "top-right" });
   };
   
   const handleForceConnection = async () => {
@@ -242,17 +256,18 @@ const SyncSettingsManager: React.FC = () => {
     try {
       const success = await forceSupabaseConnection();
       setIsConnected(success);
+      localStorage.setItem('supabase_connected', success ? 'true' : 'false');
       
       if (success) {
-        toast.success("Connexion à Supabase établie avec succès!");
+        toast.success("Connexion à Supabase établie avec succès!", { position: "top-right" });
         // Mettre à jour les statistiques
         await checkDataExistence();
       } else {
-        toast.error("Impossible de se connecter à Supabase");
+        toast.error("Impossible de se connecter à Supabase", { position: "top-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la tentative de connexion:", error);
-      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
     } finally {
       setIsConnecting(false);
     }
@@ -403,14 +418,14 @@ const SyncSettingsManager: React.FC = () => {
           </div>
           
           {!isConnected && (
-            <div className="bg-red-950/30 border border-red-500/30 p-4 rounded-md mb-6">
+            <div className="bg-red-950/30 border border-red-500/30 p-4 rounded-md mb-6 max-w-[100%]">
               <p className="text-red-200 text-sm">
                 La connexion à Supabase n'est pas établie. Veuillez cliquer sur "Établir la connexion" pour vous connecter à votre base de données.
               </p>
               <div className="mt-4 text-sm text-red-200">
                 <p className="font-semibold">Instructions pour établir la connexion:</p>
                 <ol className="list-decimal pl-4 mt-2 space-y-1">
-                  <li>Vérifiez que le serveur Supabase est accessible (https://flifjrvtjphhnxcqtxwx.supabase.co)</li>
+                  <li>Vérifiez que le serveur Supabase est accessible</li>
                   <li>Assurez-vous que votre clé API Supabase est valide</li>
                   <li>Cliquez sur le bouton "Établir la connexion" ci-dessus</li>
                   <li>Une fois connecté, vous pourrez synchroniser vos données</li>

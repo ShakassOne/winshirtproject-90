@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,8 +8,24 @@ import SyncSettingsManager from '@/components/admin/settings/SyncSettingsManager
 import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
 import HomeIntroManager from '@/components/admin/settings/HomeIntroManager';
 import SyncDebugTool from '@/components/admin/settings/SyncDebugTool';
+import { checkSupabaseConnection } from '@/lib/supabase';
 
 const AdminSettingsPage: React.FC = () => {
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+
+  // Vérifier la connexion au chargement de la page
+  useEffect(() => {
+    const checkConnection = async () => {
+      const connected = await checkSupabaseConnection();
+      setIsConnected(connected);
+      
+      // Stocker l'état de connexion dans le localStorage pour la cohérence entre composants
+      localStorage.setItem('supabase_connected', connected ? 'true' : 'false');
+    };
+    
+    checkConnection();
+  }, []);
+
   return (
     <>
       <StarBackground />
@@ -40,7 +56,7 @@ const AdminSettingsPage: React.FC = () => {
             </TabsContent>
             
             <TabsContent value="sync" className="space-y-6">
-              <SyncSettingsManager />
+              <SyncSettingsManager isInitiallyConnected={isConnected} />
             </TabsContent>
             
             <TabsContent value="ftp" className="space-y-6">

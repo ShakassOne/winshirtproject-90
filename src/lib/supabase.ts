@@ -51,7 +51,7 @@ export const isSupabaseConfigured = () => {
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   if (!isSupabaseConfigured()) {
     console.error("Supabase n'est pas configuré correctement");
-    toast.error("Supabase n'est pas configuré correctement", { position: "bottom-right" });
+    toast.error("Supabase n'est pas configuré correctement", { position: "top-right" });
     return false;
   }
 
@@ -73,7 +73,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
       }
       
       console.error("Erreur de connexion Supabase:", error);
-      toast.error("Impossible de se connecter à Supabase: " + error.message, { position: "bottom-right" });
+      toast.error("Impossible de se connecter à Supabase: " + error.message, { position: "top-right" });
       return false;
     }
 
@@ -81,7 +81,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Exception lors de la vérification Supabase:", error);
-    toast.error("Erreur de connexion à Supabase", { position: "bottom-right" });
+    toast.error("Erreur de connexion à Supabase", { position: "top-right" });
     return false;
   }
 };
@@ -92,7 +92,7 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
     console.log("Tentative de connexion à Supabase...");
     
     if (!isSupabaseConfigured()) {
-      toast.error("Configuration Supabase manquante", { position: "bottom-right" });
+      toast.error("Configuration Supabase manquante", { position: "top-right" });
       return false;
     }
     
@@ -104,16 +104,19 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
       
     if (error && error.code !== 'PGRST116') {
       console.error("Erreur de connexion:", error);
-      toast.error(`Erreur de connexion: ${error.message}`, { position: "bottom-right" });
+      toast.error(`Erreur de connexion: ${error.message}`, { position: "top-right" });
       return false;
     }
     
-    toast.success("Connexion à Supabase établie!", { position: "bottom-right" });
+    toast.success("Connexion à Supabase établie!", { position: "top-right" });
     console.log("Connexion à Supabase réussie");
+    
+    // Mise à jour du localStorage pour signaler la connexion
+    localStorage.setItem('supabase_connected', 'true');
     return true;
   } catch (error) {
     console.error("Exception lors de la connexion:", error);
-    toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
     return false;
   }
 };
