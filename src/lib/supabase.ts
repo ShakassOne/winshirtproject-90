@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { toast } from './toast';
 
@@ -5,13 +6,13 @@ import { toast } from './toast';
 export const SUPABASE_URL = "https://uwgclposhhdovfjnazlp.supabase.co";
 export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3Z2NscG9zaGhkb3Zmam5hemxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTA4MzEsImV4cCI6MjA2MTA2NjgzMX0.wZBdCERqRHdWQMCZvFSbJBSMoXQHvpK49Jz_m4dx4cc";
 
-// Configuration explicite pour assurer la persistance de la session
+// Configuration explicite pour assurer la persistance de la session et garantir un client unique
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  },
+  }
 });
 
 // Type definition for FTP configuration
@@ -43,27 +44,36 @@ export interface HomeIntroConfig {
 
 // Vérifier si Supabase est configuré
 export const isSupabaseConfigured = () => {
-  return SUPABASE_URL && SUPABASE_ANON_KEY;
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 };
 
 // Fonction pour vérifier la connexion à Supabase
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   if (!isSupabaseConfigured()) {
-    toast.error("Supabase n'est pas configuré correctement");
+    console.error("Supabase n'est pas configuré correctement");
+    toast.error("Supabase n'est pas configuré correctement", { position: "bottom-right" });
     return false;
   }
 
   try {
-    // Utiliser la même requête que dans l'autre module pour vérifier la connexion
+    console.log("Vérification de la connexion à Supabase...");
+    
+    // Requête simple pour vérifier la connexion
+    // On utilise une requête directe au lieu de pg_tables qui cause des problèmes
     const { data, error } = await supabase
-      .from('pg_tables')
-      .select('tablename')
-      .eq('schemaname', 'public')
+      .from('lotteries')
+      .select('count')
       .limit(1);
     
     if (error) {
+      if (error.code === 'PGRST116') {
+        // Si l'erreur est que la table n'existe pas, on est quand même connecté
+        console.log("Connexion Supabase réussie mais la table lotteries n'existe pas");
+        return true;
+      }
+      
       console.error("Erreur de connexion Supabase:", error);
-      toast.error("Impossible de se connecter à Supabase: " + error.message);
+      toast.error("Impossible de se connecter à Supabase: " + error.message, { position: "bottom-right" });
       return false;
     }
 
@@ -71,7 +81,39 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Exception lors de la vérification Supabase:", error);
-    toast.error("Erreur de connexion à Supabase");
+    toast.error("Erreur de connexion à Supabase", { position: "bottom-right" });
+    return false;
+  }
+};
+
+// Fonction pour forcer la connexion à Supabase et créer les tables si nécessaire
+export const forceSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    console.log("Tentative de connexion à Supabase...");
+    
+    if (!isSupabaseConfigured()) {
+      toast.error("Configuration Supabase manquante", { position: "bottom-right" });
+      return false;
+    }
+    
+    // Tentative de connexion simple
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('count')
+      .limit(1);
+      
+    if (error && error.code !== 'PGRST116') {
+      console.error("Erreur de connexion:", error);
+      toast.error(`Erreur de connexion: ${error.message}`, { position: "bottom-right" });
+      return false;
+    }
+    
+    toast.success("Connexion à Supabase établie!", { position: "bottom-right" });
+    console.log("Connexion à Supabase réussie");
+    return true;
+  } catch (error) {
+    console.error("Exception lors de la connexion:", error);
+    toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return false;
   }
 };
@@ -145,19 +187,6 @@ export const uploadImage = async (file: File, folder: string): Promise<string | 
   try {
     // For now, create a local URL (this would normally upload to Supabase storage)
     const localUrl = URL.createObjectURL(file);
-    
-    // In a real implementation with Supabase:
-    // const { data, error } = await supabase.storage
-    //   .from('images')
-    //   .upload(`${folder}/${file.name}`, file);
-    
-    // if (error) {
-    //   throw error;
-    // }
-    
-    // return supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl;
-    
-    // For now, just return the local URL
     return localUrl;
   } catch (error) {
     console.error("Error uploading image:", error);

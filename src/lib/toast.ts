@@ -39,7 +39,7 @@ export const toast = {
       description: options?.description,
       action: options?.action,
       duration: options?.duration || 5000,
-      className: getPositionClass(options?.position || "bottom-right") + " bg-amber-600/90",
+      className: `${getPositionClass(options?.position || "bottom-right")} bg-amber-600/90`,
       variant: "default",
     });
   },
@@ -49,7 +49,7 @@ export const toast = {
       description: options?.description,
       action: options?.action,
       duration: options?.duration || 4000,
-      className: getPositionClass(options?.position || "bottom-right") + " bg-blue-600/90",
+      className: `${getPositionClass(options?.position || "bottom-right")} bg-blue-600/90`,
       variant: "default",
     });
   },

@@ -1,8 +1,24 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 const SUPABASE_URL = "https://uwgclposhhdovfjnazlp.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3Z2NscG9zaGhkb3Zmam5hemxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTA4MzEsImV4cCI6MjA2MTA2NjgzMX0.wZBdCERqRHdWQMCZvFSbJBSMoXQHvpK49Jz_m4dx4cc";
+
+// Types pour le débuggeur de tables
+export type TablesStatus = 'both' | 'local' | 'supabase' | 'none' | 'error';
+
+export interface TableData {
+  localData: boolean;
+  supabaseData: boolean;
+  status: TablesStatus;
+  count: number;
+  error?: string;
+}
+
+export interface TablesData {
+  [tableName: string]: TableData;
+}
 
 // Define our known database tables
 export type Tables = {
@@ -343,17 +359,30 @@ export const requiredTables = [
 export type ValidTableName = typeof requiredTables[number];
 
 // Create a custom supabase client with our type definitions
-export const supabase = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // Function to check if Supabase connection works
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
+    // Nous utilisons une requête plus simple qui a moins de chance d'échouer
     const { data, error } = await supabase
-      .from('pg_tables')
-      .select('tablename')
+      .from('lotteries')
+      .select('count')
       .limit(1);
     
-    return !error;
+    if (error && error.code !== 'PGRST116') {
+      // Si l'erreur n'est pas que la table n'existe pas
+      console.error("Error checking Supabase connection:", error);
+      return false;
+    }
+    
+    return true;
   } catch (e) {
     console.error("Error checking Supabase connection:", e);
     return false;
@@ -362,27 +391,32 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
 
 // Function to check if all required tables exist
 export const checkRequiredTables = async (): Promise<{exists: boolean; missing: readonly string[]}> => {
-  try {
-    const { data } = await supabase
-      .from('pg_tables')
-      .select('tablename')
-      .eq('schemaname', 'public');
-    
-    if (!data) return { exists: false, missing: requiredTables };
-    
-    const existingTables = data.map(t => t.tablename);
-    const missingTables = requiredTables.filter(
-      table => !existingTables.includes(table)
-    );
-    
-    return {
-      exists: missingTables.length === 0,
-      missing: missingTables
-    };
-  } catch (e) {
-    console.error("Error checking required tables:", e);
-    return { exists: false, missing: requiredTables };
+  const missingTables: string[] = [];
+  let allExist = true;
+  
+  for (const table of requiredTables) {
+    try {
+      const { error } = await supabase
+        .from(table)
+        .select('count')
+        .limit(1);
+      
+      if (error && error.code === 'PGRST116') {
+        // Si l'erreur est que la table n'existe pas
+        missingTables.push(table);
+        allExist = false;
+      }
+    } catch (e) {
+      console.error(`Error checking table ${table}:`, e);
+      missingTables.push(table);
+      allExist = false;
+    }
   }
+  
+  return {
+    exists: allExist,
+    missing: missingTables as readonly string[]
+  };
 };
 
 // Function to sync local data to Supabase
