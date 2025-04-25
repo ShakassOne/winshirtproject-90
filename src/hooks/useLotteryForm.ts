@@ -112,7 +112,7 @@ export const useLotteryForm = (
         value: parseFloat(data.value),
         targetParticipants: parseInt(data.targetParticipants, 10),
         currentParticipants: parseInt(data.currentParticipants, 10) || 0,
-        status: data.status,
+        status: data.status as "active" | "completed" | "relaunched" | "cancelled",
         image: data.image,
         linkedProducts,
         featured: data.featured,
@@ -207,7 +207,7 @@ export const useLotteryForm = (
       
       // Mettre à jour le statut de la loterie
       const updatedLotteries = lotteries.map(l => 
-        l.id === id ? { ...l, status: 'completed', drawDate: new Date().toISOString() } : l
+        l.id === id ? { ...l, status: 'completed' as "active" | "completed" | "relaunched" | "cancelled", drawDate: new Date().toISOString() } : l
       );
       
       setLotteries(updatedLotteries);
@@ -253,7 +253,7 @@ export const useLotteryForm = (
     });
   };
 
-  // Fonction pour ajouter/retirer un produit de la liste selectedProducts
+  // Function to toggle product selection
   const toggleProduct = (productId: string): void => {
     const currentProducts = form.getValues('linkedProducts') || [];
     
