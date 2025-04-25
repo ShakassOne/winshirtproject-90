@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { toast } from './toast';
 
@@ -51,37 +50,30 @@ export const isSupabaseConfigured = () => {
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   if (!isSupabaseConfigured()) {
     console.error("Supabase n'est pas configuré correctement");
-    toast.error("Supabase n'est pas configuré correctement", { position: "top-right" });
+    toast.error("Supabase n'est pas configuré correctement", { position: "bottom-right" });
     return false;
   }
 
   try {
     console.log("Vérification de la connexion à Supabase...");
     
-    // Requête simple pour vérifier la connexion
-    // On utilise une requête directe au lieu de pg_tables qui cause des problèmes
-    const { data, error } = await supabase
-      .from('lotteries')
-      .select('count')
-      .limit(1);
+    // Essayons une requête plus simple et directe
+    const { data, error } = await supabase.from('lotteries').select('count').limit(1);
     
     if (error) {
-      if (error.code === 'PGRST116') {
-        // Si l'erreur est que la table n'existe pas, on est quand même connecté
-        console.log("Connexion Supabase réussie mais la table lotteries n'existe pas");
-        return true;
-      }
-      
       console.error("Erreur de connexion Supabase:", error);
-      toast.error("Impossible de se connecter à Supabase: " + error.message, { position: "top-right" });
+      toast.error("Impossible de se connecter à Supabase: " + error.message, { position: "bottom-right" });
+      localStorage.setItem('supabase_connected', 'false');
       return false;
     }
 
     console.log("Connexion Supabase réussie");
+    localStorage.setItem('supabase_connected', 'true');
     return true;
   } catch (error) {
     console.error("Exception lors de la vérification Supabase:", error);
-    toast.error("Erreur de connexion à Supabase", { position: "top-right" });
+    toast.error("Erreur de connexion à Supabase", { position: "bottom-right" });
+    localStorage.setItem('supabase_connected', 'false');
     return false;
   }
 };
@@ -92,23 +84,39 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
     console.log("Tentative de connexion à Supabase...");
     
     if (!isSupabaseConfigured()) {
-      toast.error("Configuration Supabase manquante", { position: "top-right" });
+      toast.error("Configuration Supabase manquante", { position: "bottom-right" });
       return false;
     }
     
     // Tentative de connexion simple
-    const { data, error } = await supabase
-      .from('lotteries')
-      .select('count')
-      .limit(1);
+    const { data, error } = await supabase.from('lotteries').select('count').limit(1);
       
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      // Si l'erreur indique que la table n'existe pas, nous devons peut-être la créer
       console.error("Erreur de connexion:", error);
-      toast.error(`Erreur de connexion: ${error.message}`, { position: "top-right" });
-      return false;
+      
+      if (error.code === '42P01') { // Table doesn't exist
+        try {
+          // Tenter de créer les tables nécessaires
+          const { error: createError } = await supabase.rpc('create_required_tables');
+          if (createError) {
+            console.error("Erreur lors de la création des tables:", createError);
+            toast.error("Impossible de créer les tables: " + createError.message, { position: "bottom-right" });
+            localStorage.setItem('supabase_connected', 'false');
+            return false;
+          }
+          toast.success("Tables créées avec succès", { position: "bottom-right" });
+        } catch (e) {
+          console.error("Exception lors de la création des tables:", e);
+        }
+      } else {
+        toast.error(`Erreur de connexion: ${error.message}`, { position: "bottom-right" });
+        localStorage.setItem('supabase_connected', 'false');
+        return false;
+      }
     }
     
-    toast.success("Connexion à Supabase établie!", { position: "top-right" });
+    toast.success("Connexion à Supabase établie!", { position: "bottom-right" });
     console.log("Connexion à Supabase réussie");
     
     // Mise à jour du localStorage pour signaler la connexion
@@ -116,8 +124,75 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Exception lors de la connexion:", error);
-    toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
+    toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    localStorage.setItem('supabase_connected', 'false');
     return false;
+  }
+};
+
+// Fonction de synchronisation des données locales vers Supabase
+export const syncLocalDataToSupabase = async (tableName: string): Promise<boolean> => {
+  try {
+    const localData = localStorage.getItem(tableName);
+    if (!localData) {
+      toast.warning(`Pas de données locales pour ${tableName}`, { position: "bottom-right" });
+      return false;
+    }
+
+    const parsedData = JSON.parse(localData);
+    if (!Array.isArray(parsedData) || parsedData.length === 0) {
+      toast.warning(`Données invalides pour ${tableName}`, { position: "bottom-right" });
+      return false;
+    }
+
+    // Nous allons tenter d'utiliser upsert pour éviter les conflits
+    const { error } = await supabase.from(tableName).upsert(
+      parsedData.map(item => camelToSnake(item)),
+      { onConflict: 'id' }
+    );
+
+    if (error) {
+      console.error(`Erreur lors de la synchronisation de ${tableName}:`, error);
+      toast.error(`Erreur de synchronisation: ${error.message}`, { position: "bottom-right" });
+      return false;
+    }
+
+    // Synchronisation réussie
+    toast.success(`${tableName} synchronisé avec succès`, { position: "bottom-right" });
+    return true;
+  } catch (error) {
+    console.error(`Erreur lors de la synchronisation de ${tableName}:`, error);
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return false;
+  }
+};
+
+// Fonction pour obtenir les données Supabase et les mettre à jour en local
+export const fetchDataFromSupabase = async (tableName: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase.from(tableName).select('*');
+    
+    if (error) {
+      console.error(`Erreur lors de la récupération des données pour ${tableName}:`, error);
+      toast.error(`Erreur: ${error.message}`, { position: "bottom-right" });
+      return [];
+    }
+    
+    if (data && Array.isArray(data)) {
+      // Conversion des données snake_case en camelCase
+      const camelCaseData = data.map(item => snakeToCamel(item));
+      
+      // Mise à jour du localStorage
+      localStorage.setItem(tableName, JSON.stringify(camelCaseData));
+      
+      return camelCaseData;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error(`Exception lors de la récupération des données pour ${tableName}:`, error);
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return [];
   }
 };
 

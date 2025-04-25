@@ -3,29 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Database, AlertCircle, CheckCircle, XCircle, RefreshCw, Info } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/toast';
-import { supabase, checkSupabaseConnection, forceSupabaseConnection } from '@/lib/supabase';
-import { TablesData, TablesStatus } from '@/integrations/supabase/client';
+import { supabase, checkSupabaseConnection, forceSupabaseConnection, syncLocalDataToSupabase } from '@/lib/supabase';
+import { TablesData, TablesStatus, requiredTables } from '@/integrations/supabase/client';
 
 const SyncDebugTool: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [tablesData, setTablesData] = useState<TablesData>({});
-
-  // Liste des tables à vérifier
-  const tablesToCheck = [
-    'lotteries',
-    'lottery_participants',
-    'lottery_winners',
-    'products',
-    'visuals',
-    'orders',
-    'order_items',
-    'clients'
-  ];
   
   // Vérifier la connexion et les données au chargement
   useEffect(() => {
@@ -38,6 +25,10 @@ const SyncDebugTool: React.FC = () => {
     setConnectionError(null);
     
     try {
+      // Récupérer d'abord l'état de connexion stocké
+      const storedState = localStorage.getItem('supabase_connected');
+      const initialConnected = storedState === 'true';
+      
       // Vérifier la connexion
       const connected = await checkSupabaseConnection();
       setIsConnected(connected);
@@ -45,16 +36,18 @@ const SyncDebugTool: React.FC = () => {
       if (connected) {
         // Vérifier les données dans chaque table
         await checkTablesData();
-        toast.success("Connecté à Supabase", { position: "top-right" });
+        if (!initialConnected) {
+          toast.success("Connecté à Supabase", { position: "bottom-right" });
+        }
       } else {
         setConnectionError("Impossible d'établir une connexion à Supabase");
-        toast.error("Non connecté à Supabase", { position: "top-right" });
+        toast.error("Non connecté à Supabase", { position: "bottom-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la vérification de la connexion:", error);
       setConnectionError(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       setIsConnected(false);
-      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
+      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +57,7 @@ const SyncDebugTool: React.FC = () => {
   const checkTablesData = async () => {
     const data: TablesData = {};
     
-    for (const table of tablesToCheck) {
+    for (const table of requiredTables) {
       try {
         // Vérifier localStorage
         const localData = localStorage.getItem(table);
@@ -124,16 +117,37 @@ const SyncDebugTool: React.FC = () => {
       setIsConnected(connected);
       
       if (connected) {
-        toast.success("Connexion à Supabase établie avec succès", { position: "top-right" });
+        toast.success("Connexion à Supabase établie avec succès", { position: "bottom-right" });
         await checkTablesData();
       } else {
         setConnectionError("Impossible d'établir une connexion à Supabase");
-        toast.error("Échec de la connexion à Supabase", { position: "top-right" });
+        toast.error("Échec de la connexion à Supabase", { position: "bottom-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la tentative de connexion forcée:", error);
       setConnectionError(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Synchroniser une table
+  const handleSyncTable = async (table: string) => {
+    if (!isConnected) {
+      toast.error("Vous devez être connecté à Supabase pour synchroniser", { position: "bottom-right" });
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const success = await syncLocalDataToSupabase(table);
+      if (success) {
+        await checkTablesData();
+      }
+    } catch (e) {
+      console.error(`Erreur lors de la synchronisation de ${table}:`, e);
+      toast.error(`Erreur: ${e instanceof Error ? e.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     } finally {
       setIsLoading(false);
     }
@@ -232,18 +246,10 @@ const SyncDebugTool: React.FC = () => {
           </div>
         </div>
         
-        {connectionError && (
-          <Alert variant="destructive" className="mb-4 w-full">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Erreur de connexion</AlertTitle>
-            <AlertDescription>{connectionError}</AlertDescription>
-          </Alert>
-        )}
-        
         <div className="mt-4">
-          <h3 className="text-lg font-medium mb-2">Données locales</h3>
+          <h3 className="text-lg font-medium mb-2">Données des tables</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {tablesToCheck.map(table => {
+            {requiredTables.map(table => {
               const tableData = tablesData[table] || { status: 'none', count: 0, localData: false, supabaseData: false };
               
               return (
@@ -260,11 +266,21 @@ const SyncDebugTool: React.FC = () => {
                       </span>
                     </Badge>
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 mb-2">
                     {tableData.status === 'both' || tableData.status === 'supabase' ? (
                       <span>Supabase: {tableData.count} éléments</span>
                     ) : null}
                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={isLoading || !isConnected || !tableData.localData}
+                    onClick={() => handleSyncTable(table)}
+                    className="w-full h-8 border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Synchroniser
+                  </Button>
                 </div>
               );
             })}

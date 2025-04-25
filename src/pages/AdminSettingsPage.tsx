@@ -8,23 +8,69 @@ import SyncSettingsManager from '@/components/admin/settings/SyncSettingsManager
 import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
 import HomeIntroManager from '@/components/admin/settings/HomeIntroManager';
 import SyncDebugTool from '@/components/admin/settings/SyncDebugTool';
-import { checkSupabaseConnection } from '@/lib/supabase';
+import { checkSupabaseConnection, forceSupabaseConnection } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const AdminSettingsPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Vérifier la connexion au chargement de la page
   useEffect(() => {
     const checkConnection = async () => {
-      const connected = await checkSupabaseConnection();
-      setIsConnected(connected);
-      
-      // Stocker l'état de connexion dans le localStorage pour la cohérence entre composants
-      localStorage.setItem('supabase_connected', connected ? 'true' : 'false');
+      setIsLoading(true);
+      try {
+        const connected = await checkSupabaseConnection();
+        setIsConnected(connected);
+        
+        // Stocker l'état de connexion dans le localStorage pour la cohérence entre composants
+        localStorage.setItem('supabase_connected', connected ? 'true' : 'false');
+        
+        if (connected) {
+          toast.success("Connexion à Supabase établie", { position: "bottom-right" });
+        } else {
+          toast.warning("Non connecté à Supabase. Veuillez établir la connexion.", { position: "bottom-right" });
+          setError("La connexion à Supabase n'est pas établie. Cliquez sur 'Établir la connexion'.");
+        }
+      } catch (e) {
+        console.error("Erreur lors de la vérification de la connexion:", e);
+        setError(`Erreur: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
+        toast.error("Erreur lors de la vérification de la connexion", { position: "bottom-right" });
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     checkConnection();
   }, []);
+
+  const handleForceConnection = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const success = await forceSupabaseConnection();
+      setIsConnected(success);
+      
+      if (success) {
+        toast.success("Connexion à Supabase établie avec succès!", { position: "bottom-right" });
+        setError(null);
+      } else {
+        setError("Impossible d'établir une connexion à Supabase");
+        toast.error("Échec de la connexion à Supabase", { position: "bottom-right" });
+      }
+    } catch (e) {
+      console.error("Erreur lors de la tentative de connexion:", e);
+      setError(`Erreur: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
+      toast.error("Erreur lors de la tentative de connexion", { position: "bottom-right" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -36,6 +82,24 @@ const AdminSettingsPage: React.FC = () => {
           <h1 className="text-3xl font-bold mb-8 text-white text-center">
             Paramètres de l'application
           </h1>
+          
+          {error && (
+            <Alert variant="destructive" className="mb-6 max-w-md mx-auto">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex flex-col gap-2">
+                {error}
+                <Button 
+                  onClick={handleForceConnection} 
+                  variant="outline" 
+                  className="self-start mt-2"
+                  size="sm"
+                  disabled={isLoading}
+                >
+                  Établir la connexion
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
           
           <SyncDebugTool />
           

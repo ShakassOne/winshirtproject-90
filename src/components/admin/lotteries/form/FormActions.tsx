@@ -1,38 +1,38 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 
-interface FormActionsProps {
+export interface FormActionsProps {
   isCreating: boolean;
-  isSubmitting?: boolean;
+  isSubmitting?: boolean; // Ajout de la prop isSubmitting
   onCancel: () => void;
-  submitLabel?: React.ReactNode;
+  submitLabel: React.ReactNode;
 }
 
 const FormActions: React.FC<FormActionsProps> = ({ 
   isCreating, 
-  isSubmitting = false, 
+  isSubmitting = false,
   onCancel, 
   submitLabel 
 }) => {
   return (
-    <div className="flex justify-end space-x-2 pt-4">
-      <Button 
-        type="button" 
-        variant="outline" 
+    <div className="flex justify-end space-x-2 mt-8">
+      <Button
+        type="button"
+        variant="outline"
         onClick={onCancel}
+        className="border-red-500/30 text-red-400 hover:bg-red-500/10"
         disabled={isSubmitting}
-        className="border-winshirt-purple/30 text-white"
       >
         Annuler
       </Button>
+      
       <Button 
-        type="submit"
+        type="submit" 
+        className="bg-winshirt-blue hover:bg-winshirt-blue/90"
         disabled={isSubmitting}
-        className="bg-winshirt-blue hover:bg-winshirt-blue-dark"
       >
-        {submitLabel || (isCreating ? "Créer la loterie" : "Mettre à jour")}
+        {submitLabel}
       </Button>
     </div>
   );

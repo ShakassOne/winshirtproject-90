@@ -19,7 +19,7 @@ export const toast = {
       description: options?.description,
       action: options?.action,
       duration: options?.duration || 5000,
-      className: `${getPositionClass(options?.position || "bottom-right")} bg-green-600/90`,
+      className: `${getPositionClass(options?.position || "bottom-right")} bg-green-600/90 text-white`,
       variant: "default",
     });
   },
@@ -29,7 +29,7 @@ export const toast = {
       description: options?.description,
       action: options?.action,
       duration: options?.duration || 7000,
-      className: getPositionClass(options?.position || "bottom-right"),
+      className: `${getPositionClass(options?.position || "bottom-right")}`,
       variant: "destructive",
     });
   },
@@ -39,7 +39,7 @@ export const toast = {
       description: options?.description,
       action: options?.action,
       duration: options?.duration || 5000,
-      className: `${getPositionClass(options?.position || "bottom-right")} bg-amber-600/90`,
+      className: `${getPositionClass(options?.position || "bottom-right")} bg-amber-600/90 text-white`,
       variant: "default",
     });
   },
@@ -49,7 +49,7 @@ export const toast = {
       description: options?.description,
       action: options?.action,
       duration: options?.duration || 4000,
-      className: `${getPositionClass(options?.position || "bottom-right")} bg-blue-600/90`,
+      className: `${getPositionClass(options?.position || "bottom-right")} bg-blue-600/90 text-white`,
       variant: "default",
     });
   },
@@ -57,19 +57,20 @@ export const toast = {
 
 // Helper to get position-specific classes
 function getPositionClass(position: ToastPosition): string {
+  // Nous supprimons les classes fixed qui sont maintenant gérées par ToastViewport
   switch (position) {
     case "top-right":
-      return "top-4 right-4 fixed";
+      return "top-0 right-0";
     case "top":
-      return "top-4 left-1/2 -translate-x-1/2 fixed";
+      return "top-0 left-1/2 -translate-x-1/2";
     case "top-left":
-      return "top-4 left-4 fixed";
+      return "top-0 left-0";
     case "bottom-left":
-      return "bottom-4 left-4 fixed";
+      return "bottom-0 left-0";
     case "bottom":
-      return "bottom-4 left-1/2 -translate-x-1/2 fixed";
+      return "bottom-0 left-1/2 -translate-x-1/2";
     case "bottom-right":
     default:
-      return "bottom-4 right-4 fixed";
+      return "";
   }
 }

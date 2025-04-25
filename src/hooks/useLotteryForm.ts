@@ -1,41 +1,10 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { ExtendedLottery, Participant } from '@/types/lottery';
+import { ExtendedLottery } from '@/types/lottery';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
-import { 
-  createLottery, 
-  updateLottery, 
-  deleteLottery, 
-  toggleLotteryFeatured, 
-  updateLotteryWinner,
-  fetchLotteries,
-  testSupabaseConnection 
-} from '@/api/lotteryApi';
-
-const formSchema = z.object({
-  title: z.string().min(2, {
-    message: "Le titre doit comporter au moins 2 caractères.",
-  }),
-  description: z.string().min(10, {
-    message: "La description doit comporter au moins 10 caractères.",
-  }),
-  value: z.coerce.number().min(1, {
-    message: "La valeur doit être supérieure à 0.",
-  }),
-  targetParticipants: z.coerce.number().min(2, {
-    message: "Le nombre de participants doit être supérieur à 1.",
-  }),
-  status: z.enum(["active", "completed", "relaunched", "cancelled"]),
-  image: z.string().url({
-    message: "Veuillez entrer une URL valide.",
-  }),
-  endDate: z.string().optional(),
-  linkedProducts: z.array(z.string()).optional(),
-  featured: z.boolean().optional(),
-});
+import { isSupabaseConfigured, syncLocalDataToSupabase } from '@/lib/supabase';
 
 export const useLotteryForm = (
   lotteries: ExtendedLottery[],
@@ -45,262 +14,266 @@ export const useLotteryForm = (
   const [isCreating, setIsCreating] = useState(false);
   const [selectedLotteryId, setSelectedLotteryId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
     defaultValues: {
-      title: "",
-      description: "",
-      value: 1,
-      targetParticipants: 5,
-      status: 'active' as const,
-      image: "",
-      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default: 7 days from now
-      linkedProducts: [],
-      featured: false,
-    },
+      title: '',
+      description: '',
+      value: 0,
+      targetParticipants: 10,
+      currentParticipants: 0,
+      status: 'active',
+      image: 'https://images.unsplash.com/photo-1523540939399-141cbff6a8d7',
+      linkedProducts: [] as string[],
+      featured: false
+    }
   });
 
-  const handleCreateLottery = () => {
+  // Fonction pour obtenir l'ID suivant (pour le stockage local)
+  const getNextId = (): number => {
+    if (lotteries.length === 0) return 1;
+    return Math.max(...lotteries.map(lottery => lottery.id)) + 1;
+  };
+
+  // Fonction pour créer une nouvelle loterie
+  const handleCreateLottery = (): void => {
+    form.reset({
+      title: '',
+      description: '',
+      value: 0,
+      targetParticipants: 10,
+      currentParticipants: 0,
+      status: 'active',
+      image: 'https://images.unsplash.com/photo-1523540939399-141cbff6a8d7',
+      linkedProducts: [] as string[],
+      featured: false
+    });
     setIsCreating(true);
     setSelectedLotteryId(null);
+  };
+
+  // Fonction pour éditer une loterie existante
+  const handleEditLottery = (id: number): void => {
+    const lotteryToEdit = lotteries.find(lottery => lottery.id === id);
+    if (!lotteryToEdit) return;
+
     form.reset({
-      title: "",
-      description: "",
-      value: 1,
-      targetParticipants: 5,
-      status: 'active' as const,
-      image: "https://images.unsplash.com/photo-1563906267088-b029e7101114", // URL d'image par défaut
-      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      linkedProducts: [],
-      featured: false,
+      title: lotteryToEdit.title,
+      description: lotteryToEdit.description || '',
+      value: lotteryToEdit.value,
+      targetParticipants: lotteryToEdit.targetParticipants,
+      currentParticipants: lotteryToEdit.currentParticipants,
+      status: lotteryToEdit.status,
+      image: lotteryToEdit.image || '',
+      linkedProducts: lotteryToEdit.linkedProducts?.map(id => id.toString()) || [],
+      featured: Boolean(lotteryToEdit.featured)
     });
+
+    setSelectedLotteryId(id);
+    setIsCreating(false);
   };
 
-  const handleEditLottery = (lotteryId: number) => {
-    const lotteryToEdit = lotteries.find(lottery => lottery.id === lotteryId);
-    if (lotteryToEdit) {
-      setSelectedLotteryId(lotteryId);
-      setIsCreating(false);
-      
-      console.log("Editing lottery:", lotteryToEdit);
-      
-      form.reset({
-        title: lotteryToEdit.title || "",
-        description: lotteryToEdit.description || "",
-        value: lotteryToEdit.value || 1,
-        targetParticipants: lotteryToEdit.targetParticipants || 5,
-        status: lotteryToEdit.status || 'active',
-        image: lotteryToEdit.image || "",
-        endDate: lotteryToEdit.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        linkedProducts: lotteryToEdit.linkedProducts?.map(String) || [],
-        featured: lotteryToEdit.featured || false,
-      });
-      
-      console.log("Données chargées pour édition:", {
-        id: lotteryId,
-        image: lotteryToEdit.image,
-        value: lotteryToEdit.value,
-        formValue: form.getValues()
-      });
-    }
-  };
-
-  const handleDeleteLottery = async (lotteryId: number) => {
+  // Function to toggle featured status
+  const handleToggleFeatured = async (id: number): Promise<void> => {
     try {
-      const confirmed = window.confirm("Êtes-vous sûr de vouloir supprimer cette loterie ? Cette action est irréversible.");
-      if (!confirmed) return;
+      const updatedLotteries = lotteries.map(lottery => 
+        lottery.id === id ? { ...lottery, featured: !lottery.featured } : lottery
+      );
       
-      const success = await deleteLottery(lotteryId);
+      setLotteries(updatedLotteries);
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       
-      if (success) {
-        // Forcer la mise à jour des données
-        const updatedLotteries = await fetchLotteries(true);
-        setLotteries(updatedLotteries);
-        setSelectedLotteryId(null);
-        toast.success("Loterie supprimée avec succès !", { position: "bottom-right" });
+      const lottery = updatedLotteries.find(l => l.id === id);
+      const featuredStatus = lottery?.featured ? 'mise en avant' : 'retirée des mises en avant';
+      toast.success(`Loterie ${featuredStatus}`, { position: "bottom-right" });
+      
+      // Sync to Supabase if connected
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      if (supabaseConnected) {
+        await syncLocalDataToSupabase('lotteries');
       }
     } catch (error) {
-      console.error("Erreur lors de la suppression de la loterie:", error);
-      toast.error("Erreur lors de la suppression de la loterie", { position: "bottom-right" });
+      console.error('Error toggling featured:', error);
+      toast.error("Erreur lors du changement de statut", { position: "bottom-right" });
     }
   };
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
+  // Fonction pour soumettre le formulaire (création ou mise à jour)
+  const onSubmit = async (data: any): Promise<void> => {
     try {
-      console.log("Données du formulaire soumises:", data);
+      setIsSubmitting(true);
+      // Convertir les IDs de produits en nombres
+      const linkedProducts = data.linkedProducts.map((id: string) => parseInt(id, 10));
       
-      // Test Supabase connection first
-      await testSupabaseConnection();
-      
-      // Ensure numeric values
-      const valueAsNumber = Number(data.value);
-      const targetParticipantsAsNumber = Number(data.targetParticipants);
-      
-      if (isNaN(valueAsNumber) || isNaN(targetParticipantsAsNumber)) {
-        toast.error("Erreur de conversion des valeurs numériques", { position: "bottom-right" });
-        setIsSubmitting(false);
-        return;
-      }
+      // Préparer l'objet loterie
+      const newLottery: ExtendedLottery = {
+        id: isCreating ? getNextId() : selectedLotteryId || getNextId(),
+        title: data.title,
+        description: data.description,
+        value: parseFloat(data.value),
+        targetParticipants: parseInt(data.targetParticipants, 10),
+        currentParticipants: parseInt(data.currentParticipants, 10) || 0,
+        status: data.status,
+        image: data.image,
+        linkedProducts,
+        featured: data.featured,
+        endDate: data.endDate || null,
+        drawDate: data.drawDate || null
+      };
+
+      // Mettre à jour les loteries
+      let updatedLotteries: ExtendedLottery[];
       
       if (isCreating) {
-        // Créer une nouvelle loterie
-        const newLotteryData: Omit<ExtendedLottery, 'id'> = {
-          title: data.title,
-          description: data.description,
-          value: valueAsNumber,
-          targetParticipants: targetParticipantsAsNumber,
-          currentParticipants: 0,
-          status: data.status,
-          image: data.image,
-          linkedProducts: data.linkedProducts?.map(Number) || [],
-          participants: [],
-          winner: null,
-          drawDate: null,
-          endDate: data.endDate,
-          featured: data.featured || false,
-        };
-        
-        console.log("Tentative de création de loterie avec les données:", newLotteryData);
-        toast.info("Création de la loterie en cours...", { position: "bottom-right" });
-        
-        const createdLottery = await createLottery(newLotteryData);
-        
-        if (createdLottery) {
-          console.log("Loterie créée avec succès:", createdLottery);
-          // Forcer la mise à jour des données
-          const updatedLotteries = await fetchLotteries(true);
-          setLotteries(updatedLotteries);
-          setIsCreating(false);
-          setSelectedLotteryId(null);
-          form.reset();
-          toast.success("Loterie créée avec succès !", { position: "bottom-right" });
-        } else {
-          console.error("Échec de la création de la loterie");
-          toast.error("Erreur lors de la création de la loterie", { position: "bottom-right" });
-        }
-      } else if (selectedLotteryId) {
-        // Trouver la loterie existante pour conserver ses propriétés non modifiables par le formulaire
-        const existingLottery = lotteries.find(l => l.id === selectedLotteryId);
-        
-        if (existingLottery) {
-          // Préparer les données pour la mise à jour
-          const updatedLotteryData: ExtendedLottery = {
-            ...existingLottery,
-            title: data.title,
-            description: data.description,
-            value: valueAsNumber,
-            targetParticipants: targetParticipantsAsNumber,
-            status: data.status,
-            image: data.image,
-            endDate: data.endDate,
-            linkedProducts: data.linkedProducts?.map(Number) || [],
-            featured: data.featured || false,
-          };
-          
-          console.log("Sending update to Supabase:", updatedLotteryData);
-          toast.info("Mise à jour de la loterie en cours...", { position: "bottom-right" });
-          
-          const updatedLottery = await updateLottery(updatedLotteryData);
-          
-          if (updatedLottery) {
-            console.log("Lottery updated successfully:", updatedLottery);
-            
-            // Forcer la mise à jour des données
-            const updatedLotteries = await fetchLotteries(true);
-            setLotteries(updatedLotteries);
-            setIsCreating(false);
-            setSelectedLotteryId(null);
-            form.reset();
-            toast.success("Loterie modifiée avec succès !", { position: "bottom-right" });
-          } else {
-            console.error("Failed to update lottery");
-            toast.error("Erreur lors de la mise à jour de la loterie", { position: "bottom-right" });
-          }
-        }
+        updatedLotteries = [...lotteries, newLottery];
+        toast.success(`Loterie "${data.title}" créée avec succès`, { position: "bottom-right" });
+      } else {
+        updatedLotteries = lotteries.map(lottery => 
+          lottery.id === selectedLotteryId ? newLottery : lottery
+        );
+        toast.success(`Loterie "${data.title}" mise à jour avec succès`, { position: "bottom-right" });
       }
+      
+      // Mettre à jour l'état et le localStorage
+      setLotteries(updatedLotteries);
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      
+      // Synchroniser avec Supabase si connecté
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      if (supabaseConnected) {
+        console.log("Tentative de synchronisation avec Supabase");
+        await syncLocalDataToSupabase('lotteries');
+      }
+      
+      // Réinitialiser le formulaire et l'état
+      form.reset();
+      setIsCreating(false);
+      setSelectedLotteryId(null);
     } catch (error) {
-      console.error("Erreur lors de la soumission du formulaire:", error);
-      toast.error(`Erreur lors de la soumission du formulaire: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+      console.error('Error in form submission:', error);
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
+  // Fonction pour annuler l'édition
+  const handleCancel = (): void => {
+    form.reset();
     setIsCreating(false);
     setSelectedLotteryId(null);
-    form.reset();
-    toast.info("Modification annulée", { position: "bottom-right" });
   };
 
-  const toggleProduct = (productId: string) => {
-    const currentProducts = form.getValues('linkedProducts') || [];
-    const productIdString = String(productId);
-  
-    if (currentProducts.includes(productIdString)) {
-      form.setValue(
-        'linkedProducts',
-        currentProducts.filter((id) => id !== productIdString)
-      );
-    } else {
-      form.setValue('linkedProducts', [...currentProducts, productIdString]);
+  // Fonction pour supprimer une loterie
+  const handleDeleteLottery = (id: number): void => {
+    try {
+      // Si la loterie en cours d'édition est supprimée, réinitialiser le formulaire
+      if (id === selectedLotteryId) {
+        form.reset();
+        setIsCreating(false);
+        setSelectedLotteryId(null);
+      }
+
+      // Mettre à jour l'état et le localStorage
+      const updatedLotteries = lotteries.filter(lottery => lottery.id !== id);
+      setLotteries(updatedLotteries);
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      
+      toast.success("Loterie supprimée avec succès", { position: "bottom-right" });
+      
+      // Synchroniser avec Supabase si connecté
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      if (supabaseConnected) {
+        syncLocalDataToSupabase('lotteries');
+      }
+    } catch (error) {
+      console.error('Error deleting lottery:', error);
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     }
   };
-  
-  const selectAllProducts = () => {
-    const allProductIds = products.map((product) => String(product.id));
+
+  // Fonction pour tirer au sort un gagnant
+  const handleDrawWinner = (id: number): void => {
+    try {
+      // Trouver la loterie
+      const lottery = lotteries.find(l => l.id === id);
+      if (!lottery) {
+        toast.error("Loterie non trouvée", { position: "bottom-right" });
+        return;
+      }
+
+      // Simuler un tirage au sort
+      const winnerName = "Participant gagnant";
+      const winnerEmail = "gagnant@example.com";
+      
+      // Mettre à jour le statut de la loterie
+      const updatedLotteries = lotteries.map(l => 
+        l.id === id ? { ...l, status: 'completed', drawDate: new Date().toISOString() } : l
+      );
+      
+      setLotteries(updatedLotteries);
+      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      
+      // Stocker le gagnant dans localStorage (dans la vraie vie, on utiliserait une table dédiée)
+      const winners = JSON.parse(localStorage.getItem('lottery_winners') || '[]');
+      winners.push({
+        id: winners.length + 1,
+        lotteryId: id,
+        userId: 1, // Fictif pour la démonstration
+        name: winnerName,
+        email: winnerEmail,
+        drawnAt: new Date().toISOString()
+      });
+      
+      localStorage.setItem('lottery_winners', JSON.stringify(winners));
+      
+      toast.success(`Tirage effectué! Le gagnant est ${winnerName}`, { position: "bottom-right" });
+      
+      // Synchroniser avec Supabase si connecté
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      if (supabaseConnected) {
+        syncLocalDataToSupabase('lotteries');
+        syncLocalDataToSupabase('lottery_winners');
+      }
+    } catch (error) {
+      console.error('Error drawing winner:', error);
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    }
+  };
+
+  // Fonction pour vérifier quelles loteries sont prêtes pour le tirage
+  const checkLotteriesReadyForDraw = () => {
+    return lotteries.filter(lottery => {
+      // Prêt si la loterie est active et a atteint le nombre de participants cible
+      const participantsReached = lottery.currentParticipants >= lottery.targetParticipants;
+      
+      // Ou si la date de fin est passée (si elle existe)
+      const datePassed = lottery.endDate ? new Date(lottery.endDate) < new Date() : false;
+      
+      return lottery.status === 'active' && (participantsReached || datePassed);
+    });
+  };
+
+  // Fonction pour ajouter/retirer un produit de la liste selectedProducts
+  const toggleProduct = (productId: string): void => {
+    const currentProducts = form.getValues('linkedProducts') || [];
+    
+    if (currentProducts.includes(productId)) {
+      const updatedProducts = currentProducts.filter(id => id !== productId);
+      form.setValue('linkedProducts', updatedProducts);
+    } else {
+      form.setValue('linkedProducts', [...currentProducts, productId]);
+    }
+  };
+
+  // Fonction pour sélectionner tous les produits
+  const selectAllProducts = (): void => {
+    const allProductIds = products.map(product => product.id.toString());
     form.setValue('linkedProducts', allProductIds);
   };
-  
-  const deselectAllProducts = () => {
+
+  // Fonction pour désélectionner tous les produits
+  const deselectAllProducts = (): void => {
     form.setValue('linkedProducts', []);
-  };
-
-  const handleDrawWinner = async (lotteryId: number, winner: Participant) => {
-    try {
-      const success = await updateLotteryWinner(lotteryId, winner);
-      
-      if (success) {
-        // Forcer la mise à jour des données
-        const updatedLotteries = await fetchLotteries(true);
-        setLotteries(updatedLotteries);
-        toast.success(`Le gagnant de la loterie est ${winner.name} !`, { position: "bottom-right" });
-      }
-    } catch (error) {
-      console.error("Erreur lors du tirage au sort:", error);
-      toast.error("Erreur lors du tirage au sort", { position: "bottom-right" });
-    }
-  };
-
-  const checkLotteriesReadyForDraw = useCallback(() => {
-    const readyLotteries = lotteries.filter(lottery =>
-      lottery.status === 'active' &&
-      (lottery.currentParticipants >= lottery.targetParticipants ||
-        (lottery.endDate && new Date(lottery.endDate) <= new Date()))
-    );
-    return readyLotteries;
-  }, [lotteries]);
-
-  const handleToggleFeatured = async (lotteryId: number, featured: boolean) => {
-    try {
-      const success = await toggleLotteryFeatured(lotteryId, featured);
-      
-      if (success) {
-        // Forcer la mise à jour des données
-        const updatedLotteries = await fetchLotteries(true);
-        setLotteries(updatedLotteries);
-        toast.success(featured ? 
-          "Loterie mise en avant avec succès !" : 
-          "Loterie retirée des mises en avant avec succès !", { position: "bottom-right" });
-      }
-    } catch (error) {
-      console.error("Erreur lors de la modification du statut vedette:", error);
-      toast.error("Erreur lors de la modification du statut vedette", { position: "bottom-right" });
-    }
   };
 
   return {
