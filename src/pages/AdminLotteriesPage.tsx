@@ -9,7 +9,7 @@ import { useLotteryForm } from '@/hooks/useLotteryForm';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Gift, Database, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { fetchLotteries } from '@/api/lotteryApi';
+import { fetchLotteries, testSupabaseConnection, ensureLotteryTablesExist } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -22,6 +22,7 @@ const AdminLotteriesPage: React.FC = () => {
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean>(false);
   
   // Chargement des données
   const loadData = async () => {
@@ -29,14 +30,25 @@ const AdminLotteriesPage: React.FC = () => {
     setLoadError(null);
     
     try {
+      // Vérifier la connexion à Supabase
+      const connected = await testSupabaseConnection();
+      setIsSupabaseConnected(connected);
+      
+      if (connected) {
+        // S'assurer que les tables existent
+        await ensureLotteryTablesExist();
+      }
+      
       // Forcer le rafraîchissement des données pour s'assurer qu'elles sont à jour
       const apiLotteries = await fetchLotteries(true);
       
       if (apiLotteries && apiLotteries.length > 0) {
-        console.log("Admin: Loaded from Supabase:", apiLotteries.length);
+        console.log("Admin: Loaded lotteries:", apiLotteries.length);
+        toast.success(`${apiLotteries.length} loterie(s) chargée(s)`, { position: "bottom-right" });
         setLotteries(apiLotteries);
       } else {
         console.log("Admin: No lotteries found, initializing empty array");
+        toast.info("Aucune loterie trouvée", { position: "bottom-right" });
         setLotteries([]);
       }
       
@@ -87,6 +99,7 @@ const AdminLotteriesPage: React.FC = () => {
     isCreating,
     selectedLotteryId,
     form,
+    isSubmitting,
     handleCreateLottery,
     handleEditLottery,
     handleDeleteLottery,
@@ -106,7 +119,8 @@ const AdminLotteriesPage: React.FC = () => {
     const readyLotteries = checkLotteriesReadyForDraw();
     if (readyLotteries.length > 0) {
       toast.info(`${readyLotteries.length} loterie(s) prête(s) pour le tirage !`, {
-        description: "Certaines loteries ont atteint leur objectif ou leur date limite."
+        description: "Certaines loteries ont atteint leur objectif ou leur date limite.",
+        position: "bottom-right"
       });
     }
 
@@ -115,7 +129,8 @@ const AdminLotteriesPage: React.FC = () => {
       const readyLotteries = checkLotteriesReadyForDraw();
       if (readyLotteries.length > 0) {
         toast.info(`${readyLotteries.length} loterie(s) prête(s) pour le tirage !`, {
-          description: "Certaines loteries ont atteint leur objectif ou leur date limite."
+          description: "Certaines loteries ont atteint leur objectif ou leur date limite.",
+          position: "bottom-right"
         });
       }
     }, 300000); // 5 minutes
@@ -147,6 +162,27 @@ const AdminLotteriesPage: React.FC = () => {
       
       <section className="pt-32 pb-24">
         <div className="container mx-auto px-4 md:px-8">
+          {!isSupabaseConnected && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle>Mode hors-ligne actif</AlertTitle>
+              <AlertDescription className="flex flex-col gap-2">
+                La connexion à Supabase n'est pas établie. Les modifications seront sauvegardées uniquement localement.
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    onClick={() => testSupabaseConnection()} 
+                    variant="outline" 
+                    className="self-start"
+                    size="sm"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" /> 
+                    Tester la connexion
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {loadError && (
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-5 w-5" />
@@ -225,6 +261,7 @@ const AdminLotteriesPage: React.FC = () => {
                   toggleProduct={toggleProduct}
                   selectAllProducts={selectAllProducts}
                   deselectAllProducts={deselectAllProducts}
+                  isSubmitting={isSubmitting}
                 />
               </div>
             </ResizablePanel>

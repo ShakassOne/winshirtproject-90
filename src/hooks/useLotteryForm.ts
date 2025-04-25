@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +11,8 @@ import {
   deleteLottery, 
   toggleLotteryFeatured, 
   updateLotteryWinner,
-  fetchLotteries 
+  fetchLotteries,
+  testSupabaseConnection 
 } from '@/api/lotteryApi';
 
 const formSchema = z.object({
@@ -118,11 +118,11 @@ export const useLotteryForm = (
         const updatedLotteries = await fetchLotteries(true);
         setLotteries(updatedLotteries);
         setSelectedLotteryId(null);
-        toast.success("Loterie supprimée avec succès !");
+        toast.success("Loterie supprimée avec succès !", { position: "bottom-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la suppression de la loterie:", error);
-      toast.error("Erreur lors de la suppression de la loterie");
+      toast.error("Erreur lors de la suppression de la loterie", { position: "bottom-right" });
     }
   };
 
@@ -133,12 +133,15 @@ export const useLotteryForm = (
     try {
       console.log("Données du formulaire soumises:", data);
       
+      // Test Supabase connection first
+      await testSupabaseConnection();
+      
       // Ensure numeric values
       const valueAsNumber = Number(data.value);
       const targetParticipantsAsNumber = Number(data.targetParticipants);
       
       if (isNaN(valueAsNumber) || isNaN(targetParticipantsAsNumber)) {
-        toast.error("Erreur de conversion des valeurs numériques");
+        toast.error("Erreur de conversion des valeurs numériques", { position: "bottom-right" });
         setIsSubmitting(false);
         return;
       }
@@ -162,6 +165,7 @@ export const useLotteryForm = (
         };
         
         console.log("Tentative de création de loterie avec les données:", newLotteryData);
+        toast.info("Création de la loterie en cours...", { position: "bottom-right" });
         
         const createdLottery = await createLottery(newLotteryData);
         
@@ -173,10 +177,10 @@ export const useLotteryForm = (
           setIsCreating(false);
           setSelectedLotteryId(null);
           form.reset();
-          toast.success("Loterie créée avec succès !");
+          toast.success("Loterie créée avec succès !", { position: "bottom-right" });
         } else {
           console.error("Échec de la création de la loterie");
-          toast.error("Erreur lors de la création de la loterie");
+          toast.error("Erreur lors de la création de la loterie", { position: "bottom-right" });
         }
       } else if (selectedLotteryId) {
         // Trouver la loterie existante pour conserver ses propriétés non modifiables par le formulaire
@@ -198,6 +202,7 @@ export const useLotteryForm = (
           };
           
           console.log("Sending update to Supabase:", updatedLotteryData);
+          toast.info("Mise à jour de la loterie en cours...", { position: "bottom-right" });
           
           const updatedLottery = await updateLottery(updatedLotteryData);
           
@@ -210,16 +215,16 @@ export const useLotteryForm = (
             setIsCreating(false);
             setSelectedLotteryId(null);
             form.reset();
-            toast.success("Loterie modifiée avec succès !");
+            toast.success("Loterie modifiée avec succès !", { position: "bottom-right" });
           } else {
             console.error("Failed to update lottery");
-            toast.error("Erreur lors de la mise à jour de la loterie");
+            toast.error("Erreur lors de la mise à jour de la loterie", { position: "bottom-right" });
           }
         }
       }
     } catch (error) {
       console.error("Erreur lors de la soumission du formulaire:", error);
-      toast.error("Erreur lors de la soumission du formulaire");
+      toast.error(`Erreur lors de la soumission du formulaire: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     } finally {
       setIsSubmitting(false);
     }
@@ -229,6 +234,7 @@ export const useLotteryForm = (
     setIsCreating(false);
     setSelectedLotteryId(null);
     form.reset();
+    toast.info("Modification annulée", { position: "bottom-right" });
   };
 
   const toggleProduct = (productId: string) => {
@@ -262,11 +268,11 @@ export const useLotteryForm = (
         // Forcer la mise à jour des données
         const updatedLotteries = await fetchLotteries(true);
         setLotteries(updatedLotteries);
-        toast.success(`Le gagnant de la loterie est ${winner.name} !`);
+        toast.success(`Le gagnant de la loterie est ${winner.name} !`, { position: "bottom-right" });
       }
     } catch (error) {
       console.error("Erreur lors du tirage au sort:", error);
-      toast.error("Erreur lors du tirage au sort");
+      toast.error("Erreur lors du tirage au sort", { position: "bottom-right" });
     }
   };
 
@@ -289,11 +295,11 @@ export const useLotteryForm = (
         setLotteries(updatedLotteries);
         toast.success(featured ? 
           "Loterie mise en avant avec succès !" : 
-          "Loterie retirée des mises en avant avec succès !");
+          "Loterie retirée des mises en avant avec succès !", { position: "bottom-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la modification du statut vedette:", error);
-      toast.error("Erreur lors de la modification du statut vedette");
+      toast.error("Erreur lors de la modification du statut vedette", { position: "bottom-right" });
     }
   };
 

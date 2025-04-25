@@ -1,61 +1,73 @@
 
-import { toast as sonnerToast } from "sonner";
+import { toast as shadcnToast } from "@/hooks/use-toast";
+import { ToastActionElement } from "@/components/ui/toast";
 
-type ToastProps = {
-  title?: string;
+type ToastPosition = "top-right" | "top" | "top-left" | "bottom-left" | "bottom" | "bottom-right";
+
+interface ToastOptions {
+  action?: ToastActionElement;
   description?: string;
-  action?: React.ReactNode;
   duration?: number;
+  position?: ToastPosition;
+}
+
+// Helper function to provide consistent toast API
+export const toast = {
+  success: (message: string, options?: ToastOptions) => {
+    return shadcnToast({
+      title: message,
+      description: options?.description,
+      action: options?.action,
+      duration: options?.duration || 5000,
+      className: getPositionClass(options?.position || "bottom-right"),
+      variant: "success",
+    });
+  },
+  error: (message: string, options?: ToastOptions) => {
+    return shadcnToast({
+      title: message,
+      description: options?.description,
+      action: options?.action,
+      duration: options?.duration || 7000,
+      className: getPositionClass(options?.position || "bottom-right"),
+      variant: "destructive",
+    });
+  },
+  warning: (message: string, options?: ToastOptions) => {
+    return shadcnToast({
+      title: message,
+      description: options?.description,
+      action: options?.action,
+      duration: options?.duration || 5000,
+      className: getPositionClass(options?.position || "bottom-right") + " bg-amber-600/90",
+    });
+  },
+  info: (message: string, options?: ToastOptions) => {
+    return shadcnToast({
+      title: message,
+      description: options?.description,
+      action: options?.action,
+      duration: options?.duration || 4000,
+      className: getPositionClass(options?.position || "bottom-right") + " bg-blue-600/90",
+    });
+  },
 };
 
-export const toast = {
-  success: (message: string, options?: ToastProps) => {
-    console.log("Success toast:", message);
-    return sonnerToast.success(message, {
-      duration: 4000,
-      ...options,
-      className: "bg-winshirt-space border border-winshirt-purple/30 text-white text-xs z-50",
-      position: "bottom-right",
-      style: { zIndex: 9999, maxWidth: "280px", padding: "8px 12px" }
-    });
-  },
-  error: (message: string, options?: ToastProps) => {
-    console.log("Error toast:", message);
-    return sonnerToast.error(message, {
-      duration: 5000,
-      ...options,
-      className: "bg-winshirt-space border border-red-500/30 text-white text-xs z-50",
-      position: "bottom-right",
-      style: { zIndex: 9999, maxWidth: "280px", padding: "8px 12px" }
-    });
-  },
-  info: (message: string, options?: ToastProps) => {
-    console.log("Info toast:", message);
-    return sonnerToast.info(message, {
-      duration: 3000,
-      ...options,
-      className: "bg-winshirt-space border border-winshirt-blue/30 text-white text-xs z-50",
-      position: "bottom-right",
-      style: { zIndex: 9999, maxWidth: "280px", padding: "8px 12px" }
-    });
-  },
-  warning: (message: string, options?: ToastProps) => {
-    console.log("Warning toast:", message);
-    return sonnerToast.warning(message, {
-      duration: 4000,
-      ...options,
-      className: "bg-winshirt-space border border-yellow-500/30 text-white text-xs z-50",
-      position: "bottom-right",
-      style: { zIndex: 9999, maxWidth: "280px", padding: "8px 12px" }
-    });
-  },
-  adminAction: (action: string, entity: string, status: string) => {
-    console.log(`Admin ${action}:`, entity, status);
-    return sonnerToast.info(`Admin: ${action} ${entity} ${status}`, {
-      duration: 3000,
-      className: "bg-winshirt-space border border-winshirt-purple/30 text-white text-xs z-50",
-      position: "bottom-right",
-      style: { zIndex: 9999, maxWidth: "280px", padding: "8px 12px" }
-    });
-  },
-};
+// Helper to get position-specific classes
+function getPositionClass(position: ToastPosition): string {
+  switch (position) {
+    case "top-right":
+      return "top-4 right-4 fixed";
+    case "top":
+      return "top-4 left-1/2 -translate-x-1/2 fixed";
+    case "top-left":
+      return "top-4 left-4 fixed";
+    case "bottom-left":
+      return "bottom-4 left-4 fixed";
+    case "bottom":
+      return "bottom-4 left-1/2 -translate-x-1/2 fixed";
+    case "bottom-right":
+    default:
+      return "bottom-4 right-4 fixed";
+  }
+}

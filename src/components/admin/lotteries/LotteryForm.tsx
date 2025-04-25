@@ -11,6 +11,7 @@ import FormActions from './form/FormActions';
 import { showNotification, showFormValidation, showAdminAction } from '@/lib/notifications';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
+import { Loader2 } from "lucide-react";
 
 interface LotteryFormProps {
   isCreating: boolean;
@@ -24,6 +25,7 @@ interface LotteryFormProps {
   toggleProduct: (productId: string) => void;
   selectAllProducts: () => void;
   deselectAllProducts: () => void;
+  isSubmitting?: boolean;
 }
 
 const LotteryForm: React.FC<LotteryFormProps> = ({
@@ -37,7 +39,8 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
   onCreateClick,
   toggleProduct,
   selectAllProducts,
-  deselectAllProducts
+  deselectAllProducts,
+  isSubmitting = false
 }) => {
   const selectedProducts = form.watch('linkedProducts') || [];
   const supabaseConnected = isSupabaseConfigured();
@@ -64,31 +67,31 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
     
     if (!formValues.title || formValues.title.trim() === '') {
       showFormValidation('Titre', 'Le titre est requis');
-      toast.error('Le titre est requis');
+      toast.error('Le titre est requis', { position: "bottom-right" });
       formValid = false;
     }
     
     if (!formValues.description || formValues.description.trim() === '') {
       showFormValidation('Description', 'La description est requise');
-      toast.error('La description est requise');
+      toast.error('La description est requise', { position: "bottom-right" });
       formValid = false;
     }
     
     if (!formValues.value || isNaN(Number(formValues.value)) || Number(formValues.value) <= 0) {
       showFormValidation('Valeur', 'Veuillez entrer une valeur valide (supérieure à 0)');
-      toast.error('Veuillez entrer une valeur valide (supérieure à 0)');
+      toast.error('Veuillez entrer une valeur valide (supérieure à 0)', { position: "bottom-right" });
       formValid = false;
     }
     
     if (!formValues.targetParticipants || isNaN(Number(formValues.targetParticipants)) || Number(formValues.targetParticipants) < 1) {
       showFormValidation('Participants', 'Le nombre de participants doit être d\'au moins 1');
-      toast.error('Le nombre de participants doit être d\'au moins 1');
+      toast.error('Le nombre de participants doit être d\'au moins 1', { position: "bottom-right" });
       formValid = false;
     }
     
     if (!formValues.image || !formValues.image.startsWith('http')) {
       showFormValidation('Image', 'Veuillez entrer une URL d\'image valide');
-      toast.error('Veuillez entrer une URL d\'image valide');
+      toast.error('Veuillez entrer une URL d\'image valide', { position: "bottom-right" });
       formValid = false;
     }
 
@@ -141,10 +144,24 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
           onDeselectAll={deselectAllProducts}
         />
         
-        <FormActions isCreating={isCreating} onCancel={() => {
-          showAdminAction('lottery', 'Annulation des modifications', storageType);
-          onCancel();
-        }} />
+        <FormActions 
+          isCreating={isCreating} 
+          isSubmitting={isSubmitting}
+          onCancel={() => {
+            showAdminAction('lottery', 'Annulation des modifications', storageType);
+            onCancel();
+          }} 
+          submitLabel={
+            isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isCreating ? "Création..." : "Mise à jour..."}
+              </>
+            ) : (
+              isCreating ? "Créer la loterie" : "Mettre à jour la loterie"
+            )
+          }
+        />
       </form>
     </Form>
   );
