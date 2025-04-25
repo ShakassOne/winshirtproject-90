@@ -11,7 +11,7 @@ interface ToastOptions {
   position?: ToastPosition;
 }
 
-// Helper function to provide consistent toast API
+// Create a unified toast API with consistent styling and positioning
 export const toast = {
   success: (message: string, options?: ToastOptions) => {
     return shadcnToast({
@@ -55,9 +55,10 @@ export const toast = {
   },
 };
 
-// Helper to get position-specific classes
+// Helper function to get position classes based on the requested position
 function getPositionClass(position: ToastPosition): string {
-  // Nous supprimons les classes fixed qui sont maintenant gérées par ToastViewport
+  // The actual positioning is now handled by ToastViewport
+  // This function returns additional positioning classes if needed
   switch (position) {
     case "top-right":
       return "top-0 right-0";
