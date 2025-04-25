@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,6 +49,7 @@ const SyncDebugTool: React.FC = () => {
   const checkLocalStorageData = () => {
     const counts: Record<string, number> = {};
     const localData: Record<string, boolean> = {};
+    const supabase: Record<string, boolean> = {};
     
     requiredTables.forEach(table => {
       const data = localStorage.getItem(table);
@@ -57,6 +59,9 @@ const SyncDebugTool: React.FC = () => {
           counts[table] = Array.isArray(parsed) ? parsed.length : 1;
           localData[table] = Array.isArray(parsed) && parsed.length > 0;
           
+          // Initialiser l'état du stockage Supabase
+          supabase[table] = false;
+          
           // Afficher les premières données pour le débogage
           if (Array.isArray(parsed) && parsed.length > 0) {
             console.log(`Exemple de données ${table}:`, parsed[0]);
@@ -65,20 +70,29 @@ const SyncDebugTool: React.FC = () => {
           console.error(`Erreur lors de l'analyse des données pour ${table}:`, e);
           counts[table] = 0;
           localData[table] = false;
+          supabase[table] = false;
         }
       } else {
         counts[table] = 0;
         localData[table] = false;
+        supabase[table] = false;
       }
     });
     
     setLocalDataCounts(counts);
     setLocalStorageData(localData);
+    setSupabaseStorage(supabase);
   };
 
   const handleForceSync = async (table: ValidTableName) => {
     try {
       setSyncing(true);
+      
+      // Définir l'état de chargement pour cette table
+      setIsLoading(prev => ({
+        ...prev,
+        [table]: true
+      }));
       
       // Créer des données d'exemple si la table est vide
       if (localDataCounts[table] === 0) {
@@ -89,6 +103,10 @@ const SyncDebugTool: React.FC = () => {
         } else {
           toast.error(`Échec de la création des données d'exemple pour ${table}`);
         }
+        setIsLoading(prev => ({
+          ...prev,
+          [table]: false
+        }));
         setSyncing(false);
         return;
       }
@@ -101,6 +119,11 @@ const SyncDebugTool: React.FC = () => {
       }));
       
       if (success) {
+        // Marquer la table comme synchronisée avec Supabase
+        setSupabaseStorage(prev => ({
+          ...prev,
+          [table]: true
+        }));
         toast.success(`Synchronisation de ${table} réussie`);
       } else {
         toast.error(`Échec de la synchronisation de ${table}`);
@@ -114,6 +137,10 @@ const SyncDebugTool: React.FC = () => {
         [table]: false
       }));
     } finally {
+      setIsLoading(prev => ({
+        ...prev,
+        [table]: false
+      }));
       setSyncing(false);
     }
   };
@@ -201,6 +228,14 @@ const SyncDebugTool: React.FC = () => {
         
         const success = await syncLocalDataToSupabase(table as ValidTableName);
         results[table] = success;
+        
+        if (success) {
+          // Marquer la table comme synchronisée avec Supabase
+          setSupabaseStorage(prev => ({
+            ...prev,
+            [table]: true
+          }));
+        }
       } catch (e) {
         results[table] = false;
       }

@@ -64,7 +64,17 @@ export const useLotteryForm = (
   const handleCreateLottery = () => {
     setIsCreating(true);
     setSelectedLotteryId(null);
-    form.reset();
+    form.reset({
+      title: "",
+      description: "",
+      value: 1,
+      targetParticipants: 5,
+      status: 'active' as const,
+      image: "https://images.unsplash.com/photo-1563906267088-b029e7101114", // URL d'image par défaut
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      linkedProducts: [],
+      featured: false,
+    });
   };
 
   const handleEditLottery = (lotteryId: number) => {
@@ -73,22 +83,20 @@ export const useLotteryForm = (
       setSelectedLotteryId(lotteryId);
       setIsCreating(false);
       
-      // Debug: log the lottery being edited
       console.log("Editing lottery:", lotteryToEdit);
       
       form.reset({
-        title: lotteryToEdit.title,
-        description: lotteryToEdit.description,
-        value: lotteryToEdit.value,
-        targetParticipants: lotteryToEdit.targetParticipants,
-        status: lotteryToEdit.status,
-        image: lotteryToEdit.image,
-        endDate: lotteryToEdit.endDate || undefined,
+        title: lotteryToEdit.title || "",
+        description: lotteryToEdit.description || "",
+        value: lotteryToEdit.value || 1,
+        targetParticipants: lotteryToEdit.targetParticipants || 5,
+        status: lotteryToEdit.status || 'active',
+        image: lotteryToEdit.image || "",
+        endDate: lotteryToEdit.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         linkedProducts: lotteryToEdit.linkedProducts?.map(String) || [],
         featured: lotteryToEdit.featured || false,
       });
       
-      // Debug: vérifier les données chargées dans le formulaire
       console.log("Données chargées pour édition:", {
         id: lotteryId,
         image: lotteryToEdit.image,
@@ -131,6 +139,7 @@ export const useLotteryForm = (
       
       if (isNaN(valueAsNumber) || isNaN(targetParticipantsAsNumber)) {
         toast.error("Erreur de conversion des valeurs numériques");
+        setIsSubmitting(false);
         return;
       }
       
@@ -152,13 +161,22 @@ export const useLotteryForm = (
           featured: data.featured || false,
         };
         
+        console.log("Tentative de création de loterie avec les données:", newLotteryData);
+        
         const createdLottery = await createLottery(newLotteryData);
         
         if (createdLottery) {
+          console.log("Loterie créée avec succès:", createdLottery);
           // Forcer la mise à jour des données
           const updatedLotteries = await fetchLotteries(true);
           setLotteries(updatedLotteries);
+          setIsCreating(false);
+          setSelectedLotteryId(null);
+          form.reset();
           toast.success("Loterie créée avec succès !");
+        } else {
+          console.error("Échec de la création de la loterie");
+          toast.error("Erreur lors de la création de la loterie");
         }
       } else if (selectedLotteryId) {
         // Trouver la loterie existante pour conserver ses propriétés non modifiables par le formulaire
@@ -189,6 +207,9 @@ export const useLotteryForm = (
             // Forcer la mise à jour des données
             const updatedLotteries = await fetchLotteries(true);
             setLotteries(updatedLotteries);
+            setIsCreating(false);
+            setSelectedLotteryId(null);
+            form.reset();
             toast.success("Loterie modifiée avec succès !");
           } else {
             console.error("Failed to update lottery");
@@ -196,10 +217,6 @@ export const useLotteryForm = (
           }
         }
       }
-      
-      setIsCreating(false);
-      setSelectedLotteryId(null);
-      form.reset();
     } catch (error) {
       console.error("Erreur lors de la soumission du formulaire:", error);
       toast.error("Erreur lors de la soumission du formulaire");

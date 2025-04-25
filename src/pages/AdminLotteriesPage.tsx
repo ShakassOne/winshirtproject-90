@@ -8,27 +8,27 @@ import LotteryForm from '@/components/admin/lotteries/LotteryForm';
 import { useLotteryForm } from '@/hooks/useLotteryForm';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Gift, Database, Loader2 } from 'lucide-react';
-import { fetchLotteries, clearAllLotteryData } from '@/api/lotteryApi';
+import { Gift, Database, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 
 const AdminLotteriesPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [products, setProducts] = useState<ExtendedProduct[]>([]);
   const lotteryStatuses = ['active', 'completed', 'relaunched', 'cancelled'];
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
-  // Chargement des données depuis Supabase uniquement
+  // Chargement des données
   const loadData = async () => {
     setIsLoading(true);
+    setLoadError(null);
     
     try {
-      // Effacer toutes les données existantes au chargement
-      await clearAllLotteryData();
-      
       // Forcer le rafraîchissement des données pour s'assurer qu'elles sont à jour
       const apiLotteries = await fetchLotteries(true);
       
@@ -36,6 +36,7 @@ const AdminLotteriesPage: React.FC = () => {
         console.log("Admin: Loaded from Supabase:", apiLotteries.length);
         setLotteries(apiLotteries);
       } else {
+        console.log("Admin: No lotteries found, initializing empty array");
         setLotteries([]);
       }
       
@@ -44,13 +45,17 @@ const AdminLotteriesPage: React.FC = () => {
         const fetchedProducts = await fetchProducts();
         if (fetchedProducts && fetchedProducts.length > 0) {
           setProducts(fetchedProducts);
+        } else {
+          console.log("Admin: No products found, initializing empty array");
+          setProducts([]);
         }
       } catch (err) {
         console.error("Admin: Error loading products:", err);
+        setLoadError("Erreur lors du chargement des produits. Veuillez actualiser la page.");
       }
     } catch (error) {
       console.error("Admin: Erreur lors du chargement des données:", error);
-      toast.error("Erreur lors du chargement des données");
+      setLoadError("Erreur lors du chargement des loteries. Veuillez actualiser la page.");
       setLotteries([]);
     } finally {
       setIsLoading(false);
@@ -58,7 +63,7 @@ const AdminLotteriesPage: React.FC = () => {
   };
   
   useEffect(() => {
-    // Exécuter la fonction de suppression des données au chargement initial
+    // Exécuter la fonction de chargement des données au chargement initial
     loadData();
     
     // Set up subscription for real-time updates
@@ -124,6 +129,7 @@ const AdminLotteriesPage: React.FC = () => {
     return (
       <>
         <StarBackground />
+        <AdminNavigation />
         <div className="pt-32 pb-24 flex justify-center items-center">
           <div className="flex items-center gap-2 text-xl text-white">
             <Loader2 className="h-6 w-6 animate-spin text-winshirt-blue" />
@@ -141,6 +147,25 @@ const AdminLotteriesPage: React.FC = () => {
       
       <section className="pt-32 pb-24">
         <div className="container mx-auto px-4 md:px-8">
+          {loadError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle>Erreur de chargement</AlertTitle>
+              <AlertDescription className="flex flex-col gap-2">
+                {loadError}
+                <Button 
+                  onClick={loadData} 
+                  variant="outline" 
+                  className="self-start"
+                  size="sm"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" /> 
+                  Réessayer
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {lotteriesReadyForDraw.length > 0 && (
             <Alert className="mb-6 bg-green-500/20 border border-green-500/40">
               <Gift className="h-5 w-5 text-green-500" />
@@ -151,6 +176,18 @@ const AdminLotteriesPage: React.FC = () => {
               </AlertDescription>
             </Alert>
           )}
+
+          <div className="mb-4 flex justify-end">
+            <Button 
+              onClick={loadData}
+              variant="outline"
+              className="text-winshirt-blue border-winshirt-blue/40"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" /> 
+              Actualiser les données
+            </Button>
+          </div>
 
           <ResizablePanelGroup direction="horizontal" className="min-h-[600px]">
             {/* Lottery List - Default 40% width, can be resized */}
