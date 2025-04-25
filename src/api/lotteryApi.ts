@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -861,4 +862,17 @@ export const clearAllLotteryData = async (): Promise<boolean> => {
       .neq('id', 0);
     
     if (lotteriesError) {
-      console.error("Error clearing lotteries
+      console.error("Error clearing lotteries:", lotteriesError);
+      toast.error(`Erreur lors de la suppression des loteries: ${lotteriesError.message}`, { position: "bottom-right" });
+      return false;
+    }
+    
+    console.log("Successfully cleared all lottery data from Supabase");
+    toast.success("Toutes les données de loterie ont été supprimées avec succès", { position: "bottom-right" });
+    return true;
+  } catch (error) {
+    console.error("Error clearing lottery data:", error);
+    toast.error(`Erreur lors de la suppression des données de loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return false;
+  }
+};
