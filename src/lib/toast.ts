@@ -19,8 +19,8 @@ export const toast = {
       description: options?.description,
       action: options?.action,
       duration: options?.duration || 5000,
-      className: getPositionClass(options?.position || "bottom-right"),
-      variant: "success",
+      className: `${getPositionClass(options?.position || "bottom-right")} bg-green-600/90`,
+      variant: "default",
     });
   },
   error: (message: string, options?: ToastOptions) => {
@@ -40,6 +40,7 @@ export const toast = {
       action: options?.action,
       duration: options?.duration || 5000,
       className: getPositionClass(options?.position || "bottom-right") + " bg-amber-600/90",
+      variant: "default",
     });
   },
   info: (message: string, options?: ToastOptions) => {
@@ -49,6 +50,7 @@ export const toast = {
       action: options?.action,
       duration: options?.duration || 4000,
       className: getPositionClass(options?.position || "bottom-right") + " bg-blue-600/90",
+      variant: "default",
     });
   },
 };
