@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ExtendedLottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -173,6 +172,110 @@ export const fetchLotteries = async (forceRefresh = false): Promise<ExtendedLott
     console.error('Error fetching lotteries:', error);
     toast.error("Erreur lors de la récupération des loteries.");
     return [];
+  }
+};
+
+// Function to fetch a single lottery by ID
+export const fetchLotteryById = async (lotteryId: number): Promise<ExtendedLottery | null> => {
+  try {
+    console.log(`Fetching lottery with ID ${lotteryId} from Supabase...`);
+    
+    // Fetch the lottery from Supabase
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('*')
+      .eq('id', lotteryId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error fetching lottery by ID:', error);
+      toast.error(`Erreur lors de la récupération de la loterie: ${error.message}`);
+      return null;
+    }
+    
+    if (!data) {
+      console.log(`No lottery with ID ${lotteryId} found in Supabase`);
+      return null;
+    }
+    
+    console.log(`Fetched lottery with ID ${lotteryId} from Supabase:`, data);
+    
+    // Convert to ExtendedLottery format
+    const lottery = convertSupabaseLottery(data as DatabaseTables['lotteries']);
+    
+    // Fetch participants and winner for the lottery
+    lottery.participants = await fetchParticipantsForLottery(lottery.id);
+    lottery.currentParticipants = lottery.participants.length;
+    
+    if (lottery.status === 'completed') {
+      lottery.winner = await fetchWinnerForLottery(lottery.id);
+    }
+    
+    return lottery;
+  } catch (error) {
+    console.error(`Error fetching lottery with ID ${lotteryId}:`, error);
+    toast.error("Erreur lors de la récupération de la loterie.");
+    return null;
+  }
+};
+
+// Function to add participant to a lottery
+export const addLotteryParticipant = async (lotteryId: number, participant: Participant): Promise<boolean> => {
+  try {
+    console.log(`Adding participant to lottery ${lotteryId}:`, participant);
+    
+    // First check if participant already exists for this lottery
+    const { data: existingParticipant, error: checkError } = await supabase
+      .from('lottery_participants')
+      .select('*')
+      .eq('lottery_id', lotteryId)
+      .eq('email', participant.email)
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error('Error checking for existing participant:', checkError);
+    }
+    
+    if (existingParticipant) {
+      console.log('Participant already exists for this lottery');
+      toast.info("Vous participez déjà à cette loterie.");
+      return true; // Return true since they're already participating
+    }
+    
+    // Add participant to lottery
+    const { error } = await supabase
+      .from('lottery_participants')
+      .insert({
+        lottery_id: lotteryId,
+        user_id: participant.id,
+        name: participant.name,
+        email: participant.email,
+        avatar: participant.avatar
+      });
+    
+    if (error) {
+      console.error('Error adding participant to lottery:', error);
+      toast.error(`Erreur lors de l'ajout du participant: ${error.message}`);
+      return false;
+    }
+    
+    // Update current participants count in the lottery
+    const { error: updateError } = await supabase
+      .from('lotteries')
+      .update({ current_participants: supabase.rpc('increment', { 'row_id': lotteryId, 'amount': 1 }) })
+      .eq('id', lotteryId);
+    
+    if (updateError) {
+      console.error('Error updating participant count:', updateError);
+      // Don't return false here, the participant was added successfully
+    }
+    
+    console.log('Participant added successfully to lottery', lotteryId);
+    return true;
+  } catch (error) {
+    console.error('Error adding participant to lottery:', error);
+    toast.error(`Erreur lors de l'ajout du participant: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return false;
   }
 };
 
