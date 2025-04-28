@@ -1,12 +1,11 @@
 
-// Import the supabase client
-import { supabase } from '@/integrations/supabase/client';
+// Import the supabase client and required types directly
+import { supabase, checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
+import type { ValidTableName } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
 // Re-export the required types and functions from client
-// Note: These need to be at the top to avoid "used before defined" errors
-export { supabase, checkSupabaseConnection } from '@/integrations/supabase/client';
-export { requiredTables } from '@/integrations/supabase/client';
+export { supabase, checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
 export type { ValidTableName } from '@/integrations/supabase/client';
 
 // HomeIntro related types and functions
