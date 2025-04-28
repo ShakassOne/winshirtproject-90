@@ -95,3 +95,17 @@ export const filterActiveLotteries = (lotteries: ExtendedLottery[]): ExtendedLot
   );
 };
 
+// Add the getActiveLotteries function that was being imported in other components
+export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
+  try {
+    console.log("lotteryService: Récupération des loteries actives...");
+    const allLotteries = await fetchLotteries();
+    const activeLotteries = filterActiveLotteries(allLotteries);
+    console.log("lotteryService: Loteries actives récupérées:", activeLotteries.length);
+    return activeLotteries;
+  } catch (error) {
+    console.error("lotteryService: Erreur lors de la récupération des loteries actives:", error);
+    toast.error("Impossible de récupérer les loteries actives", { position: "bottom-right" });
+    return [];
+  }
+};
