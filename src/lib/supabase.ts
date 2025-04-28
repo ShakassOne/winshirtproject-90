@@ -1,9 +1,18 @@
-
 // Import the supabase client and required types directly
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  supabase, 
+  checkSupabaseConnection, 
+  requiredTables,
+  ValidTableName 
+} from '@/integrations/supabase/client';
+
 // Re-export the required types and functions from client
-export { supabase, checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
-export type { ValidTableName } from '@/integrations/supabase/client';
+export { 
+  supabase, 
+  checkSupabaseConnection, 
+  requiredTables,
+  ValidTableName 
+} from '@/integrations/supabase/client';
 
 // HomeIntro related types and functions
 export type SlideType = {
@@ -467,4 +476,5 @@ export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promis
   }
 };
 
+// Make sure toast is imported for error handling
 import { toast } from './toast';
