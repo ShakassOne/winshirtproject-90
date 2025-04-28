@@ -3,7 +3,7 @@ import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 
 // Layouts
-import MainLayout from './layouts/MainLayout';
+import Layout from './pages/Layout';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -13,11 +13,11 @@ import LotteriesPage from './pages/LotteriesPage';
 import LotteryDetailPage from './pages/LotteryDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
-import AdminPage from './pages/AdminPage';
+import AdminPage from './pages/admin/AdminPlaceholder';
 import AdminLotteriesPage from './pages/AdminLotteriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminVisualsPage from './pages/AdminVisualsPage';
-import AdminOrdersPage from './pages/AdminOrdersPage';
+import AdminOrdersPage from './pages/AdminCommandesPage'; // Renamed from AdminOrdersPage
 import AdminClientsPage from './pages/AdminClientsPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
 import AdminSyncPage from './pages/AdminSyncPage';
@@ -25,16 +25,17 @@ import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import NotFoundPage from './pages/NotFoundPage';
-import ProductCustomizationPage from './pages/ProductCustomizationPage';
+import PreviousWinnersPage from './pages/PreviousWinnersPage';
+import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
+      <Route path="/" element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="products/:productId" element={<ProductDetailPage />} />
-        <Route path="products/:productId/customize" element={<ProductCustomizationPage />} />
         <Route path="lotteries" element={<LotteriesPage />} />
         <Route path="lotteries/:lotteryId" element={<LotteryDetailPage />} />
         <Route path="cart" element={<CartPage />} />
@@ -50,6 +51,9 @@ function App() {
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />
+        <Route path="winners" element={<PreviousWinnersPage />} />
+        <Route path="terms" element={<TermsAndConditionsPage />} />
+        <Route path="privacy" element={<PrivacyPolicyPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
