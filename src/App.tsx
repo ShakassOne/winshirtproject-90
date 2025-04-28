@@ -16,6 +16,12 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import CartPage from './pages/CartPage';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminProductsPage from './pages/AdminProductsPage';
+import AdminVisualsPage from './pages/AdminVisualsPage';
+import AdminCommandesPage from './pages/AdminCommandesPage';
+import AdminClientsPage from './pages/AdminClientsPage';
+import AdminSettingsPage from './pages/AdminSettingsPage';
 
 function App() {
   // Effet pour initialiser Supabase au démarrage de l'application
@@ -67,7 +73,16 @@ function App() {
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/cart" element={<CartPage />} />
+          
+          {/* Routes d'administration */}
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin/products" element={<AdminProductsPage />} />
           <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
+          <Route path="/admin/visuals" element={<AdminVisualsPage />} />
+          <Route path="/admin/commandes" element={<AdminCommandesPage />} />
+          <Route path="/admin/clients" element={<AdminClientsPage />} />
+          <Route path="/admin/settings" element={<AdminSettingsPage />} />
+          
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

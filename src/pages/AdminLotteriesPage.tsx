@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -8,7 +9,7 @@ import { useLotteryForm } from '@/hooks/useLotteryForm';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Gift, Database, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { fetchLotteries, testSupabaseConnection, ensureLotteryTablesExist } from '@/api/lotteryApi';
+import { fetchLotteries } from '@/api/lotteryApi';
 import { fetchProducts } from '@/api/productApi';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -23,6 +24,31 @@ const AdminLotteriesPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean>(false);
   
+  // Fonction pour vérifier la connexion à Supabase
+  const testSupabaseConnection = async (): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.from('lotteries').select('id').limit(1);
+      const connected = !error;
+      setIsSupabaseConnected(connected);
+      return connected;
+    } catch (error) {
+      console.error("Erreur de connexion Supabase:", error);
+      setIsSupabaseConnected(false);
+      return false;
+    }
+  };
+
+  // Fonction pour vérifier si les tables de loteries existent
+  const ensureLotteryTablesExist = async (): Promise<boolean> => {
+    try {
+      const { error } = await supabase.from('lotteries').select('id').limit(1);
+      return !error;
+    } catch (error) {
+      console.error("Échec de la validation des tables de loterie:", error);
+      return false;
+    }
+  };
+
   // Chargement des données
   const loadData = async () => {
     setIsLoading(true);
@@ -31,7 +57,6 @@ const AdminLotteriesPage: React.FC = () => {
     try {
       // Vérifier la connexion à Supabase
       const connected = await testSupabaseConnection();
-      setIsSupabaseConnected(connected);
       
       if (connected) {
         // S'assurer que les tables existent

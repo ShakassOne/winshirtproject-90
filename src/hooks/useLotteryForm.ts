@@ -86,7 +86,7 @@ export const useLotteryForm = (
       const newFeaturedValue = !lottery.featured;
       
       // Vérifier si nous sommes connectés à Supabase
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      const supabaseConnected = await testSupabaseConnection();
       
       if (supabaseConnected) {
         try {
@@ -124,13 +124,24 @@ export const useLotteryForm = (
     }
   };
 
+  // Fonction pour vérifier l'état de connexion à Supabase
+  const testSupabaseConnection = async (): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.from('lotteries').select('id').limit(1);
+      return !error;
+    } catch (error) {
+      console.error("Supabase connection test failed:", error);
+      return false;
+    }
+  };
+
   // Fonction pour soumettre le formulaire (création ou mise à jour)
   const onSubmit = async (data: any): Promise<void> => {
     try {
       setIsSubmitting(true);
       
       // Vérifier si nous sommes connectés à Supabase
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      const supabaseConnected = await testSupabaseConnection();
       
       // Convertir les IDs de produits en nombres
       const linkedProducts = data.linkedProducts.map((id: string) => parseInt(id, 10));
@@ -249,7 +260,7 @@ export const useLotteryForm = (
   const handleDeleteLottery = async (id: number): Promise<void> => {
     try {
       // Vérifier si nous sommes connectés à Supabase
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      const supabaseConnected = await testSupabaseConnection();
       
       // Si connecté à Supabase, essayer d'abord d'y supprimer
       if (supabaseConnected) {
@@ -305,7 +316,7 @@ export const useLotteryForm = (
       const drawDate = new Date().toISOString();
       
       // Vérifier si nous sommes connectés à Supabase
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      const supabaseConnected = await testSupabaseConnection();
       
       // Si connecté à Supabase, mettre à jour le statut de la loterie
       if (supabaseConnected) {
