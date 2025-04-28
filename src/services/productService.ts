@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchDataFromSupabase, syncLocalDataToSupabase, checkSupabaseConnection } from '@/lib/supabase';
+import { mockProducts } from '@/data/mockData';
 import { ValidTableName } from '@/integrations/supabase/client';
 
 /**
@@ -14,54 +14,85 @@ export const useProducts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const getProducts = async () => {
-      try {
-        setLoading(true);
-        console.log("productService: Chargement des produits...");
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      console.log("productService: Chargement des produits...");
+      
+      // Essayer d'abord de récupérer depuis Supabase
+      const isConnected = await checkSupabaseConnection();
+      
+      if (isConnected) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
         
-        // Essayer d'abord de récupérer depuis Supabase
-        const allProducts = await fetchDataFromSupabase('products') as ExtendedProduct[];
-        
-        if (allProducts && allProducts.length > 0) {
-          console.log("productService: Produits récupérés depuis Supabase:", allProducts.length);
-          setProducts(allProducts);
-        } else {
-          // Si aucun produit n'est trouvé dans Supabase, utiliser les données locales
-          const localData = localStorage.getItem('products');
-          if (localData) {
-            const localProducts = JSON.parse(localData);
-            console.log("productService: Produits récupérés depuis localStorage:", localProducts.length);
-            setProducts(localProducts);
-          } else {
-            console.log("productService: Aucun produit trouvé");
-            setProducts([]);
-          }
+        if (data && data.length > 0) {
+          console.log("productService: Produits récupérés depuis Supabase:", data.length);
+          setProducts(data);
+          localStorage.setItem('products', JSON.stringify(data));
+          return;
         }
-      } catch (err) {
-        console.error("productService: Erreur lors du chargement des produits:", err);
-        setError(err instanceof Error ? err : new Error('Erreur inconnue'));
-        toast.error("Impossible de charger les produits", { position: "bottom-right" });
-      } finally {
-        setLoading(false);
       }
-    };
+      
+      // Si aucun produit n'est trouvé dans Supabase, utiliser les données locales
+      const localData = localStorage.getItem('products');
+      if (localData) {
+        const localProducts = JSON.parse(localData);
+        if (Array.isArray(localProducts) && localProducts.length > 0) {
+          console.log("productService: Produits récupérés depuis localStorage:", localProducts.length);
+          setProducts(localProducts);
+          
+          // Tenter de synchroniser avec Supabase
+          if (isConnected) {
+            await syncLocalDataToSupabase('products');
+          }
+          return;
+        }
+      }
+      
+      // Si aucune donnée n'est trouvée, utiliser les données mock
+      console.log("productService: Utilisation des données mock");
+      setProducts(mockProducts);
+      localStorage.setItem('products', JSON.stringify(mockProducts));
+      
+      // Tenter de synchroniser les données mock avec Supabase
+      if (isConnected) {
+        await syncLocalDataToSupabase('products');
+      }
+      
+    } catch (err) {
+      console.error("productService: Erreur lors du chargement des produits:", err);
+      setError(err instanceof Error ? err : new Error('Erreur inconnue'));
+      toast.error("Impossible de charger les produits", { position: "bottom-right" });
+      
+      // En cas d'erreur, charger les données mock
+      setProducts(mockProducts);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
-    getProducts();
-
-    // Set up real-time subscription for products
+  // Set up real-time subscription for products
+  useEffect(() => {
     const channel = supabase
       .channel('public:products')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'products' }, 
         async (payload) => {
           console.log("productService: Mise à jour en temps réel détectée", payload);
-          await getProducts();
+          await loadProducts();
         }
       )
       .subscribe();
     
-    // Cleanup subscription on unmount
     return () => {
       supabase.removeChannel(channel);
     };
@@ -71,19 +102,7 @@ export const useProducts = () => {
     products, 
     loading, 
     error, 
-    refreshProducts: async () => {
-      setLoading(true);
-      try {
-        const allProducts = await fetchDataFromSupabase('products') as ExtendedProduct[];
-        setProducts(allProducts);
-        toast.success("Produits mis à jour", { position: "bottom-right" });
-      } catch (err) {
-        console.error("Erreur lors du rafraîchissement des produits:", err);
-        toast.error("Erreur lors de la mise à jour des produits", { position: "bottom-right" });
-      } finally {
-        setLoading(false);
-      }
-    }
+    refreshProducts: loadProducts
   };
 };
 
@@ -284,3 +303,4 @@ const camelToSnake = (obj: any): any => {
     return acc;
   }, {} as any);
 };
+

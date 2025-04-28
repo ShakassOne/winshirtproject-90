@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LotteryCard from '../components/LotteryCard';
@@ -9,13 +8,13 @@ import AdminNavigation from '@/components/admin/AdminNavigation';
 import StatsSection from '@/components/home/StatsSection';
 import WinnersCarousel from '@/components/home/WinnersCarousel';
 import HomeIntroSlider from '@/components/home/HomeIntroSlider';
-import { mockLotteries, mockProducts } from '../data/mockData';
 import { mockWinners } from '@/data/mockWinners';
 import { ExtendedLottery } from '@/types/lottery';
+import { useProducts } from '@/services/productService';
 
 const HomePage: React.FC = () => {
   const [activeLotteries, setActiveLotteries] = useState<ExtendedLottery[]>([]);
-  const [popularProducts, setPopularProducts] = useState([]);
+  const { products: popularProducts, loading: productsLoading } = useProducts();
   
   // Chargement des loteries et produits
   useEffect(() => {
@@ -39,32 +38,7 @@ const HomePage: React.FC = () => {
       setActiveLotteries(mockLotteries.filter(lottery => lottery.status === 'active'));
     };
     
-    // Chargement des produits populaires
-    const loadPopularProducts = () => {
-      try {
-        const storedProducts = localStorage.getItem('products');
-        if (storedProducts) {
-          const parsedProducts = JSON.parse(storedProducts);
-          if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-            const popular = [...parsedProducts]
-              .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
-              .slice(0, 4);
-            setPopularProducts(popular);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des produits:", error);
-      }
-      
-      // Fallback aux produits mock
-      setPopularProducts([...mockProducts]
-        .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
-        .slice(0, 4));
-    };
-    
     loadLotteries();
-    loadPopularProducts();
     
     // Écouter les changements dans localStorage
     window.addEventListener('storage', loadLotteries);
@@ -75,6 +49,10 @@ const HomePage: React.FC = () => {
       window.removeEventListener('storageUpdate', loadLotteries);
     };
   }, []);
+  
+  const sortedPopularProducts = popularProducts
+    .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
+    .slice(0, 4);
   
   return (
     <>
@@ -124,9 +102,19 @@ const HomePage: React.FC = () => {
           </p>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {popularProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            {productsLoading ? (
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-400">Chargement des produits...</p>
+              </div>
+            ) : sortedPopularProducts.length > 0 ? (
+              sortedPopularProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-400">Aucun produit disponible</p>
+              </div>
+            )}
           </div>
           
           <div className="text-center mt-12">
