@@ -4,11 +4,19 @@ import { Button } from '@/components/ui/button';
 import { addLotteryParticipant } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Participant } from '@/types/lottery';
 
 interface LotteryParticipateButtonProps {
   lotteryId: number;
   className?: string;
+}
+
+// Update this interface to match what's expected by addLotteryParticipant
+interface Participant {
+  id: number;
+  userId: number;  // Added this field to match expected type
+  name: string;
+  email: string;
+  avatar: string;
 }
 
 const LotteryParticipateButton: React.FC<LotteryParticipateButtonProps> = ({ lotteryId, className }) => {
@@ -26,9 +34,10 @@ const LotteryParticipateButton: React.FC<LotteryParticipateButtonProps> = ({ lot
         return;
       }
       
-      // Create participant object
+      // Create participant object with userId field
       const participant: Participant = {
-        id: user.id ? parseInt(user.id.replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000000), // Convert UUID to number or use random ID
+        id: user.id ? parseInt(user.id.replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000000), 
+        userId: user.id ? parseInt(user.id.replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000000), // Convert UUID to number or use random ID
         name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Utilisateur',
         email: user.email || '',
         avatar: user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${user.email?.split('@')[0]}`

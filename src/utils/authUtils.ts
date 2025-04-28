@@ -1,4 +1,3 @@
-
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "@/lib/toast";
 import { supabase } from "@/integrations/supabase/client"; // Fixed import
@@ -137,4 +136,74 @@ export const getCurrentSession = (): Session | null => {
 export const isAuthenticated = (): boolean => {
   const session = getCurrentSession();
   return session !== null && new Date(session.expires_at * 1000) > new Date();
+};
+
+// Convert Supabase user to our app's User type
+export const convertSupabaseUser = (supabaseUser: User): any => {
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email,
+    name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+    role: supabaseUser.user_metadata?.role || 'user',
+    registrationDate: supabaseUser.created_at,
+    provider: supabaseUser.app_metadata?.provider || 'email'
+  };
+};
+
+// Generate simulated social media user
+export const generateSimulatedSocialUser = (provider: 'facebook' | 'google', randomId: number): any => {
+  const isDemoProvider = provider === 'facebook' ? 'facebook' : 'google';
+  const userName = isDemoProvider === 'facebook' ? `facebook_user_${randomId}` : `google_user_${randomId}`;
+  const email = `${userName}@example.com`;
+  
+  return {
+    name: userName.replace('_', ' '),
+    email: email,
+    socialMediaDetails: {
+      providerId: `${isDemoProvider}_${randomId}`,
+      provider: isDemoProvider
+    }
+  };
+};
+
+// Simulate sending email
+export const simulateSendEmail = (email: string, subject: string, body: string): boolean => {
+  console.log(`Simulated email to ${email}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Body: ${body}`);
+  
+  return true;
+};
+
+// Load users from storage
+export const loadUsersFromStorage = (): any[] => {
+  try {
+    const usersStr = localStorage.getItem('winshirt_users');
+    return usersStr ? JSON.parse(usersStr) : [];
+  } catch (error) {
+    console.error("Error loading users from storage:", error);
+    return [];
+  }
+};
+
+// Save users to storage
+export const saveUsersToStorage = (users: any[]): void => {
+  try {
+    localStorage.setItem('winshirt_users', JSON.stringify(users));
+  } catch (error) {
+    console.error("Error saving users to storage:", error);
+  }
+};
+
+// Initialize users if needed
+export const initializeUsers = (): void => {
+  try {
+    const usersStr = localStorage.getItem('winshirt_users');
+    if (!usersStr) {
+      // Initialize with an empty array
+      localStorage.setItem('winshirt_users', JSON.stringify([]));
+    }
+  } catch (error) {
+    console.error("Error initializing users:", error);
+  }
 };

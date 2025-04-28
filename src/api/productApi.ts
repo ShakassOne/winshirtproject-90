@@ -1,8 +1,12 @@
-
 import { ExtendedProduct } from "@/types/product";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/toast";
 import { snakeToCamel, camelToSnake } from "@/lib/utils";
+
+// Helper function to check if Supabase is configured
+const isSupabaseConfigured = (): boolean => {
+  return Boolean(supabase && supabase.auth);
+};
 
 // Helper function to save products to localStorage
 const saveProductsToLocalStorage = (products: ExtendedProduct[]) => {
@@ -22,11 +26,6 @@ const getNextProductId = (products: ExtendedProduct[]): number => {
 
 // Fonction pour récupérer tous les produits
 export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
-  // Vérifier si Supabase est configuré
-  const isSupabaseConfigured = () => {
-    return Boolean(supabase && supabase.auth);
-  };
-
   if (!isSupabaseConfigured()) {
     console.log('Supabase n\'est pas configuré. Utilisation du localStorage uniquement.');
     const storedProducts = localStorage.getItem('products');
@@ -240,7 +239,7 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
         delivery_price: product.deliveryPrice,
         allow_customization: product.allowCustomization,
         default_visual_id: product.defaultVisualId,
-        default_visual_settings: product.defaultVisualSettings,
+        defaultVisualSettings: product.defaultVisualSettings,
         visual_category_id: product.visualCategoryId
       })
       .eq('id', product.id)
@@ -269,7 +268,7 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       deliveryPrice: data.delivery_price,
       allowCustomization: data.allow_customization,
       defaultVisualId: data.default_visual_id,
-      defaultVisualSettings: data.default_visual_settings,
+      defaultVisualSettings: data.defaultVisualSettings,
       visualCategoryId: data.visual_category_id
     };
     

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,21 @@ import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { syncLocalDataToSupabase, forceSupabaseConnection, checkSupabaseConnection } from '@/lib/supabase';
 import { ValidTableName, requiredTables } from '@/integrations/supabase/client';
+
+// Add the missing type definitions
+type TablesStatus = 'both' | 'local' | 'supabase' | 'none' | 'error';
+
+interface TableData {
+  localData: boolean;
+  supabaseData: boolean;
+  status: TablesStatus;
+  count: number;
+  error?: string;
+}
+
+interface TablesData {
+  [tableName: string]: TableData;
+}
 
 const SyncDebugTool: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
