@@ -1,8 +1,31 @@
 
-import { ExtendedLottery, Lottery, Participant } from "@/types/lottery";
+import { ExtendedLottery, Participant } from "@/types/lottery";
 import { supabase } from "@/integrations/supabase/client";
 
-export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
+// Function to test connection to Supabase
+export const testSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.from('lotteries').select('id').limit(1);
+    return !error;
+  } catch (error) {
+    console.error("Supabase connection test failed:", error);
+    return false;
+  }
+};
+
+// Function to ensure required tables exist
+export const ensureLotteryTablesExist = async (): Promise<boolean> => {
+  try {
+    // Just check if we can access the lotteries table
+    const { error } = await supabase.from('lotteries').select('id').limit(1);
+    return !error;
+  } catch (error) {
+    console.error("Failed to validate lottery tables:", error);
+    return false;
+  }
+};
+
+export const fetchLotteries = async (forceRefresh?: boolean): Promise<ExtendedLottery[]> => {
   try {
     const { data, error } = await supabase.from('lotteries').select('*');
     
@@ -20,7 +43,6 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       currentParticipants: lottery.current_participants || 0,
       drawDate: lottery.draw_date,
       endDate: lottery.end_date,
-      createdAt: lottery.created_at,
       linkedProducts: lottery.linked_products || [],
     }));
   } catch (error) {
@@ -52,7 +74,6 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
       currentParticipants: data.current_participants || 0,
       drawDate: data.draw_date,
       endDate: data.end_date,
-      createdAt: data.created_at,
       linkedProducts: data.linked_products || [],
     };
   } catch (error) {

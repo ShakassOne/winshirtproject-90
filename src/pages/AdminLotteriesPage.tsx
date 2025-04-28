@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -40,7 +39,7 @@ const AdminLotteriesPage: React.FC = () => {
       }
       
       // Forcer le rafraîchissement des données pour s'assurer qu'elles sont à jour
-      const apiLotteries = await fetchLotteries(true);
+      const apiLotteries = await fetchLotteries();
       
       if (apiLotteries && apiLotteries.length > 0) {
         console.log("Admin: Loaded lotteries:", apiLotteries.length);

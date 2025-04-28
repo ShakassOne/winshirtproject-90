@@ -20,7 +20,7 @@ export const useLotteries = (activeOnly: boolean = false) => {
         console.log("lotteryService: Chargement des loteries...");
         
         // Récupération directe via l'API (testSupabaseConnection intégré)
-        const allLotteries = await fetchLotteries(true); // Force refresh pour éviter les problèmes de cache
+        const allLotteries = await fetchLotteries(); // Remove forced refresh parameter
         console.log("lotteryService: Loteries récupérées:", allLotteries.length);
         
         if (activeOnly) {
@@ -49,7 +49,7 @@ export const useLotteries = (activeOnly: boolean = false) => {
       setLoading(true);
       
       // Récupération directe via l'API
-      const allLotteries = await fetchLotteries(true); // forceRefresh pour éviter les problèmes de cache
+      const allLotteries = await fetchLotteries(); // Remove forced refresh parameter
       
       if (activeOnly) {
         setLotteries(allLotteries.filter(lottery => 
@@ -74,9 +74,9 @@ export const useLotteries = (activeOnly: boolean = false) => {
  * Fonction pour récupérer les données brutes des loteries (sans gestion d'état)
  * Utile pour les composants qui n'ont pas besoin de la gestion d'état complète
  */
-export const getAllLotteries = async (forceRefresh = false): Promise<ExtendedLottery[]> => {
+export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
-    return await fetchLotteries(forceRefresh);
+    return await fetchLotteries(); // Remove forceRefresh parameter
   } catch (error) {
     console.error("lotteryService: Erreur lors de la récupération des loteries:", error);
     return [];
@@ -86,9 +86,9 @@ export const getAllLotteries = async (forceRefresh = false): Promise<ExtendedLot
 /**
  * Récupère les loteries actives uniquement
  */
-export const getActiveLotteries = async (forceRefresh = false): Promise<ExtendedLottery[]> => {
+export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
-    const allLotteries = await fetchLotteries(forceRefresh);
+    const allLotteries = await fetchLotteries(); // Remove forceRefresh parameter
     return allLotteries.filter(lottery => 
       lottery.status === 'active' || lottery.status === 'relaunched'
     );
