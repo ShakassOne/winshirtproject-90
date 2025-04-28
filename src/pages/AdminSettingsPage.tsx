@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import StarBackground from '@/components/StarBackground';
+import DynamicBackground from '@/components/backgrounds/DynamicBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GeneralSettings from '@/components/admin/settings/GeneralSettings';
@@ -8,6 +8,7 @@ import SyncSettingsManager from '@/components/admin/settings/SyncSettingsManager
 import FtpSettingsManager from '@/components/admin/settings/FtpSettingsManager';
 import HomeIntroManager from '@/components/admin/settings/HomeIntroManager';
 import SyncDebugTool from '@/components/admin/settings/SyncDebugTool';
+import PageBackgroundsManager from '@/components/admin/settings/PageBackgroundsManager';
 import { checkSupabaseConnection, forceSupabaseConnection } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -74,7 +75,7 @@ const AdminSettingsPage: React.FC = () => {
 
   return (
     <>
-      <StarBackground />
+      <DynamicBackground />
       <AdminNavigation />
       
       <section className="pt-32 pb-24">
@@ -104,9 +105,10 @@ const AdminSettingsPage: React.FC = () => {
           <SyncDebugTool />
           
           <Tabs defaultValue="general" className="winshirt-card p-6">
-            <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-6">
+            <TabsList className="grid grid-cols-2 md:grid-cols-5 mb-6">
               <TabsTrigger value="general">Général</TabsTrigger>
               <TabsTrigger value="content">Home Intro</TabsTrigger>
+              <TabsTrigger value="backgrounds">Arrière-plans</TabsTrigger>
               <TabsTrigger value="sync">Synchronisation</TabsTrigger>
               <TabsTrigger value="ftp">FTP</TabsTrigger>
             </TabsList>
@@ -117,6 +119,10 @@ const AdminSettingsPage: React.FC = () => {
             
             <TabsContent value="content" className="space-y-6">
               <HomeIntroManager />
+            </TabsContent>
+            
+            <TabsContent value="backgrounds" className="space-y-6">
+              <PageBackgroundsManager />
             </TabsContent>
             
             <TabsContent value="sync" className="space-y-6">

@@ -1,9 +1,6 @@
 
 // Import the supabase client and required types directly
-import { supabase, checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
-import type { ValidTableName } from '@/integrations/supabase/client';
-import { toast } from '@/lib/toast';
-
+import { supabase } from '@/integrations/supabase/client';
 // Re-export the required types and functions from client
 export { supabase, checkSupabaseConnection, requiredTables } from '@/integrations/supabase/client';
 export type { ValidTableName } from '@/integrations/supabase/client';
@@ -469,3 +466,5 @@ export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promis
     return false;
   }
 };
+
+import { toast } from './toast';
