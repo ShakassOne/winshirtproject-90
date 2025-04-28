@@ -3,7 +3,7 @@ import {
   supabase, 
   checkSupabaseConnection, 
   requiredTables,
-  ValidTableName 
+  type ValidTableName 
 } from '@/integrations/supabase/client';
 
 // Re-export the required types and functions from client
@@ -11,8 +11,8 @@ export {
   supabase, 
   checkSupabaseConnection, 
   requiredTables,
-  ValidTableName 
-} from '@/integrations/supabase/client';
+};
+export type { ValidTableName };
 
 // HomeIntro related types and functions
 export type SlideType = {
