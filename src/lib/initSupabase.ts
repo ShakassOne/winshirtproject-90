@@ -1,11 +1,10 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { syncLocalDataToSupabase, forceSupabaseConnection as forceConnection, checkSupabaseConnection } from './supabase';
+import { syncLocalDataToSupabase, forceSupabaseConnection, checkSupabaseConnection } from '@/lib/supabase';
 import { toast } from './toast';
 import { requiredTables } from '@/integrations/supabase/client';
 
 // Re-export forceSupabaseConnection from supabase.ts
-export const forceSupabaseConnection = forceConnection;
+export const forceSupabaseConnection = forceSupabaseConnection;
 
 // Configuration pour la synchronisation
 export const syncConfig = {
