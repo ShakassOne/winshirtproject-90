@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 
@@ -25,9 +26,6 @@ import ContactPage from './pages/ContactPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProductCustomizationPage from './pages/ProductCustomizationPage';
-
-// Add this import if not already there
-import AdminSyncPage from './pages/AdminSyncPage';
 
 function App() {
   return (
