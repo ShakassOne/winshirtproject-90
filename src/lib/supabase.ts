@@ -1,18 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+
+import { camelToSnake, snakeToCamel } from './utils'; // Déplacé les fonctions utilitaires
 import { toast } from './toast';
-
-// Utiliser les mêmes informations que dans src/integrations/supabase/client.ts
-export const SUPABASE_URL = "https://uwgclposhhdovfjnazlp.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3Z2NscG9zaGhkb3Zmam5hemxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTA4MzEsImV4cCI6MjA2MTA2NjgzMX0.wZBdCERqRHdWQMCZvFSbJBSMoXQHvpK49Jz_m4dx4cc";
-
-// Configuration explicite pour assurer la persistance de la session et garantir un client unique
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
+import { ValidTableName, requiredTables } from '@/integrations/supabase/client';
 
 // Type definition for FTP configuration
 export const ftpConfig = {
@@ -92,28 +82,10 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
     const { data, error } = await supabase.from('lotteries').select('count').limit(1);
       
     if (error) {
-      // Si l'erreur indique que la table n'existe pas, nous devons peut-être la créer
       console.error("Erreur de connexion:", error);
-      
-      if (error.code === '42P01') { // Table doesn't exist
-        try {
-          // Tenter de créer les tables nécessaires
-          const { error: createError } = await supabase.rpc('create_required_tables');
-          if (createError) {
-            console.error("Erreur lors de la création des tables:", createError);
-            toast.error("Impossible de créer les tables: " + createError.message, { position: "bottom-right" });
-            localStorage.setItem('supabase_connected', 'false');
-            return false;
-          }
-          toast.success("Tables créées avec succès", { position: "bottom-right" });
-        } catch (e) {
-          console.error("Exception lors de la création des tables:", e);
-        }
-      } else {
-        toast.error(`Erreur de connexion: ${error.message}`, { position: "bottom-right" });
-        localStorage.setItem('supabase_connected', 'false');
-        return false;
-      }
+      toast.error(`Erreur de connexion: ${error.message}`, { position: "bottom-right" });
+      localStorage.setItem('supabase_connected', 'false');
+      return false;
     }
     
     toast.success("Connexion à Supabase établie!", { position: "bottom-right" });
@@ -131,7 +103,7 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
 };
 
 // Fonction de synchronisation des données locales vers Supabase
-export const syncLocalDataToSupabase = async (tableName: string): Promise<boolean> => {
+export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
   try {
     const localData = localStorage.getItem(tableName);
     if (!localData) {
@@ -168,7 +140,7 @@ export const syncLocalDataToSupabase = async (tableName: string): Promise<boolea
 };
 
 // Fonction pour obtenir les données Supabase et les mettre à jour en local
-export const fetchDataFromSupabase = async (tableName: string): Promise<any[]> => {
+export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<any[]> => {
   try {
     const { data, error } = await supabase.from(tableName).select('*');
     
@@ -270,44 +242,4 @@ export const uploadImage = async (file: File, folder: string): Promise<string | 
     console.error("Error uploading image:", error);
     return null;
   }
-};
-
-// Fonction utilitaire pour convertir les clés snake_case en camelCase
-export const snakeToCamel = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  
-  if (Array.isArray(obj)) {
-    return obj.map(snakeToCamel);
-  }
-  
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    
-    // Récursivement convertir les valeurs qui sont des objets
-    const newValue = value !== null && typeof value === 'object' 
-      ? snakeToCamel(value) 
-      : value;
-    
-    return { ...acc, [camelKey]: newValue };
-  }, {});
-};
-
-// Fonction utilitaire pour convertir les clés camelCase en snake_case
-export const camelToSnake = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  
-  if (Array.isArray(obj)) {
-    return obj.map(camelToSnake);
-  }
-  
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const snakeKey = key.replace(/([A-Z])/g, (_, letter) => `_${letter.toLowerCase()}`);
-    
-    // Récursivement convertir les valeurs qui sont des objets
-    const newValue = value !== null && typeof value === 'object' 
-      ? camelToSnake(value) 
-      : value;
-    
-    return { ...acc, [snakeKey]: newValue };
-  }, {});
 };

@@ -19,21 +19,15 @@ export const useLotteries = (activeOnly: boolean = false) => {
         setLoading(true);
         console.log("lotteryService: Chargement des loteries...");
         
-        // Vérifier d'abord la connexion à Supabase
-        const isConnected = await testSupabaseConnection();
-        if (!isConnected) {
-          setError(new Error('Impossible de se connecter à Supabase'));
-          return;
-        }
-        
+        // Récupération directe via l'API (testSupabaseConnection intégré)
         const allLotteries = await fetchLotteries(true); // Force refresh pour éviter les problèmes de cache
-        console.log("lotteryService: Loteries récupérées:", allLotteries);
+        console.log("lotteryService: Loteries récupérées:", allLotteries.length);
         
         if (activeOnly) {
           const activeLots = allLotteries.filter(lottery => 
             lottery.status === 'active' || lottery.status === 'relaunched'
           );
-          console.log("lotteryService: Filtrage des loteries actives:", activeLots);
+          console.log("lotteryService: Loteries actives:", activeLots.length);
           setLotteries(activeLots);
         } else {
           setLotteries(allLotteries);
@@ -41,7 +35,7 @@ export const useLotteries = (activeOnly: boolean = false) => {
       } catch (err) {
         console.error("lotteryService: Erreur lors du chargement des loteries:", err);
         setError(err instanceof Error ? err : new Error('Erreur inconnue'));
-        toast.error("Impossible de charger les loteries");
+        toast.error("Impossible de charger les loteries", { position: "bottom-right" });
       } finally {
         setLoading(false);
       }
@@ -54,14 +48,8 @@ export const useLotteries = (activeOnly: boolean = false) => {
     try {
       setLoading(true);
       
-      // Vérifier d'abord la connexion à Supabase
-      const isConnected = await testSupabaseConnection();
-      if (!isConnected) {
-        setError(new Error('Impossible de se connecter à Supabase'));
-        return;
-      }
-      
-      const allLotteries = await fetchLotteries(true);
+      // Récupération directe via l'API
+      const allLotteries = await fetchLotteries(true); // forceRefresh pour éviter les problèmes de cache
       
       if (activeOnly) {
         setLotteries(allLotteries.filter(lottery => 
@@ -70,10 +58,10 @@ export const useLotteries = (activeOnly: boolean = false) => {
       } else {
         setLotteries(allLotteries);
       }
-      toast.success("Loteries mises à jour");
+      toast.success("Loteries mises à jour", { position: "bottom-right" });
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Erreur lors du rafraîchissement'));
-      toast.error("Échec de la mise à jour des loteries");
+      toast.error("Échec de la mise à jour des loteries", { position: "bottom-right" });
     } finally {
       setLoading(false);
     }

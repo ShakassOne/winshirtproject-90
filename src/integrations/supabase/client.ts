@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://uwgclposhhdovfjnazlp.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3Z2NscG9zaGhkb3Zmam5hemxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTA4MzEsImV4cCI6MjA2MTA2NjgzMX0.wZBdCERqRHdWQMCZvFSbJBSMoXQHvpK49Jz_m4dx4cc";
+export const SUPABASE_URL = "https://uwgclposhhdovfjnazlp.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3Z2NscG9zaGhkb3Zmam5hemxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTA4MzEsImV4cCI6MjA2MTA2NjgzMX0.wZBdCERqRHdWQMCZvFSbJBSMoXQHvpK49Jz_m4dx4cc";
 
 // Types pour le débuggeur de tables
 export type TablesStatus = 'both' | 'local' | 'supabase' | 'none' | 'error';
@@ -358,14 +358,24 @@ export const requiredTables = [
 // Define the valid table names type
 export type ValidTableName = typeof requiredTables[number];
 
-// Create a custom supabase client with our type definitions
-export const supabase = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+// Create the Supabase client as a singleton
+let supabaseInstance: ReturnType<typeof createClient<CustomDatabase>> | null = null;
+
+export const getSupabaseClient = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
   }
-});
+  return supabaseInstance;
+};
+
+// Export supabase as the default client for backward compatibility
+export const supabase = getSupabaseClient();
 
 // Function to check if Supabase connection works
 export const checkSupabaseConnection = async (): Promise<boolean> => {
@@ -376,8 +386,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
       .select('count')
       .limit(1);
     
-    if (error && error.code !== 'PGRST116') {
-      // Si l'erreur n'est pas que la table n'existe pas
+    if (error) {
       console.error("Error checking Supabase connection:", error);
       return false;
     }
@@ -401,8 +410,7 @@ export const checkRequiredTables = async (): Promise<{exists: boolean; missing: 
         .select('count')
         .limit(1);
       
-      if (error && error.code === 'PGRST116') {
-        // Si l'erreur est que la table n'existe pas
+      if (error) {
         missingTables.push(table);
         allExist = false;
       }

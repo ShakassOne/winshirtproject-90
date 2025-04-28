@@ -1,10 +1,8 @@
 
-import { supabase, syncLocalDataToSupabase, forceSupabaseConnection as supabaseForceConnection } from './supabase';
+import { supabase } from '@/integrations/supabase/client';
+import { syncLocalDataToSupabase, forceSupabaseConnection, checkSupabaseConnection } from './supabase';
 import { toast } from './toast';
 import { requiredTables } from '@/integrations/supabase/client';
-
-// Export the forceSupabaseConnection function from supabase.ts
-export const forceSupabaseConnection = supabaseForceConnection;
 
 // Configuration pour la synchronisation
 export const syncConfig = {
@@ -31,6 +29,13 @@ export const syncData = async (forceSync = false): Promise<boolean> => {
   }
   
   try {
+    // Vérifier d'abord si nous sommes connectés à Supabase
+    const isConnected = await checkSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Échec de synchronisation - Impossible de se connecter à Supabase", { position: "bottom-right" });
+      return false;
+    }
+    
     let allSuccess = true;
     
     for (const table of syncConfig.tables) {

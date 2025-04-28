@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { ExtendedLottery } from '@/types/lottery';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
-import { isSupabaseConfigured, syncLocalDataToSupabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useLotteryForm = (
   lotteries: ExtendedLottery[],
@@ -75,22 +75,49 @@ export const useLotteryForm = (
   // Function to toggle featured status
   const handleToggleFeatured = async (id: number): Promise<void> => {
     try {
+      // Trouver la loterie à mettre à jour
+      const lottery = lotteries.find(l => l.id === id);
+      if (!lottery) {
+        toast.error(`Loterie avec ID ${id} introuvable`, { position: "bottom-right" });
+        return;
+      }
+      
+      // Nouvelle valeur featured inversée
+      const newFeaturedValue = !lottery.featured;
+      
+      // Vérifier si nous sommes connectés à Supabase
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      
+      if (supabaseConnected) {
+        try {
+          // Mise à jour directe dans Supabase
+          const { error } = await supabase
+            .from('lotteries')
+            .update({ featured: newFeaturedValue })
+            .eq('id', id);
+            
+          if (error) {
+            console.error("Erreur lors de la mise à jour dans Supabase:", error);
+            toast.error(`Erreur Supabase: ${error.message}`, { position: "bottom-right" });
+            return;
+          }
+        } catch (error) {
+          console.error("Exception lors de la mise à jour dans Supabase:", error);
+        }
+      }
+      
+      // Mettre à jour l'état local
       const updatedLotteries = lotteries.map(lottery => 
-        lottery.id === id ? { ...lottery, featured: !lottery.featured } : lottery
+        lottery.id === id ? { ...lottery, featured: newFeaturedValue } : lottery
       );
       
       setLotteries(updatedLotteries);
+      
+      // Mettre à jour localStorage dans tous les cas
       localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       
-      const lottery = updatedLotteries.find(l => l.id === id);
-      const featuredStatus = lottery?.featured ? 'mise en avant' : 'retirée des mises en avant';
+      const featuredStatus = newFeaturedValue ? 'mise en avant' : 'retirée des mises en avant';
       toast.success(`Loterie ${featuredStatus}`, { position: "bottom-right" });
-      
-      // Sync to Supabase if connected
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
-      if (supabaseConnected) {
-        await syncLocalDataToSupabase('lotteries');
-      }
     } catch (error) {
       console.error('Error toggling featured:', error);
       toast.error("Erreur lors du changement de statut", { position: "bottom-right" });
@@ -101,6 +128,10 @@ export const useLotteryForm = (
   const onSubmit = async (data: any): Promise<void> => {
     try {
       setIsSubmitting(true);
+      
+      // Vérifier si nous sommes connectés à Supabase
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      
       // Convertir les IDs de produits en nombres
       const linkedProducts = data.linkedProducts.map((id: string) => parseInt(id, 10));
       
@@ -120,7 +151,66 @@ export const useLotteryForm = (
         drawDate: data.drawDate || null
       };
 
-      // Mettre à jour les loteries
+      // Si connecté à Supabase, essayer d'abord d'y sauvegarder
+      if (supabaseConnected) {
+        try {
+          if (isCreating) {
+            // Création
+            const { error } = await supabase
+              .from('lotteries')
+              .insert({
+                id: newLottery.id,
+                title: newLottery.title,
+                description: newLottery.description,
+                value: newLottery.value,
+                target_participants: newLottery.targetParticipants,
+                current_participants: newLottery.currentParticipants,
+                status: newLottery.status,
+                image: newLottery.image,
+                linked_products: newLottery.linkedProducts,
+                featured: newLottery.featured,
+                end_date: newLottery.endDate,
+                draw_date: newLottery.drawDate
+              });
+              
+            if (error) {
+              console.error("Erreur lors de la création dans Supabase:", error);
+              toast.error(`Erreur Supabase: ${error.message}`, { position: "bottom-right" });
+            } else {
+              toast.success(`Loterie "${data.title}" créée et synchronisée avec Supabase`, { position: "bottom-right" });
+            }
+          } else {
+            // Mise à jour
+            const { error } = await supabase
+              .from('lotteries')
+              .update({
+                title: newLottery.title,
+                description: newLottery.description,
+                value: newLottery.value,
+                target_participants: newLottery.targetParticipants,
+                current_participants: newLottery.currentParticipants,
+                status: newLottery.status,
+                image: newLottery.image,
+                linked_products: newLottery.linkedProducts,
+                featured: newLottery.featured,
+                end_date: newLottery.endDate,
+                draw_date: newLottery.drawDate
+              })
+              .eq('id', newLottery.id);
+              
+            if (error) {
+              console.error("Erreur lors de la mise à jour dans Supabase:", error);
+              toast.error(`Erreur Supabase: ${error.message}`, { position: "bottom-right" });
+            } else {
+              toast.success(`Loterie "${data.title}" mise à jour et synchronisée avec Supabase`, { position: "bottom-right" });
+            }
+          }
+        } catch (error) {
+          console.error("Exception lors de l'opération Supabase:", error);
+        }
+      }
+      
+      // Mettre à jour l'état et le localStorage (toujours, même si Supabase est utilisé)
       let updatedLotteries: ExtendedLottery[];
       
       if (isCreating) {
@@ -133,16 +223,8 @@ export const useLotteryForm = (
         toast.success(`Loterie "${data.title}" mise à jour avec succès`, { position: "bottom-right" });
       }
       
-      // Mettre à jour l'état et le localStorage
       setLotteries(updatedLotteries);
       localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-      
-      // Synchroniser avec Supabase si connecté
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
-      if (supabaseConnected) {
-        console.log("Tentative de synchronisation avec Supabase");
-        await syncLocalDataToSupabase('lotteries');
-      }
       
       // Réinitialiser le formulaire et l'état
       form.reset();
@@ -164,8 +246,30 @@ export const useLotteryForm = (
   };
 
   // Fonction pour supprimer une loterie
-  const handleDeleteLottery = (id: number): void => {
+  const handleDeleteLottery = async (id: number): Promise<void> => {
     try {
+      // Vérifier si nous sommes connectés à Supabase
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      
+      // Si connecté à Supabase, essayer d'abord d'y supprimer
+      if (supabaseConnected) {
+        try {
+          const { error } = await supabase
+            .from('lotteries')
+            .delete()
+            .eq('id', id);
+            
+          if (error) {
+            console.error("Erreur lors de la suppression dans Supabase:", error);
+            toast.error(`Erreur Supabase: ${error.message}`, { position: "bottom-right" });
+          } else {
+            toast.success("Loterie supprimée de Supabase avec succès", { position: "bottom-right" });
+          }
+        } catch (error) {
+          console.error("Exception lors de la suppression dans Supabase:", error);
+        }
+      }
+      
       // Si la loterie en cours d'édition est supprimée, réinitialiser le formulaire
       if (id === selectedLotteryId) {
         form.reset();
@@ -179,12 +283,6 @@ export const useLotteryForm = (
       localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
       
       toast.success("Loterie supprimée avec succès", { position: "bottom-right" });
-      
-      // Synchroniser avec Supabase si connecté
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
-      if (supabaseConnected) {
-        syncLocalDataToSupabase('lotteries');
-      }
     } catch (error) {
       console.error('Error deleting lottery:', error);
       toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
@@ -192,7 +290,7 @@ export const useLotteryForm = (
   };
 
   // Fonction pour tirer au sort un gagnant
-  const handleDrawWinner = (id: number): void => {
+  const handleDrawWinner = async (id: number): Promise<void> => {
     try {
       // Trouver la loterie
       const lottery = lotteries.find(l => l.id === id);
@@ -204,10 +302,50 @@ export const useLotteryForm = (
       // Simuler un tirage au sort
       const winnerName = "Participant gagnant";
       const winnerEmail = "gagnant@example.com";
+      const drawDate = new Date().toISOString();
       
-      // Mettre à jour le statut de la loterie
+      // Vérifier si nous sommes connectés à Supabase
+      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
+      
+      // Si connecté à Supabase, mettre à jour le statut de la loterie
+      if (supabaseConnected) {
+        try {
+          const { error: lotteryError } = await supabase
+            .from('lotteries')
+            .update({ 
+              status: 'completed',
+              draw_date: drawDate
+            })
+            .eq('id', id);
+            
+          if (lotteryError) {
+            console.error("Erreur lors de la mise à jour du statut dans Supabase:", lotteryError);
+          }
+          
+          // Ajouter le gagnant dans lottery_winners
+          const { error: winnerError } = await supabase
+            .from('lottery_winners')
+            .insert({
+              lottery_id: id,
+              user_id: 1, // Fictif pour la démonstration
+              name: winnerName,
+              email: winnerEmail,
+              drawn_at: drawDate
+            });
+            
+          if (winnerError) {
+            console.error("Erreur lors de l'ajout du gagnant dans Supabase:", winnerError);
+          } else {
+            toast.success(`Tirage enregistré dans Supabase`, { position: "bottom-right" });
+          }
+        } catch (error) {
+          console.error("Exception lors des opérations Supabase:", error);
+        }
+      }
+      
+      // Mettre à jour le statut de la loterie dans l'état local
       const updatedLotteries = lotteries.map(l => 
-        l.id === id ? { ...l, status: 'completed' as "active" | "completed" | "relaunched" | "cancelled", drawDate: new Date().toISOString() } : l
+        l.id === id ? { ...l, status: 'completed' as "active" | "completed" | "relaunched" | "cancelled", drawDate } : l
       );
       
       setLotteries(updatedLotteries);
@@ -221,19 +359,12 @@ export const useLotteryForm = (
         userId: 1, // Fictif pour la démonstration
         name: winnerName,
         email: winnerEmail,
-        drawnAt: new Date().toISOString()
+        drawnAt: drawDate
       });
       
       localStorage.setItem('lottery_winners', JSON.stringify(winners));
       
       toast.success(`Tirage effectué! Le gagnant est ${winnerName}`, { position: "bottom-right" });
-      
-      // Synchroniser avec Supabase si connecté
-      const supabaseConnected = localStorage.getItem('supabase_connected') === 'true';
-      if (supabaseConnected) {
-        syncLocalDataToSupabase('lotteries');
-        syncLocalDataToSupabase('lottery_winners');
-      }
     } catch (error) {
       console.error('Error drawing winner:', error);
       toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
