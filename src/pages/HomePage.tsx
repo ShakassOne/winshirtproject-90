@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LotteryCard from '../components/LotteryCard';
@@ -9,6 +10,7 @@ import StatsSection from '@/components/home/StatsSection';
 import WinnersCarousel from '@/components/home/WinnersCarousel';
 import HomeIntroSlider from '@/components/home/HomeIntroSlider';
 import { mockWinners } from '@/data/mockWinners';
+import { mockLotteries } from '@/data/mockData'; // Fixed import for mockLotteries
 import { ExtendedLottery } from '@/types/lottery';
 import { useProducts } from '@/services/productService';
 
