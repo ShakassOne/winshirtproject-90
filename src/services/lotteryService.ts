@@ -50,29 +50,22 @@ export const useLotteries = (activeOnly: boolean = false) => {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'lotteries' }, 
         async (payload) => {
-          console.log("lotteryService: Real-time update received for lotteries", payload);
-          // Refresh data when changes are detected
-          getLotteries();
+          console.log("lotteryService: Mise à jour en temps réel détectée", payload);
+          await getLotteries();
         }
       )
       .subscribe();
     
+    // Cleanup subscription on unmount
     return () => {
       supabase.removeChannel(channel);
     };
   }, [activeOnly]);
   
-  const refreshLotteries = async () => {
+  return { lotteries, loading, error, refreshLotteries: async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Clear any cached data to ensure fresh fetch
-      localStorage.removeItem('lotteries');
-      sessionStorage.removeItem('lotteries');
-      
-      // Récupération directe via l'API
       const allLotteries = await fetchLotteries();
-      
       if (activeOnly) {
         setLotteries(allLotteries.filter(lottery => 
           lottery.status === 'active' || lottery.status === 'relaunched'
@@ -82,44 +75,13 @@ export const useLotteries = (activeOnly: boolean = false) => {
       }
       toast.success("Loteries mises à jour", { position: "bottom-right" });
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Erreur lors du rafraîchissement'));
-      toast.error("Échec de la mise à jour des loteries", { position: "bottom-right" });
+      console.error("Erreur lors du rafraîchissement des loteries:", err);
+      toast.error("Erreur lors de la mise à jour des loteries", { position: "bottom-right" });
     } finally {
       setLoading(false);
     }
-  };
-
-  return { lotteries, loading, error, refreshLotteries };
+  } };
 };
 
-/**
- * Fonction pour récupérer les données brutes des loteries (sans gestion d'état)
- * Utile pour les composants qui n'ont pas besoin de la gestion d'état complète
- */
-export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
-  try {
-    return await fetchLotteries();
-  } catch (error) {
-    console.error("lotteryService: Erreur lors de la récupération des loteries:", error);
-    toast.error("Erreur lors de la récupération des loteries", { position: "bottom-right" });
-    return [];
-  }
-};
-
-/**
- * Récupère les loteries actives uniquement
- */
-export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
-  try {
-    const allLotteries = await fetchLotteries();
-    const activeLotteries = allLotteries.filter(lottery => 
-      lottery.status === 'active' || lottery.status === 'relaunched'
-    );
-    console.log(`getActiveLotteries: Found ${activeLotteries.length} active lotteries out of ${allLotteries.length} total`);
-    return activeLotteries;
-  } catch (error) {
-    console.error("lotteryService: Erreur lors de la récupération des loteries actives:", error);
-    toast.error("Erreur lors de la récupération des loteries actives", { position: "bottom-right" });
-    return [];
-  }
-};
+// Re-export other functions
+export { getAllLotteries, getActiveLotteries } from '@/api/lotteryApi';

@@ -353,7 +353,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_increment_function: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_lottery_public_policies: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_rls_helper_functions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      disable_rls_for_lotteries: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      enable_rls_for_lotteries: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
