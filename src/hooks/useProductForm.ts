@@ -1,367 +1,240 @@
 
 import { useState } from 'react';
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { ExtendedProduct, PrintArea } from '@/types/product';
+import { ExtendedProduct } from '@/types/product';
+import { useForm } from 'react-hook-form';
 import { ExtendedLottery } from '@/types/lottery';
 import { toast } from '@/lib/toast';
-
-const productFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Le nom du produit doit comporter au moins 2 caractères.",
-  }),
-  description: z.string().optional(),
-  price: z.coerce.number(),
-  image: z.string().optional(),
-  secondaryImage: z.string().optional(),
-  sizes: z.array(z.string()).optional(),
-  colors: z.array(z.string()).optional(),
-  type: z.string().optional(),
-  productType: z.string().optional(),
-  sleeveType: z.string().optional(),
-  linkedLotteries: z.array(z.string()).optional(),
-  tickets: z.coerce.number().min(1).max(5).default(1),
-  weight: z.coerce.number().optional(),
-  deliveryPrice: z.coerce.number().optional(),
-  allowCustomization: z.boolean().default(false),
-  defaultVisualId: z.number().nullable().optional(),
-  defaultVisualSettings: z.any().optional(),
-  visualCategoryId: z.number().nullable().optional(),
-  // Mise à jour du schéma pour les zones d'impression
-  printAreas: z.array(z.object({
-    id: z.number(),
-    name: z.string(),
-    position: z.enum(['front', 'back']),
-    format: z.literal('custom'), 
-    bounds: z.object({
-      x: z.number(),
-      y: z.number(),
-      width: z.number(),
-      height: z.number()
-    }),
-    allowCustomPosition: z.boolean().optional().default(true)
-  })).optional(),
-  // Nouveaux champs pour les filtres avancés
-  gender: z.enum(['homme', 'femme', 'enfant', 'unisexe']).optional(),
-  material: z.string().optional(),
-  fit: z.enum(['regular', 'ajusté', 'oversize']).optional(),
-  brand: z.string().optional(),
-});
-
-export type ProductFormValues = z.infer<typeof productFormSchema>;
+import { createProduct, updateProduct, deleteProduct } from '@/services/productService';
+import { checkSupabaseConnection } from '@/lib/supabase';
 
 export const useProductForm = (
   products: ExtendedProduct[],
-  setProducts: React.Dispatch<React.SetStateAction<ExtendedProduct[]>>,
+  refreshProducts: () => Promise<void>,
   activeLotteries: ExtendedLottery[]
 ) => {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-
-  // Create a proper empty array of the correct type for printAreas
-  const emptyPrintAreas: PrintArea[] = [];
-
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productFormSchema),
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Form initialization
+  const form = useForm({
     defaultValues: {
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       price: 0,
-      image: "",
-      secondaryImage: "",
-      sizes: [],
-      colors: [],
-      type: "",
-      productType: "",
-      sleeveType: "",
-      linkedLotteries: [],
+      sizes: [] as string[],
+      colors: [] as string[],
+      image: '',
+      secondaryImage: '',
+      type: 'standard',
+      productType: '',
+      sleeveType: '',
+      linkedLotteries: [] as string[],
+      popularity: 0,
       tickets: 1,
       weight: 0,
       deliveryPrice: 0,
       allowCustomization: false,
+      printAreas: [] as any[],
       defaultVisualId: null,
-      defaultVisualSettings: null,
+      defaultVisualSettings: {},
       visualCategoryId: null,
-      printAreas: emptyPrintAreas,
-      gender: undefined,
-      material: "",
-      fit: undefined,
-      brand: "",
-    },
+    }
   });
 
+  // Handler for creating a new product
   const handleCreateProduct = () => {
+    console.log("Creating new product");
     setIsCreating(true);
     setSelectedProductId(null);
     form.reset();
   };
 
-  const handleDeleteProduct = (productId: number) => {
-    const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?");
-    if (confirmDelete) {
-      const updatedProducts = products.filter(product => product.id !== productId);
-      setProducts(updatedProducts);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-      toast.success("Produit supprimé avec succès");
+  // Handler for editing an existing product
+  const handleEditProduct = (product: ExtendedProduct) => {
+    console.log("Editing product:", product.id);
+    if (product) {
+      setIsCreating(false);
+      setSelectedProductId(product.id);
+      form.reset({
+        name: product.name,
+        description: product.description || '',
+        price: product.price,
+        sizes: product.sizes || [],
+        colors: product.colors || [],
+        image: product.image || '',
+        secondaryImage: product.secondaryImage || '',
+        type: product.type || 'standard',
+        productType: product.productType || '',
+        sleeveType: product.sleeveType || '',
+        linkedLotteries: product.linkedLotteries?.map(String) || [],
+        popularity: product.popularity || 0,
+        tickets: product.tickets || 1,
+        weight: product.weight || 0,
+        deliveryPrice: product.deliveryPrice || 0,
+        allowCustomization: product.allowCustomization || false,
+        printAreas: product.printAreas || [],
+        defaultVisualId: product.defaultVisualId || null,
+        defaultVisualSettings: product.defaultVisualSettings || {},
+        visualCategoryId: product.visualCategoryId || null,
+      });
     }
   };
 
-  const handleEditProduct = (product: ExtendedProduct) => {
-    setIsCreating(false);
-    setSelectedProductId(product.id);
+  // Handler for deleting a product
+  const handleDeleteProduct = async (productId: number) => {
+    const isConnected = await checkSupabaseConnection();
     
-    // Create properly typed print areas array
-    const typedPrintAreas: PrintArea[] = (product.printAreas || []).map(area => ({
-      id: area.id,
-      name: area.name,
-      format: 'custom' as const, // Utiliser 'as const' pour garantir le type littéral
-      position: area.position,
-      bounds: {
-        x: area.bounds.x,
-        y: area.bounds.y,
-        width: area.bounds.width,
-        height: area.bounds.height
-      },
-      allowCustomPosition: area.allowCustomPosition ?? true
-    }));
-    
-    form.reset({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      image: product.image,
-      secondaryImage: product.secondaryImage,
-      sizes: product.sizes,
-      colors: product.colors,
-      type: product.type,
-      productType: product.productType,
-      sleeveType: product.sleeveType,
-      linkedLotteries: product.linkedLotteries?.map(String),
-      tickets: product.tickets,
-      weight: product.weight,
-      deliveryPrice: product.deliveryPrice,
-      allowCustomization: product.allowCustomization,
-      defaultVisualId: product.defaultVisualId,
-      defaultVisualSettings: product.defaultVisualSettings,
-      visualCategoryId: product.visualCategoryId,
-      printAreas: typedPrintAreas,
-      gender: product.gender,
-      material: product.material,
-      fit: product.fit,
-      brand: product.brand,
-    });
-    
-    console.log("Loaded product for editing:", {
-      id: product.id,
-      price: product.price,
-      tickets: product.tickets,
-      linkedLotteries: product.linkedLotteries?.map(String),
-      gender: product.gender,
-      material: product.material,
-      fit: product.fit,
-      brand: product.brand,
-      printAreas: typedPrintAreas
-    });
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+      console.log("Deleting product:", productId);
+      
+      const success = await deleteProduct(productId);
+      
+      if (success) {
+        if (selectedProductId === productId) {
+          setSelectedProductId(null);
+          setIsCreating(false);
+          form.reset();
+        }
+        
+        await refreshProducts();
+      }
+    }
   };
 
-  const onSubmit = async (data: ProductFormValues) => {
+  // Form submission handler
+  const onSubmit = async (data: any) => {
     try {
-      console.log("Form data submitted:", data);
+      setIsSubmitting(true);
+      console.log("Submitting product form:", data);
       
-      // Ensure all numeric values are actually numbers
-      const price = Number(data.price);
-      const tickets = Number(data.tickets);
-      const weight = data.weight ? Number(data.weight) : 0;
-      const deliveryPrice = data.deliveryPrice ? Number(data.deliveryPrice) : 0;
-      
-      if (isNaN(price) || isNaN(tickets) || isNaN(weight) || isNaN(deliveryPrice)) {
-        toast.error("Erreur de conversion des valeurs numériques");
-        return;
-      }
-      
-      // Ensure properly typed printAreas
-      const typedPrintAreas: PrintArea[] = (data.printAreas || []).map(area => ({
-        id: area.id,
-        name: area.name,
-        format: 'custom' as const,
-        position: area.position,
-        bounds: {
-          x: area.bounds.x,
-          y: area.bounds.y,
-          width: area.bounds.width,
-          height: area.bounds.height
-        },
-        allowCustomPosition: area.allowCustomPosition ?? true
-      }));
-      
-      const newProduct: ExtendedProduct = {
-        id: isCreating ? Date.now() : selectedProductId || Date.now(),
-        name: data.name,
-        description: data.description || '',
-        price: price,
-        image: data.image || '',
-        secondaryImage: data.secondaryImage || '',
-        sizes: data.sizes || [],
-        colors: data.colors || [],
-        type: data.type || 'standard',
-        productType: data.productType || 'T-shirt',
-        sleeveType: data.sleeveType || 'Courtes',
-        linkedLotteries: data.linkedLotteries ? data.linkedLotteries.map(Number) : [],
-        popularity: 0,
-        tickets: tickets,
-        weight: weight,
-        deliveryPrice: deliveryPrice,
-        allowCustomization: data.allowCustomization || false,
-        defaultVisualId: data.defaultVisualId || null,
-        defaultVisualSettings: data.defaultVisualSettings || null,
-        // Si on autorise la personnalisation, on garde la catégorie visuelle
-        // Sinon on la met à null
-        visualCategoryId: data.allowCustomization ? 
-          (data.visualCategoryId || 1) : null,
-        printAreas: typedPrintAreas,
-        gender: data.gender,
-        material: data.material,
-        fit: data.fit,
-        brand: data.brand,
+      // Convert linkedLotteries from string[] to number[]
+      const productData = {
+        ...data,
+        linkedLotteries: data.linkedLotteries.map(Number),
+        price: Number(data.price),
+        weight: Number(data.weight),
+        deliveryPrice: Number(data.deliveryPrice),
+        popularity: Number(data.popularity),
+        tickets: Number(data.tickets)
       };
 
       if (isCreating) {
-        setProducts(prevProducts => {
-          const updatedProducts = [...prevProducts, newProduct];
-          localStorage.setItem('products', JSON.stringify(updatedProducts));
-          return updatedProducts;
-        });
-        toast.success("Produit créé avec succès");
-        setIsCreating(false);
-        form.reset();
-      } else {
-        const productIndex = products.findIndex(p => p.id === selectedProductId);
+        const newProduct = await createProduct(productData);
         
-        if (productIndex !== -1) {
-          const updatedProducts = [...products];
-          updatedProducts[productIndex] = {
-            ...updatedProducts[productIndex],
-            ...newProduct
-          };
-          
-          setProducts(updatedProducts);
-          
-          localStorage.setItem('products', JSON.stringify(updatedProducts));
-          
-          toast.success("Produit mis à jour avec succès");
+        if (newProduct) {
+          await refreshProducts();
           setIsCreating(false);
+          form.reset();
+          toast.success("Produit créé avec succès", { position: "bottom-right" });
+        }
+      } else if (selectedProductId) {
+        const updatedProduct = await updateProduct(selectedProductId, productData);
+        
+        if (updatedProduct) {
+          await refreshProducts();
           setSelectedProductId(null);
           form.reset();
+          toast.success("Produit mis à jour avec succès", { position: "bottom-right" });
         }
       }
     } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error("Une erreur est survenue lors de la soumission du formulaire");
+      console.error("Form submission error:", error);
+      toast.error("Erreur lors de la sauvegarde", { position: "bottom-right" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Cancel form handler
   const handleCancel = () => {
     setIsCreating(false);
     setSelectedProductId(null);
     form.reset();
   };
 
+  // Size handlers
   const addSize = (size: string) => {
-    const currentSizes = form.getValues().sizes || [];
-    form.setValue("sizes", [...currentSizes, size]);
+    const currentSizes = form.getValues('sizes') || [];
+    if (!currentSizes.includes(size)) {
+      form.setValue('sizes', [...currentSizes, size]);
+    }
   };
 
   const removeSize = (size: string) => {
-    const currentSizes = form.getValues().sizes || [];
-    form.setValue("sizes", currentSizes.filter(s => s !== size));
+    const currentSizes = form.getValues('sizes') || [];
+    form.setValue('sizes', currentSizes.filter(s => s !== size));
   };
 
+  // Color handlers
   const addColor = (color: string) => {
-    const currentColors = form.getValues().colors || [];
-    form.setValue("colors", [...currentColors, color]);
+    const currentColors = form.getValues('colors') || [];
+    if (!currentColors.includes(color)) {
+      form.setValue('colors', [...currentColors, color]);
+    }
   };
 
   const removeColor = (color: string) => {
-    const currentColors = form.getValues().colors || [];
-    form.setValue("colors", currentColors.filter(c => c !== color));
+    const currentColors = form.getValues('colors') || [];
+    form.setValue('colors', currentColors.filter(c => c !== color));
   };
-  
+
+  // Lottery handlers
   const toggleLottery = (lotteryId: string) => {
-    const linkedLotteries = form.getValues().linkedLotteries || [];
-    if (linkedLotteries.includes(lotteryId)) {
-      form.setValue("linkedLotteries", linkedLotteries.filter(id => id !== lotteryId));
-    } else {
-      form.setValue("linkedLotteries", [...linkedLotteries, lotteryId]);
-    }
+    const currentLotteries = form.getValues('linkedLotteries') || [];
+    const newLotteries = currentLotteries.includes(lotteryId)
+      ? currentLotteries.filter(id => id !== lotteryId)
+      : [...currentLotteries, lotteryId];
+    form.setValue('linkedLotteries', newLotteries);
   };
-  
+
   const selectAllLotteries = () => {
     const allLotteryIds = activeLotteries.map(lottery => lottery.id.toString());
-    form.setValue("linkedLotteries", allLotteryIds);
+    form.setValue('linkedLotteries', allLotteryIds);
   };
-  
+
   const deselectAllLotteries = () => {
-    form.setValue("linkedLotteries", []);
+    form.setValue('linkedLotteries', []);
   };
-  
-  // Create a unique ID for new print area
-  const generatePrintAreaId = (): number => {
-    const currentAreas = form.getValues().printAreas || [];
-    return currentAreas.length > 0 
-      ? Math.max(...currentAreas.map(area => area.id)) + 1 
-      : 1;
-  };
-  
-  // Add a new print area
-  const addPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
-    const newArea: PrintArea = {
-      ...printArea,
-      id: generatePrintAreaId(),
-      format: 'custom' as const
-    };
-    
-    const currentAreas = form.getValues().printAreas || [];
-    
-    // Check if we already have a front or back area
-    const hasArea = currentAreas.some(area => area.position === printArea.position);
-    
-    // Si on a déjà une zone pour cette position (recto/verso), ne pas en ajouter une autre
-    if (hasArea) {
-      toast.error(`Une zone d'impression ${printArea.position === 'front' ? 'recto' : 'verso'} existe déjà`);
-      return;
-    }
-    
-    form.setValue("printAreas", [...currentAreas, newArea]);
-  };
-  
-  // Update an existing print area
-  const updatePrintArea = (id: number, data: Partial<PrintArea>) => {
-    const currentAreas = form.getValues().printAreas || [];
-    const updatedAreas = currentAreas.map(area => {
-      if (area.id === id) {
-        return { 
-          ...area, 
-          ...data,
-          format: 'custom' as const // Ensure format is always 'custom'
-        };
+
+  // Print area handlers
+  const addPrintArea = () => {
+    const currentPrintAreas = form.getValues('printAreas') || [];
+    form.setValue('printAreas', [...currentPrintAreas, { 
+      id: Date.now(), 
+      name: `Zone ${currentPrintAreas.length + 1}`,
+      width: 100, 
+      height: 100, 
+      posX: 50, 
+      posY: 50,
+      angle: 0,
+      constraints: {
+        minWidth: 50,
+        maxWidth: 200,
+        minHeight: 50,
+        maxHeight: 200,
       }
-      return area;
-    });
-    
-    form.setValue("printAreas", updatedAreas as PrintArea[]);
+    }]);
   };
-  
-  // Remove a print area
+
+  const updatePrintArea = (id: number, data: any) => {
+    const currentPrintAreas = form.getValues('printAreas') || [];
+    const updatedAreas = currentPrintAreas.map(area => 
+      area.id === id ? { ...area, ...data } : area
+    );
+    form.setValue('printAreas', updatedAreas);
+  };
+
   const removePrintArea = (id: number) => {
-    const currentAreas = form.getValues().printAreas || [];
-    form.setValue("printAreas", currentAreas.filter(area => area.id !== id));
+    const currentPrintAreas = form.getValues('printAreas') || [];
+    form.setValue('printAreas', currentPrintAreas.filter(area => area.id !== id));
   };
 
   return {
     isCreating,
     selectedProductId,
     form,
+    isSubmitting,
     handleCreateProduct,
     handleEditProduct,
     handleDeleteProduct,

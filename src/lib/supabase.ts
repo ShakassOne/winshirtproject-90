@@ -108,9 +108,15 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
   }
 };
 
-// Fonction de synchronisation des données locales vers Supabase
+// Fonction plus robuste pour synchroniser les données locales vers Supabase
 export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
   try {
+    const isConnected = await checkSupabaseConnection();
+    if (!isConnected) {
+      toast.warning(`Impossible de synchroniser ${tableName} - Mode hors-ligne`, { position: "bottom-right" });
+      return false;
+    }
+
     const localData = localStorage.getItem(tableName);
     if (!localData) {
       toast.warning(`Pas de données locales pour ${tableName}`, { position: "bottom-right" });
@@ -122,6 +128,8 @@ export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promis
       toast.warning(`Données invalides pour ${tableName}`, { position: "bottom-right" });
       return false;
     }
+
+    console.log(`Synchronisation de ${parsedData.length} éléments pour ${tableName}...`);
 
     // Nous allons tenter d'utiliser upsert pour éviter les conflits
     const { error } = await supabase.from(tableName).upsert(
@@ -137,6 +145,10 @@ export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promis
 
     // Synchronisation réussie
     toast.success(`${tableName} synchronisé avec succès`, { position: "bottom-right" });
+    
+    // Récupérer les données après synchronisation pour assurer la cohérence
+    await fetchDataFromSupabase(tableName);
+    
     return true;
   } catch (error) {
     console.error(`Erreur lors de la synchronisation de ${tableName}:`, error);
@@ -145,9 +157,19 @@ export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promis
   }
 };
 
-// Fonction pour obtenir les données Supabase et les mettre à jour en local
+// Fonction améliorée pour obtenir les données Supabase et les mettre à jour en local
 export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<any[]> => {
   try {
+    const isConnected = await checkSupabaseConnection();
+    if (!isConnected) {
+      const localData = localStorage.getItem(tableName);
+      console.log(`Mode hors-ligne - Utilisation des données locales pour ${tableName}`);
+      if (localData) {
+        return JSON.parse(localData);
+      }
+      return [];
+    }
+    
     const { data, error } = await supabase.from(tableName).select('*');
     
     if (error) {
@@ -162,6 +184,7 @@ export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<
       
       // Mise à jour du localStorage
       localStorage.setItem(tableName, JSON.stringify(camelCaseData));
+      console.log(`Données de ${tableName} mises à jour: ${camelCaseData.length} éléments`);
       
       return camelCaseData;
     }
@@ -170,6 +193,13 @@ export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<
   } catch (error) {
     console.error(`Exception lors de la récupération des données pour ${tableName}:`, error);
     toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    
+    // En cas d'erreur, essayer d'utiliser les données locales
+    const localData = localStorage.getItem(tableName);
+    if (localData) {
+      return JSON.parse(localData);
+    }
+    
     return [];
   }
 };

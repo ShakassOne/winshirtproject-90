@@ -4,6 +4,7 @@ import { ExtendedLottery } from '@/types/lottery';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchDataFromSupabase, syncLocalDataToSupabase, checkSupabaseConnection } from '@/lib/supabase';
 
 /**
  * Hook pour récupérer les loteries avec gestion d'état (chargement, erreurs)
@@ -20,18 +21,33 @@ export const useLotteries = (activeOnly: boolean = false) => {
         setLoading(true);
         console.log("lotteryService: Chargement des loteries...");
         
-        // Récupération directe via l'API
-        const allLotteries = await fetchLotteries();
-        console.log("lotteryService: Loteries récupérées:", allLotteries.length);
+        // Essayer d'abord de récupérer depuis Supabase
+        const allLotteries = await fetchDataFromSupabase('lotteries') as ExtendedLottery[];
         
-        if (activeOnly) {
-          const activeLots = allLotteries.filter(lottery => 
-            lottery.status === 'active' || lottery.status === 'relaunched'
-          );
-          console.log("lotteryService: Loteries actives:", activeLots.length);
-          setLotteries(activeLots);
+        if (allLotteries && allLotteries.length > 0) {
+          console.log("lotteryService: Loteries récupérées depuis Supabase:", allLotteries.length);
+          
+          if (activeOnly) {
+            const activeLots = filterActiveLotteries(allLotteries);
+            console.log("lotteryService: Loteries actives:", activeLots.length);
+            setLotteries(activeLots);
+          } else {
+            setLotteries(allLotteries);
+          }
         } else {
-          setLotteries(allLotteries);
+          // Si aucune loterie n'est trouvée dans Supabase, essayer de les récupérer via l'API
+          console.log("lotteryService: Essai de récupération des loteries via l'API...");
+          const apiLotteries = await fetchLotteries();
+          
+          console.log("lotteryService: Loteries récupérées via API:", apiLotteries.length);
+          
+          if (activeOnly) {
+            const activeLots = filterActiveLotteries(apiLotteries);
+            console.log("lotteryService: Loteries actives:", activeLots.length);
+            setLotteries(activeLots);
+          } else {
+            setLotteries(apiLotteries);
+          }
         }
       } catch (err) {
         console.error("lotteryService: Erreur lors du chargement des loteries:", err);
@@ -69,11 +85,10 @@ export const useLotteries = (activeOnly: boolean = false) => {
     refreshLotteries: async () => {
       setLoading(true);
       try {
-        const allLotteries = await fetchLotteries();
+        const allLotteries = await fetchDataFromSupabase('lotteries') as ExtendedLottery[];
+        
         if (activeOnly) {
-          setLotteries(allLotteries.filter(lottery => 
-            lottery.status === 'active' || lottery.status === 'relaunched'
-          ));
+          setLotteries(filterActiveLotteries(allLotteries));
         } else {
           setLotteries(allLotteries);
         }
@@ -84,6 +99,15 @@ export const useLotteries = (activeOnly: boolean = false) => {
       } finally {
         setLoading(false);
       }
+    },
+    syncLotteriesToSupabase: async () => {
+      const isConnected = await checkSupabaseConnection();
+      if (!isConnected) {
+        toast.error("Impossible de synchroniser - Mode hors-ligne", { position: "bottom-right" });
+        return false;
+      }
+      
+      return await syncLocalDataToSupabase('lotteries');
     }
   };
 };
@@ -99,10 +123,21 @@ export const filterActiveLotteries = (lotteries: ExtendedLottery[]): ExtendedLot
 export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
     console.log("lotteryService: Récupération des loteries actives...");
-    const allLotteries = await fetchLotteries();
-    const activeLotteries = filterActiveLotteries(allLotteries);
-    console.log("lotteryService: Loteries actives récupérées:", activeLotteries.length);
-    return activeLotteries;
+    
+    // Essayer d'abord de récupérer depuis Supabase
+    const allLotteries = await fetchDataFromSupabase('lotteries') as ExtendedLottery[];
+    
+    if (allLotteries && allLotteries.length > 0) {
+      const activeLotteries = filterActiveLotteries(allLotteries);
+      console.log("lotteryService: Loteries actives récupérées depuis Supabase:", activeLotteries.length);
+      return activeLotteries;
+    } else {
+      // Si aucune loterie n'est trouvée dans Supabase, essayer de les récupérer via l'API
+      const apiLotteries = await fetchLotteries();
+      const activeLotteries = filterActiveLotteries(apiLotteries);
+      console.log("lotteryService: Loteries actives récupérées via API:", activeLotteries.length);
+      return activeLotteries;
+    }
   } catch (error) {
     console.error("lotteryService: Erreur lors de la récupération des loteries actives:", error);
     toast.error("Impossible de récupérer les loteries actives", { position: "bottom-right" });

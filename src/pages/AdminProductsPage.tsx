@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import { mockLotteries, mockProducts } from '@/data/mockData';
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import { VisualCategory } from '@/types/visual';
@@ -10,13 +9,18 @@ import ProductList from '@/components/admin/products/ProductList';
 import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Button } from "@/components/ui/button";
-import { Download, Upload } from "lucide-react";
+import { Download, Upload, RefreshCw } from "lucide-react";
 import { toast } from '@/lib/toast';
+import { useProducts, syncProductsToSupabase } from '@/services/productService';
+import { useLotteries } from '@/services/lotteryService';
 
 const AdminProductsPage: React.FC = () => {
-  const [products, setProducts] = useState<ExtendedProduct[]>(mockProducts as ExtendedProduct[]);
-  const [lotteries, setLotteries] = useState<ExtendedLottery[]>(mockLotteries as ExtendedLottery[]);
+  // Utiliser le hook useProducts
+  const { products, loading: productsLoading, error: productsError, refreshProducts } = useProducts();
+  const { lotteries, loading: lotteriesLoading } = useLotteries(true); // Récupérer seulement les loteries actives
+  
   const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
+  const [syncingProducts, setSyncingProducts] = useState(false);
   
   // Load visual categories on mount
   useEffect(() => {
@@ -37,65 +41,22 @@ const AdminProductsPage: React.FC = () => {
     loadVisualCategories();
   }, []);
   
-  // Load lotteries from both storage types on mount
-  useEffect(() => {
-    const loadLotteries = () => {
-      // Try localStorage first
-      const localLotteries = localStorage.getItem('lotteries');
-      if (localLotteries) {
-        try {
-          const parsedLotteries = JSON.parse(localLotteries);
-          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-            setLotteries(parsedLotteries);
-            // Sync with sessionStorage
-            sessionStorage.setItem('lotteries', localLotteries);
-            return;
-          }
-        } catch (error) {
-          console.error("Error loading lotteries from localStorage:", error);
-        }
+  // Gérer la synchronisation manuelle des produits avec Supabase
+  const handleSyncProducts = async () => {
+    setSyncingProducts(true);
+    try {
+      const success = await syncProductsToSupabase('products');
+      if (success) {
+        await refreshProducts();
+        toast.success("Produits synchronisés avec Supabase", { position: "bottom-right" });
       }
-      
-      // Fallback to sessionStorage
-      const sessionLotteries = sessionStorage.getItem('lotteries');
-      if (sessionLotteries) {
-        try {
-          const parsedLotteries = JSON.parse(sessionLotteries);
-          if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-            setLotteries(parsedLotteries);
-            // Sync with localStorage
-            localStorage.setItem('lotteries', sessionLotteries);
-          }
-        } catch (error) {
-          console.error("Error loading lotteries from sessionStorage:", error);
-        }
-      }
-    };
-    
-    loadLotteries();
-  }, []);
-  
-  // Load products
-  useEffect(() => {
-    const loadProducts = () => {
-      const savedProducts = localStorage.getItem('products');
-      if (savedProducts) {
-        try {
-          const parsedProducts = JSON.parse(savedProducts);
-          if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-            setProducts(parsedProducts);
-          }
-        } catch (error) {
-          console.error("Error loading products from localStorage:", error);
-        }
-      }
-    };
-    
-    loadProducts();
-  }, []);
-  
-  // Filter for active lotteries to assign to products
-  const activeLotteries = lotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+    } catch (error) {
+      console.error("Erreur lors de la synchronisation:", error);
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    } finally {
+      setSyncingProducts(false);
+    }
+  };
   
   const {
     isCreating,
@@ -116,7 +77,7 @@ const AdminProductsPage: React.FC = () => {
     addPrintArea,
     updatePrintArea,
     removePrintArea
-  } = useProductForm(products, setProducts, activeLotteries);
+  } = useProductForm(products, refreshProducts, lotteries);
   
   // Export products to JSON file
   const handleExportProducts = () => {
@@ -151,13 +112,17 @@ const AdminProductsPage: React.FC = () => {
       if (!file) return;
       
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           const importedProducts = JSON.parse(event.target?.result as string);
           
           if (Array.isArray(importedProducts)) {
-            setProducts(importedProducts);
+            // Mise à jour du localStorage
             localStorage.setItem('products', JSON.stringify(importedProducts));
+            
+            // Rafraîchir les produits
+            await refreshProducts();
+            
             toast.success(`${importedProducts.length} produits importés avec succès`);
           } else {
             toast.error("Format de fichier invalide. Attendu: tableau de produits");
@@ -180,9 +145,21 @@ const AdminProductsPage: React.FC = () => {
       
       <section className="pt-32 pb-32">
         <div className="container mx-auto px-4 md:px-8">
-          <div className="mb-8 flex justify-between items-center">
+          <div className="mb-8 flex justify-between items-center flex-wrap gap-3">
             <h1 className="text-3xl font-bold text-white">Gestion des Produits</h1>
             <div className="flex gap-3">
+              <Button 
+                onClick={handleSyncProducts}
+                disabled={syncingProducts}
+                className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+              >
+                {syncingProducts ? (
+                  <RefreshCw size={16} className="mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw size={16} className="mr-2" />
+                )}
+                Synchroniser
+              </Button>
               <Button 
                 onClick={handleExportProducts}
                 className="bg-winshirt-blue hover:bg-winshirt-blue-dark"
@@ -205,6 +182,7 @@ const AdminProductsPage: React.FC = () => {
               <ProductList
                 products={products}
                 selectedProductId={selectedProductId}
+                loading={productsLoading}
                 onCreateProduct={handleCreateProduct}
                 onEditProduct={(id: number) => handleEditProduct(products.find(p => p.id === id)!)}
                 onDeleteProduct={handleDeleteProduct}
@@ -222,7 +200,7 @@ const AdminProductsPage: React.FC = () => {
                   isCreating={isCreating}
                   selectedProductId={selectedProductId}
                   form={form}
-                  activeLotteries={activeLotteries}
+                  activeLotteries={lotteries}
                   visualCategories={visualCategories}
                   onCancel={handleCancel}
                   onSubmit={onSubmit}

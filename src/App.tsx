@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -22,9 +23,11 @@ import AdminCommandesPage from './pages/AdminCommandesPage';
 import AdminClientsPage from './pages/AdminClientsPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchDataFromSupabase } from '@/lib/supabase';
+import { requiredTables } from '@/integrations/supabase/client';
 
 function App() {
-  // Effet pour initialiser Supabase au démarrage de l'application
+  // Effet pour initialiser Supabase et synchroniser les données au démarrage de l'application
   useEffect(() => {
     const setupApp = async () => {
       try {
@@ -39,6 +42,20 @@ function App() {
           
           if (initialized) {
             toast.success("Configuration Supabase initialisée avec succès", { position: "bottom-right" });
+            
+            // Synchroniser les données de toutes les tables requises
+            console.log("Synchronisation des données de toutes les tables...");
+            
+            // Récupérer les données de toutes les tables requises
+            for (const table of requiredTables) {
+              try {
+                await fetchDataFromSupabase(table);
+                console.log(`Données de ${table} synchronisées avec succès`);
+              } catch (error) {
+                console.error(`Erreur lors de la synchronisation des données de ${table}:`, error);
+              }
+            }
+            
           } else {
             toast.warning("Configuration Supabase partielle - certaines fonctionnalités pourraient ne pas fonctionner", { 
               position: "bottom-right" 
