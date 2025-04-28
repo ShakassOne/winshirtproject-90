@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -28,7 +27,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     const loadActiveLotteries = async () => {
       setIsLoading(true);
       try {
-        const lotteries = await getActiveLotteries(true); // Force refresh
+        const lotteries = await getActiveLotteries();
         console.log("LotterySelection - Loteries actives chargées:", lotteries);
         setActiveLotteries(lotteries);
         
@@ -42,6 +41,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
             console.warn("LotterySelection - Certaines loteries sélectionnées ne sont pas valides:", invalidSelections);
           }
         }
+        
       } catch (error) {
         console.error("LotterySelection - Erreur lors du chargement des loteries:", error);
         setErrorMessage("Impossible de charger les loteries disponibles");

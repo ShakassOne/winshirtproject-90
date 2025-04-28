@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockProducts } from '@/data/mockData';
@@ -204,7 +203,7 @@ const ProductDetailPage: React.FC = () => {
     const cart = cartString ? JSON.parse(cartString) : [];
     
     // Récupérer les loteries actives pour avoir les informations complètes
-    const activeLotteries = await getActiveLotteries(true);
+    const activeLotteries = await getActiveLotteries();
     
     // Obtenir les informations des loteries sélectionnées
     const selectedLotteriesInfo = selectedLotteries.map(lotteryId => {
