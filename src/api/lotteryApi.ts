@@ -25,7 +25,7 @@ export const ensureLotteryTablesExist = async (): Promise<boolean> => {
   }
 };
 
-export const fetchLotteries = async (forceRefresh?: boolean): Promise<ExtendedLottery[]> => {
+export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
     const { data, error } = await supabase.from('lotteries').select('*');
     

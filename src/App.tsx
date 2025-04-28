@@ -7,8 +7,15 @@ import AdminLotteriesPage from './pages/AdminLotteriesPage';
 import { toast } from './lib/toast';
 import { testSupabaseConnection } from './api/lotteryApi';
 import { initializeSupabase } from './api/setupSupabase';
-
-// Ajoutez vos autres importations de pages ici
+import NotFoundPage from './pages/NotFoundPage';
+import HomePage from './pages/HomePage';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import ContactPage from './pages/ContactPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import CartPage from './pages/CartPage';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 
 function App() {
   // Effet pour initialiser Supabase au démarrage de l'application
@@ -49,13 +56,22 @@ function App() {
   }, []);
   
   return (
-    <div>
-      <Routes>
-        <Route path="/" element={<LotteriesPage />} />
-        <Route path="/lotteries" element={<LotteriesPage />} />
-        <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
-        {/* Ajoutez vos autres routes ici */}
-      </Routes>
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/lotteries" element={<LotteriesPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/product/:id" element={<ProductDetailPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </main>
+      <Footer />
       <Toaster />
     </div>
   );

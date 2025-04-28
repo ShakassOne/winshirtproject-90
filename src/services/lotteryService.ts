@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { ExtendedLottery } from '@/types/lottery';
-import { fetchLotteries, testSupabaseConnection } from '@/api/lotteryApi';
+import { fetchLotteries } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
 
 /**
@@ -19,8 +19,8 @@ export const useLotteries = (activeOnly: boolean = false) => {
         setLoading(true);
         console.log("lotteryService: Chargement des loteries...");
         
-        // Récupération directe via l'API (testSupabaseConnection intégré)
-        const allLotteries = await fetchLotteries(); // Remove forced refresh parameter
+        // Récupération directe via l'API
+        const allLotteries = await fetchLotteries();
         console.log("lotteryService: Loteries récupérées:", allLotteries.length);
         
         if (activeOnly) {
@@ -49,7 +49,7 @@ export const useLotteries = (activeOnly: boolean = false) => {
       setLoading(true);
       
       // Récupération directe via l'API
-      const allLotteries = await fetchLotteries(); // Remove forced refresh parameter
+      const allLotteries = await fetchLotteries();
       
       if (activeOnly) {
         setLotteries(allLotteries.filter(lottery => 
@@ -76,7 +76,7 @@ export const useLotteries = (activeOnly: boolean = false) => {
  */
 export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
-    return await fetchLotteries(); // Remove forceRefresh parameter
+    return await fetchLotteries();
   } catch (error) {
     console.error("lotteryService: Erreur lors de la récupération des loteries:", error);
     return [];
@@ -88,7 +88,7 @@ export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
  */
 export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
-    const allLotteries = await fetchLotteries(); // Remove forceRefresh parameter
+    const allLotteries = await fetchLotteries();
     return allLotteries.filter(lottery => 
       lottery.status === 'active' || lottery.status === 'relaunched'
     );
