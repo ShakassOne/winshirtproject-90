@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Database, AlertCircle, CheckCircle, XCircle, RefreshCw, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/toast';
-import { supabase, checkSupabaseConnection, forceSupabaseConnection, syncLocalDataToSupabase } from '@/lib/supabase';
-import { TablesData, TablesStatus, requiredTables } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
+import { syncLocalDataToSupabase, forceSupabaseConnection, checkSupabaseConnection } from '@/lib/supabase';
+import { ValidTableName, requiredTables } from '@/integrations/supabase/client';
 
 const SyncDebugTool: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -141,9 +141,14 @@ const SyncDebugTool: React.FC = () => {
     
     setIsLoading(true);
     try {
-      const success = await syncLocalDataToSupabase(table);
-      if (success) {
-        await checkTablesData();
+      // Ensure table is a valid table name before passing to syncLocalDataToSupabase
+      if (requiredTables.includes(table as ValidTableName)) {
+        const success = await syncLocalDataToSupabase(table as ValidTableName);
+        if (success) {
+          await checkTablesData();
+        }
+      } else {
+        toast.error(`Table invalide: ${table}`, { position: "bottom-right" });
       }
     } catch (e) {
       console.error(`Erreur lors de la synchronisation de ${table}:`, e);

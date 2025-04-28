@@ -1,7 +1,8 @@
 
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { ExtendedProduct } from '@/types/product';
-import { toast } from '@/lib/toast';
+import { ExtendedProduct } from "@/types/product";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/lib/toast";
+import { snakeToCamel, camelToSnake } from "@/lib/utils";
 
 // Helper function to save products to localStorage
 const saveProductsToLocalStorage = (products: ExtendedProduct[]) => {
@@ -22,6 +23,10 @@ const getNextProductId = (products: ExtendedProduct[]): number => {
 // Fonction pour récupérer tous les produits
 export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
   // Vérifier si Supabase est configuré
+  const isSupabaseConfigured = () => {
+    return Boolean(supabase && supabase.auth);
+  };
+
   if (!isSupabaseConfigured()) {
     console.log('Supabase n\'est pas configuré. Utilisation du localStorage uniquement.');
     const storedProducts = localStorage.getItem('products');

@@ -1,8 +1,11 @@
 
-import { camelToSnake, snakeToCamel } from './utils'; // Déplacé les fonctions utilitaires
+import { camelToSnake, snakeToCamel } from './utils'; // Import from utils instead
 import { toast } from './toast';
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
+import { supabase as supabaseInstance, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { ValidTableName, requiredTables } from '@/integrations/supabase/client';
+
+// Re-export the Supabase instance
+export const supabase = supabaseInstance;
 
 // Type definition for FTP configuration
 export const ftpConfig = {
@@ -30,6 +33,9 @@ export interface HomeIntroConfig {
   transitionTime: number;
   slides: SlideType[];
 }
+
+// Export camelToSnake and snakeToCamel from here as well for backward compatibility
+export { camelToSnake, snakeToCamel };
 
 // Vérifier si Supabase est configuré
 export const isSupabaseConfigured = () => {

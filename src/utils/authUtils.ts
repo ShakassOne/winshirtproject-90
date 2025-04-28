@@ -1,109 +1,140 @@
 
-import { User } from '@/types/auth';
-import { supabase } from '@/lib/supabase';
+import { Session, User } from "@supabase/supabase-js";
+import { toast } from "@/lib/toast";
+import { supabase } from "@/integrations/supabase/client"; // Fixed import
 
-// Simulate sending an email - for compatibility
-export const simulateSendEmail = (to: string, subject: string, body: string) => {
-  console.log(`[SIMULATION EMAIL] À: ${to}, Sujet: ${subject}`);
-  console.log(`[SIMULATION EMAIL] Corps du message: ${body}`);
-  
-  // Notification in the console to verify functionality
-  console.log(`[EMAIL ENVOYÉ] Un email a été envoyé à ${to}`);
-  
-  return true;
-};
+// Authentication state
+let currentUser: User | null = null;
+let currentSession: Session | null = null;
 
-// Convert Supabase user to our User type
-export const convertSupabaseUser = (supabaseUser: any): User => {
-  const userRole = supabaseUser.email === 'admin@winshirt.com' ? 'admin' : 'user';
-  
-  // Determine provider
-  let provider: 'email' | 'facebook' | 'google' = 'email';
-  if (supabaseUser.app_metadata?.provider === 'facebook') {
-    provider = 'facebook';
-  } else if (supabaseUser.app_metadata?.provider === 'google') {
-    provider = 'google';
-  }
-  
-  return {
-    id: parseInt(supabaseUser.id.substring(0, 8), 16), // Generate ID from UUID
-    name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Utilisateur',
-    email: supabaseUser.email || '',
-    role: userRole,
-    registrationDate: supabaseUser.created_at,
-    provider: provider,
-    profilePicture: supabaseUser.user_metadata?.avatar_url,
-    socialMediaDetails: {
-      providerId: supabaseUser.id,
-      displayName: supabaseUser.user_metadata?.name,
+// Store authentication state to localStorage for persistence
+export const storeAuthLocally = (user: User | null, session: Session | null) => {
+  try {
+    if (user && session) {
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      localStorage.setItem('auth_session', JSON.stringify(session));
+    } else {
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_session');
     }
-  };
-};
-
-// Generate simulated user data for social media logins
-export const generateSimulatedSocialUser = (provider: 'facebook' | 'google', randomId: number): Partial<User> => {
-  if (provider === 'facebook') {
-    // Facebook data simulation
-    return {
-      name: `Jean Dupont`, // Fictive name for demo
-      email: `jean.dupont${randomId}@facebook.com`,
-      profilePicture: "https://i.pravatar.cc/150?u=facebook" + randomId,
-      socialMediaDetails: {
-        providerId: `facebook-${randomId}`,
-        displayName: "Jean Dupont",
-        firstName: "Jean",
-        lastName: "Dupont",
-        isVerified: true
-      }
-    };
-  } else {
-    // Google data simulation
-    return {
-      name: `Marie Martin`, // Fictive name for demo
-      email: `marie.martin${randomId}@gmail.com`,
-      profilePicture: "https://i.pravatar.cc/150?u=google" + randomId,
-      socialMediaDetails: {
-        providerId: `google-${randomId}`,
-        displayName: "Marie Martin",
-        firstName: "Marie",
-        lastName: "Martin",
-        isVerified: true
-      }
-    };
+  } catch (e) {
+    console.error("Error storing auth locally:", e);
   }
 };
 
-// Load users from localStorage
-export const loadUsersFromStorage = (): User[] => {
-  const registeredUsers = localStorage.getItem('winshirt_users');
-  if (registeredUsers) {
-    try {
-      return JSON.parse(registeredUsers);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des utilisateurs:", error);
+// Get stored authentication from localStorage
+export const getStoredAuth = (): { user: User | null, session: Session | null } => {
+  try {
+    const userStr = localStorage.getItem('auth_user');
+    const sessionStr = localStorage.getItem('auth_session');
+    
+    const user = userStr ? JSON.parse(userStr) : null;
+    const session = sessionStr ? JSON.parse(sessionStr) : null;
+    
+    return { user, session };
+  } catch (e) {
+    console.error("Error retrieving stored auth:", e);
+    return { user: null, session: null };
+  }
+};
+
+// User login with email and password
+export const loginWithEmail = async (email: string, password: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      toast.error(`Échec de connexion: ${error.message}`);
+      return false;
     }
+    
+    if (data.user && data.session) {
+      currentUser = data.user;
+      currentSession = data.session;
+      storeAuthLocally(data.user, data.session);
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    console.error("Error during login:", e);
+    toast.error(`Erreur de connexion: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
+    return false;
   }
-  return [];
 };
 
-// Save users to localStorage
-export const saveUsersToStorage = (users: User[]): void => {
-  localStorage.setItem('winshirt_users', JSON.stringify(users));
+// User signup with email and password
+export const signupWithEmail = async (email: string, password: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    
+    if (error) {
+      toast.error(`Échec d'inscription: ${error.message}`);
+      return false;
+    }
+    
+    if (data.user && data.session) {
+      currentUser = data.user;
+      currentSession = data.session;
+      storeAuthLocally(data.user, data.session);
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    console.error("Error during signup:", e);
+    toast.error(`Erreur d'inscription: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
+    return false;
+  }
 };
 
-// Initialize users if needed
-export const initializeUsers = (): void => {
-  if (!localStorage.getItem('winshirt_users')) {
-    const initialUsers = [
-      {
-        id: 1,
-        name: 'Admin',
-        email: 'admin@winshirt.com',
-        role: 'admin',
-        registrationDate: new Date().toISOString(),
-        provider: 'email'
-      }
-    ];
-    localStorage.setItem('winshirt_users', JSON.stringify(initialUsers));
+// User logout
+export const logout = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      toast.error(`Échec de déconnexion: ${error.message}`);
+      return false;
+    }
+    
+    currentUser = null;
+    currentSession = null;
+    storeAuthLocally(null, null);
+    return true;
+  } catch (e) {
+    console.error("Error during logout:", e);
+    toast.error(`Erreur de déconnexion: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
+    return false;
   }
+};
+
+// Get current user
+export const getCurrentUser = (): User | null => {
+  if (currentUser) return currentUser;
+  
+  const { user } = getStoredAuth();
+  currentUser = user;
+  return user;
+};
+
+// Get current session
+export const getCurrentSession = (): Session | null => {
+  if (currentSession) return currentSession;
+  
+  const { session } = getStoredAuth();
+  currentSession = session;
+  return session;
+};
+
+// Check if user is authenticated
+export const isAuthenticated = (): boolean => {
+  const session = getCurrentSession();
+  return session !== null && new Date(session.expires_at * 1000) > new Date();
 };
