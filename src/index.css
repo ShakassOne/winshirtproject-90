@@ -349,3 +349,7 @@ select::-ms-input-placeholder {
 .dark button, input, optgroup, select, textarea {
     color: white;
 }
+.font-medium {
+    font-weight: 500;
+    color: white;
+}
