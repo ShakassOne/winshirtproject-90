@@ -1,6 +1,6 @@
 
 import { ExtendedLottery, Participant } from "@/types/lottery";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, checkSupabaseConnection } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
 
 // Function to test connection to Supabase
@@ -159,6 +159,14 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
 
 export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promise<ExtendedLottery | null> => {
   try {
+    // First, ensure we have a connection to Supabase
+    const connected = await checkSupabaseConnection();
+    if (!connected) {
+      console.error("Cannot create lottery: No connection to Supabase");
+      toast.error("Impossible de créer une loterie: Pas de connexion à Supabase", { position: "bottom-right" });
+      return null;
+    }
+    
     // Prepare data for Supabase (convert camelCase to snake_case)
     const supabaseData = {
       title: lottery.title,
@@ -183,7 +191,14 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
     
     if (error) {
       console.error("Error creating lottery in Supabase:", error);
-      throw error;
+      toast.error(`Erreur lors de la création: ${error.message}`, { position: "bottom-right" });
+      return null;
+    }
+    
+    if (!data) {
+      console.error("No data returned after lottery creation");
+      toast.error("Erreur: Aucune donnée retournée après création", { position: "bottom-right" });
+      return null;
     }
     
     const newLottery: ExtendedLottery = {
@@ -215,6 +230,14 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
 
 export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery>): Promise<ExtendedLottery | null> => {
   try {
+    // First, ensure we have a connection to Supabase
+    const connected = await checkSupabaseConnection();
+    if (!connected) {
+      console.error("Cannot update lottery: No connection to Supabase");
+      toast.error("Impossible de mettre à jour la loterie: Pas de connexion à Supabase", { position: "bottom-right" });
+      return null;
+    }
+    
     // Convert camelCase to snake_case for Supabase
     const supabaseData: any = {};
     
@@ -240,7 +263,14 @@ export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery
     
     if (error) {
       console.error(`Error updating lottery ${id} in Supabase:`, error);
-      throw error;
+      toast.error(`Erreur lors de la mise à jour: ${error.message}`, { position: "bottom-right" });
+      return null;
+    }
+    
+    if (!data) {
+      console.error("No data returned after lottery update");
+      toast.error("Erreur: Aucune donnée retournée après mise à jour", { position: "bottom-right" });
+      return null;
     }
     
     const updatedLottery: ExtendedLottery = {
@@ -265,7 +295,7 @@ export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery
     return updatedLottery;
   } catch (error) {
     console.error(`Error updating lottery ${id}:`, error);
-    toast.error(`Erreur lors de la mise à jour de la loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    toast.error(`Erreur lors de la mise à jour: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return null;
   }
 };

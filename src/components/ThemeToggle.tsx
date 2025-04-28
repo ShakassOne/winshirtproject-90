@@ -1,26 +1,60 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTheme } from 'next-themes';
 
 const ThemeToggle = () => {
-  const { theme, setTheme } = useTheme();
-
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    // Try to get the saved theme from localStorage
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    
+    // If no theme is saved, use the system preference
+    if (!savedTheme) {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      return prefersDark ? 'dark' : 'light';
+    }
+    
+    return savedTheme || 'dark';
+  });
+  
+  // Function to toggle the theme
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+  
+  // Apply the theme when it changes
+  useEffect(() => {
+    const root = window.document.documentElement;
+    
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+  
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="fixed top-4 right-4 z-50 rounded-full bg-winshirt-space/80 backdrop-blur-sm border border-winshirt-purple/30 hover:bg-winshirt-space/90"
-      aria-label="Toggle theme"
-    >
-      {theme === 'dark' ? (
-        <Sun className="h-6 w-6 text-yellow-400" />
-      ) : (
-        <Moon className="h-6 w-6 text-winshirt-purple" />
-      )}
-    </Button>
+    <div className="fixed bottom-4 right-4 z-50">
+      <Button 
+        onClick={toggleTheme} 
+        variant="outline" 
+        size="icon" 
+        className="rounded-full bg-winshirt-space-light border border-winshirt-purple/30"
+      >
+        {theme === 'dark' ? (
+          <Moon className="h-[1.2rem] w-[1.2rem] text-blue-200" />
+        ) : (
+          <Sun className="h-[1.2rem] w-[1.2rem] text-yellow-400" />
+        )}
+        <span className="sr-only">
+          {theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        </span>
+      </Button>
+    </div>
   );
 };
 
