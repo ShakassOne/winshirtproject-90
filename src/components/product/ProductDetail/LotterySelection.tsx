@@ -21,7 +21,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Chargement des loteries actives depuis le service centralisé
+  // Load active lotteries from the centralized service
   useEffect(() => {
     console.log("LotterySelection - Component mounted");
     
@@ -29,22 +29,22 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
       setIsLoading(true);
       try {
         const lotteries = await getActiveLotteries();
-        console.log("LotterySelection - Loteries actives chargées:", lotteries);
+        console.log("LotterySelection - Active lotteries loaded:", lotteries);
         setActiveLotteries(lotteries);
         
-        // Vérification de la cohérence des données sélectionnées
+        // Check consistency of selected data
         if (selectedLotteries.length > 0) {
-          console.log("LotterySelection - Vérification des loteries sélectionnées:", selectedLotteries);
+          console.log("LotterySelection - Verifying selected lotteries:", selectedLotteries);
           const validLotteryIds = lotteries.map(l => l.id.toString());
           const invalidSelections = selectedLotteries.filter(id => id && !validLotteryIds.includes(id));
           
           if (invalidSelections.length > 0) {
-            console.warn("LotterySelection - Certaines loteries sélectionnées ne sont pas valides:", invalidSelections);
+            console.warn("LotterySelection - Some selected lotteries are invalid:", invalidSelections);
           }
         }
         
       } catch (error) {
-        console.error("LotterySelection - Erreur lors du chargement des loteries:", error);
+        console.error("LotterySelection - Error loading lotteries:", error);
         setErrorMessage("Impossible de charger les loteries disponibles");
       } finally {
         setIsLoading(false);
@@ -53,6 +53,22 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     
     loadActiveLotteries();
   }, [selectedLotteries]);
+
+  // Set up interval to refresh lotteries periodically
+  useEffect(() => {
+    // Refresh lotteries every 30 seconds
+    const intervalId = setInterval(async () => {
+      try {
+        console.log("LotterySelection - Refreshing active lotteries");
+        const lotteries = await getActiveLotteries();
+        setActiveLotteries(lotteries);
+      } catch (error) {
+        console.error("LotterySelection - Error refreshing lotteries:", error);
+      }
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
 
   if (!tickets || tickets <= 0) return null;
 

@@ -1,6 +1,7 @@
 
 import { ExtendedLottery, Participant } from "@/types/lottery";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from '@/lib/toast';
 
 // Function to test connection to Supabase
 export const testSupabaseConnection = async (): Promise<boolean> => {
@@ -25,13 +26,35 @@ export const ensureLotteryTablesExist = async (): Promise<boolean> => {
   }
 };
 
+// Function to help with debugging
+const logStorageState = () => {
+  try {
+    const localData = localStorage.getItem('lotteries');
+    const sessionData = sessionStorage.getItem('lotteries');
+    console.log(`Storage debug: 
+      LocalStorage: ${localData ? JSON.parse(localData).length : 'empty'} lotteries
+      SessionStorage: ${sessionData ? JSON.parse(sessionData).length : 'empty'} lotteries`
+    );
+  } catch (e) {
+    console.error("Error logging storage state:", e);
+  }
+};
+
 export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
-    const { data, error } = await supabase.from('lotteries').select('*');
+    console.log("Attempting to fetch lotteries from Supabase...");
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('*')
+      .order('id', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error from Supabase when fetching lotteries:", error);
+      throw error;
+    }
     
-    return data.map((lottery: any) => ({
+    // Transform from snake_case to camelCase
+    const lotteries = data.map((lottery: any) => ({
       id: lottery.id,
       title: lottery.title,
       description: lottery.description || '',
@@ -45,10 +68,42 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       endDate: lottery.end_date,
       linkedProducts: lottery.linked_products || [],
     }));
+    
+    console.log(`Retrieved ${lotteries.length} lotteries from Supabase`);
+    
+    // Ensure data consistency by storing in both storages
+    if (lotteries.length > 0) {
+      localStorage.setItem('lotteries', JSON.stringify(lotteries));
+      sessionStorage.setItem('lotteries', JSON.stringify(lotteries));
+    }
+    
+    logStorageState();
+    return lotteries;
   } catch (error) {
-    console.error("Error fetching lotteries:", error);
+    console.error("Error fetching lotteries, falling back to local storage:", error);
+    
+    // Try to get from localStorage first
     const storedLotteries = localStorage.getItem('lotteries');
-    return storedLotteries ? JSON.parse(storedLotteries) : [];
+    if (storedLotteries) {
+      const parsedLotteries = JSON.parse(storedLotteries);
+      console.log(`Using ${parsedLotteries.length} lotteries from localStorage`);
+      // Also ensure session storage is consistent
+      sessionStorage.setItem('lotteries', storedLotteries);
+      return parsedLotteries;
+    }
+    
+    // If not in localStorage, try sessionStorage
+    const sessionLotteries = sessionStorage.getItem('lotteries');
+    if (sessionLotteries) {
+      const parsedLotteries = JSON.parse(sessionLotteries);
+      console.log(`Using ${parsedLotteries.length} lotteries from sessionStorage`);
+      // Sync back to localStorage for consistency
+      localStorage.setItem('lotteries', sessionLotteries);
+      return parsedLotteries;
+    }
+    
+    console.log("No lotteries found in any storage, returning empty array");
+    return [];
   }
 };
 
@@ -60,7 +115,10 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
       .eq('id', id)
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error(`Error fetching lottery ${id}:`, error);
+      throw error;
+    }
     
     return {
       id: data.id,
@@ -77,14 +135,208 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
       linkedProducts: data.linked_products || [],
     };
   } catch (error) {
-    console.error(`Error fetching lottery ${id}:`, error);
+    console.error(`Error fetching lottery ${id}, trying local storage:`, error);
+    
+    // Try localStorage first
     const storedLotteries = localStorage.getItem('lotteries');
     if (storedLotteries) {
       const lotteries = JSON.parse(storedLotteries);
       const lottery = lotteries.find((l: any) => l.id === id);
-      return lottery || null;
+      if (lottery) return lottery;
     }
+    
+    // Fall back to sessionStorage
+    const sessionLotteries = sessionStorage.getItem('lotteries');
+    if (sessionLotteries) {
+      const lotteries = JSON.parse(sessionLotteries);
+      const lottery = lotteries.find((l: any) => l.id === id);
+      if (lottery) return lottery;
+    }
+    
     return null;
+  }
+};
+
+export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promise<ExtendedLottery | null> => {
+  try {
+    // Prepare data for Supabase (convert camelCase to snake_case)
+    const supabaseData = {
+      title: lottery.title,
+      description: lottery.description,
+      image: lottery.image,
+      value: lottery.value,
+      status: lottery.status,
+      featured: lottery.featured || false,
+      target_participants: lottery.targetParticipants,
+      current_participants: lottery.currentParticipants || 0,
+      draw_date: lottery.drawDate,
+      end_date: lottery.endDate,
+      linked_products: lottery.linkedProducts || [],
+    };
+    
+    console.log("Creating lottery in Supabase:", supabaseData);
+    const { data, error } = await supabase
+      .from('lotteries')
+      .insert(supabaseData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error creating lottery in Supabase:", error);
+      throw error;
+    }
+    
+    const newLottery: ExtendedLottery = {
+      id: data.id,
+      title: data.title,
+      description: data.description || '',
+      image: data.image || '',
+      value: data.value,
+      status: data.status,
+      featured: data.featured || false,
+      targetParticipants: data.target_participants,
+      currentParticipants: data.current_participants || 0,
+      drawDate: data.draw_date,
+      endDate: data.end_date,
+      linkedProducts: data.linked_products || [],
+    };
+    
+    // Update local storage with the new lottery
+    updateLocalStorage(newLottery);
+    
+    toast.success(`Loterie "${lottery.title}" créée avec succès`, { position: "bottom-right" });
+    return newLottery;
+  } catch (error) {
+    console.error("Error creating lottery:", error);
+    toast.error(`Erreur lors de la création de la loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return null;
+  }
+};
+
+export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery>): Promise<ExtendedLottery | null> => {
+  try {
+    // Convert camelCase to snake_case for Supabase
+    const supabaseData: any = {};
+    
+    if (lottery.title !== undefined) supabaseData.title = lottery.title;
+    if (lottery.description !== undefined) supabaseData.description = lottery.description;
+    if (lottery.image !== undefined) supabaseData.image = lottery.image;
+    if (lottery.value !== undefined) supabaseData.value = lottery.value;
+    if (lottery.status !== undefined) supabaseData.status = lottery.status;
+    if (lottery.featured !== undefined) supabaseData.featured = lottery.featured;
+    if (lottery.targetParticipants !== undefined) supabaseData.target_participants = lottery.targetParticipants;
+    if (lottery.currentParticipants !== undefined) supabaseData.current_participants = lottery.currentParticipants;
+    if (lottery.drawDate !== undefined) supabaseData.draw_date = lottery.drawDate;
+    if (lottery.endDate !== undefined) supabaseData.end_date = lottery.endDate;
+    if (lottery.linkedProducts !== undefined) supabaseData.linked_products = lottery.linkedProducts;
+    
+    console.log(`Updating lottery ${id} in Supabase:`, supabaseData);
+    const { data, error } = await supabase
+      .from('lotteries')
+      .update(supabaseData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error(`Error updating lottery ${id} in Supabase:`, error);
+      throw error;
+    }
+    
+    const updatedLottery: ExtendedLottery = {
+      id: data.id,
+      title: data.title,
+      description: data.description || '',
+      image: data.image || '',
+      value: data.value,
+      status: data.status,
+      featured: data.featured || false,
+      targetParticipants: data.target_participants,
+      currentParticipants: data.current_participants || 0,
+      drawDate: data.draw_date,
+      endDate: data.end_date,
+      linkedProducts: data.linked_products || [],
+    };
+    
+    // Update the lottery in local storage
+    updateLocalStorage(updatedLottery);
+    
+    toast.success(`Loterie "${data.title}" mise à jour avec succès`, { position: "bottom-right" });
+    return updatedLottery;
+  } catch (error) {
+    console.error(`Error updating lottery ${id}:`, error);
+    toast.error(`Erreur lors de la mise à jour de la loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return null;
+  }
+};
+
+export const deleteLottery = async (id: number): Promise<boolean> => {
+  try {
+    console.log(`Deleting lottery ${id} from Supabase`);
+    const { error } = await supabase
+      .from('lotteries')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error(`Error deleting lottery ${id} from Supabase:`, error);
+      throw error;
+    }
+    
+    // Also delete from local storage
+    removeFromLocalStorage(id);
+    
+    toast.success("Loterie supprimée avec succès", { position: "bottom-right" });
+    return true;
+  } catch (error) {
+    console.error(`Error deleting lottery ${id}:`, error);
+    toast.error(`Erreur lors de la suppression de la loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return false;
+  }
+};
+
+// Helper function to update local storage with a new or updated lottery
+const updateLocalStorage = (lottery: ExtendedLottery) => {
+  try {
+    // Update localStorage
+    const localData = localStorage.getItem('lotteries');
+    let lotteries: ExtendedLottery[] = localData ? JSON.parse(localData) : [];
+    
+    // Remove existing lottery with same ID if it exists
+    lotteries = lotteries.filter(l => l.id !== lottery.id);
+    
+    // Add the new/updated lottery
+    lotteries.push(lottery);
+    
+    // Save back to both storage types
+    const jsonData = JSON.stringify(lotteries);
+    localStorage.setItem('lotteries', jsonData);
+    sessionStorage.setItem('lotteries', jsonData);
+    
+    console.log(`Updated lottery ${lottery.id} in local storage, now ${lotteries.length} lotteries`);
+  } catch (error) {
+    console.error("Error updating local storage:", error);
+  }
+};
+
+// Helper function to remove a lottery from local storage
+const removeFromLocalStorage = (id: number) => {
+  try {
+    // Update localStorage
+    const localData = localStorage.getItem('lotteries');
+    if (localData) {
+      let lotteries: ExtendedLottery[] = JSON.parse(localData);
+      lotteries = lotteries.filter(l => l.id !== id);
+      
+      // Save back to both storage types
+      const jsonData = JSON.stringify(lotteries);
+      localStorage.setItem('lotteries', jsonData);
+      sessionStorage.setItem('lotteries', jsonData);
+      
+      console.log(`Removed lottery ${id} from local storage, now ${lotteries.length} lotteries`);
+    }
+  } catch (error) {
+    console.error("Error removing from local storage:", error);
   }
 };
 

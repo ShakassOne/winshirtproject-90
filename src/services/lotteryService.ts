@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { ExtendedLottery } from '@/types/lottery';
 import { fetchLotteries } from '@/api/lotteryApi';
 import { toast } from '@/lib/toast';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Hook pour récupérer les loteries avec gestion d'état (chargement, erreurs)
@@ -42,11 +43,32 @@ export const useLotteries = (activeOnly: boolean = false) => {
     };
 
     getLotteries();
+
+    // Set up real-time subscription for lotteries
+    const channel = supabase
+      .channel('public:lotteries')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'lotteries' }, 
+        async (payload) => {
+          console.log("lotteryService: Real-time update received for lotteries", payload);
+          // Refresh data when changes are detected
+          getLotteries();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeOnly]);
   
   const refreshLotteries = async () => {
     try {
       setLoading(true);
+      
+      // Clear any cached data to ensure fresh fetch
+      localStorage.removeItem('lotteries');
+      sessionStorage.removeItem('lotteries');
       
       // Récupération directe via l'API
       const allLotteries = await fetchLotteries();
@@ -79,6 +101,7 @@ export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
     return await fetchLotteries();
   } catch (error) {
     console.error("lotteryService: Erreur lors de la récupération des loteries:", error);
+    toast.error("Erreur lors de la récupération des loteries", { position: "bottom-right" });
     return [];
   }
 };
@@ -89,11 +112,14 @@ export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
 export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
     const allLotteries = await fetchLotteries();
-    return allLotteries.filter(lottery => 
+    const activeLotteries = allLotteries.filter(lottery => 
       lottery.status === 'active' || lottery.status === 'relaunched'
     );
+    console.log(`getActiveLotteries: Found ${activeLotteries.length} active lotteries out of ${allLotteries.length} total`);
+    return activeLotteries;
   } catch (error) {
     console.error("lotteryService: Erreur lors de la récupération des loteries actives:", error);
+    toast.error("Erreur lors de la récupération des loteries actives", { position: "bottom-right" });
     return [];
   }
 };

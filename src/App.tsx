@@ -39,6 +39,16 @@ function App() {
           
           if (initialized) {
             toast.success("Configuration Supabase initialisée avec succès", { position: "bottom-right" });
+            
+            // Create helper functions for RLS policies
+            try {
+              const { error: fnError } = await createRlsHelperFunctions();
+              if (fnError) {
+                console.log("Les fonctions RLS existent peut-être déjà:", fnError);
+              }
+            } catch (err) {
+              console.error("Erreur lors de la création des fonctions helper RLS:", err);
+            }
           } else {
             toast.warning("Configuration Supabase partielle - certaines fonctionnalités pourraient ne pas fonctionner", { 
               position: "bottom-right" 
@@ -60,6 +70,12 @@ function App() {
     
     setupApp();
   }, []);
+  
+  // Helper function to create RLS helper functions in the database
+  const createRlsHelperFunctions = async () => {
+    const { error } = await supabase.rpc('create_rls_helper_functions');
+    return { error };
+  };
   
   return (
     <div className="flex flex-col min-h-screen">

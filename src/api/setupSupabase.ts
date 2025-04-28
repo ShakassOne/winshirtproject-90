@@ -24,6 +24,25 @@ export const initializeSupabase = async (): Promise<boolean> => {
       }
     }
 
+    // Create or update RLS policies for lotteries table
+    try {
+      // First disable RLS if it's enabled so we can adjust policies
+      await supabase.rpc('disable_rls_for_lotteries');
+      console.log("RLS temporairement désactivé pour mettre à jour les politiques");
+      
+      // Then create public access policies
+      await supabase.rpc('create_lottery_public_policies');
+      console.log("Politiques d'accès public créées avec succès");
+      
+      // Re-enable RLS with our new policies
+      await supabase.rpc('enable_rls_for_lotteries');
+      console.log("RLS réactivé avec nouvelles politiques");
+      
+    } catch (rlsError) {
+      console.log("Les politiques RLS existent peut-être déjà:", rlsError);
+      // Non-fatal error, continue
+    }
+
     return true;
   } catch (error) {
     console.error("Erreur lors de l'initialisation de Supabase:", error);
