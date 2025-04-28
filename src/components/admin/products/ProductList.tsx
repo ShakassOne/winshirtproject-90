@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 interface ProductListProps {
   products: ExtendedProduct[];
   selectedProductId: number | null;
+  loading?: boolean;
   onCreateProduct: () => void;
   onEditProduct: (id: number) => void;
   onDeleteProduct: (id: number) => void;
@@ -17,6 +18,7 @@ interface ProductListProps {
 const ProductList: React.FC<ProductListProps> = ({
   products,
   selectedProductId,
+  loading = false,
   onCreateProduct,
   onEditProduct,
   onDeleteProduct
@@ -26,7 +28,7 @@ const ProductList: React.FC<ProductListProps> = ({
   // Filtrer les produits par nom ou description
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchQuery.toLowerCase())
+    product.description?.toLowerCase().includes(searchQuery.toLowerCase() || '')
   );
   
   return (
@@ -51,95 +53,101 @@ const ProductList: React.FC<ProductListProps> = ({
         />
       </div>
       
-      <div className="space-y-3 max-h-[calc(100vh-400px)] overflow-y-auto pr-2">
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <p>Aucun produit trouvé</p>
-          </div>
-        ) : (
-          filteredProducts.map(product => (
-            <div
-              key={product.id}
-              className={`border p-3 rounded-md cursor-pointer transition-colors ${
-                selectedProductId === product.id
-                  ? 'border-winshirt-purple bg-winshirt-space-light'
-                  : 'border-gray-700 hover:border-winshirt-purple/50'
-              }`}
-              onClick={() => onEditProduct(product.id)}
-            >
-              <div className="flex gap-3 items-center">
-                <div className="w-16 h-16 overflow-hidden rounded bg-gray-800 flex-shrink-0">
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-500">
-                      No img
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex-grow min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-white text-ellipsis overflow-hidden whitespace-nowrap">
-                      {product.name}
-                    </h3>
-                    {product.allowCustomization && (
-                      <Badge className="bg-winshirt-blue-light text-xs flex items-center gap-1">
-                        <Palette size={10} />
-                      </Badge>
+      {loading ? (
+        <div className="text-center py-8 text-gray-400">
+          <p>Chargement des produits...</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-[calc(100vh-400px)] overflow-y-auto pr-2">
+          {filteredProducts.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <p>Aucun produit trouvé</p>
+            </div>
+          ) : (
+            filteredProducts.map(product => (
+              <div
+                key={product.id}
+                className={`border p-3 rounded-md cursor-pointer transition-colors ${
+                  selectedProductId === product.id
+                    ? 'border-winshirt-purple bg-winshirt-space-light'
+                    : 'border-gray-700 hover:border-winshirt-purple/50'
+                }`}
+                onClick={() => onEditProduct(product.id)}
+              >
+                <div className="flex gap-3 items-center">
+                  <div className="w-16 h-16 overflow-hidden rounded bg-gray-800 flex-shrink-0">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-500">
+                        No img
+                      </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-400 mt-0.5">
-                    {product.price.toFixed(2)} € - {product.type}
-                  </p>
                   
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    {product.productType && (
-                      <span className="text-xs bg-winshirt-space px-1.5 py-0.5 rounded text-gray-300">
-                        {product.productType}
-                      </span>
-                    )}
-                    {product.tickets && (
-                      <span className="text-xs bg-winshirt-purple/30 text-winshirt-purple-light px-1.5 py-0.5 rounded">
-                        {product.tickets} {product.tickets > 1 ? 'tickets' : 'ticket'}
-                      </span>
-                    )}
+                  <div className="flex-grow min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-white text-ellipsis overflow-hidden whitespace-nowrap">
+                        {product.name}
+                      </h3>
+                      {product.allowCustomization && (
+                        <Badge className="bg-winshirt-blue-light text-xs flex items-center gap-1">
+                          <Palette size={10} />
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      {product.price.toFixed(2)} € - {product.type}
+                    </p>
+                    
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {product.productType && (
+                        <span className="text-xs bg-winshirt-space px-1.5 py-0.5 rounded text-gray-300">
+                          {product.productType}
+                        </span>
+                      )}
+                      {product.tickets && (
+                        <span className="text-xs bg-winshirt-purple/30 text-winshirt-purple-light px-1.5 py-0.5 rounded">
+                          {product.tickets} {product.tickets > 1 ? 'tickets' : 'ticket'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex flex-col gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0 text-gray-400 hover:text-white"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditProduct(product.id);
-                    }}
-                  >
-                    <Edit size={16} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteProduct(product.id);
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+                  
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(product.id);
+                      }}
+                    >
+                      <Edit size={16} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteProduct(product.id);
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };

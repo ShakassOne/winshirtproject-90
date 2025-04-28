@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
@@ -82,17 +81,19 @@ export const useProducts = () => {
       } finally {
         setLoading(false);
       }
-    },
-    syncProductsToSupabase: async () => {
-      const isConnected = await checkSupabaseConnection();
-      if (!isConnected) {
-        toast.error("Impossible de synchroniser - Mode hors-ligne", { position: "bottom-right" });
-        return false;
-      }
-      
-      return await syncLocalDataToSupabase('products');
     }
   };
+};
+
+// Export function to sync products to Supabase
+export const syncProductsToSupabase = async (tableName: string): Promise<boolean> => {
+  const isConnected = await checkSupabaseConnection();
+  if (!isConnected) {
+    toast.error("Impossible de synchroniser - Mode hors-ligne", { position: "bottom-right" });
+    return false;
+  }
+  
+  return await syncLocalDataToSupabase(tableName);
 };
 
 // Récupérer tous les produits
