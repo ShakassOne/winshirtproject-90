@@ -145,8 +145,7 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
           default_visual_settings: product.defaultVisualSettings,
           visual_category_id: product.visualCategoryId
         }])
-        .select('*')
-        .single();
+        .select();
       
       if (error) {
         console.error("productService: Erreur lors de la création du produit:", error);
@@ -154,7 +153,7 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       }
       
       // Conversion du résultat en format camelCase
-      const createdProduct = snakeToCamel(data) as ExtendedProduct;
+      const createdProduct = data && data[0] ? snakeToCamel(data[0]) as ExtendedProduct : null;
       
       // Mettre à jour le stockage local pour garder la cohérence
       const existingProducts = localStorage.getItem('products') ? JSON.parse(localStorage.getItem('products')!) : [];
@@ -196,8 +195,7 @@ export const updateProduct = async (id: number, productData: Partial<ExtendedPro
         .from('products')
         .update(camelToSnake(productData))
         .eq('id', id)
-        .select('*')
-        .single();
+        .select();
       
       if (error) {
         console.error("productService: Erreur lors de la mise à jour du produit:", error);
@@ -206,7 +204,7 @@ export const updateProduct = async (id: number, productData: Partial<ExtendedPro
       }
       
       toast.success("Produit mis à jour avec succès", { position: "bottom-right" });
-      return snakeToCamel(data) as ExtendedProduct;
+      return data && data[0] ? snakeToCamel(data[0]) as ExtendedProduct : updatedProduct;
     } else {
       toast.success("Produit mis à jour localement (mode hors-ligne)", { position: "bottom-right" });
       return updatedProduct;
