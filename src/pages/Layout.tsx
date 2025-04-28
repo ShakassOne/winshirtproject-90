@@ -6,20 +6,56 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import DynamicBackground from '@/components/backgrounds/DynamicBackground';
 import { Toaster } from '@/components/ui/toaster';
-import { forceSupabaseConnection } from '@/lib/supabase';
+import { forceSupabaseConnection, checkRequiredTables, syncLocalDataToSupabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 
 const Layout = () => {
-  // Try to establish Supabase connection when app loads
+  // Try to establish Supabase connection and synchronize necessary data when app loads
   useEffect(() => {
-    const checkConnection = async () => {
+    const initializeApp = async () => {
       try {
-        await forceSupabaseConnection();
+        // Check theme from localStorage and apply it
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+          document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        } else {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', prefersDark);
+        }
+        
+        // Try to establish Supabase connection
+        const isConnected = await forceSupabaseConnection();
+        
+        if (isConnected) {
+          // Check required tables
+          const tablesStatus = await checkRequiredTables();
+          if (!tablesStatus.exists) {
+            console.warn("Missing required tables:", tablesStatus.missing);
+          }
+          
+          // Try to synchronize local data to Supabase if we have a connection
+          const localLotteries = localStorage.getItem('lotteries');
+          if (localLotteries) {
+            const parsedLotteries = JSON.parse(localLotteries);
+            if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
+              await syncLocalDataToSupabase('lotteries');
+            }
+          }
+          
+          const localVisuals = localStorage.getItem('visuals');
+          if (localVisuals) {
+            const parsedVisuals = JSON.parse(localVisuals);
+            if (Array.isArray(parsedVisuals) && parsedVisuals.length > 0) {
+              await syncLocalDataToSupabase('visuals');
+            }
+          }
+        }
       } catch (error) {
-        console.error("Error checking Supabase connection:", error);
+        console.error("Error initializing app:", error);
       }
     };
     
-    checkConnection();
+    initializeApp();
   }, []);
   
   return (

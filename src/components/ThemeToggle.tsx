@@ -5,36 +5,40 @@ import { Button } from '@/components/ui/button';
 
 const ThemeToggle = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    // Try to get the saved theme from localStorage
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    
-    // If no theme is saved, use the system preference
-    if (!savedTheme) {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      return prefersDark ? 'dark' : 'light';
+    if (typeof window !== 'undefined') {
+      // Try to get the saved theme from localStorage
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+      
+      // If no theme is saved, use the system preference
+      if (!savedTheme) {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        return prefersDark ? 'dark' : 'light';
+      }
+      
+      return savedTheme || 'dark';
     }
-    
-    return savedTheme || 'dark';
+    return 'dark';
   });
   
   // Function to toggle the theme
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
   };
   
   // Apply the theme when it changes
   useEffect(() => {
-    const root = window.document.documentElement;
-    
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    if (typeof window !== 'undefined') {
+      const root = window.document.documentElement;
+      
+      if (theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      
+      localStorage.setItem('theme', theme);
     }
-    
-    localStorage.setItem('theme', theme);
   }, [theme]);
   
   return (

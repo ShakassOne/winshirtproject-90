@@ -2,13 +2,12 @@
 import { Visual, VisualCategory } from "@/types/visual";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
-import { snakeToCamel, camelToSnake } from '@/lib/supabase';
+import { snakeToCamel, camelToSnake, checkSupabaseConnection } from '@/lib/supabase';
 
 // Function to test connection to Supabase
 export const testVisualsConnection = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.from('visuals').select('id').limit(1);
-    return !error;
+    return await checkSupabaseConnection();
   } catch (error) {
     console.error("Supabase visuals connection test failed:", error);
     return false;
@@ -19,6 +18,13 @@ export const testVisualsConnection = async (): Promise<boolean> => {
 export const fetchVisuals = async (): Promise<Visual[]> => {
   try {
     console.log("Attempting to fetch visuals from Supabase...");
+    const isConnected = await testVisualsConnection();
+    
+    if (!isConnected) {
+      console.log("No Supabase connection, falling back to local storage");
+      throw new Error("No Supabase connection");
+    }
+    
     const { data, error } = await supabase
       .from('visuals')
       .select('*')
@@ -66,6 +72,13 @@ export const fetchVisuals = async (): Promise<Visual[]> => {
 // Function to create a new visual
 export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual | null> => {
   try {
+    const isConnected = await testVisualsConnection();
+    if (!isConnected) {
+      toast.error("Impossible de créer un visuel - Mode hors-ligne", { position: "bottom-right" });
+      console.error("Cannot create visual - offline mode");
+      return null;
+    }
+    
     // Prepare data for Supabase (convert camelCase to snake_case)
     const supabaseData = {
       name: visual.name,
@@ -114,6 +127,12 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
 // Function to update a visual
 export const updateVisual = async (id: number, visual: Partial<Visual>): Promise<Visual | null> => {
   try {
+    const isConnected = await testVisualsConnection();
+    if (!isConnected) {
+      toast.error("Impossible de mettre à jour un visuel - Mode hors-ligne", { position: "bottom-right" });
+      return null;
+    }
+    
     // Convert to snake_case for Supabase
     const supabaseData: any = {};
     
@@ -163,6 +182,12 @@ export const updateVisual = async (id: number, visual: Partial<Visual>): Promise
 // Function to delete a visual
 export const deleteVisual = async (id: number): Promise<boolean> => {
   try {
+    const isConnected = await testVisualsConnection();
+    if (!isConnected) {
+      toast.error("Impossible de supprimer un visuel - Mode hors-ligne", { position: "bottom-right" });
+      return false;
+    }
+    
     console.log(`Deleting visual ${id} from Supabase`);
     const { error } = await supabase
       .from('visuals')
@@ -190,6 +215,12 @@ export const deleteVisual = async (id: number): Promise<boolean> => {
 // Function to synchronize visuals from local to Supabase
 export const syncVisualsToSupabase = async (): Promise<boolean> => {
   try {
+    const isConnected = await testVisualsConnection();
+    if (!isConnected) {
+      toast.error("Impossible de synchroniser - Mode hors-ligne", { position: "bottom-right" });
+      return false;
+    }
+    
     // Get local data
     const localData = localStorage.getItem('visuals');
     if (!localData) {
@@ -291,6 +322,11 @@ const removeFromLocalStorage = (id: number) => {
 // Function to fetch visual categories
 export const fetchVisualCategories = async (): Promise<VisualCategory[]> => {
   try {
+    const isConnected = await testVisualsConnection();
+    if (!isConnected) {
+      throw new Error("No Supabase connection");
+    }
+    
     const { data, error } = await supabase
       .from('visual_categories')
       .select('*')

@@ -1,18 +1,26 @@
+
 // Import the supabase client and required types directly
 import { 
   supabase, 
-  checkSupabaseConnection, 
+  checkSupabaseConnection as checkConnection,
   requiredTables,
-  type ValidTableName 
+  checkRequiredTables,
+  syncLocalDataToSupabase as syncData
 } from '@/integrations/supabase/client';
 
 // Re-export the required types and functions from client
 export { 
   supabase, 
-  checkSupabaseConnection, 
   requiredTables,
+  checkRequiredTables,
 };
-export type { ValidTableName };
+
+// Export renamed functions to avoid name clashes
+export const checkSupabaseConnection = checkConnection;
+export const syncLocalDataToSupabase = syncData;
+
+// Export type definitions with proper syntax for isolated modules
+export type { ValidTableName } from '@/integrations/supabase/client';
 
 // HomeIntro related types and functions
 export type SlideType = {
@@ -380,7 +388,7 @@ export const camelToSnake = (obj: any): any => {
 };
 
 // Fetch data from Supabase for a specific table
-export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<any[]> => {
+export const fetchDataFromSupabase = async (tableName: string): Promise<any[]> => {
   try {
     console.log(`Récupération des données depuis Supabase pour ${tableName}...`);
     
@@ -417,62 +425,6 @@ export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<
     }
     
     return [];
-  }
-};
-
-// Synchronize local data to Supabase
-export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
-  try {
-    console.log(`Synchronisation des données locales vers Supabase pour ${tableName}...`);
-    
-    const isConnected = await checkSupabaseConnection();
-    if (!isConnected) {
-      console.log("Pas de connexion à Supabase, impossible de synchroniser");
-      return false;
-    }
-    
-    // Récupérer les données locales
-    const localData = localStorage.getItem(tableName);
-    if (!localData) {
-      console.log(`Aucune donnée locale à synchroniser pour ${tableName}`);
-      return false;
-    }
-    
-    const parsedData = JSON.parse(localData);
-    if (!Array.isArray(parsedData) || parsedData.length === 0) {
-      console.log(`Données locales invalides pour ${tableName}`);
-      return false;
-    }
-    
-    // Convertir en snake_case pour Supabase
-    const snakeCaseData = parsedData.map(item => camelToSnake(item));
-    
-    // Supprimer toutes les données existantes
-    const { error: deleteError } = await supabase
-      .from(tableName)
-      .delete()
-      .gte('id', 0);  // Supprime toutes les lignes avec un ID >= 0
-    
-    if (deleteError) {
-      console.error(`Erreur lors de la suppression des données de ${tableName}:`, deleteError);
-      return false;
-    }
-    
-    // Insérer les nouvelles données
-    const { error: insertError } = await supabase
-      .from(tableName)
-      .insert(snakeCaseData);
-    
-    if (insertError) {
-      console.error(`Erreur lors de l'insertion des données dans ${tableName}:`, insertError);
-      return false;
-    }
-    
-    console.log(`Données de ${tableName} synchronisées avec succès`);
-    return true;
-  } catch (error) {
-    console.error(`Erreur lors de la synchronisation des données de ${tableName}:`, error);
-    return false;
   }
 };
 

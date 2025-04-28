@@ -32,6 +32,12 @@ export const saveBackgroundSetting = (pageId: string, setting: BackgroundSetting
       pageId
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allSettings));
+    
+    // Dispatch an event to notify that backgrounds have been updated
+    window.dispatchEvent(new CustomEvent('backgroundsUpdated', { 
+      detail: { pageId, setting }
+    }));
+    
     toast.success('Fond d\'écran mis à jour');
     return true;
   } catch (error) {
@@ -48,6 +54,12 @@ export const removeBackgroundSetting = (pageId: string): boolean => {
     if (allSettings[pageId]) {
       delete allSettings[pageId];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allSettings));
+      
+      // Dispatch an event to notify that backgrounds have been updated
+      window.dispatchEvent(new CustomEvent('backgroundsUpdated', { 
+        detail: { pageId, removed: true }
+      }));
+      
       toast.success('Fond d\'écran réinitialisé');
       return true;
     }
@@ -76,4 +88,30 @@ export const predefinedBackgrounds = {
     { name: 'Aurore boréale', value: '/backgrounds/aurora.jpg' },
     { name: 'Cosmos', value: '/backgrounds/cosmos.jpg' },
   ]
+};
+
+// Upload an image and return the URL
+export const uploadBackgroundImage = async (file: File): Promise<string | null> => {
+  try {
+    // For now, we're just creating a local object URL
+    // In a production environment, you would upload this to a server
+    const objectUrl = URL.createObjectURL(file);
+    return objectUrl;
+    
+    // When implementing real image uploads, use this:
+    // const formData = new FormData();
+    // formData.append('file', file);
+    // formData.append('folder', 'backgrounds');
+    // const response = await fetch('/api/upload', {
+    //   method: 'POST',
+    //   body: formData
+    // });
+    // if (!response.ok) throw new Error('Upload failed');
+    // const data = await response.json();
+    // return data.url;
+  } catch (error) {
+    console.error('Erreur lors du téléchargement de l\'image:', error);
+    toast.error('Erreur lors du téléchargement de l\'image');
+    return null;
+  }
 };

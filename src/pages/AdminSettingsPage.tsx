@@ -19,8 +19,9 @@ const AdminSettingsPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [updateTrigger, setUpdateTrigger] = useState<number>(0);
 
-  // Vérifier la connexion au chargement de la page
+  // Check connection when page loads
   useEffect(() => {
     const checkConnection = async () => {
       setIsLoading(true);
@@ -28,7 +29,7 @@ const AdminSettingsPage: React.FC = () => {
         const connected = await checkSupabaseConnection();
         setIsConnected(connected);
         
-        // Stocker l'état de connexion dans le localStorage pour la cohérence entre composants
+        // Save connection state in localStorage for consistency across components
         localStorage.setItem('supabase_connected', connected ? 'true' : 'false');
         
         if (connected) {
@@ -47,6 +48,17 @@ const AdminSettingsPage: React.FC = () => {
     };
     
     checkConnection();
+    
+    // Listen for background updates to force re-render
+    const handleBackgroundsUpdated = () => {
+      setUpdateTrigger(prev => prev + 1);
+    };
+    
+    window.addEventListener('backgroundsUpdated', handleBackgroundsUpdated);
+    
+    return () => {
+      window.removeEventListener('backgroundsUpdated', handleBackgroundsUpdated);
+    };
   }, []);
 
   const handleForceConnection = async () => {
@@ -75,7 +87,7 @@ const AdminSettingsPage: React.FC = () => {
 
   return (
     <>
-      <DynamicBackground />
+      <DynamicBackground key={`background-${updateTrigger}`} />
       <AdminNavigation />
       
       <section className="pt-32 pb-24">
