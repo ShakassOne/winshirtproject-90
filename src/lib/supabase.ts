@@ -2,6 +2,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
+// Re-export the required types and functions from client
+export { supabase, checkSupabaseConnection } from '@/integrations/supabase/client';
+export { requiredTables } from '@/integrations/supabase/client';
+export type { ValidTableName } from '@/integrations/supabase/client';
+
 // HomeIntro related types and functions
 export type SlideType = {
   id: number;
@@ -223,16 +228,6 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
     return false;
   }
 };
-
-// Re-export the required functions from @/integrations/supabase/client
-export { supabase } from '@/integrations/supabase/client';
-export { checkSupabaseConnection } from '@/integrations/supabase/client';
-export { requiredTables } from '@/integrations/supabase/client';
-export type { ValidTableName } from '@/integrations/supabase/client';
-
-// Vérifie la connexion à Supabase
-// Function already defined in client.ts, re-exported above
-// export const checkSupabaseConnection = async (): Promise<boolean> => { ... }
 
 // Function to create tables or fix schema issues if needed
 export const ensureDatabaseSchema = async (): Promise<boolean> => {

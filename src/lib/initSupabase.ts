@@ -1,10 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { syncLocalDataToSupabase, forceSupabaseConnection, checkSupabaseConnection } from '@/lib/supabase';
+import { syncLocalDataToSupabase, checkSupabaseConnection } from '@/lib/supabase';
 import { toast } from './toast';
 import { requiredTables } from '@/integrations/supabase/client';
-
-// Re-export forceSupabaseConnection from supabase.ts
-export const forceSupabaseConnection = forceSupabaseConnection;
 
 // Configuration pour la synchronisation
 export const syncConfig = {
@@ -65,7 +63,7 @@ export const syncData = async (forceSync = false): Promise<boolean> => {
 export const initDatabase = async (): Promise<boolean> => {
   try {
     // Vérifier d'abord la connexion
-    const isConnected = await forceConnection();
+    const isConnected = await checkSupabaseConnection();
     
     if (!isConnected) {
       console.error("Impossible de se connecter à Supabase");
@@ -81,3 +79,7 @@ export const initDatabase = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// Re-export forceSupabaseConnection from supabase.ts
+export { forceSupabaseConnection } from '@/lib/supabase';
+

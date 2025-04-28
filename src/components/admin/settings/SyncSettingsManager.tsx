@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { syncConfig, syncData, forceSupabaseConnection } from '@/lib/initSupabase';
-import { checkSupabaseConnection, requiredTables, ValidTableName } from '@/integrations/supabase/client';
-import { supabase, camelToSnake, snakeToCamel } from '@/lib/supabase';
+import { syncConfig, syncData } from '@/lib/initSupabase';
+import { checkSupabaseConnection, requiredTables, ValidTableName, forceSupabaseConnection, camelToSnake, snakeToCamel } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SyncSettingsManagerProps {
   isInitiallyConnected?: boolean;
