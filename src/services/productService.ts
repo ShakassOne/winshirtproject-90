@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchDataFromSupabase, syncLocalDataToSupabase, checkSupabaseConnection } from '@/lib/supabase';
+import { ValidTableName } from '@/integrations/supabase/client';
 
 /**
  * Hook pour récupérer les produits avec gestion d'état (chargement, erreurs)
@@ -86,13 +88,14 @@ export const useProducts = () => {
 };
 
 // Export function to sync products to Supabase
-export const syncProductsToSupabase = async (tableName: string): Promise<boolean> => {
+export const syncProductsToSupabase = async (): Promise<boolean> => {
   const isConnected = await checkSupabaseConnection();
   if (!isConnected) {
     toast.error("Impossible de synchroniser - Mode hors-ligne", { position: "bottom-right" });
     return false;
   }
   
+  const tableName: ValidTableName = 'products';
   return await syncLocalDataToSupabase(tableName);
 };
 
