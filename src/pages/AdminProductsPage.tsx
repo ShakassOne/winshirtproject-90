@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedProduct } from '@/types/product';
@@ -45,7 +44,7 @@ const AdminProductsPage: React.FC = () => {
   const handleSyncProducts = async () => {
     setSyncingProducts(true);
     try {
-      const success = await syncProductsToSupabase('products');
+      const success = await syncProductsToSupabase(); // Remove the argument here
       if (success) {
         await refreshProducts();
         toast.success("Produits synchronisés avec Supabase", { position: "bottom-right" });
