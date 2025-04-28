@@ -13,6 +13,7 @@ const ThemeToggle = () => {
       size="icon"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       className="fixed top-4 right-4 z-50 rounded-full bg-winshirt-space/80 backdrop-blur-sm border border-winshirt-purple/30 hover:bg-winshirt-space/90"
+      aria-label="Toggle theme"
     >
       {theme === 'dark' ? (
         <Sun className="h-6 w-6 text-yellow-400" />

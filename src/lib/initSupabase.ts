@@ -82,4 +82,3 @@ export const initDatabase = async (): Promise<boolean> => {
 
 // Re-export forceSupabaseConnection from supabase.ts
 export { forceSupabaseConnection } from '@/lib/supabase';
-
