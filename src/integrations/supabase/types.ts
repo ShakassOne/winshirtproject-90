@@ -373,6 +373,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      increment_lottery_participants: {
+        Args: { lottery_id_param: number }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

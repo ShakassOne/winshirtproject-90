@@ -62,26 +62,36 @@ export const useLotteries = (activeOnly: boolean = false) => {
     };
   }, [activeOnly]);
   
-  return { lotteries, loading, error, refreshLotteries: async () => {
-    setLoading(true);
-    try {
-      const allLotteries = await fetchLotteries();
-      if (activeOnly) {
-        setLotteries(allLotteries.filter(lottery => 
-          lottery.status === 'active' || lottery.status === 'relaunched'
-        ));
-      } else {
-        setLotteries(allLotteries);
+  return { 
+    lotteries, 
+    loading, 
+    error, 
+    refreshLotteries: async () => {
+      setLoading(true);
+      try {
+        const allLotteries = await fetchLotteries();
+        if (activeOnly) {
+          setLotteries(allLotteries.filter(lottery => 
+            lottery.status === 'active' || lottery.status === 'relaunched'
+          ));
+        } else {
+          setLotteries(allLotteries);
+        }
+        toast.success("Loteries mises à jour", { position: "bottom-right" });
+      } catch (err) {
+        console.error("Erreur lors du rafraîchissement des loteries:", err);
+        toast.error("Erreur lors de la mise à jour des loteries", { position: "bottom-right" });
+      } finally {
+        setLoading(false);
       }
-      toast.success("Loteries mises à jour", { position: "bottom-right" });
-    } catch (err) {
-      console.error("Erreur lors du rafraîchissement des loteries:", err);
-      toast.error("Erreur lors de la mise à jour des loteries", { position: "bottom-right" });
-    } finally {
-      setLoading(false);
     }
-  } };
+  };
 };
 
-// Re-export other functions
-export { getAllLotteries, getActiveLotteries } from '@/api/lotteryApi';
+// Export active lotteries filter function
+export const filterActiveLotteries = (lotteries: ExtendedLottery[]): ExtendedLottery[] => {
+  return lotteries.filter(lottery => 
+    lottery.status === 'active' || lottery.status === 'relaunched'
+  );
+};
+
