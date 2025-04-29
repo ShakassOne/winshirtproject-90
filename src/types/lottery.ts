@@ -1,3 +1,4 @@
+
 export interface ExtendedLottery {
   id: number;
   title: string;
@@ -36,17 +37,17 @@ export interface Lottery {
   title: string;
   description: string;
   value: number;
-  participants: number;
   targetParticipants: number; 
   currentParticipants?: number;
   status: "active" | "completed" | "relaunched" | "cancelled";
   image: string;
   linkedProducts?: number[];
+  participants: number; // Changed to be required for type consistency
   winnerId?: number;
   winnerName?: string;
   winnerEmail?: string;
   drawDate?: string | null;
-  endDate: string;
+  endDate: string; // Required field
   createdAt?: string;
   featured?: boolean;
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -15,7 +16,7 @@ const convertToExtendedLottery = (lottery: Lottery): ExtendedLottery => {
     participants.push({
       id: -i, // Temporary negative IDs to distinguish mock participants
       name: `Participant ${i+1}`,
-      email: "participant@example.com", // Ajout de l'email manquant
+      email: "participant@example.com",
       avatar: null
     });
   }
@@ -43,16 +44,33 @@ export const useLotteries = () => {
       const isConnected = await checkSupabaseConnection();
       
       if (isConnected) {
-        const supabaseLotteries = await fetchDataFromSupabase('lotteries') as Lottery[];
+        const supabaseLotteries = await fetchDataFromSupabase('lotteries') as any[];
         
         if (supabaseLotteries && supabaseLotteries.length > 0) {
           console.log("lotteryService: Loteries récupérées depuis Supabase:", supabaseLotteries.length);
           
+          // Convertir les données brutes en objets de type Lottery puis ExtendedLottery
+          const lotteryObjects = supabaseLotteries.map(rawLottery => ({
+            id: rawLottery.id,
+            title: rawLottery.title,
+            description: rawLottery.description || '',
+            value: rawLottery.value,
+            participants: rawLottery.current_participants || 0, // Pour satisfaire l'interface Lottery
+            targetParticipants: rawLottery.target_participants,
+            currentParticipants: rawLottery.current_participants || 0,
+            status: rawLottery.status,
+            image: rawLottery.image || '',
+            linkedProducts: rawLottery.linked_products || [],
+            endDate: rawLottery.end_date || new Date().toISOString(), // Une valeur par défaut pour satisfaire l'interface
+            drawDate: rawLottery.draw_date,
+            featured: rawLottery.featured || false
+          } as Lottery));
+          
           // Convertir en ExtendedLottery
-          const extendedLotteries = supabaseLotteries.map(lottery => convertToExtendedLottery(lottery));
+          const extendedLotteries = lotteryObjects.map(lottery => convertToExtendedLottery(lottery));
           
           setLotteries(extendedLotteries);
-          localStorage.setItem('lotteries', JSON.stringify(supabaseLotteries));
+          localStorage.setItem('lotteries', JSON.stringify(lotteryObjects));
           return;
         }
       }
@@ -60,12 +78,19 @@ export const useLotteries = () => {
       // Si aucune loterie n'est trouvée dans Supabase, utiliser les données locales
       const localData = localStorage.getItem('lotteries');
       if (localData) {
-        const localLotteries = JSON.parse(localData) as Lottery[];
+        const localLotteries = JSON.parse(localData);
         if (Array.isArray(localLotteries) && localLotteries.length > 0) {
           console.log("lotteryService: Loteries récupérées depuis localStorage:", localLotteries.length);
           
+          // S'assurer que chaque élément a les propriétés requises pour Lottery
+          const validLotteries = localLotteries.map(lottery => ({
+            ...lottery,
+            participants: lottery.currentParticipants || 0, // Pour type Lottery
+            endDate: lottery.endDate || new Date().toISOString() // Pour type Lottery
+          } as Lottery));
+          
           // Convertir en ExtendedLottery
-          const extendedLotteries = localLotteries.map(lottery => convertToExtendedLottery(lottery));
+          const extendedLotteries = validLotteries.map(lottery => convertToExtendedLottery(lottery));
           
           setLotteries(extendedLotteries);
           
@@ -80,11 +105,18 @@ export const useLotteries = () => {
       // Si aucune donnée n'est trouvée, utiliser les données mock
       console.log("lotteryService: Utilisation des données mock");
       
+      // Assurer que les mocks ont toutes les propriétés requises
+      const validMockLotteries = mockLotteries.map(lottery => ({
+        ...lottery,
+        participants: lottery.currentParticipants || 0,
+        endDate: lottery.endDate || new Date().toISOString()
+      } as Lottery));
+      
       // Convertir en ExtendedLottery
-      const extendedLotteries = mockLotteries.map(lottery => convertToExtendedLottery(lottery));
+      const extendedLotteries = validMockLotteries.map(lottery => convertToExtendedLottery(lottery));
       
       setLotteries(extendedLotteries);
-      localStorage.setItem('lotteries', JSON.stringify(mockLotteries));
+      localStorage.setItem('lotteries', JSON.stringify(validMockLotteries));
       
       // Tenter de synchroniser les données mock avec Supabase
       if (isConnected) {
@@ -96,7 +128,12 @@ export const useLotteries = () => {
       setError(err instanceof Error ? err : new Error('Erreur inconnue'));
       
       // En cas d'erreur, charger les données mock
-      const extendedLotteries = mockLotteries.map(lottery => convertToExtendedLottery(lottery));
+      const validMockLotteries = mockLotteries.map(lottery => ({
+        ...lottery,
+        participants: lottery.currentParticipants || 0,
+        endDate: lottery.endDate || new Date().toISOString()
+      } as Lottery));
+      const extendedLotteries = validMockLotteries.map(lottery => convertToExtendedLottery(lottery));
       
       setLotteries(extendedLotteries);
     } finally {
@@ -144,36 +181,31 @@ export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
     
     if (error) throw error;
     
-    return data ? data.map(lottery => ({
-      ...lottery,
-      participants: [] // Initialize with an empty array
-    })) : [];
+    return data ? data.map(rawLottery => {
+      // Convertir d'abord en Lottery avec les champs requis
+      const lottery: Lottery = {
+        id: rawLottery.id,
+        title: rawLottery.title,
+        description: rawLottery.description || '',
+        value: rawLottery.value,
+        participants: rawLottery.current_participants || 0, // Pour type Lottery
+        targetParticipants: rawLottery.target_participants,
+        currentParticipants: rawLottery.current_participants || 0,
+        status: rawLottery.status,
+        image: rawLottery.image || '',
+        linkedProducts: rawLottery.linked_products || [],
+        endDate: rawLottery.end_date || new Date().toISOString(), // Assurer qu'il y a une valeur
+        drawDate: rawLottery.draw_date,
+        featured: rawLottery.featured || false
+      };
+      
+      // Puis convertir en ExtendedLottery
+      return convertToExtendedLottery(lottery);
+    }) : [];
   } catch (error) {
     console.error("lotteryService: Erreur lors de la récupération des loteries:", error);
     toast.error("Impossible de récupérer les loteries", { position: "bottom-right" });
     return [];
-  }
-};
-
-// Fonction manquante : récupérer les loteries actives seulement
-export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('lotteries')
-      .select('*')
-      .eq('status', 'active');
-    
-    if (error) throw error;
-    
-    // Convertir en ExtendedLottery
-    return data ? data.map(lottery => convertToExtendedLottery(lottery as Lottery)) : [];
-  } catch (error) {
-    console.error("lotteryService: Erreur lors de la récupération des loteries actives:", error);
-    toast.error("Impossible de récupérer les loteries actives", { position: "bottom-right" });
-    
-    // En cas d'erreur, utiliser les données mock filtrées par statut actif
-    const activeMockLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
-    return activeMockLotteries.map(lottery => convertToExtendedLottery(lottery));
   }
 };
 
@@ -188,10 +220,33 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id' | 'parti
     if (error) throw error;
     
     toast.success("Loterie créée avec succès", { position: "bottom-right" });
-    return data ? {
-      ...data[0],
-      participants: [] // Initialize with an empty array
-    } : null;
+    
+    if (data && data[0]) {
+      // Convertir le résultat en ExtendedLottery
+      const rawLottery = data[0];
+      
+      // Créer d'abord un objet Lottery
+      const lotteryObj: Lottery = {
+        id: rawLottery.id,
+        title: rawLottery.title,
+        description: rawLottery.description || '',
+        value: rawLottery.value,
+        participants: 0, // Nouvelle loterie sans participants
+        targetParticipants: rawLottery.target_participants,
+        currentParticipants: 0,
+        status: rawLottery.status,
+        image: rawLottery.image || '',
+        linkedProducts: rawLottery.linked_products || [],
+        endDate: rawLottery.end_date || new Date().toISOString(),
+        drawDate: rawLottery.draw_date,
+        featured: rawLottery.featured || false
+      };
+      
+      // Puis le convertir en ExtendedLottery
+      return convertToExtendedLottery(lotteryObj);
+    }
+    
+    return null;
   } catch (error) {
     console.error("lotteryService: Erreur lors de la création de la loterie:", error);
     toast.error("Erreur lors de la création de la loterie", { position: "bottom-right" });
@@ -211,10 +266,28 @@ export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedL
     if (error) throw error;
     
     toast.success("Loterie mise à jour avec succès", { position: "bottom-right" });
-    return data ? {
-      ...data[0],
-      participants: [] // Initialize with an empty array
-    } : null;
+    if (data && data[0]) {
+      // Convertir en Lottery puis en ExtendedLottery
+      const rawLottery = data[0];
+      const lotteryObj: Lottery = {
+        id: rawLottery.id,
+        title: rawLottery.title,
+        description: rawLottery.description || '',
+        value: rawLottery.value,
+        participants: rawLottery.current_participants || 0,
+        targetParticipants: rawLottery.target_participants,
+        currentParticipants: rawLottery.current_participants || 0,
+        status: rawLottery.status,
+        image: rawLottery.image || '',
+        linkedProducts: rawLottery.linked_products || [],
+        endDate: rawLottery.end_date || new Date().toISOString(),
+        drawDate: rawLottery.draw_date,
+        featured: rawLottery.featured || false
+      };
+      
+      return convertToExtendedLottery(lotteryObj);
+    }
+    return null;
   } catch (error) {
     console.error("lotteryService: Erreur lors de la mise à jour de la loterie:", error);
     toast.error("Erreur lors de la mise à jour de la loterie", { position: "bottom-right" });

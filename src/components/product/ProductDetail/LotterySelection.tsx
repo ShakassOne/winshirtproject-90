@@ -63,8 +63,9 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     const intervalId = setInterval(async () => {
       try {
         console.log("LotterySelection - Refreshing active lotteries");
-        const lotteries = await getActiveLotteries();
-        setActiveLotteries(lotteries);
+        const allLotteries = await getAllLotteries();
+        const activeLots = allLotteries.filter(lottery => lottery.status === 'active');
+        setActiveLotteries(activeLots);
       } catch (error) {
         console.error("LotterySelection - Error refreshing lotteries:", error);
       }
