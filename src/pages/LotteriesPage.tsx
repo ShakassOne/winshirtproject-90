@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLotteries } from '@/services/lotteryService';
 import LotteryGrid from '@/components/lottery/LotteryGrid';

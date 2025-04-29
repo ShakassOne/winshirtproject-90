@@ -11,10 +11,11 @@ import { mockLotteries } from '@/data/mockData';
 const convertToExtendedLottery = (lottery: Lottery): ExtendedLottery => {
   // Create empty participants array based on current_participants count
   const participants: Participant[] = [];
-  for (let i = 0; i < (lottery.current_participants || 0); i++) {
+  for (let i = 0; i < (lottery.currentParticipants || 0); i++) {
     participants.push({
       id: -i, // Temporary negative IDs to distinguish mock participants
       name: `Participant ${i+1}`,
+      email: "participant@example.com", // Ajout de l'email manquant
       avatar: null
     });
   }
@@ -151,6 +152,28 @@ export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
     console.error("lotteryService: Erreur lors de la récupération des loteries:", error);
     toast.error("Impossible de récupérer les loteries", { position: "bottom-right" });
     return [];
+  }
+};
+
+// Fonction manquante : récupérer les loteries actives seulement
+export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('*')
+      .eq('status', 'active');
+    
+    if (error) throw error;
+    
+    // Convertir en ExtendedLottery
+    return data ? data.map(lottery => convertToExtendedLottery(lottery as Lottery)) : [];
+  } catch (error) {
+    console.error("lotteryService: Erreur lors de la récupération des loteries actives:", error);
+    toast.error("Impossible de récupérer les loteries actives", { position: "bottom-right" });
+    
+    // En cas d'erreur, utiliser les données mock filtrées par statut actif
+    const activeMockLotteries = mockLotteries.filter(lottery => lottery.status === 'active');
+    return activeMockLotteries.map(lottery => convertToExtendedLottery(lottery));
   }
 };
 

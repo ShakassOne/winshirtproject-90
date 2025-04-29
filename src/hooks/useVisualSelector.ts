@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Visual, ProductVisualSettings } from '@/types/visual';
 import { useVisuals } from '@/data/mockVisuals';
 import { PrintArea } from '@/types/product';
 
 const DEFAULT_VISUAL_SETTINGS: ProductVisualSettings = {
-  visualId: null,
   position: { x: 50, y: 50 },
   size: { width: 200, height: 200 },
   opacity: 0.8
@@ -76,8 +74,11 @@ export const useVisualSelector = (
           const { bounds } = activePrintArea;
           
           // Centrer le visuel dans la zone d'impression
-          const centerX = bounds.x + (bounds.width - (initialSettings?.size?.width || DEFAULT_VISUAL_SETTINGS.size.width)) / 2;
-          const centerY = bounds.y + (bounds.height - (initialSettings?.size?.height || DEFAULT_VISUAL_SETTINGS.size.height)) / 2;
+          const defaultWidth = (initialSettings?.size?.width || DEFAULT_VISUAL_SETTINGS.size?.width || 200);
+          const defaultHeight = (initialSettings?.size?.height || DEFAULT_VISUAL_SETTINGS.size?.height || 200);
+          
+          const centerX = bounds.x + (bounds.width - defaultWidth) / 2;
+          const centerY = bounds.y + (bounds.height - defaultHeight) / 2;
           
           setVisualSettings(prev => ({
             ...prev,

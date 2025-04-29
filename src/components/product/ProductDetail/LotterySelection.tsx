@@ -4,7 +4,7 @@ import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ExtendedLottery } from '@/types/lottery';
 import { Card } from '@/components/ui/card';
-import { getActiveLotteries } from '@/services/lotteryService';
+import { getAllLotteries } from '@/services/lotteryService';
 
 interface LotterySelectionProps {
   tickets: number;
@@ -28,7 +28,10 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     const loadActiveLotteries = async () => {
       setIsLoading(true);
       try {
-        const lotteries = await getActiveLotteries();
+        const allLotteries = await getAllLotteries();
+        // Filtrer uniquement les loteries actives
+        const lotteries = allLotteries.filter(lottery => lottery.status === 'active');
+        
         console.log("LotterySelection - Active lotteries loaded:", lotteries);
         setActiveLotteries(lotteries);
         

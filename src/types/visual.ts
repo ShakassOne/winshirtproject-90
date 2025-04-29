@@ -25,9 +25,14 @@ export interface ProductVisualSettings {
     x: number;
     y: number;
   };
+  size?: {  // Ajout de la propriété manquante
+    width: number;
+    height: number;
+  };
   scale?: number;
   rotation?: number;
   printAreaId?: number;
+  visualId?: number; // Ajout de la propriété manquante
   colorMode?: 'original' | 'monochrome' | 'custom';
   customColor?: string;
   opacity?: number;
