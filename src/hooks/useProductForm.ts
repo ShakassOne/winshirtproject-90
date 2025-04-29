@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedProduct, PrintArea } from '@/types/product';
 import { useForm } from 'react-hook-form';
 import { ExtendedLottery } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -35,7 +35,7 @@ export const useProductForm = (
       weight: 0,
       deliveryPrice: 0,
       allowCustomization: false,
-      printAreas: [] as any[],
+      printAreas: [] as PrintArea[],
       defaultVisualId: null,
       defaultVisualSettings: {},
       visualCategoryId: null,
@@ -116,7 +116,8 @@ export const useProductForm = (
         weight: Number(data.weight),
         deliveryPrice: Number(data.deliveryPrice),
         popularity: Number(data.popularity),
-        tickets: Number(data.tickets)
+        tickets: Number(data.tickets),
+        printAreas: data.printAreas || []
       };
 
       if (isCreating) {
@@ -129,7 +130,10 @@ export const useProductForm = (
           toast.success("Produit créé avec succès", { position: "bottom-right" });
         }
       } else if (selectedProductId) {
-        const updatedProduct = await updateProduct(selectedProductId, productData);
+        const updatedProduct = await updateProduct({
+          ...productData,
+          id: selectedProductId
+        });
         
         if (updatedProduct) {
           await refreshProducts();
@@ -198,26 +202,15 @@ export const useProductForm = (
   };
 
   // Print area handlers
-  const addPrintArea = () => {
+  const addPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
     const currentPrintAreas = form.getValues('printAreas') || [];
     form.setValue('printAreas', [...currentPrintAreas, { 
+      ...printArea,
       id: Date.now(), 
-      name: `Zone ${currentPrintAreas.length + 1}`,
-      width: 100, 
-      height: 100, 
-      posX: 50, 
-      posY: 50,
-      angle: 0,
-      constraints: {
-        minWidth: 50,
-        maxWidth: 200,
-        minHeight: 50,
-        maxHeight: 200,
-      }
     }]);
   };
 
-  const updatePrintArea = (id: number, data: any) => {
+  const updatePrintArea = (id: number, data: Partial<PrintArea>) => {
     const currentPrintAreas = form.getValues('printAreas') || [];
     const updatedAreas = currentPrintAreas.map(area => 
       area.id === id ? { ...area, ...data } : area

@@ -62,7 +62,8 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
         allowCustomization: item.allow_customization === true, // Conversion explicite en booléen
         defaultVisualId: item.default_visual_id,
         defaultVisualSettings: item.default_visual_settings,
-        visualCategoryId: item.visual_category_id
+        visualCategoryId: item.visual_category_id,
+        printAreas: item.print_areas || [], // Added to handle the new column
       };
     });
     
@@ -136,7 +137,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       allow_customization: product.allowCustomization === true, // Conversion explicite en booléen
       default_visual_id: product.defaultVisualId,
       default_visual_settings: product.defaultVisualSettings,
-      visual_category_id: product.visualCategoryId
+      visual_category_id: product.visualCategoryId,
+      print_areas: product.printAreas || [], // Added to handle the new column
     };
     
     console.log('Données envoyées à Supabase:', supabaseData); // Debug
@@ -179,7 +181,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       allowCustomization: data.allow_customization === true, // Conversion explicite en booléen
       defaultVisualId: data.default_visual_id,
       defaultVisualSettings: data.default_visual_settings,
-      visualCategoryId: data.visual_category_id
+      visualCategoryId: data.visual_category_id,
+      printAreas: data.print_areas || [], // Added to handle the new column
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -258,7 +261,8 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       allow_customization: product.allowCustomization === true, // Conversion explicite en booléen
       default_visual_id: product.defaultVisualId,
       default_visual_settings: product.defaultVisualSettings,
-      visual_category_id: product.visualCategoryId
+      visual_category_id: product.visualCategoryId,
+      print_areas: product.printAreas || [], // Added to handle the new column
     };
     
     console.log('Données envoyées à Supabase pour mise à jour:', supabaseData); // Debug
@@ -302,7 +306,8 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       allowCustomization: data.allow_customization === true, // Conversion explicite en booléen
       defaultVisualId: data.default_visual_id,
       defaultVisualSettings: data.default_visual_settings,
-      visualCategoryId: data.visual_category_id
+      visualCategoryId: data.visual_category_id,
+      printAreas: data.print_areas || [], // Added to handle the new column
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -392,5 +397,69 @@ export const deleteProduct = async (productId: number): Promise<boolean> => {
       toast.error("Erreur lors de la suppression du produit");
       return false;
     }
+  }
+};
+
+// Add function to sync products to Supabase
+export const syncProductsToSupabase = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    toast.error("Synchronisation impossible - Mode hors-ligne");
+    return false;
+  }
+
+  try {
+    const storedProducts = localStorage.getItem('products');
+    if (!storedProducts) {
+      toast.warning("Aucun produit local à synchroniser");
+      return false;
+    }
+
+    const products: ExtendedProduct[] = JSON.parse(storedProducts);
+    if (products.length === 0) {
+      toast.warning("Aucun produit trouvé");
+      return false;
+    }
+
+    // Convert data from camelCase to snake_case for Supabase
+    const supabaseData = products.map(product => ({
+      id: product.id,
+      name: product.name,
+      description: product.description || null,
+      price: product.price,
+      image: product.image,
+      secondary_image: product.secondaryImage || null,
+      sizes: product.sizes || [],
+      colors: product.colors || [],
+      type: product.type || 'standard',
+      product_type: product.productType || null,
+      sleeve_type: product.sleeveType || null,
+      linked_lotteries: product.linkedLotteries || [],
+      popularity: product.popularity || 0,
+      tickets: product.tickets || 1,
+      weight: product.weight || null,
+      delivery_price: product.deliveryPrice || null,
+      allow_customization: !!product.allowCustomization, // Ensure boolean
+      default_visual_id: product.defaultVisualId || null,
+      default_visual_settings: product.defaultVisualSettings || null,
+      visual_category_id: product.visualCategoryId || null,
+      print_areas: product.printAreas || [], // Added to handle the new column
+    }));
+
+    // Upsert (insert or update automatically)
+    const { error } = await supabase
+      .from('products')
+      .upsert(supabaseData, { 
+        onConflict: 'id',
+        ignoreDuplicates: false // Update existing records on conflict
+      });
+
+    if (error) throw error;
+
+    toast.success(`${products.length} produits synchronisés`);
+    return true;
+  } catch (error) {
+    console.error("Erreur de synchronisation:", error);
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return false;
   }
 };

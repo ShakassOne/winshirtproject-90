@@ -57,10 +57,10 @@ const Navbar: React.FC = () => {
                 Accueil
               </Link>
               <Link 
-                to="/products" 
-                className={`nav-link ${isActive('/products') ? 'active' : ''}`}
+                to="/shop" 
+                className={`nav-link ${isActive('/shop') ? 'active' : ''}`}
               >
-                Produits
+                Shop
               </Link>
               <Link 
                 to="/lotteries" 
@@ -125,11 +125,11 @@ const Navbar: React.FC = () => {
                     Accueil
                   </Link>
                   <Link 
-                    to="/products" 
-                    className={`nav-link text-center ${isActive('/products') ? 'active' : ''}`}
+                    to="/shop" 
+                    className={`nav-link text-center ${isActive('/shop') ? 'active' : ''}`}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Produits
+                    Shop
                   </Link>
                   <Link 
                     to="/lotteries" 

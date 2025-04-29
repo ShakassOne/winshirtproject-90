@@ -261,6 +261,7 @@ export type Database = {
           name: string
           popularity: number | null
           price: number
+          print_areas: Json | null
           product_type: string | null
           secondary_image: string | null
           sizes: string[] | null
@@ -284,6 +285,7 @@ export type Database = {
           name: string
           popularity?: number | null
           price: number
+          print_areas?: Json | null
           product_type?: string | null
           secondary_image?: string | null
           sizes?: string[] | null
@@ -307,6 +309,7 @@ export type Database = {
           name?: string
           popularity?: number | null
           price?: number
+          print_areas?: Json | null
           product_type?: string | null
           secondary_image?: string | null
           sizes?: string[] | null
@@ -375,30 +378,36 @@ export type Database = {
       visuals: {
         Row: {
           category_id: number | null
+          category_name: string | null
           created_at: string | null
           description: string | null
           id: number
           image_url: string
           name: string
           tags: string[] | null
+          updated_at: string | null
         }
         Insert: {
           category_id?: number | null
+          category_name?: string | null
           created_at?: string | null
           description?: string | null
           id?: number
           image_url: string
           name: string
           tags?: string[] | null
+          updated_at?: string | null
         }
         Update: {
           category_id?: number | null
+          category_name?: string | null
           created_at?: string | null
           description?: string | null
           id?: number
           image_url?: string
           name?: string
           tags?: string[] | null
+          updated_at?: string | null
         }
         Relationships: []
       }
