@@ -1,3 +1,4 @@
+
 import { Visual, VisualCategory } from "@/types/visual";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
@@ -105,7 +106,7 @@ export const updateVisual = async (id: number, visual: Partial<Visual>): Promise
 
     const supabaseData: any = {};
     if (visual.name) supabaseData.name = visual.name;
-    if (visual.description) supabaseData.description = visual.description;
+    if (visual.description !== undefined) supabaseData.description = visual.description;
     if (visual.image) supabaseData.image_url = visual.image;
     if (visual.categoryId) supabaseData.category_id = visual.categoryId;
     if (visual.categoryName) supabaseData.category_name = visual.categoryName;
@@ -166,7 +167,7 @@ export const deleteVisual = async (id: number): Promise<boolean> => {
   }
 };
 
-// Synchronisation fiable
+// Synchronisation fiable avec upsert au lieu de delete + insert
 export const syncVisualsToSupabase = async (): Promise<boolean> => {
   try {
     const isConnected = await testVisualsConnection();
@@ -187,10 +188,25 @@ export const syncVisualsToSupabase = async (): Promise<boolean> => {
       return false;
     }
 
+    // Préparer les données pour Supabase (convertir de camelCase à snake_case)
+    const supabaseData = visuals.map(visual => ({
+      id: visual.id,
+      name: visual.name,
+      description: visual.description || null,
+      image_url: visual.image,
+      category_id: visual.categoryId || null,
+      category_name: visual.categoryName || null,
+      created_at: visual.createdAt || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
+
     // Upsert (insert or update automatiquement)
     const { error } = await supabase
       .from('visuals')
-      .upsert(visuals, { onConflict: ['id'] });
+      .upsert(supabaseData, { 
+        onConflict: 'id',
+        ignoreDuplicates: false // Mettre à jour les enregistrements existants en cas de conflit
+      });
 
     if (error) throw error;
 
@@ -245,6 +261,7 @@ export const fetchVisualCategories = async (): Promise<VisualCategory[]> => {
     localStorage.setItem('visual_categories', JSON.stringify(categories));
     return categories;
   } catch (error) {
+    console.error("Erreur fetch visual categories:", error);
     const stored = localStorage.getItem('visual_categories');
     if (stored) return JSON.parse(stored);
     return [];

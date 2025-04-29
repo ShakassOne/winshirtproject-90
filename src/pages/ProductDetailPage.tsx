@@ -20,7 +20,7 @@ import ProductCustomization from '@/components/product/ProductDetail/ProductCust
 import AddToCartButton from '@/components/product/ProductDetail/AddToCartButton';
 
 const ProductDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [product, setProduct] = useState<ExtendedProduct | undefined>(undefined);
@@ -55,6 +55,7 @@ const ProductDetailPage: React.FC = () => {
   useEffect(() => {
     const loadProduct = () => {
       setLoading(true);
+      console.log("Loading product with ID:", productId);
       
       // D'abord, essayer de le charger depuis localStorage
       const savedProducts = localStorage.getItem('products');
@@ -62,9 +63,10 @@ const ProductDetailPage: React.FC = () => {
       if (savedProducts) {
         try {
           const parsedProducts = JSON.parse(savedProducts) as ExtendedProduct[];
-          const foundProduct = parsedProducts.find(p => p.id === Number(id));
+          const foundProduct = parsedProducts.find(p => p.id === Number(productId));
           
           if (foundProduct) {
+            console.log("Product found in localStorage:", foundProduct);
             setProduct(foundProduct);
             // Définir la catégorie par défaut si elle existe
             if (foundProduct.visualCategoryId) {
@@ -87,18 +89,23 @@ const ProductDetailPage: React.FC = () => {
       }
       
       // Fallback aux données mock
-      const mockProduct = mockProducts.find(p => p.id === Number(id)) as ExtendedProduct;
-      if (mockProduct?.visualCategoryId) {
-        setSelectedCategoryId(mockProduct.visualCategoryId);
+      const mockProduct = mockProducts.find(p => p.id === Number(productId)) as ExtendedProduct;
+      console.log("Using mockProduct:", mockProduct);
+      
+      if (mockProduct) {
+        if (mockProduct?.visualCategoryId) {
+          setSelectedCategoryId(mockProduct.visualCategoryId);
+        }
+        // Initialiser le tableau des loteries sélectionnées
+        setSelectedLotteries(Array(mockProduct?.tickets || 1).fill(''));
       }
+      
       setProduct(mockProduct);
-      // Initialiser le tableau des loteries sélectionnées
-      setSelectedLotteries(Array(mockProduct?.tickets || 1).fill(''));
       setLoading(false);
     };
     
     loadProduct();
-  }, [id]);
+  }, [productId]);
   
   // Charger les catégories de visuels
   useEffect(() => {

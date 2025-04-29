@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +11,7 @@ import { toast } from "@/lib/toast";
 import { fetchLotteryById } from "@/api/lotteryApi";
 
 const LotteryDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { lotteryId } = useParams<{ lotteryId: string }>();
   const navigate = useNavigate();
   const [lottery, setLottery] = useState<ExtendedLottery | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -21,14 +20,15 @@ const LotteryDetailPage: React.FC = () => {
     const loadLottery = async () => {
       setIsLoading(true);
       try {
-        if (!id) {
+        if (!lotteryId) {
           throw new Error("ID de loterie manquant");
         }
         
-        const lotteryId = Number(id);
-        const fetchedLottery = await fetchLotteryById(lotteryId);
+        const lotteryIdNum = Number(lotteryId);
+        const fetchedLottery = await fetchLotteryById(lotteryIdNum);
         
         if (fetchedLottery) {
+          console.log("Lottery loaded:", fetchedLottery);
           setLottery(fetchedLottery);
         } else {
           toast.error("Loterie non trouvée");
@@ -44,7 +44,7 @@ const LotteryDetailPage: React.FC = () => {
     };
     
     loadLottery();
-  }, [id, navigate]);
+  }, [lotteryId, navigate]);
   
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "Non définie";
