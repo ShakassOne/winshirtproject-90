@@ -1,3 +1,4 @@
+
 import { supabase as supabaseClient, requiredTables, ValidTableName, checkSupabaseConnection as checkConnection, checkRequiredTables as checkTables } from '@/integrations/supabase/client';
 import { snakeToCamel as snakeToC, camelToSnake as camelToS } from '@/lib/utils';
 
@@ -50,7 +51,53 @@ export const ensureDatabaseSchema = async (): Promise<boolean> => {
 export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
   try {
     console.log(`Syncing ${tableName} data to Supabase`);
-    // Simple implementation - a more robust version would be in syncManager.ts
+    
+    // Get local data from localStorage
+    const localData = localStorage.getItem(tableName);
+    if (!localData) {
+      console.log(`No local data found for ${tableName}`);
+      return false;
+    }
+    
+    let localItems = JSON.parse(localData);
+    if (!Array.isArray(localItems) || localItems.length === 0) {
+      console.log(`No items found in local data for ${tableName}`);
+      return false;
+    }
+    
+    console.log(`Found ${localItems.length} items in local data for ${tableName}`);
+    
+    // Special handling for visuals table: map 'image' to 'image_url' for Supabase compatibility
+    if (tableName === 'visuals') {
+      localItems = localItems.map(item => {
+        const modifiedItem = { ...item };
+        if (modifiedItem.image && !modifiedItem.image_url) {
+          modifiedItem.image_url = modifiedItem.image;
+          delete modifiedItem.image; // Remove the image property
+        }
+        return modifiedItem;
+      });
+    }
+    
+    // Convert camelCase properties to snake_case for Supabase
+    const snakeCaseItems = localItems.map(item => camelToSnake(item));
+    
+    console.log(`Prepared ${snakeCaseItems.length} items for upload to Supabase`);
+    
+    // Use upsert to add/update the records
+    const { error } = await supabase
+      .from(tableName)
+      .upsert(snakeCaseItems, { 
+        onConflict: 'id', 
+        ignoreDuplicates: false 
+      });
+    
+    if (error) {
+      console.error(`Error syncing ${tableName} to Supabase:`, error);
+      return false;
+    }
+    
+    console.log(`Successfully synced ${tableName} to Supabase`);
     return true;
   } catch (error) {
     console.error(`Error syncing ${tableName} to Supabase:`, error);
@@ -64,7 +111,19 @@ export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<
     console.log(`Fetching ${tableName} data from Supabase`);
     const { data, error } = await supabase.from(tableName).select('*');
     if (error) throw error;
-    return data || [];
+    
+    // Special handling for visuals table: map 'image_url' to 'image' for app compatibility
+    if (tableName === 'visuals' && data) {
+      return data.map(item => {
+        const camelCaseItem = snakeToCamel(item);
+        if (camelCaseItem.imageUrl && !camelCaseItem.image) {
+          camelCaseItem.image = camelCaseItem.imageUrl;
+        }
+        return camelCaseItem;
+      });
+    }
+    
+    return data ? data.map(item => snakeToCamel(item)) : [];
   } catch (error) {
     console.error(`Error fetching ${tableName} from Supabase:`, error);
     return [];

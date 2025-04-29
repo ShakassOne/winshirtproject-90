@@ -166,8 +166,21 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       return status;
     }
     
-    // Convert data from camelCase to snake_case for Supabase
-    const supabaseData = parsedData.map(item => camelToSnake(item));
+    // Convert data from camelCase to snake_case for Supabase with special handling for visuals table
+    const supabaseData = parsedData.map(item => {
+      // Special handling for visuals table
+      if (tableName === 'visuals') {
+        const processedItem = { ...item };
+        if (processedItem.image) {
+          processedItem.image_url = processedItem.image;
+          delete processedItem.image;
+        }
+        return camelToSnake(processedItem);
+      }
+      return camelToSnake(item);
+    });
+    
+    console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
     
     // Use upsert instead of delete+insert to preserve IDs and related references
     // This will update existing records and insert new ones
@@ -303,7 +316,19 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     }
     
     // Convert data from snake_case to camelCase for local storage
-    const localData = data.map(item => snakeToCamel(item));
+    // with special handling for visuals table
+    const localData = data.map(item => {
+      if (tableName === 'visuals') {
+        // Convert from Supabase format to local app format
+        const camelItem = snakeToCamel(item);
+        if (camelItem.imageUrl && !camelItem.image) {
+          camelItem.image = camelItem.imageUrl;
+          delete camelItem.imageUrl;
+        }
+        return camelItem;
+      }
+      return snakeToCamel(item);
+    });
     
     // Save to localStorage
     localStorage.setItem(tableName, JSON.stringify(localData));

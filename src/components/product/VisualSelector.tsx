@@ -11,7 +11,7 @@ interface VisualSelectorProps {
   categoryId?: number | null;
   activePosition?: 'front' | 'back';
   hideUploader?: boolean;
-  gridCols?: 2 | 3 | 4; // New prop to control grid columns
+  gridCols?: 2 | 3 | 4; // Prop to control grid columns
 }
 
 const VisualSelector: React.FC<VisualSelectorProps> = ({

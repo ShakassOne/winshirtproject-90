@@ -27,11 +27,12 @@ export const fetchVisuals = async (): Promise<Visual[]> => {
 
     if (error) throw error;
 
+    // Convertir image_url en image pour compatibilité avec l'application
     const visuals = data.map(visual => ({
       id: visual.id,
       name: visual.name,
       description: visual.description || '',
-      image: visual.image_url,
+      image: visual.image_url, // Map 'image_url' to 'image'
       categoryId: visual.category_id,
       categoryName: visual.category_name || '',
       createdAt: visual.created_at,
@@ -61,7 +62,7 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
     const supabaseData = {
       name: visual.name,
       description: visual.description,
-      image_url: visual.image,
+      image_url: visual.image, // Map 'image' to 'image_url' for Supabase
       category_id: visual.categoryId,
       category_name: visual.categoryName,
     };
@@ -81,7 +82,7 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
       id: data.id,
       name: data.name,
       description: data.description || '',
-      image: data.image_url,
+      image: data.image_url, // Map back to 'image'
       categoryId: data.category_id,
       categoryName: data.category_name || '',
       createdAt: data.created_at,
@@ -110,7 +111,7 @@ export const updateVisual = async (id: number, visual: Partial<Visual>): Promise
     const supabaseData: any = {};
     if (visual.name) supabaseData.name = visual.name;
     if (visual.description !== undefined) supabaseData.description = visual.description;
-    if (visual.image) supabaseData.image_url = visual.image;
+    if (visual.image) supabaseData.image_url = visual.image; // Convert to image_url
     if (visual.categoryId) supabaseData.category_id = visual.categoryId;
     if (visual.categoryName) supabaseData.category_name = visual.categoryName;
 
@@ -127,7 +128,7 @@ export const updateVisual = async (id: number, visual: Partial<Visual>): Promise
       id: data.id,
       name: data.name,
       description: data.description || '',
-      image: data.image_url,
+      image: data.image_url, // Convert back to image
       categoryId: data.category_id,
       categoryName: data.category_name || '',
       createdAt: data.created_at,
@@ -192,16 +193,19 @@ export const syncVisualsToSupabase = async (): Promise<boolean> => {
     }
 
     // Préparer les données pour Supabase (convertir de camelCase à snake_case)
+    // et assurer que 'image' est envoyée comme 'image_url'
     const supabaseData = visuals.map(visual => ({
       id: visual.id,
       name: visual.name,
       description: visual.description || null,
-      image_url: visual.image,
+      image_url: visual.image, // Map 'image' to 'image_url'
       category_id: visual.categoryId || null,
       category_name: visual.categoryName || null,
       created_at: visual.createdAt || new Date().toISOString(),
       updated_at: new Date().toISOString()
     }));
+
+    console.log("Données préparées pour Supabase:", supabaseData);
 
     // Upsert (insert or update automatiquement)
     const { error } = await supabase
@@ -211,7 +215,11 @@ export const syncVisualsToSupabase = async (): Promise<boolean> => {
         ignoreDuplicates: false // Mettre à jour les enregistrements existants en cas de conflit
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erreur lors de l'upsert:", error);
+      toast.error(`Erreur de synchronisation: ${error.message}`);
+      throw error;
+    }
 
     toast.success(`${visuals.length} visuels synchronisés`);
     return true;
