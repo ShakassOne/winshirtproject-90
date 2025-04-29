@@ -132,11 +132,11 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ isInitiallyCo
         setIsConnected(true);
         localStorage.setItem('supabase_connected', 'true');
       }
-      
+    
       // Récupérer les données du localStorage
       const localData = localStorage.getItem(table);
       let parsedData = [];
-      
+    
       if (localData) {
         try {
           parsedData = JSON.parse(localData);
@@ -145,84 +145,64 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ isInitiallyCo
           console.error(`Error parsing localStorage data for ${table}:`, e);
         }
       }
-      
+    
       if (!Array.isArray(parsedData) || parsedData.length === 0) {
         toast.warning(`Pas de données locales pour ${table}`, { position: "top-right" });
         setIsLoading(prev => ({ ...prev, [table]: false }));
         setSyncSuccess(prev => ({ ...prev, [table]: false }));
         return;
       }
-      
+    
       // Conversion des données camelCase vers snake_case pour Supabase
       const snakeCaseData = parsedData.map(item => camelToSnake(item));
-      
-      // Effacer les données existantes
-      const { error: deleteError } = await supabase
+    
+      // Utiliser upsert au lieu de delete+insert pour préserver les données existantes
+      const { error: upsertError } = await supabase
         .from(table)
-        .delete()
-        .gt('id', 0);
-        
-      if (deleteError) {
-        console.error(`Error clearing ${table} table:`, deleteError);
-        toast.error(`Erreur lors de la suppression des données: ${deleteError.message}`, { position: "top-right" });
-        setIsLoading(prev => ({ ...prev, [table]: false }));
+        .upsert(snakeCaseData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
+      
+      if (upsertError) {
+        console.error(`Error upserting data to ${table}:`, upsertError);
+        toast.error(`Erreur lors de la synchronisation: ${upsertError.message}`, { position: "top-right" });
         setSyncSuccess(prev => ({ ...prev, [table]: false }));
+      
+        setIsLoading(prev => ({ ...prev, [table]: false }));
         return;
       }
+    
+      setSyncSuccess(prev => ({ ...prev, [table]: true }));
+    
+      toast.success(`Synchronisation réussie pour ${table} (${parsedData.length} éléments)`, { position: "top-right" });
+    
+      // Vérifier le résultat
+      const { count, error } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true });
       
-      // Insérer les nouvelles données
-      const batchSize = 25;
-      let allSuccess = true;
+      console.log(`Verified ${count} items in Supabase for ${table}`);
+    
+      // Récupérer les données depuis Supabase pour mettre à jour le localStorage
+      const { data, error: fetchError } = await supabase
+        .from(table)
+        .select('*');
       
-      for (let i = 0; i < snakeCaseData.length; i += batchSize) {
-        const batch = snakeCaseData.slice(i, i + batchSize);
-        
-        const { error: insertError } = await supabase
-          .from(table)
-          .insert(batch);
-          
-        if (insertError) {
-          console.error(`Error inserting batch to ${table}:`, insertError);
-          toast.error(`Erreur lors de l'insertion des données: ${insertError.message}`, { position: "top-right" });
-          allSuccess = false;
-          break;
-        }
+      if (!fetchError && data) {
+        // Convertir les données snake_case en camelCase
+        const camelCaseData = data.map(item => snakeToCamel(item));
+      
+        // Mettre à jour le localStorage
+        localStorage.setItem(table, JSON.stringify(camelCaseData));
+        console.log(`Updated localStorage with ${camelCaseData.length} items for ${table}`);
       }
-      
-      setSyncSuccess(prev => ({ ...prev, [table]: allSuccess }));
-      
-      if (allSuccess) {
-        toast.success(`Synchronisation réussie pour ${table} (${parsedData.length} éléments)`, { position: "top-right" });
-        
-        // Vérifier le résultat
-        const { count, error } = await supabase
-          .from(table)
-          .select('*', { count: 'exact', head: true });
-          
-        console.log(`Verified ${count} items in Supabase for ${table}`);
-        
-        // Récupérer les données depuis Supabase pour mettre à jour le localStorage
-        const { data, error: fetchError } = await supabase
-          .from(table)
-          .select('*');
-          
-        if (!fetchError && data) {
-          // Convertir les données snake_case en camelCase
-          const camelCaseData = data.map(item => snakeToCamel(item));
-          
-          // Mettre à jour le localStorage
-          localStorage.setItem(table, JSON.stringify(camelCaseData));
-          console.log(`Updated localStorage with ${camelCaseData.length} items for ${table}`);
-        }
-        
-        // Mettre à jour les statistiques
-        checkDataExistence();
-      } else {
-        toast.error(`Échec de synchronisation pour ${table}`, { position: "top-right" });
-      }
-    } catch (error) {
+    
+      // Mettre à jour les statistiques
+      checkDataExistence();
+    } catch (error: any) {
       console.error(`Erreur lors de la synchronisation de ${table}:`, error);
-      toast.error(`Erreur lors de la synchronisation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
+      toast.error(`Erreur lors de la synchronisation: ${error.message || 'Erreur inconnue'}`, { position: "top-right" });
       setSyncSuccess(prev => ({ ...prev, [table]: false }));
     } finally {
       setIsLoading(prev => ({ ...prev, [table]: false }));

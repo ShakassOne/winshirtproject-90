@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -436,24 +435,17 @@ export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promis
     const parsedData = JSON.parse(localData);
     if (!Array.isArray(parsedData) || parsedData.length === 0) return false;
     
-    // Clear existing data
-    const { error: deleteError } = await supabase
+    // Use upsert instead of delete+insert
+    // This preserves any data created directly in Supabase while updating local changes
+    const { error: upsertError } = await supabase
       .from(tableName)
-      .delete()
-      .neq('id', 0);
+      .upsert(parsedData, {
+        onConflict: 'id',
+        ignoreDuplicates: false // Update existing records when there's a conflict
+      });
     
-    if (deleteError) {
-      console.error(`Error clearing ${tableName} table:`, deleteError);
-      return false;
-    }
-    
-    // Insert new data
-    const { error: insertError } = await supabase
-      .from(tableName)
-      .insert(parsedData);
-    
-    if (insertError) {
-      console.error(`Error inserting data to ${tableName}:`, insertError);
+    if (upsertError) {
+      console.error(`Error upserting data to ${tableName}:`, upsertError);
       return false;
     }
     
