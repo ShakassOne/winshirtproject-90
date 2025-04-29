@@ -10,7 +10,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 
 const LotteriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const { lotteries, loading, error, refreshLotteries } = useLotteries();
+  const { lotteries, isLoading, error, refreshLotteries } = useLotteries();
   
   const safeFilteredLotteries = activeFilter === 'all' 
     ? lotteries 
@@ -19,7 +19,7 @@ const LotteriesPage: React.FC = () => {
   // Check if there are featured lotteries
   const hasFeaturedLotteries = lotteries.some(lottery => lottery.featured);
   
-  if (loading) {
+  if (isLoading) {
     return (
       <>
         <StarBackground />

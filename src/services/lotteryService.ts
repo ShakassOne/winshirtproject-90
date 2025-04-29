@@ -19,7 +19,9 @@ export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
       console.error("Error fetching active lotteries from Supabase:", error);
       // Fall back to local storage and filter active lotteries
       const allLotteries = getLocalLotteries();
-      return allLotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+      return allLotteries
+        .filter(lottery => lottery.status === 'active')
+        .map(convertToExtendedLottery);
     }
     
     if (data && data.length > 0) {
@@ -39,7 +41,9 @@ export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
         endDate: lottery.endDate,
         drawDate: lottery.drawDate,
         featured: lottery.featured || false,
-        linkedProducts: lottery.linkedProducts || []
+        linkedProducts: lottery.linkedProducts || [],
+        participants: [], // Initialize with empty array to match ExtendedLottery type
+        winner: null    // Initialize with null to match ExtendedLottery type
       }));
       
       return extendedLotteries;
@@ -47,17 +51,41 @@ export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
     
     // If no data in Supabase, fall back to local storage and filter active lotteries
     const allLotteries = getLocalLotteries();
-    return allLotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+    return allLotteries
+      .filter(lottery => lottery.status === 'active')
+      .map(convertToExtendedLottery);
   } catch (error) {
     console.error("Error in getActiveLotteries:", error);
     // Fall back to local storage and filter active lotteries
     const allLotteries = getLocalLotteries();
-    return allLotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+    return allLotteries
+      .filter(lottery => lottery.status === 'active')
+      .map(convertToExtendedLottery);
   }
 };
 
+// Helper function to convert Lottery to ExtendedLottery
+const convertToExtendedLottery = (lottery: Lottery): ExtendedLottery => {
+  return {
+    id: lottery.id,
+    title: lottery.title,
+    description: lottery.description,
+    value: lottery.value,
+    targetParticipants: lottery.targetParticipants,
+    currentParticipants: lottery.currentParticipants || 0,
+    status: lottery.status,
+    image: lottery.image,
+    linkedProducts: lottery.linkedProducts || [],
+    participants: [], // Initialize with empty array
+    winner: null,     // Initialize with null
+    drawDate: lottery.drawDate,
+    endDate: lottery.endDate,
+    featured: lottery.featured || false
+  };
+};
+
 // Create a useLotteries hook for convenience
-export const useLotteries = () => {
+export const useLotteries = (activeOnly: boolean = false) => {
   const [lotteries, setLotteries] = React.useState<ExtendedLottery[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
@@ -66,8 +94,13 @@ export const useLotteries = () => {
     const fetchLotteries = async () => {
       try {
         setIsLoading(true);
-        const data = await getAllLotteries();
-        setLotteries(data as ExtendedLottery[]);
+        let data;
+        if (activeOnly) {
+          data = await getActiveLotteries();
+        } else {
+          data = (await getAllLotteries()).map(convertToExtendedLottery);
+        }
+        setLotteries(data);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Unknown error fetching lotteries'));
       } finally {
@@ -76,9 +109,34 @@ export const useLotteries = () => {
     };
 
     fetchLotteries();
-  }, []);
+  }, [activeOnly]);
 
-  return { lotteries, isLoading, error };
+  const refreshLotteries = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      let data;
+      if (activeOnly) {
+        data = await getActiveLotteries();
+      } else {
+        data = (await getAllLotteries()).map(convertToExtendedLottery);
+      }
+      setLotteries(data);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error refreshing lotteries'));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeOnly]);
+
+  return { 
+    lotteries, 
+    isLoading, 
+    loading: isLoading, // Alias for backward compatibility
+    error, 
+    refreshLotteries 
+  };
 };
 
 // Function to get all lotteries

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedProduct } from '@/types/product';
@@ -17,7 +16,7 @@ import { useLotteries } from '@/services/lotteryService';
 const AdminProductsPage: React.FC = () => {
   // Utiliser le hook useProducts
   const { products, loading: productsLoading, error: productsError, refreshProducts } = useProducts();
-  const { lotteries, loading: lotteriesLoading } = useLotteries(true); // Récupérer seulement les loteries actives
+  const { lotteries, isLoading: lotteriesLoading } = useLotteries();
   
   const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
   const [syncingProducts, setSyncingProducts] = useState(false);

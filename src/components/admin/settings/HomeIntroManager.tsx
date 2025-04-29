@@ -70,6 +70,7 @@ const HomeIntroManager: React.FC = () => {
       id: newSlideId,
       title: "Nouveau slide",
       subtitle: "Description du nouveau slide",
+      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb", // Required field
       buttonText: "En savoir plus",
       buttonLink: "/",
       backgroundImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
