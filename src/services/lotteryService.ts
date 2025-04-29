@@ -17,7 +17,7 @@ const convertToExtendedLottery = (lottery: Lottery): ExtendedLottery => {
       id: -i, // Temporary negative IDs to distinguish mock participants
       name: `Participant ${i+1}`,
       email: "participant@example.com",
-      avatar: null
+      avatar: undefined
     });
   }
   
@@ -61,7 +61,8 @@ export const useLotteries = () => {
             status: rawLottery.status,
             image: rawLottery.image || '',
             linkedProducts: rawLottery.linked_products || [],
-            endDate: rawLottery.end_date || new Date().toISOString(), // Une valeur par défaut pour satisfaire l'interface
+            // Use the correct format for endDate mapping from end_date
+            endDate: rawLottery.end_date || new Date().toISOString(), // Fixed to match the Lottery interface
             drawDate: rawLottery.draw_date,
             featured: rawLottery.featured || false
           } as Lottery));
@@ -86,7 +87,8 @@ export const useLotteries = () => {
           const validLotteries = localLotteries.map(lottery => ({
             ...lottery,
             participants: lottery.currentParticipants || 0, // Pour type Lottery
-            endDate: lottery.endDate || new Date().toISOString() // Pour type Lottery
+            // Ensure endDate is set properly from either endDate or end_date
+            endDate: lottery.endDate || lottery.end_date || new Date().toISOString() // Fixed to include both possible property names
           } as Lottery));
           
           // Convertir en ExtendedLottery
@@ -109,7 +111,8 @@ export const useLotteries = () => {
       const validMockLotteries = mockLotteries.map(lottery => ({
         ...lottery,
         participants: lottery.currentParticipants || 0,
-        endDate: lottery.endDate || new Date().toISOString()
+        // Ensure endDate is set properly from either endDate or end_date
+        endDate: lottery.endDate || lottery.end_date || new Date().toISOString() // Fixed to include both possible property names
       } as Lottery));
       
       // Convertir en ExtendedLottery
@@ -194,7 +197,7 @@ export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
         status: rawLottery.status,
         image: rawLottery.image || '',
         linkedProducts: rawLottery.linked_products || [],
-        endDate: rawLottery.end_date || new Date().toISOString(), // Assurer qu'il y a une valeur
+        endDate: rawLottery.end_date || new Date().toISOString(), // Ensuring endDate is properly mapped
         drawDate: rawLottery.draw_date,
         featured: rawLottery.featured || false
       };
@@ -237,7 +240,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id' | 'parti
         status: rawLottery.status,
         image: rawLottery.image || '',
         linkedProducts: rawLottery.linked_products || [],
-        endDate: rawLottery.end_date || new Date().toISOString(),
+        endDate: rawLottery.end_date || new Date().toISOString(), // Fixed to use end_date
         drawDate: rawLottery.draw_date,
         featured: rawLottery.featured || false
       };
@@ -280,7 +283,7 @@ export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedL
         status: rawLottery.status,
         image: rawLottery.image || '',
         linkedProducts: rawLottery.linked_products || [],
-        endDate: rawLottery.end_date || new Date().toISOString(),
+        endDate: rawLottery.end_date || new Date().toISOString(), // Fixed to use end_date
         drawDate: rawLottery.draw_date,
         featured: rawLottery.featured || false
       };
