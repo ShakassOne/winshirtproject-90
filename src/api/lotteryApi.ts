@@ -167,6 +167,8 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
       return null;
     }
     
+    console.log("Données de loterie avant envoi:", lottery); // Debug
+    
     // Prepare data for Supabase (convert camelCase to snake_case)
     const supabaseData = {
       title: lottery.title,
@@ -182,7 +184,8 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
       linked_products: lottery.linkedProducts || [],
     };
     
-    console.log("Creating lottery in Supabase:", supabaseData);
+    console.log("Création de loterie dans Supabase:", supabaseData); // Debug
+    
     const { data, error } = await supabase
       .from('lotteries')
       .insert(supabaseData)
@@ -190,16 +193,18 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
       .single();
     
     if (error) {
-      console.error("Error creating lottery in Supabase:", error);
+      console.error("Erreur lors de la création de loterie dans Supabase:", error);
       toast.error(`Erreur lors de la création: ${error.message}`, { position: "bottom-right" });
       return null;
     }
     
     if (!data) {
-      console.error("No data returned after lottery creation");
+      console.error("Aucune donnée retournée après création de loterie");
       toast.error("Erreur: Aucune donnée retournée après création", { position: "bottom-right" });
       return null;
     }
+    
+    console.log("Données reçues après création:", data); // Debug
     
     const newLottery: ExtendedLottery = {
       id: data.id,
@@ -222,7 +227,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
     toast.success(`Loterie "${lottery.title}" créée avec succès`, { position: "bottom-right" });
     return newLottery;
   } catch (error) {
-    console.error("Error creating lottery:", error);
+    console.error("Erreur lors de la création de loterie:", error);
     toast.error(`Erreur lors de la création de la loterie: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return null;
   }

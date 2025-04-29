@@ -1,3 +1,4 @@
+
 import { ExtendedProduct } from "@/types/product";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/toast";
@@ -53,12 +54,12 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
         type: item.type || 'standard',
         productType: item.product_type,
         sleeveType: item.sleeve_type,
-        linkedLotteries: item.linked_lotteries,
+        linkedLotteries: item.linked_lotteries || [],
         popularity: item.popularity,
         tickets: item.tickets || 1,
         weight: item.weight,
         deliveryPrice: item.delivery_price,
-        allowCustomization: item.allow_customization,
+        allowCustomization: item.allow_customization === true, // Conversion explicite en booléen
         defaultVisualId: item.default_visual_id,
         defaultVisualSettings: item.default_visual_settings,
         visualCategoryId: item.visual_category_id
@@ -88,6 +89,8 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
 
 // Fonction pour créer un nouveau produit
 export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promise<ExtendedProduct | null> => {
+  console.log('Création du produit:', product); // Debug
+  
   // Si Supabase n'est pas configuré, utiliser localStorage
   if (!isSupabaseConfigured()) {
     try {
@@ -113,33 +116,47 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
   }
 
   try {
+    // Log des données converties pour debug
+    const supabaseData = {
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      image: product.image,
+      secondary_image: product.secondaryImage,
+      sizes: product.sizes || [],
+      colors: product.colors || [],
+      type: product.type || 'standard',
+      product_type: product.productType,
+      sleeve_type: product.sleeveType,
+      linked_lotteries: product.linkedLotteries || [],
+      popularity: product.popularity || Math.random() * 100,
+      tickets: product.tickets || 1,
+      weight: product.weight,
+      delivery_price: product.deliveryPrice,
+      allow_customization: product.allowCustomization === true, // Conversion explicite en booléen
+      default_visual_id: product.defaultVisualId,
+      default_visual_settings: product.defaultVisualSettings,
+      visual_category_id: product.visualCategoryId
+    };
+    
+    console.log('Données envoyées à Supabase:', supabaseData); // Debug
+    
     const { data, error } = await supabase
       .from('products')
-      .insert({
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        image: product.image,
-        secondary_image: product.secondaryImage,
-        sizes: product.sizes || [],
-        colors: product.colors || [],
-        type: product.type || 'standard',
-        product_type: product.productType,
-        sleeve_type: product.sleeveType,
-        linked_lotteries: product.linkedLotteries || [],
-        popularity: product.popularity || Math.random() * 100,
-        tickets: product.tickets || 1,
-        weight: product.weight,
-        delivery_price: product.deliveryPrice,
-        allow_customization: product.allowCustomization,
-        default_visual_id: product.defaultVisualId,
-        default_visual_settings: product.defaultVisualSettings,
-        visual_category_id: product.visualCategoryId
-      })
+      .insert(supabaseData)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Erreur Supabase lors de la création:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      throw new Error('Aucune donnée retournée après création');
+    }
+    
+    console.log('Données reçues de Supabase après création:', data); // Debug
     
     // Convertir au format ExtendedProduct
     const createdProduct: ExtendedProduct = {
@@ -154,12 +171,12 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       type: data.type || 'standard',
       productType: data.product_type,
       sleeveType: data.sleeve_type,
-      linkedLotteries: data.linked_lotteries,
-      popularity: data.popularity || Math.random() * 100,
+      linkedLotteries: data.linked_lotteries || [],
+      popularity: data.popularity || 0,
       tickets: data.tickets || 1,
       weight: data.weight,
       deliveryPrice: data.delivery_price,
-      allowCustomization: data.allow_customization,
+      allowCustomization: data.allow_customization === true, // Conversion explicite en booléen
       defaultVisualId: data.default_visual_id,
       defaultVisualSettings: data.default_visual_settings,
       visualCategoryId: data.visual_category_id
@@ -170,10 +187,11 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
     products.push(createdProduct);
     saveProductsToLocalStorage(products);
     
+    toast.success(`Produit "${createdProduct.name}" créé avec succès`);
     return createdProduct;
   } catch (error) {
     console.error('Erreur lors de la création du produit:', error);
-    toast.error("Erreur de connexion: sauvegardé localement");
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     
     // Fallback au localStorage
     try {
@@ -200,6 +218,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
 
 // Fonction pour mettre à jour un produit existant
 export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
+  console.log('Mise à jour du produit:', product); // Debug
+  
   // Si Supabase n'est pas configuré, utiliser localStorage
   if (!isSupabaseConfigured()) {
     try {
@@ -219,34 +239,47 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
   }
 
   try {
+    const supabaseData = {
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      image: product.image,
+      secondary_image: product.secondaryImage,
+      sizes: product.sizes || [],
+      colors: product.colors || [],
+      type: product.type || 'standard',
+      product_type: product.productType,
+      sleeve_type: product.sleeveType,
+      linked_lotteries: product.linkedLotteries || [],
+      popularity: product.popularity,
+      tickets: product.tickets || 1,
+      weight: product.weight,
+      delivery_price: product.deliveryPrice,
+      allow_customization: product.allowCustomization === true, // Conversion explicite en booléen
+      default_visual_id: product.defaultVisualId,
+      default_visual_settings: product.defaultVisualSettings,
+      visual_category_id: product.visualCategoryId
+    };
+    
+    console.log('Données envoyées à Supabase pour mise à jour:', supabaseData); // Debug
+    
     const { data, error } = await supabase
       .from('products')
-      .update({
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        image: product.image,
-        secondary_image: product.secondaryImage,
-        sizes: product.sizes || [],
-        colors: product.colors || [],
-        type: product.type || 'standard',
-        product_type: product.productType,
-        sleeve_type: product.sleeveType,
-        linked_lotteries: product.linkedLotteries || [],
-        popularity: product.popularity,
-        tickets: product.tickets || 1,
-        weight: product.weight,
-        delivery_price: product.deliveryPrice,
-        allow_customization: product.allowCustomization,
-        default_visual_id: product.defaultVisualId,
-        defaultVisualSettings: product.defaultVisualSettings,
-        visual_category_id: product.visualCategoryId
-      })
+      .update(supabaseData)
       .eq('id', product.id)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Erreur Supabase lors de la mise à jour:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      throw new Error('Aucune donnée retournée après mise à jour');
+    }
+    
+    console.log('Données reçues de Supabase après mise à jour:', data); // Debug
     
     // Convertir au format ExtendedProduct
     const updatedProduct: ExtendedProduct = {
@@ -261,14 +294,14 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       type: data.type || 'standard',
       productType: data.product_type,
       sleeveType: data.sleeve_type,
-      linkedLotteries: data.linked_lotteries,
+      linkedLotteries: data.linked_lotteries || [],
       popularity: data.popularity,
       tickets: data.tickets || 1,
       weight: data.weight,
       deliveryPrice: data.delivery_price,
-      allowCustomization: data.allow_customization,
+      allowCustomization: data.allow_customization === true, // Conversion explicite en booléen
       defaultVisualId: data.default_visual_id,
-      defaultVisualSettings: data.defaultVisualSettings,
+      defaultVisualSettings: data.default_visual_settings,
       visualCategoryId: data.visual_category_id
     };
     
@@ -277,10 +310,11 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
     const updatedProducts = products.map(p => p.id === product.id ? updatedProduct : p);
     saveProductsToLocalStorage(updatedProducts);
     
+    toast.success(`Produit "${updatedProduct.name}" mis à jour avec succès`);
     return updatedProduct;
   } catch (error) {
     console.error('Erreur lors de la mise à jour du produit:', error);
-    toast.error("Erreur de connexion: sauvegardé localement");
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     
     // Fallback au localStorage
     try {

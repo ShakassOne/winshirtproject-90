@@ -72,7 +72,10 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erreur Supabase lors de la création:", error);
+      throw error;
+    }
 
     const newVisual: Visual = {
       id: data.id,
