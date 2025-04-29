@@ -256,6 +256,7 @@ export type Database = {
           default_visual_settings: Json | null
           delivery_price: number | null
           description: string | null
+          fit: string | null
           id: number
           image: string | null
           linked_lotteries: number[] | null
@@ -281,6 +282,7 @@ export type Database = {
           default_visual_settings?: Json | null
           delivery_price?: number | null
           description?: string | null
+          fit?: string | null
           id?: number
           image?: string | null
           linked_lotteries?: number[] | null
@@ -306,6 +308,7 @@ export type Database = {
           default_visual_settings?: Json | null
           delivery_price?: number | null
           description?: string | null
+          fit?: string | null
           id?: number
           image?: string | null
           linked_lotteries?: number[] | null

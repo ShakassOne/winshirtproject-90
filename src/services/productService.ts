@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
@@ -170,7 +169,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
     const productWithDefaults = {
       ...product,
       type: product.type || "standard",
-      brand: product.brand || null // Assurer que brand est présent même si null
+      brand: product.brand || null, // Assurer que brand est présent même si null
+      fit: product.fit || "regular" // Assurer que fit est présent même si null
     };
     
     // Générer un ID pour le nouveau produit - Fix: use a smaller integer value
@@ -231,7 +231,8 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
     const productWithDefaults = {
       ...product,
       type: product.type || "standard",
-      brand: product.brand || null // Assurer que brand est présent même si null
+      brand: product.brand || null, // Assurer que brand est présent même si null
+      fit: product.fit || "regular" // Assurer que fit est présent même si null
     };
     
     // Mettre à jour dans localStorage
