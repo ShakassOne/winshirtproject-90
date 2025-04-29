@@ -1,3 +1,4 @@
+
 // Add this code if the mockData.ts file doesn't exist or append to it
 
 // If you already have a mockLotteries export, replace it with this one
@@ -52,7 +53,7 @@ export const mockLotteries = [
   }
 ];
 
-// Add mock products export that was missing
+// Add mock products export with 'type' property added
 export const mockProducts = [
   {
     id: 1,
@@ -63,6 +64,7 @@ export const mockProducts = [
     secondaryImage: "https://placehold.co/600x400/333/fff?text=T-Shirt+3D+Back",
     sizes: ["S", "M", "L", "XL"],
     colors: ["Noir", "Blanc", "Rouge"],
+    type: "standard", // Ajout de la propriété manquante
     productType: "T-Shirt",
     sleeveType: "Courtes",
     gender: "unisex",
@@ -110,6 +112,7 @@ export const mockProducts = [
     secondaryImage: "https://placehold.co/600x400/222/fff?text=Sweatshirt+Back",
     sizes: ["M", "L", "XL", "XXL"],
     colors: ["Bleu", "Gris", "Noir"],
+    type: "premium", // Ajout de la propriété manquante
     productType: "Sweatshirt",
     sleeveType: "Longues",
     popularity: 4,
@@ -131,6 +134,7 @@ export const updateMockProducts = () => {
         products[tshirtIndex].linkedLotteries = [1, 2]; // Link to the first two lotteries
         products[tshirtIndex].allowCustomization = true;
         products[tshirtIndex].tickets = 3; // Give it 3 tickets
+        products[tshirtIndex].type = "standard"; // Ajouter aussi la propriété type
         
         if (!products[tshirtIndex].printAreas || products[tshirtIndex].printAreas.length === 0) {
           products[tshirtIndex].printAreas = [
@@ -187,7 +191,30 @@ export const initializeLotteryData = () => {
       // Update mock products to link to lotteries
       updateMockProducts();
     }
+    
+    // Assurons-nous que les produits ont également la propriété 'type'
+    const storedProducts = localStorage.getItem('products');
+    if (storedProducts) {
+      let products = JSON.parse(storedProducts);
+      let updated = false;
+      
+      products.forEach((product: any) => {
+        if (!product.type) {
+          product.type = product.productType === "Sweatshirt" ? "premium" : "standard";
+          updated = true;
+        }
+      });
+      
+      if (updated) {
+        localStorage.setItem('products', JSON.stringify(products));
+        console.log('Products updated with type property');
+      }
+    } else {
+      // Stockons nos mockProducts si aucun produit n'existe
+      localStorage.setItem('products', JSON.stringify(mockProducts));
+      console.log('Mock products initialized in localStorage');
+    }
   } catch (error) {
-    console.error('Error initializing lottery data:', error);
+    console.error('Error initializing data:', error);
   }
 };

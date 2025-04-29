@@ -32,8 +32,14 @@ export const useProducts = () => {
         
         if (data && data.length > 0) {
           console.log("productService: Produits récupérés depuis Supabase:", data.length);
-          setProducts(data);
-          localStorage.setItem('products', JSON.stringify(data));
+          // S'assurer que chaque produit a un champ 'type'
+          const productsWithType = data.map(product => ({
+            ...product,
+            type: product.type || product.product_type || "standard"
+          })) as ExtendedProduct[];
+          
+          setProducts(productsWithType);
+          localStorage.setItem('products', JSON.stringify(productsWithType));
           return;
         }
       }
@@ -44,7 +50,14 @@ export const useProducts = () => {
         const localProducts = JSON.parse(localData);
         if (Array.isArray(localProducts) && localProducts.length > 0) {
           console.log("productService: Produits récupérés depuis localStorage:", localProducts.length);
-          setProducts(localProducts);
+          
+          // S'assurer que chaque produit a un champ 'type'
+          const productsWithType = localProducts.map((product: any) => ({
+            ...product,
+            type: product.type || product.productType || "standard"
+          })) as ExtendedProduct[];
+          
+          setProducts(productsWithType);
           
           // Tenter de synchroniser avec Supabase
           if (isConnected) {
@@ -56,7 +69,8 @@ export const useProducts = () => {
       
       // Si aucune donnée n'est trouvée, utiliser les données mock
       console.log("productService: Utilisation des données mock");
-      setProducts(mockProducts);
+      // Assurez-vous que mockProducts correspond au type ExtendedProduct
+      setProducts(mockProducts as ExtendedProduct[]);
       localStorage.setItem('products', JSON.stringify(mockProducts));
       
       // Tenter de synchroniser les données mock avec Supabase
@@ -70,7 +84,7 @@ export const useProducts = () => {
       toast.error("Impossible de charger les produits", { position: "bottom-right" });
       
       // En cas d'erreur, charger les données mock
-      setProducts(mockProducts);
+      setProducts(mockProducts as ExtendedProduct[]);
     } finally {
       setLoading(false);
     }
