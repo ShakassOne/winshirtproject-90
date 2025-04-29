@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
@@ -172,8 +173,9 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       brand: product.brand || null // Assurer que brand est présent même si null
     };
     
-    // Générer un ID pour le nouveau produit
-    const newProductId = Date.now();
+    // Générer un ID pour le nouveau produit - Fix: use a smaller integer value
+    // PostgreSQL integer has a max value of 2147483647, so ensure we stay below that
+    const newProductId = Math.floor(Math.random() * 1000000) + 1; // Safe random integer ID
     const newProduct = { ...productWithDefaults, id: newProductId };
     
     if (isConnected) {
