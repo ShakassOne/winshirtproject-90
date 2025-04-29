@@ -37,7 +37,19 @@ export const useLotteryForm = (
     console.log("Creating new lottery");
     setIsCreating(true);
     setSelectedLotteryId(null);
-    form.reset();
+    form.reset({
+      title: '',
+      description: '',
+      image: '',
+      value: 0,
+      status: 'active',
+      featured: false,
+      targetParticipants: 10,
+      currentParticipants: 0,
+      drawDate: '',
+      endDate: '',
+      linkedProducts: [],
+    });
   };
 
   // Handler for editing an existing lottery
@@ -63,28 +75,6 @@ export const useLotteryForm = (
     }
   };
 
-  // Handler for deleting a lottery
-  const handleDeleteLottery = async (lotteryId: number) => {
-    const isConnected = await testSupabaseConnection();
-    if (!isConnected) {
-      toast.error("Impossible de supprimer la loterie - Mode hors-ligne", { position: "bottom-right" });
-      return;
-    }
-
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette loterie ?')) {
-      console.log("Deleting lottery:", lotteryId);
-      const success = await deleteLottery(lotteryId);
-      if (success) {
-        setLotteries(prev => prev.filter(l => l.id !== lotteryId));
-        if (selectedLotteryId === lotteryId) {
-          setSelectedLotteryId(null);
-          setIsCreating(false);
-          form.reset();
-        }
-      }
-    }
-  };
-
   // Form submission handler
   const onSubmit = async (data: any) => {
     try {
@@ -104,6 +94,9 @@ export const useLotteryForm = (
         value: Number(data.value),
         targetParticipants: Number(data.targetParticipants),
         currentParticipants: Number(data.currentParticipants),
+        // S'assurer que les dates vides sont null et non des chaînes vides
+        drawDate: data.drawDate || null,
+        endDate: data.endDate || null,
       };
 
       if (isCreating) {
@@ -128,6 +121,28 @@ export const useLotteryForm = (
       toast.error(`Erreur lors de la sauvegarde: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handler for deleting a lottery
+  const handleDeleteLottery = async (lotteryId: number) => {
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      toast.error("Impossible de supprimer la loterie - Mode hors-ligne", { position: "bottom-right" });
+      return;
+    }
+
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette loterie ?')) {
+      console.log("Deleting lottery:", lotteryId);
+      const success = await deleteLottery(lotteryId);
+      if (success) {
+        setLotteries(prev => prev.filter(l => l.id !== lotteryId));
+        if (selectedLotteryId === lotteryId) {
+          setSelectedLotteryId(null);
+          setIsCreating(false);
+          form.reset();
+        }
+      }
     }
   };
 
@@ -195,7 +210,26 @@ export const useLotteryForm = (
     isSubmitting,
     handleCreateLottery,
     handleEditLottery,
-    handleDeleteLottery,
+    handleDeleteLottery: async (lotteryId: number) => {
+      const isConnected = await testSupabaseConnection();
+      if (!isConnected) {
+        toast.error("Impossible de supprimer la loterie - Mode hors-ligne", { position: "bottom-right" });
+        return;
+      }
+
+      if (window.confirm('Êtes-vous sûr de vouloir supprimer cette loterie ?')) {
+        console.log("Deleting lottery:", lotteryId);
+        const success = await deleteLottery(lotteryId);
+        if (success) {
+          setLotteries(prev => prev.filter(l => l.id !== lotteryId));
+          if (selectedLotteryId === lotteryId) {
+            setSelectedLotteryId(null);
+            setIsCreating(false);
+            form.reset();
+          }
+        }
+      }
+    },
     onSubmit,
     handleCancel: () => {
       setIsCreating(false);

@@ -10,7 +10,7 @@ import StatsSection from '@/components/home/StatsSection';
 import WinnersCarousel from '@/components/home/WinnersCarousel';
 import HomeIntroSlider from '@/components/home/HomeIntroSlider';
 import { mockWinners } from '@/data/mockWinners';
-import { mockLotteries } from '@/data/mockData'; // Fixed import for mockLotteries
+import { mockLotteries } from '@/data/mockData';
 import { ExtendedLottery } from '@/types/lottery';
 import { useProducts } from '@/services/productService';
 
@@ -27,15 +27,28 @@ const HomePage: React.FC = () => {
         if (storedLotteries) {
           const parsedLotteries = JSON.parse(storedLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-            // Convert from snake_case to camelCase if needed
-            const active = parsedLotteries
-              .filter(lottery => lottery.status === 'active')
-              .map(lottery => ({
-                ...lottery,
-                targetParticipants: lottery.targetParticipants || lottery.target_participants,
-                currentParticipants: lottery.currentParticipants || lottery.current_participants
-              })) as ExtendedLottery[];
+            // Convertir les champs snake_case en camelCase et filtrer les loteries actives
+            const camelCasedLotteries = parsedLotteries.map(lottery => ({
+              id: lottery.id,
+              title: lottery.title,
+              description: lottery.description || '',
+              image: lottery.image || '',
+              value: lottery.value,
+              status: lottery.status ? lottery.status.toLowerCase() : 'active', // Normaliser le statut
+              featured: lottery.featured || false,
+              targetParticipants: lottery.targetParticipants || lottery.target_participants,
+              currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
+              drawDate: lottery.drawDate || lottery.draw_date,
+              endDate: lottery.endDate || lottery.end_date,
+              linkedProducts: lottery.linkedProducts || lottery.linked_products || [],
+            })) as ExtendedLottery[];
               
+            // Filtrer uniquement les loteries actives
+            const active = camelCasedLotteries.filter(lottery => 
+              lottery.status === 'active' || lottery.status === 'Active' || lottery.status === 'ACTIVE'
+            );
+            
+            console.log("HomePage: Loteries actives trouvées:", active.length);
             setActiveLotteries(active);
             return;
           }
@@ -45,15 +58,25 @@ const HomePage: React.FC = () => {
       }
       
       // Fallback to mock lotteries with explicit type conversion
-      setActiveLotteries(
-        mockLotteries
-          .filter(lottery => lottery.status === 'active')
-          .map(lottery => ({
-            ...lottery,
-            targetParticipants: lottery.targetParticipants || lottery.target_participants,
-            currentParticipants: lottery.currentParticipants || lottery.current_participants
-          })) as ExtendedLottery[]
-      );
+      const mockActiveLotteries = mockLotteries
+        .filter(lottery => lottery.status === 'active')
+        .map(lottery => ({
+          id: lottery.id,
+          title: lottery.title,
+          description: lottery.description || '',
+          image: lottery.image || '',
+          value: lottery.value,
+          status: lottery.status,
+          featured: lottery.featured || false,
+          targetParticipants: lottery.targetParticipants || lottery.target_participants,
+          currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
+          drawDate: lottery.drawDate || lottery.draw_date,
+          endDate: lottery.endDate || lottery.end_date,
+          linkedProducts: lottery.linkedProducts || lottery.linked_products || [],
+        })) as ExtendedLottery[];
+      
+      console.log("HomePage: Utilisation des loteries mock:", mockActiveLotteries.length);
+      setActiveLotteries(mockActiveLotteries);
     };
     
     loadLotteries();

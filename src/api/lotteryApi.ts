@@ -1,4 +1,3 @@
-
 import { ExtendedLottery, Participant } from "@/types/lottery";
 import { supabase, checkSupabaseConnection } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
@@ -179,8 +178,9 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
       featured: lottery.featured || false,
       target_participants: lottery.targetParticipants,
       current_participants: lottery.currentParticipants || 0,
-      draw_date: lottery.drawDate,
-      end_date: lottery.endDate,
+      // Ensure we don't send empty strings for date fields
+      draw_date: lottery.drawDate && lottery.drawDate !== '' ? lottery.drawDate : null,
+      end_date: lottery.endDate && lottery.endDate !== '' ? lottery.endDate : null,
       linked_products: lottery.linkedProducts || [],
     };
     
@@ -254,8 +254,16 @@ export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery
     if (lottery.featured !== undefined) supabaseData.featured = lottery.featured;
     if (lottery.targetParticipants !== undefined) supabaseData.target_participants = lottery.targetParticipants;
     if (lottery.currentParticipants !== undefined) supabaseData.current_participants = lottery.currentParticipants;
-    if (lottery.drawDate !== undefined) supabaseData.draw_date = lottery.drawDate;
-    if (lottery.endDate !== undefined) supabaseData.end_date = lottery.endDate;
+    
+    // Ensure we don't send empty strings for date fields
+    if (lottery.drawDate !== undefined) {
+      supabaseData.draw_date = lottery.drawDate && lottery.drawDate !== '' ? lottery.drawDate : null;
+    }
+    
+    if (lottery.endDate !== undefined) {
+      supabaseData.end_date = lottery.endDate && lottery.endDate !== '' ? lottery.endDate : null;
+    }
+    
     if (lottery.linkedProducts !== undefined) supabaseData.linked_products = lottery.linkedProducts;
     
     console.log(`Updating lottery ${id} in Supabase:`, supabaseData);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedLottery } from '@/types/lottery';
@@ -23,6 +22,7 @@ const AdminLotteriesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean>(false);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   
   // Fonction pour vérifier la connexion à Supabase
   const testSupabaseConnection = async (): Promise<boolean> => {
@@ -46,6 +46,31 @@ const AdminLotteriesPage: React.FC = () => {
     } catch (error) {
       console.error("Échec de la validation des tables de loterie:", error);
       return false;
+    }
+  };
+
+  // Fonction pour afficher les informations de débogage
+  const showDebugInfo = () => {
+    try {
+      const localStorage1 = localStorage.getItem('lotteries');
+      const sessionStorage1 = sessionStorage.getItem('lotteries');
+      
+      const debugText = `
+        Local Storage: ${localStorage1 ? JSON.parse(localStorage1).length + ' loteries' : 'vide'}
+        Session Storage: ${sessionStorage1 ? JSON.parse(sessionStorage1).length + ' loteries' : 'vide'}
+        État React: ${lotteries.length} loteries chargées
+        Statut Supabase: ${isSupabaseConnected ? 'Connecté' : 'Non connecté'}
+      `;
+      
+      setDebugInfo(debugText);
+      
+      // Log loteries pour debug
+      if (localStorage1) {
+        const parsedLotteries = JSON.parse(localStorage1);
+        console.log("Loteries dans localStorage:", parsedLotteries);
+      }
+    } catch (error) {
+      setDebugInfo(`Erreur lors de la récupération des infos: ${error}`);
     }
   };
 
@@ -226,6 +251,25 @@ const AdminLotteriesPage: React.FC = () => {
             </Alert>
           )}
           
+          {debugInfo && (
+            <Alert className="mb-6 bg-blue-500/10 border border-blue-500/30">
+              <AlertTitle className="flex items-center">
+                <span>Informations de débogage</span>
+                <Button 
+                  onClick={() => setDebugInfo(null)} 
+                  variant="ghost" 
+                  size="sm" 
+                  className="ml-2 h-5 p-0"
+                >
+                  x
+                </Button>
+              </AlertTitle>
+              <AlertDescription>
+                <pre className="whitespace-pre-wrap text-xs">{debugInfo}</pre>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {lotteriesReadyForDraw.length > 0 && (
             <Alert className="mb-6 bg-green-500/20 border border-green-500/40">
               <Gift className="h-5 w-5 text-green-500" />
@@ -237,7 +281,17 @@ const AdminLotteriesPage: React.FC = () => {
             </Alert>
           )}
 
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex justify-between">
+            <Button 
+              onClick={showDebugInfo}
+              variant="outline"
+              className="text-winshirt-purple border-winshirt-purple/40"
+              size="sm"
+            >
+              <span className="h-4 w-4 mr-2">🐞</span>
+              Afficher infos de débogage
+            </Button>
+
             <Button 
               onClick={loadData}
               variant="outline"

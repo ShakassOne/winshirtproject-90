@@ -62,7 +62,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
         <CarouselContent className="-ml-2 md:-ml-4">
           {lotteries.map((lottery, index) => (
             <CarouselItem key={lottery.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 carousel-slide">
-              <Link to={`/lotteries#${lottery.id}`} className="block">
+              <Link to={`/lotteries/${lottery.id}`} className="block">
                 <div className={`h-full rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 carousel-card ${index === activeIndex ? 'active' : ''}`}>
                   <div className="relative aspect-[3/4] overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70 z-10"></div>
@@ -121,34 +121,24 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <div className="flex items-center justify-center mt-8 gap-3">
-          {lotteries.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                const carousel = document.querySelector('.embla__container');
-                if (carousel) {
-                  carousel.scrollTo({
-                    left: index * (carousel.clientWidth / 3),
-                    behavior: 'smooth'
-                  });
-                }
-                setActiveIndex(index);
-              }}
-              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all text-lg ${
-                activeIndex === index 
-                ? 'border-winshirt-purple bg-winshirt-purple/20 white-text' 
-                : 'border-gray-400/50 text-gray-400'
-              }`}
-              aria-label={`Aller à la diapositive ${index + 1}`}
-            >
-              {index + 1}
-            </button>
-          ))}
-        </div>
         <CarouselPrevious className="left-1 lg:-left-12 h-12 w-12" />
         <CarouselNext className="right-1 lg:-right-12 h-12 w-12" />
       </Carousel>
+      
+      {/* Dots indicator */}
+      <div className="flex items-center justify-center mt-6 gap-2">
+        {lotteries.map((_, index) => (
+          <button
+            key={index}
+            className={`w-2.5 h-2.5 rounded-full transition-all ${
+              index === activeIndex 
+                ? "bg-winshirt-blue-light scale-125" 
+                : "bg-winshirt-space-light hover:bg-winshirt-space"
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </div>
     </div>
   );
 };
