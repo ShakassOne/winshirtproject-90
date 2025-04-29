@@ -1,8 +1,85 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
-import { Lottery, LotteryParticipant } from '@/types/lottery';
+import { Lottery, LotteryParticipant, ExtendedLottery, LotteryParticipation } from '@/types/lottery';
 import { User } from '@/types/auth';
-import { snakeToCamel, camelToSnake } from '@/lib/supabase';
+import { snakeToCamel, camelToSnake } from '@/lib/utils';
+import React from 'react';
+
+// Function to get active lotteries
+export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
+  try {
+    // Try to get data from Supabase first
+    const { data, error } = await supabase
+      .from('lotteries')
+      .select('*')
+      .eq('status', 'active')
+      .order('end_date', { ascending: true });
+    
+    if (error) {
+      console.error("Error fetching active lotteries from Supabase:", error);
+      // Fall back to local storage and filter active lotteries
+      const allLotteries = getLocalLotteries();
+      return allLotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+    }
+    
+    if (data && data.length > 0) {
+      // Convert from snake_case to camelCase
+      const camelCaseData = data.map(item => snakeToCamel(item));
+      
+      // Convert to ExtendedLottery type
+      const extendedLotteries: ExtendedLottery[] = camelCaseData.map(lottery => ({
+        id: lottery.id,
+        title: lottery.title,
+        description: lottery.description || '',
+        value: lottery.value,
+        status: lottery.status,
+        image: lottery.image || '',
+        targetParticipants: lottery.targetParticipants,
+        currentParticipants: lottery.currentParticipants || 0,
+        endDate: lottery.endDate,
+        drawDate: lottery.drawDate,
+        featured: lottery.featured || false,
+        linkedProducts: lottery.linkedProducts || []
+      }));
+      
+      return extendedLotteries;
+    }
+    
+    // If no data in Supabase, fall back to local storage and filter active lotteries
+    const allLotteries = getLocalLotteries();
+    return allLotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+  } catch (error) {
+    console.error("Error in getActiveLotteries:", error);
+    // Fall back to local storage and filter active lotteries
+    const allLotteries = getLocalLotteries();
+    return allLotteries.filter(lottery => lottery.status === 'active') as ExtendedLottery[];
+  }
+};
+
+// Create a useLotteries hook for convenience
+export const useLotteries = () => {
+  const [lotteries, setLotteries] = React.useState<ExtendedLottery[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<Error | null>(null);
+
+  React.useEffect(() => {
+    const fetchLotteries = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getAllLotteries();
+        setLotteries(data as ExtendedLottery[]);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error fetching lotteries'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLotteries();
+  }, []);
+
+  return { lotteries, isLoading, error };
+};
 
 // Function to get all lotteries
 export const getAllLotteries = async (): Promise<Lottery[]> => {

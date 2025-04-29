@@ -84,7 +84,7 @@ export interface SlideType {
   id: number;
   title: string;
   subtitle?: string;
-  image: string;
+  image: string; // This is required
   link?: string;
   // Additional properties needed based on error messages
   backgroundImage?: string;
