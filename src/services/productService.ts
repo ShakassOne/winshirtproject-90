@@ -195,25 +195,25 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
   }
 };
 
-export const updateProduct = async (id: number, productData: Partial<ExtendedProduct>): Promise<ExtendedProduct | null> => {
+export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
   try {
     const isConnected = await checkSupabaseConnection();
     
     // Mettre à jour dans localStorage
     const existingProducts = localStorage.getItem('products') ? JSON.parse(localStorage.getItem('products')!) : [];
     const updatedProducts = existingProducts.map((p: ExtendedProduct) => 
-      p.id === id ? { ...p, ...productData } : p
+      p.id === product.id ? { ...p, ...product } : p
     );
     localStorage.setItem('products', JSON.stringify(updatedProducts));
     
-    const updatedProduct = updatedProducts.find((p: ExtendedProduct) => p.id === id);
+    const updatedProduct = updatedProducts.find((p: ExtendedProduct) => p.id === product.id);
     
     if (isConnected) {
       // Mettre à jour dans Supabase
       const { data, error } = await supabase
         .from('products')
-        .update(camelToSnake(productData))
-        .eq('id', id)
+        .update(camelToSnake(product))
+        .eq('id', product.id)
         .select();
       
       if (error) {

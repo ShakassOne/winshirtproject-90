@@ -89,8 +89,9 @@ export const useProductForm = (
       console.log("Deleting product:", productId);
       
       try {
-        // Fix: Pass both productId and isConnected parameters
-        const success = await deleteProduct(productId, isConnected);
+        // Fix: Make sure we call deleteProduct with only one argument
+        // as expected by the function signature
+        const success = await deleteProduct(productId);
         
         if (success) {
           if (selectedProductId === productId) {
@@ -136,6 +137,7 @@ export const useProductForm = (
           toast.success("Produit créé avec succès", { position: "bottom-right" });
         }
       } else if (selectedProductId) {
+        // Fix: Call updateProduct with the correct parameters
         const updatedProduct = await updateProduct({
           ...productData,
           id: selectedProductId
