@@ -30,6 +30,57 @@ import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 function App() {
+  // Add code to initialize the T-Shirt 3D product with print areas to localStorage if it doesn't exist
+  React.useEffect(() => {
+    const initializeProductWithPrintAreas = () => {
+      const storedProducts = localStorage.getItem('products');
+      if (storedProducts) {
+        const products = JSON.parse(storedProducts);
+        const tshirt3D = products.find((p: any) => p.name === "T-Shirt 3D" || p.id === 1);
+        
+        if (tshirt3D && (!tshirt3D.printAreas || tshirt3D.printAreas.length === 0)) {
+          // Add print areas to the T-Shirt 3D product
+          tshirt3D.allowCustomization = true;
+          tshirt3D.printAreas = [
+            {
+              id: Date.now(),
+              name: "Recto",
+              position: "front",
+              format: "custom",
+              bounds: {
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 250
+              },
+              allowCustomPosition: true
+            },
+            {
+              id: Date.now() + 1,
+              name: "Verso",
+              position: "back",
+              format: "custom",
+              bounds: {
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 250
+              },
+              allowCustomPosition: true
+            }
+          ];
+          
+          // Save the updated product back to localStorage
+          localStorage.setItem('products', JSON.stringify(products));
+          
+          console.log('Customization enabled for T-Shirt 3D product');
+        }
+      }
+    };
+    
+    initializeProductWithPrintAreas();
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<Layout />}>

@@ -1,17 +1,17 @@
-
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './index.css'
 import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import './index.css';
-import { AuthProvider } from './contexts/AuthContext';
+import { initializeLotteryData } from './data/mockData';
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+// Initialize mock data
+initializeLotteryData();
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <App />
     </BrowserRouter>
   </React.StrictMode>,
-);
+)
