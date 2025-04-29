@@ -63,3 +63,27 @@ export const camelToSnake = (obj: any): any => {
     return acc;
   }, {} as any);
 };
+
+/**
+ * Format a date in a friendly format
+ */
+export const formatDate = (date: string | Date, includeTime: boolean = false): string => {
+  if (!date) return 'N/A';
+  
+  const d = typeof date === 'string' ? new Date(date) : date;
+  
+  if (isNaN(d.getTime())) return 'Invalid date';
+  
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  };
+  
+  if (includeTime) {
+    options.hour = '2-digit';
+    options.minute = '2-digit';
+  }
+  
+  return d.toLocaleDateString('fr-FR', options);
+};

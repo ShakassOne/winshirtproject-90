@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
 import { EmailService } from '@/lib/emailService';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';  // Now correctly imported from our utility file
 import { User } from '@/types/auth';
 import { 
   convertSupabaseUser, 
