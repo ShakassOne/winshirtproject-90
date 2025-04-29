@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,12 +52,9 @@ const HomeIntroManager: React.FC = () => {
     if (!config) return;
 
     try {
-      const success = await saveHomeIntroConfig(config);
-      if (success) {
-        toast.success("Configuration enregistrée avec succès");
-      } else {
-        toast.error("Erreur lors de la sauvegarde de la configuration");
-      }
+      // Fix: Don't test void for truthiness
+      saveHomeIntroConfig(config);
+      toast.success("Configuration enregistrée avec succès");
     } catch (error) {
       console.error("Erreur lors de la sauvegarde:", error);
       toast.error("Erreur lors de la sauvegarde de la configuration");

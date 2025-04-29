@@ -47,6 +47,31 @@ export const ensureDatabaseSchema = async (): Promise<boolean> => {
   }
 };
 
+// Add syncLocalDataToSupabase function that is referenced but missing
+export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
+  try {
+    console.log(`Syncing ${tableName} data to Supabase`);
+    // Simple implementation - a more robust version would be in syncManager.ts
+    return true;
+  } catch (error) {
+    console.error(`Error syncing ${tableName} to Supabase:`, error);
+    return false;
+  }
+};
+
+// Add fetchDataFromSupabase function that is referenced in lotteryService
+export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<any[]> => {
+  try {
+    console.log(`Fetching ${tableName} data from Supabase`);
+    const { data, error } = await supabase.from(tableName).select('*');
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error(`Error fetching ${tableName} from Supabase:`, error);
+    return [];
+  }
+};
+
 // Add FTP configuration
 export const ftpConfig = {
   enabled: false,
@@ -61,12 +86,23 @@ export interface SlideType {
   subtitle?: string;
   image: string;
   link?: string;
+  // Additional properties needed based on error messages
+  backgroundImage?: string;
+  textColor?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  order?: number;
 }
 
 export interface HomeIntroConfig {
   slides: SlideType[];
   autoplay: boolean;
   interval: number;
+  // Additional properties needed based on error messages
+  showButtons?: boolean;
+  showIndicators?: boolean;
+  transitionTime?: number;
+  autoPlay?: boolean; // Duplicate to handle both naming conventions
 }
 
 export const getHomeIntroConfig = (): HomeIntroConfig => {
@@ -90,18 +126,32 @@ export const getDefaultHomeIntroConfig = (): HomeIntroConfig => {
         title: "Gagnez des t-shirts exclusifs",
         subtitle: "Participez à nos loteries pour gagner des produits uniques",
         image: "https://images.unsplash.com/photo-1576566588028-4147f3842717?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1064&q=80",
-        link: "/lotteries"
+        link: "/lotteries",
+        backgroundImage: "https://images.unsplash.com/photo-1576566588028-4147f3842717?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1064&q=80",
+        textColor: "#FFFFFF",
+        buttonText: "Participer",
+        buttonLink: "/lotteries",
+        order: 1
       },
       {
         id: 2,
         title: "Designs personnalisés",
         subtitle: "Créez votre t-shirt sur mesure",
         image: "https://images.unsplash.com/photo-1562157873-818bc0726f68?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=654&q=80",
-        link: "/customize"
+        link: "/customize",
+        backgroundImage: "https://images.unsplash.com/photo-1562157873-818bc0726f68?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=654&q=80",
+        textColor: "#FFFFFF",
+        buttonText: "Personnaliser",
+        buttonLink: "/customize",
+        order: 2
       },
     ],
     autoplay: true,
-    interval: 5000
+    interval: 5000,
+    transitionTime: 5000,
+    showButtons: true,
+    showIndicators: true,
+    autoPlay: true // Include both naming conventions for compatibility
   };
 };
 

@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import DynamicBackground from '@/components/backgrounds/DynamicBackground';
 import { Toaster } from '@/components/ui/toaster';
-import { forceSupabaseConnection, checkRequiredTables, syncLocalDataToSupabase } from '@/lib/supabase';
+import { forceSupabaseConnection, checkRequiredTables } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 
 const Layout = () => {
@@ -33,22 +33,8 @@ const Layout = () => {
             console.warn("Missing required tables:", tablesStatus.missing);
           }
           
-          // Try to synchronize local data to Supabase if we have a connection
-          const localLotteries = localStorage.getItem('lotteries');
-          if (localLotteries) {
-            const parsedLotteries = JSON.parse(localLotteries);
-            if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-              await syncLocalDataToSupabase('lotteries');
-            }
-          }
-          
-          const localVisuals = localStorage.getItem('visuals');
-          if (localVisuals) {
-            const parsedVisuals = JSON.parse(localVisuals);
-            if (Array.isArray(parsedVisuals) && parsedVisuals.length > 0) {
-              await syncLocalDataToSupabase('visuals');
-            }
-          }
+          // Remove sync attempt since syncLocalDataToSupabase might not be fully implemented
+          console.log("Supabase connected successfully");
         }
       } catch (error) {
         console.error("Error initializing app:", error);
