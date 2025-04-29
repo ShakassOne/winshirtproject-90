@@ -1,4 +1,3 @@
-
 import { supabase as supabaseClient, requiredTables, ValidTableName, checkSupabaseConnection as checkConnection, checkRequiredTables as checkTables } from '@/integrations/supabase/client';
 import { snakeToCamel as snakeToC, camelToSnake as camelToS } from '@/lib/utils';
 

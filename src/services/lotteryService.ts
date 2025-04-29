@@ -1,521 +1,219 @@
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
-import { Lottery, LotteryParticipant, ExtendedLottery, LotteryParticipation } from '@/types/lottery';
-import { User } from '@/types/auth';
-import { snakeToCamel, camelToSnake } from '@/lib/utils';
-import React from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { fetchDataFromSupabase, syncLocalDataToSupabase, checkSupabaseConnection } from '@/lib/supabase';
+import { mockLotteries } from '@/data/mockData';
 
-// Function to get active lotteries
-export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
-  try {
-    // Try to get data from Supabase first
-    const { data, error } = await supabase
-      .from('lotteries')
-      .select('*')
-      .eq('status', 'active')
-      .order('end_date', { ascending: true });
-    
-    if (error) {
-      console.error("Error fetching active lotteries from Supabase:", error);
-      // Fall back to local storage and filter active lotteries
-      const allLotteries = getLocalLotteries();
-      return allLotteries
-        .filter(lottery => lottery.status === 'active')
-        .map(convertToExtendedLottery);
-    }
-    
-    if (data && data.length > 0) {
-      // Convert from snake_case to camelCase
-      const camelCaseData = data.map(item => snakeToCamel(item));
-      
-      // Convert to ExtendedLottery type
-      const extendedLotteries: ExtendedLottery[] = camelCaseData.map(lottery => ({
-        id: lottery.id,
-        title: lottery.title,
-        description: lottery.description || '',
-        value: lottery.value,
-        status: lottery.status,
-        image: lottery.image || '',
-        targetParticipants: lottery.targetParticipants,
-        currentParticipants: lottery.currentParticipants || 0,
-        endDate: lottery.endDate,
-        drawDate: lottery.drawDate,
-        featured: lottery.featured || false,
-        linkedProducts: lottery.linkedProducts || [],
-        participants: [], // Initialize with empty array to match ExtendedLottery type
-        winner: null    // Initialize with null to match ExtendedLottery type
-      }));
-      
-      return extendedLotteries;
-    }
-    
-    // If no data in Supabase, fall back to local storage and filter active lotteries
-    const allLotteries = getLocalLotteries();
-    return allLotteries
-      .filter(lottery => lottery.status === 'active')
-      .map(convertToExtendedLottery);
-  } catch (error) {
-    console.error("Error in getActiveLotteries:", error);
-    // Fall back to local storage and filter active lotteries
-    const allLotteries = getLocalLotteries();
-    return allLotteries
-      .filter(lottery => lottery.status === 'active')
-      .map(convertToExtendedLottery);
-  }
-};
-
-// Helper function to convert Lottery to ExtendedLottery
+/**
+ * Helper to convert Lottery to ExtendedLottery with proper participants array
+ */
 const convertToExtendedLottery = (lottery: Lottery): ExtendedLottery => {
+  // Create empty participants array based on current_participants count
+  const participants: Participant[] = [];
+  for (let i = 0; i < (lottery.current_participants || 0); i++) {
+    participants.push({
+      id: -i, // Temporary negative IDs to distinguish mock participants
+      name: `Participant ${i+1}`,
+      avatar: null
+    });
+  }
+  
   return {
-    id: lottery.id,
-    title: lottery.title,
-    description: lottery.description,
-    value: lottery.value,
-    targetParticipants: lottery.targetParticipants,
-    currentParticipants: lottery.currentParticipants || 0,
-    status: lottery.status,
-    image: lottery.image,
-    linkedProducts: lottery.linkedProducts || [],
-    participants: [], // Initialize with empty array
-    winner: null,     // Initialize with null
-    drawDate: lottery.drawDate,
-    endDate: lottery.endDate,
-    featured: lottery.featured || false
-  };
+    ...lottery,
+    participants
+  } as ExtendedLottery;
 };
 
-// Create a useLotteries hook for convenience
-export const useLotteries = (activeOnly: boolean = false) => {
-  const [lotteries, setLotteries] = React.useState<ExtendedLottery[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
-
-  React.useEffect(() => {
-    const fetchLotteries = async () => {
-      try {
-        setIsLoading(true);
-        let data;
-        if (activeOnly) {
-          data = await getActiveLotteries();
-        } else {
-          data = (await getAllLotteries()).map(convertToExtendedLottery);
-        }
-        setLotteries(data);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error fetching lotteries'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLotteries();
-  }, [activeOnly]);
-
-  const refreshLotteries = React.useCallback(async () => {
+/**
+ * Hook pour récupérer les loteries avec gestion d'état
+ */
+export const useLotteries = () => {
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const loadLotteries = async () => {
     try {
       setIsLoading(true);
-      let data;
-      if (activeOnly) {
-        data = await getActiveLotteries();
-      } else {
-        data = (await getAllLotteries()).map(convertToExtendedLottery);
+      console.log("lotteryService: Chargement des loteries...");
+      
+      // Essayer d'abord de récupérer depuis Supabase
+      const isConnected = await checkSupabaseConnection();
+      
+      if (isConnected) {
+        const supabaseLotteries = await fetchDataFromSupabase('lotteries') as Lottery[];
+        
+        if (supabaseLotteries && supabaseLotteries.length > 0) {
+          console.log("lotteryService: Loteries récupérées depuis Supabase:", supabaseLotteries.length);
+          
+          // Convertir en ExtendedLottery
+          const extendedLotteries = supabaseLotteries.map(lottery => convertToExtendedLottery(lottery));
+          
+          setLotteries(extendedLotteries);
+          localStorage.setItem('lotteries', JSON.stringify(supabaseLotteries));
+          return;
+        }
       }
-      setLotteries(data);
-      return true;
+      
+      // Si aucune loterie n'est trouvée dans Supabase, utiliser les données locales
+      const localData = localStorage.getItem('lotteries');
+      if (localData) {
+        const localLotteries = JSON.parse(localData) as Lottery[];
+        if (Array.isArray(localLotteries) && localLotteries.length > 0) {
+          console.log("lotteryService: Loteries récupérées depuis localStorage:", localLotteries.length);
+          
+          // Convertir en ExtendedLottery
+          const extendedLotteries = localLotteries.map(lottery => convertToExtendedLottery(lottery));
+          
+          setLotteries(extendedLotteries);
+          
+          // Tenter de synchroniser avec Supabase
+          if (isConnected) {
+            await syncLocalDataToSupabase('lotteries');
+          }
+          return;
+        }
+      }
+      
+      // Si aucune donnée n'est trouvée, utiliser les données mock
+      console.log("lotteryService: Utilisation des données mock");
+      
+      // Convertir en ExtendedLottery
+      const extendedLotteries = mockLotteries.map(lottery => convertToExtendedLottery(lottery));
+      
+      setLotteries(extendedLotteries);
+      localStorage.setItem('lotteries', JSON.stringify(mockLotteries));
+      
+      // Tenter de synchroniser les données mock avec Supabase
+      if (isConnected) {
+        await syncLocalDataToSupabase('lotteries');
+      }
+      
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error refreshing lotteries'));
-      return false;
+      console.error("lotteryService: Erreur lors du chargement des loteries:", err);
+      setError(err instanceof Error ? err : new Error('Erreur inconnue'));
+      
+      // En cas d'erreur, charger les données mock
+      const extendedLotteries = mockLotteries.map(lottery => convertToExtendedLottery(lottery));
+      
+      setLotteries(extendedLotteries);
     } finally {
       setIsLoading(false);
     }
-  }, [activeOnly]);
+  };
+  
+  useEffect(() => {
+    loadLotteries();
+  }, []);
 
+  // Set up real-time subscription for lotteries
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:lotteries')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'lotteries' }, 
+        async (payload) => {
+          console.log("lotteryService: Mise à jour en temps réel détectée", payload);
+          await loadLotteries();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+  
   return { 
     lotteries, 
     isLoading, 
-    loading: isLoading, // Alias for backward compatibility
+    loading: isLoading, // Alias pour compatibilité avec le reste du code
     error, 
-    refreshLotteries 
+    refreshLotteries: loadLotteries // Méthode pour rafraîchir les loteries
   };
 };
 
-// Function to get all lotteries
-export const getAllLotteries = async (): Promise<Lottery[]> => {
+// Récupérer toutes les loteries
+export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
-    // Try to get data from Supabase first
     const { data, error } = await supabase
       .from('lotteries')
-      .select('*')
-      .order('end_date', { ascending: false });
+      .select('*');
     
-    if (error) {
-      console.error("Error fetching lotteries from Supabase:", error);
-      // Fall back to local storage
-      return getLocalLotteries();
-    }
+    if (error) throw error;
     
-    if (data && data.length > 0) {
-      // Convert from snake_case to camelCase
-      const camelCaseData = data.map(item => snakeToCamel(item));
-      
-      // Update local storage with the latest data
-      localStorage.setItem('lotteries', JSON.stringify(camelCaseData));
-      
-      return camelCaseData as Lottery[];
-    }
-    
-    // If no data in Supabase, fall back to local storage
-    return getLocalLotteries();
-  } catch (error) {
-    console.error("Error in getAllLotteries:", error);
-    // Fall back to local storage in case of any error
-    return getLocalLotteries();
-  }
-};
-
-// Function to get lotteries from local storage
-export const getLocalLotteries = (): Lottery[] => {
-  try {
-    const storedLotteries = localStorage.getItem('lotteries');
-    if (storedLotteries) {
-      return JSON.parse(storedLotteries);
-    }
-  } catch (error) {
-    console.error("Error parsing local lotteries:", error);
-  }
-  
-  return [];
-};
-
-// Function to get a lottery by ID
-export const getLotteryById = async (id: number): Promise<Lottery | null> => {
-  try {
-    // Try to get from Supabase first
-    const { data, error } = await supabase
-      .from('lotteries')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
-      console.error(`Error fetching lottery ${id} from Supabase:`, error);
-      // Fall back to local storage
-      return getLocalLotteryById(id);
-    }
-    
-    if (data) {
-      // Convert from snake_case to camelCase
-      return snakeToCamel(data) as Lottery;
-    }
-    
-    // If not found in Supabase, try local storage
-    return getLocalLotteryById(id);
-  } catch (error) {
-    console.error(`Error in getLotteryById(${id}):`, error);
-    // Fall back to local storage in case of any error
-    return getLocalLotteryById(id);
-  }
-};
-
-// Function to get a lottery by ID from local storage
-export const getLocalLotteryById = (id: number): Lottery | null => {
-  try {
-    const lotteries = getLocalLotteries();
-    return lotteries.find(lottery => lottery.id === id) || null;
-  } catch (error) {
-    console.error(`Error getting local lottery ${id}:`, error);
-    return null;
-  }
-};
-
-// Function to create a new lottery
-export const createLottery = async (lottery: Omit<Lottery, 'id'>): Promise<Lottery | null> => {
-  try {
-    // Generate a new ID for local storage
-    const lotteries = getLocalLotteries();
-    const newId = lotteries.length > 0 
-      ? Math.max(...lotteries.map(l => l.id)) + 1 
-      : 1;
-    
-    const newLottery: Lottery = {
+    return data ? data.map(lottery => ({
       ...lottery,
-      id: newId,
-      participants: 0,
-      createdAt: new Date().toISOString()
-    };
-    
-    // Try to save to Supabase first
+      participants: [] // Initialize with an empty array
+    })) : [];
+  } catch (error) {
+    console.error("lotteryService: Erreur lors de la récupération des loteries:", error);
+    toast.error("Impossible de récupérer les loteries", { position: "bottom-right" });
+    return [];
+  }
+};
+
+// Créer une loterie
+export const createLottery = async (lottery: Omit<ExtendedLottery, 'id' | 'participants'>): Promise<ExtendedLottery | null> => {
+  try {
     const { data, error } = await supabase
       .from('lotteries')
-      .insert(camelToSnake(newLottery))
-      .select()
-      .single();
+      .insert([lottery])
+      .select();
     
-    if (error) {
-      console.error("Error creating lottery in Supabase:", error);
-      // Fall back to local storage only
-      return saveLocalLottery(newLottery);
-    }
+    if (error) throw error;
     
-    if (data) {
-      // Use the ID from Supabase
-      const createdLottery = snakeToCamel(data) as Lottery;
-      
-      // Update local storage
-      const updatedLotteries = [...lotteries, createdLottery];
-      localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-      
-      toast.success("Loterie créée avec succès!");
-      return createdLottery;
-    }
-    
-    // Fall back to local storage if Supabase didn't return data
-    return saveLocalLottery(newLottery);
+    toast.success("Loterie créée avec succès", { position: "bottom-right" });
+    return data ? {
+      ...data[0],
+      participants: [] // Initialize with an empty array
+    } : null;
   } catch (error) {
-    console.error("Error in createLottery:", error);
-    toast.error("Erreur lors de la création de la loterie");
+    console.error("lotteryService: Erreur lors de la création de la loterie:", error);
+    toast.error("Erreur lors de la création de la loterie", { position: "bottom-right" });
     return null;
   }
 };
 
-// Function to save a lottery to local storage
-export const saveLocalLottery = (lottery: Lottery): Lottery => {
+// Mettre à jour une loterie
+export const updateLottery = async (lottery: ExtendedLottery): Promise<ExtendedLottery | null> => {
   try {
-    const lotteries = getLocalLotteries();
-    const existingIndex = lotteries.findIndex(l => l.id === lottery.id);
-    
-    if (existingIndex >= 0) {
-      // Update existing lottery
-      lotteries[existingIndex] = lottery;
-    } else {
-      // Add new lottery
-      lotteries.push(lottery);
-    }
-    
-    localStorage.setItem('lotteries', JSON.stringify(lotteries));
-    return lottery;
-  } catch (error) {
-    console.error("Error saving lottery to local storage:", error);
-    throw error;
-  }
-};
-
-// Function to update a lottery
-export const updateLottery = async (lottery: Lottery): Promise<Lottery | null> => {
-  try {
-    // Try to update in Supabase first
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('lotteries')
-      .update(camelToSnake(lottery))
-      .eq('id', lottery.id);
+      .update(lottery)
+      .eq('id', lottery.id)
+      .select();
     
-    if (error) {
-      console.error(`Error updating lottery ${lottery.id} in Supabase:`, error);
-      // Continue with local storage update even if Supabase fails
-    }
+    if (error) throw error;
     
-    // Update in local storage
-    const updatedLottery = saveLocalLottery(lottery);
-    toast.success("Loterie mise à jour avec succès!");
-    return updatedLottery;
+    toast.success("Loterie mise à jour avec succès", { position: "bottom-right" });
+    return data ? {
+      ...data[0],
+      participants: [] // Initialize with an empty array
+    } : null;
   } catch (error) {
-    console.error("Error in updateLottery:", error);
-    toast.error("Erreur lors de la mise à jour de la loterie");
+    console.error("lotteryService: Erreur lors de la mise à jour de la loterie:", error);
+    toast.error("Erreur lors de la mise à jour de la loterie", { position: "bottom-right" });
     return null;
   }
 };
 
-// Function to delete a lottery
+// Supprimer une loterie
 export const deleteLottery = async (id: number): Promise<boolean> => {
   try {
-    // Try to delete from Supabase first
     const { error } = await supabase
       .from('lotteries')
       .delete()
       .eq('id', id);
     
-    if (error) {
-      console.error(`Error deleting lottery ${id} from Supabase:`, error);
-      // Continue with local storage deletion even if Supabase fails
-    }
+    if (error) throw error;
     
-    // Delete from local storage
-    const lotteries = getLocalLotteries();
-    const updatedLotteries = lotteries.filter(lottery => lottery.id !== id);
-    localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
-    
-    toast.success("Loterie supprimée avec succès!");
+    toast.success("Loterie supprimée avec succès", { position: "bottom-right" });
     return true;
   } catch (error) {
-    console.error(`Error in deleteLottery(${id}):`, error);
-    toast.error("Erreur lors de la suppression de la loterie");
+    console.error("lotteryService: Erreur lors de la suppression de la loterie:", error);
+    toast.error("Erreur lors de la suppression de la loterie", { position: "bottom-right" });
     return false;
-  }
-};
-
-// Function to participate in a lottery
-export const participateInLottery = async (
-  lotteryId: number, 
-  user: User,
-  ticketCount: number = 1
-): Promise<boolean> => {
-  try {
-    // Get the lottery first
-    const lottery = await getLotteryById(lotteryId);
-    if (!lottery) {
-      toast.error("Loterie introuvable");
-      return false;
-    }
-    
-    // Check if lottery is still active
-    const now = new Date();
-    const endDate = new Date(lottery.endDate);
-    if (now > endDate) {
-      toast.error("Cette loterie est terminée");
-      return false;
-    }
-    
-    // Create participant entry
-    const participant: LotteryParticipant = {
-      userId: user.id,
-      lotteryId,
-      participationDate: new Date().toISOString(),
-      ticketCount,
-      userName: user.name || user.email,
-      userEmail: user.email
-    };
-    
-    // Try to save participation to Supabase
-    const { error } = await supabase
-      .from('lottery_participants')
-      .insert(camelToSnake(participant));
-    
-    if (error) {
-      console.error("Error saving participation to Supabase:", error);
-      // Continue with local update even if Supabase fails
-    }
-    
-    // Update lottery participants count
-    const updatedLottery: Lottery = {
-      ...lottery,
-      participants: (lottery.participants || 0) + 1
-    };
-    
-    // Save the updated lottery
-    await updateLottery(updatedLottery);
-    
-    // Store participation in local storage
-    const participations = getLocalParticipations();
-    participations.push(participant);
-    localStorage.setItem('lottery_participations', JSON.stringify(participations));
-    
-    toast.success("Participation enregistrée avec succès!");
-    return true;
-  } catch (error) {
-    console.error(`Error in participateInLottery(${lotteryId}):`, error);
-    toast.error("Erreur lors de l'enregistrement de la participation");
-    return false;
-  }
-};
-
-// Function to get all participations from local storage
-export const getLocalParticipations = (): LotteryParticipant[] => {
-  try {
-    const storedParticipations = localStorage.getItem('lottery_participations');
-    if (storedParticipations) {
-      return JSON.parse(storedParticipations);
-    }
-  } catch (error) {
-    console.error("Error parsing local participations:", error);
-  }
-  
-  return [];
-};
-
-// Function to check if a user has participated in a lottery
-export const hasUserParticipated = (lotteryId: number, userId: number): boolean => {
-  try {
-    const participations = getLocalParticipations();
-    return participations.some(p => p.lotteryId === lotteryId && p.userId === userId);
-  } catch (error) {
-    console.error(`Error checking participation for lottery ${lotteryId}, user ${userId}:`, error);
-    return false;
-  }
-};
-
-// Function to get user participations
-export const getUserParticipations = (userId: number): LotteryParticipant[] => {
-  try {
-    const participations = getLocalParticipations();
-    return participations.filter(p => p.userId === userId);
-  } catch (error) {
-    console.error(`Error getting participations for user ${userId}:`, error);
-    return [];
-  }
-};
-
-// Function to draw a winner for a lottery
-export const drawLotteryWinner = async (lotteryId: number): Promise<User | null> => {
-  try {
-    // In a real implementation, this would be done server-side
-    // For now, we'll simulate it
-    
-    // Get all participants for this lottery
-    const participations = getLocalParticipations()
-      .filter(p => p.lotteryId === lotteryId);
-    
-    if (participations.length === 0) {
-      toast.error("Aucun participant pour cette loterie");
-      return null;
-    }
-    
-    // Create a weighted array based on ticket count
-    const weightedParticipants: number[] = [];
-    participations.forEach(p => {
-      for (let i = 0; i < (p.ticketCount || 1); i++) {
-        weightedParticipants.push(p.userId);
-      }
-    });
-    
-    // Draw a random winner
-    const randomIndex = Math.floor(Math.random() * weightedParticipants.length);
-    const winnerUserId = weightedParticipants[randomIndex];
-    
-    // Find the winner's details
-    const winnerParticipation = participations.find(p => p.userId === winnerUserId);
-    
-    if (!winnerParticipation) {
-      toast.error("Erreur lors du tirage au sort");
-      return null;
-    }
-    
-    // Create a User object from the participation data
-    const winner: User = {
-      id: winnerParticipation.userId,
-      name: winnerParticipation.userName,
-      email: winnerParticipation.userEmail,
-      role: 'user',
-      registrationDate: new Date().toISOString()
-    };
-    
-    // Update the lottery with the winner
-    const lottery = await getLotteryById(lotteryId);
-    if (lottery) {
-      const updatedLottery: Lottery = {
-        ...lottery,
-        winnerId: winner.id,
-        winnerName: winner.name,
-        winnerEmail: winner.email,
-        drawDate: new Date().toISOString()
-      };
-      
-      await updateLottery(updatedLottery);
-    }
-    
-    return winner;
-  } catch (error) {
-    console.error(`Error in drawLotteryWinner(${lotteryId}):`, error);
-    toast.error("Erreur lors du tirage au sort");
-    return null;
   }
 };

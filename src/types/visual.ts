@@ -3,31 +3,33 @@ export interface Visual {
   id: number;
   name: string;
   description?: string;
-  image: string;
-  categoryId: number;
+  image: string; // Pour l'application
+  categoryId?: number;
   categoryName?: string;
   createdAt?: string;
   updatedAt?: string;
+  tags?: string[];
 }
 
 export interface VisualCategory {
   id: number;
   name: string;
   description?: string;
-  slug: string;
+  slug?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface ProductVisualSettings {
-  visualId: number | null;
-  position: {
+  position?: {
     x: number;
     y: number;
   };
-  size: {
-    width: number;
-    height: number;
-  };
-  opacity: number;
+  scale?: number;
+  rotation?: number;
+  printAreaId?: number;
+  colorMode?: 'original' | 'monochrome' | 'custom';
+  customColor?: string;
+  opacity?: number;
+  effects?: string[];
 }

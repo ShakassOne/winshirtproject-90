@@ -1,4 +1,3 @@
-
 import { ExtendedProduct } from "@/types/product";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/toast";
@@ -64,6 +63,7 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
         defaultVisualSettings: item.default_visual_settings,
         visualCategoryId: item.visual_category_id,
         printAreas: item.print_areas || [], // Added to handle the new column
+        brand: item.brand,
       };
     });
     
@@ -138,7 +138,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       default_visual_id: product.defaultVisualId,
       default_visual_settings: product.defaultVisualSettings,
       visual_category_id: product.visualCategoryId,
-      print_areas: product.printAreas || [], // Added to handle the new column
+      print_areas: product.printAreas || [],
+      brand: product.brand // Ajout du nouveau champ brand
     };
     
     console.log('Données envoyées à Supabase:', supabaseData); // Debug
@@ -183,6 +184,7 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       defaultVisualSettings: data.default_visual_settings,
       visualCategoryId: data.visual_category_id,
       printAreas: data.print_areas || [], // Added to handle the new column
+      brand: data.brand,
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -262,7 +264,8 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       default_visual_id: product.defaultVisualId,
       default_visual_settings: product.defaultVisualSettings,
       visual_category_id: product.visualCategoryId,
-      print_areas: product.printAreas || [], // Added to handle the new column
+      print_areas: product.printAreas || [],
+      brand: product.brand // Ajout du nouveau champ brand
     };
     
     console.log('Données envoyées à Supabase pour mise à jour:', supabaseData); // Debug
@@ -308,6 +311,7 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       defaultVisualSettings: data.default_visual_settings,
       visualCategoryId: data.visual_category_id,
       printAreas: data.print_areas || [], // Added to handle the new column
+      brand: data.brand,
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -443,6 +447,7 @@ export const syncProductsToSupabase = async (): Promise<boolean> => {
       default_visual_settings: product.defaultVisualSettings || null,
       visual_category_id: product.visualCategoryId || null,
       print_areas: product.printAreas || [], // Added to handle the new column
+      brand: product.brand,
     }));
 
     // Upsert (insert or update automatically)

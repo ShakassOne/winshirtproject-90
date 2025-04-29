@@ -249,6 +249,7 @@ export type Database = {
       products: {
         Row: {
           allow_customization: boolean | null
+          brand: string | null
           colors: string[] | null
           created_at: string | null
           default_visual_id: number | null
@@ -273,6 +274,7 @@ export type Database = {
         }
         Insert: {
           allow_customization?: boolean | null
+          brand?: string | null
           colors?: string[] | null
           created_at?: string | null
           default_visual_id?: number | null
@@ -297,6 +299,7 @@ export type Database = {
         }
         Update: {
           allow_customization?: boolean | null
+          brand?: string | null
           colors?: string[] | null
           created_at?: string | null
           default_visual_id?: number | null

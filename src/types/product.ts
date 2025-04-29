@@ -1,3 +1,4 @@
+
 import { ProductVisualSettings } from './visual';
 
 export interface ExtendedProduct {
@@ -31,7 +32,7 @@ export interface ExtendedProduct {
   gender?: 'homme' | 'femme' | 'enfant' | 'unisexe'; // Genre
   material?: string; // Matière: coton, polyester, bio, technique
   fit?: 'regular' | 'ajusté' | 'oversize'; // Coupe
-  brand?: string; // Marque
+  brand?: string; // Marque - Nouveau champ ajouté à la base de données
   
   // Zones d'impression
   printAreas?: PrintArea[]; // Zones d'impression disponibles

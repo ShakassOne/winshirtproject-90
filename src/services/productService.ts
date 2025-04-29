@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
@@ -40,7 +39,9 @@ export const useProducts = () => {
           // S'assurer que chaque produit a un champ 'type'
           const productsWithType = productsWithProperFormat.map(product => ({
             ...product,
-            type: product.type || product.productType || "standard"
+            type: product.type || product.productType || "standard",
+            // Assurer que brand est présent, même si null
+            brand: product.brand || null
           }));
           
           setProducts(productsWithType);
@@ -164,15 +165,16 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
     console.log("createProduct: Début de la création du produit", product);
     const isConnected = await checkSupabaseConnection();
     
-    // Assurer que le champ type est défini
-    const productWithType = {
+    // Assurer que les champs requis sont définis
+    const productWithDefaults = {
       ...product,
-      type: product.type || "standard"
+      type: product.type || "standard",
+      brand: product.brand || null // Assurer que brand est présent même si null
     };
     
     // Générer un ID pour le nouveau produit
     const newProductId = Date.now();
-    const newProduct = { ...productWithType, id: newProductId };
+    const newProduct = { ...productWithDefaults, id: newProductId };
     
     if (isConnected) {
       // Si connecté à Supabase, essayer d'insérer directement
@@ -223,33 +225,34 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
     console.log("updateProduct: Début de la mise à jour du produit", product);
     const isConnected = await checkSupabaseConnection();
     
-    // Assurer que le champ type est défini
-    const productWithType = {
+    // Assurer que les champs requis sont définis
+    const productWithDefaults = {
       ...product,
-      type: product.type || "standard"
+      type: product.type || "standard",
+      brand: product.brand || null // Assurer que brand est présent même si null
     };
     
     // Mettre à jour dans localStorage
     const existingProducts = localStorage.getItem('products') ? JSON.parse(localStorage.getItem('products')!) : [];
     const updatedProducts = existingProducts.map((p: ExtendedProduct) => 
-      p.id === productWithType.id ? { ...p, ...productWithType } : p
+      p.id === productWithDefaults.id ? { ...p, ...productWithDefaults } : p
     );
     localStorage.setItem('products', JSON.stringify(updatedProducts));
     
-    const updatedProduct = updatedProducts.find((p: ExtendedProduct) => p.id === productWithType.id);
+    const updatedProduct = updatedProducts.find((p: ExtendedProduct) => p.id === productWithDefaults.id);
     
     if (isConnected) {
       // Mettre à jour dans Supabase
       console.log("updateProduct: Tentative de mise à jour dans Supabase");
       
       // Convertir en snake_case pour Supabase
-      const productForSupabase = camelToSnake(productWithType);
+      const productForSupabase = camelToSnake(productWithDefaults);
       console.log("updateProduct: Données converties pour Supabase:", productForSupabase);
       
       const { data, error } = await supabase
         .from('products')
         .update(productForSupabase)
-        .eq('id', productWithType.id)
+        .eq('id', productWithDefaults.id)
         .select();
       
       if (error) {
