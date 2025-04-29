@@ -64,6 +64,9 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
         visualCategoryId: item.visual_category_id,
         printAreas: item.print_areas || [], // Added to handle the new column
         brand: item.brand,
+        fit: item.fit,
+        gender: item.gender,
+        material: item.material,
       };
     });
     
@@ -139,7 +142,10 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       default_visual_settings: product.defaultVisualSettings,
       visual_category_id: product.visualCategoryId,
       print_areas: product.printAreas || [],
-      brand: product.brand // Ajout du nouveau champ brand
+      brand: product.brand, // Ajout du champ brand
+      fit: product.fit, // Ajout du champ fit
+      gender: product.gender, // Ajout du champ gender
+      material: product.material // Ajout du champ material
     };
     
     console.log('Données envoyées à Supabase:', supabaseData); // Debug
@@ -185,6 +191,9 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       visualCategoryId: data.visual_category_id,
       printAreas: data.print_areas || [], // Added to handle the new column
       brand: data.brand,
+      fit: data.fit,
+      gender: data.gender,
+      material: data.material,
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -221,7 +230,6 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
   }
 };
 
-// Fonction pour mettre à jour un produit existant
 export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
   console.log('Mise à jour du produit:', product); // Debug
   
@@ -265,7 +273,10 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       default_visual_settings: product.defaultVisualSettings,
       visual_category_id: product.visualCategoryId,
       print_areas: product.printAreas || [],
-      brand: product.brand // Ajout du nouveau champ brand
+      brand: product.brand, // Ajout du champ brand
+      fit: product.fit, // Ajout du champ fit
+      gender: product.gender, // Ajout du champ gender
+      material: product.material // Ajout du champ material
     };
     
     console.log('Données envoyées à Supabase pour mise à jour:', supabaseData); // Debug
@@ -308,10 +319,13 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       deliveryPrice: data.delivery_price,
       allowCustomization: data.allow_customization === true, // Conversion explicite en booléen
       defaultVisualId: data.default_visual_id,
-      defaultVisualSettings: data.default_visual_settings,
+      defaultVisualSettings: data.defaultVisualSettings,
       visualCategoryId: data.visual_category_id,
       printAreas: data.print_areas || [], // Added to handle the new column
       brand: data.brand,
+      fit: data.fit,
+      gender: data.gender,
+      material: data.material,
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -448,6 +462,9 @@ export const syncProductsToSupabase = async (): Promise<boolean> => {
       visual_category_id: product.visualCategoryId || null,
       print_areas: product.printAreas || [], // Added to handle the new column
       brand: product.brand,
+      fit: product.fit,
+      gender: product.gender,
+      material: product.material,
     }));
 
     // Upsert (insert or update automatically)

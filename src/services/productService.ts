@@ -41,7 +41,8 @@ export const useProducts = () => {
             ...product,
             type: product.type || product.productType || "standard",
             // Assurer que brand est présent, même si null
-            brand: product.brand || null
+            brand: product.brand || null,
+            material: product.material || null
           }));
           
           setProducts(productsWithType);
@@ -171,7 +172,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       type: product.type || "standard",
       brand: product.brand || null, // Assurer que brand est présent même si null
       fit: product.fit || "regular", // Assurer que fit est présent même si null
-      gender: product.gender || "unisexe" // Assurer que gender est présent même si null
+      gender: product.gender || "unisexe", // Assurer que gender est présent même si null
+      material: product.material || null // Assurer que material est présent même si null
     };
     
     // Générer un ID pour le nouveau produit - Fix: use a smaller integer value
@@ -234,7 +236,8 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       type: product.type || "standard",
       brand: product.brand || null, // Assurer que brand est présent même si null
       fit: product.fit || "regular", // Assurer que fit est présent même si null
-      gender: product.gender || "unisexe" // Assurer que gender est présent même si null
+      gender: product.gender || "unisexe", // Assurer que gender est présent même si null
+      material: product.material || null // Assurer que material est présent même si null
     };
     
     // Mettre à jour dans localStorage

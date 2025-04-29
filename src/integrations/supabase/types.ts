@@ -261,6 +261,7 @@ export type Database = {
           id: number
           image: string | null
           linked_lotteries: number[] | null
+          material: string | null
           name: string
           popularity: number | null
           price: number
@@ -288,6 +289,7 @@ export type Database = {
           id?: number
           image?: string | null
           linked_lotteries?: number[] | null
+          material?: string | null
           name: string
           popularity?: number | null
           price: number
@@ -315,6 +317,7 @@ export type Database = {
           id?: number
           image?: string | null
           linked_lotteries?: number[] | null
+          material?: string | null
           name?: string
           popularity?: number | null
           price?: number
