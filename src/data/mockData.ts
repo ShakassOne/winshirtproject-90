@@ -1,4 +1,3 @@
-
 // Add this code if the mockData.ts file doesn't exist or append to it
 
 // If you already have a mockLotteries export, replace it with this one
@@ -9,8 +8,10 @@ export const mockLotteries = [
     description: "Gagnez des produits exclusifs avec ce tirage au sort estival !",
     value: 250,
     image: "https://placehold.co/600x400/555/fff?text=Lottery+1",
-    target_participants: 50,
-    current_participants: 12,
+    targetParticipants: 50, // Changed from target_participants to match ExtendedLottery type
+    currentParticipants: 12, // Changed from current_participants to match ExtendedLottery type
+    target_participants: 50, // Keep for backward compatibility
+    current_participants: 12, // Keep for backward compatibility
     status: "active",
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
     draw_date: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString(), // 35 days from now
@@ -23,8 +24,10 @@ export const mockLotteries = [
     description: "Une chance unique de gagner des articles rares et exclusifs !",
     value: 500,
     image: "https://placehold.co/600x400/444/fff?text=Lottery+2",
-    target_participants: 100,
-    current_participants: 35,
+    targetParticipants: 100, // Changed
+    currentParticipants: 35, // Changed
+    target_participants: 100, // Keep for backward compatibility
+    current_participants: 35, // Keep for backward compatibility
     status: "active",
     end_date: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), // 45 days from now
     draw_date: new Date(Date.now() + 50 * 24 * 60 * 60 * 1000).toISOString(), // 50 days from now
@@ -37,13 +40,81 @@ export const mockLotteries = [
     description: "Participez pour tenter de gagner notre collection hiver !",
     value: 350,
     image: "https://placehold.co/600x400/333/fff?text=Lottery+3",
-    target_participants: 75,
-    current_participants: 20,
+    targetParticipants: 75, // Changed
+    currentParticipants: 20, // Changed
+    target_participants: 75, // Keep for backward compatibility
+    current_participants: 20, // Keep for backward compatibility
     status: "upcoming",
     end_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
     draw_date: new Date(Date.now() + 65 * 24 * 60 * 60 * 1000).toISOString(), // 65 days from now
     featured: false,
     linked_products: [2, 4]
+  }
+];
+
+// Add mock products export that was missing
+export const mockProducts = [
+  {
+    id: 1,
+    name: "T-Shirt 3D",
+    description: "Un t-shirt moderne avec un design en 3D unique.",
+    price: 29.99,
+    image: "https://placehold.co/600x400/555/fff?text=T-Shirt+3D",
+    secondaryImage: "https://placehold.co/600x400/333/fff?text=T-Shirt+3D+Back",
+    sizes: ["S", "M", "L", "XL"],
+    colors: ["Noir", "Blanc", "Rouge"],
+    productType: "T-Shirt",
+    sleeveType: "Courtes",
+    gender: "unisex",
+    material: "Coton, Polyester",
+    fit: "Regular",
+    brand: "WinShirt",
+    allowCustomization: true,
+    tickets: 3,
+    linkedLotteries: [1, 2],
+    printAreas: [
+      {
+        id: Date.now(),
+        name: "Recto",
+        position: "front",
+        format: "custom",
+        bounds: {
+          x: 100,
+          y: 100,
+          width: 200,
+          height: 250
+        },
+        allowCustomPosition: true
+      },
+      {
+        id: Date.now() + 1,
+        name: "Verso",
+        position: "back",
+        format: "custom",
+        bounds: {
+          x: 100,
+          y: 100,
+          width: 200,
+          height: 250
+        },
+        allowCustomPosition: true
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: "Sweatshirt Premium",
+    description: "Un sweatshirt confortable et chaud pour l'hiver.",
+    price: 49.99,
+    image: "https://placehold.co/600x400/444/fff?text=Sweatshirt",
+    secondaryImage: "https://placehold.co/600x400/222/fff?text=Sweatshirt+Back",
+    sizes: ["M", "L", "XL", "XXL"],
+    colors: ["Bleu", "Gris", "Noir"],
+    productType: "Sweatshirt",
+    sleeveType: "Longues",
+    popularity: 4,
+    tickets: 1,
+    linkedLotteries: [1, 3]
   }
 ];
 

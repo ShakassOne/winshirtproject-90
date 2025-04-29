@@ -27,7 +27,15 @@ const HomePage: React.FC = () => {
         if (storedLotteries) {
           const parsedLotteries = JSON.parse(storedLotteries);
           if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-            const active = parsedLotteries.filter(lottery => lottery.status === 'active');
+            // Convert from snake_case to camelCase if needed
+            const active = parsedLotteries
+              .filter(lottery => lottery.status === 'active')
+              .map(lottery => ({
+                ...lottery,
+                targetParticipants: lottery.targetParticipants || lottery.target_participants,
+                currentParticipants: lottery.currentParticipants || lottery.current_participants
+              })) as ExtendedLottery[];
+              
             setActiveLotteries(active);
             return;
           }
@@ -36,8 +44,16 @@ const HomePage: React.FC = () => {
         console.error("Erreur lors du chargement des loteries:", error);
       }
       
-      // Fallback aux loteries mock
-      setActiveLotteries(mockLotteries.filter(lottery => lottery.status === 'active'));
+      // Fallback to mock lotteries with explicit type conversion
+      setActiveLotteries(
+        mockLotteries
+          .filter(lottery => lottery.status === 'active')
+          .map(lottery => ({
+            ...lottery,
+            targetParticipants: lottery.targetParticipants || lottery.target_participants,
+            currentParticipants: lottery.currentParticipants || lottery.current_participants
+          })) as ExtendedLottery[]
+      );
     };
     
     loadLotteries();
