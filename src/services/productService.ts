@@ -170,7 +170,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       ...product,
       type: product.type || "standard",
       brand: product.brand || null, // Assurer que brand est présent même si null
-      fit: product.fit || "regular" // Assurer que fit est présent même si null
+      fit: product.fit || "regular", // Assurer que fit est présent même si null
+      gender: product.gender || "unisexe" // Assurer que gender est présent même si null
     };
     
     // Générer un ID pour le nouveau produit - Fix: use a smaller integer value
@@ -232,7 +233,8 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       ...product,
       type: product.type || "standard",
       brand: product.brand || null, // Assurer que brand est présent même si null
-      fit: product.fit || "regular" // Assurer que fit est présent même si null
+      fit: product.fit || "regular", // Assurer que fit est présent même si null
+      gender: product.gender || "unisexe" // Assurer que gender est présent même si null
     };
     
     // Mettre à jour dans localStorage

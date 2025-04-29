@@ -257,6 +257,7 @@ export type Database = {
           delivery_price: number | null
           description: string | null
           fit: string | null
+          gender: string | null
           id: number
           image: string | null
           linked_lotteries: number[] | null
@@ -283,6 +284,7 @@ export type Database = {
           delivery_price?: number | null
           description?: string | null
           fit?: string | null
+          gender?: string | null
           id?: number
           image?: string | null
           linked_lotteries?: number[] | null
@@ -309,6 +311,7 @@ export type Database = {
           delivery_price?: number | null
           description?: string | null
           fit?: string | null
+          gender?: string | null
           id?: number
           image?: string | null
           linked_lotteries?: number[] | null
