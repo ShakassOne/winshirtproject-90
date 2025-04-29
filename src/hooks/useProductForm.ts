@@ -88,16 +88,22 @@ export const useProductForm = (
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
       console.log("Deleting product:", productId);
       
-      const success = await deleteProduct(productId);
-      
-      if (success) {
-        if (selectedProductId === productId) {
-          setSelectedProductId(null);
-          setIsCreating(false);
-          form.reset();
-        }
+      try {
+        // Fix: Pass both productId and isConnected parameters
+        const success = await deleteProduct(productId, isConnected);
         
-        await refreshProducts();
+        if (success) {
+          if (selectedProductId === productId) {
+            setSelectedProductId(null);
+            setIsCreating(false);
+            form.reset();
+          }
+          
+          await refreshProducts();
+        }
+      } catch (error) {
+        console.error("Error deleting product:", error);
+        toast.error("Erreur lors de la suppression du produit", { position: "bottom-right" });
       }
     }
   };
