@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -88,7 +87,7 @@ export const useLotteries = () => {
             ...lottery,
             participants: lottery.currentParticipants || 0, // Pour type Lottery
             // Ensure endDate is set properly from either endDate or end_date
-            endDate: lottery.endDate || lottery.end_date || new Date().toISOString() // Fixed to include both possible property names
+            endDate: lottery.endDate || lottery.end_date || new Date().toISOString()
           } as Lottery));
           
           // Convertir en ExtendedLottery
@@ -108,12 +107,16 @@ export const useLotteries = () => {
       console.log("lotteryService: Utilisation des données mock");
       
       // Assurer que les mocks ont toutes les propriétés requises
-      const validMockLotteries = mockLotteries.map(lottery => ({
-        ...lottery,
-        participants: lottery.currentParticipants || 0,
-        // Ensure endDate is set properly from either endDate or end_date
-        endDate: lottery.endDate || lottery.end_date || new Date().toISOString() // Fixed to include both possible property names
-      } as Lottery));
+      const validMockLotteries = mockLotteries.map(lottery => {
+        // Using a temporary object to avoid direct property access errors
+        const lotteryWithRequiredFields = {
+          ...lottery,
+          participants: lottery.currentParticipants || 0,
+          // Fix: access end_date instead of endDate if using the raw object
+          endDate: (lottery as any).endDate || (lottery as any).end_date || new Date().toISOString()
+        };
+        return lotteryWithRequiredFields as Lottery;
+      });
       
       // Convertir en ExtendedLottery
       const extendedLotteries = validMockLotteries.map(lottery => convertToExtendedLottery(lottery));
@@ -131,11 +134,17 @@ export const useLotteries = () => {
       setError(err instanceof Error ? err : new Error('Erreur inconnue'));
       
       // En cas d'erreur, charger les données mock
-      const validMockLotteries = mockLotteries.map(lottery => ({
-        ...lottery,
-        participants: lottery.currentParticipants || 0,
-        endDate: lottery.endDate || new Date().toISOString()
-      } as Lottery));
+      const validMockLotteries = mockLotteries.map(lottery => {
+        // Using a temporary object to avoid direct property access errors
+        const lotteryWithRequiredFields = {
+          ...lottery,
+          participants: lottery.currentParticipants || 0,
+          // Fix: access end_date instead of endDate if using the raw object
+          endDate: (lottery as any).endDate || (lottery as any).end_date || new Date().toISOString()
+        };
+        return lotteryWithRequiredFields as Lottery;
+      });
+      
       const extendedLotteries = validMockLotteries.map(lottery => convertToExtendedLottery(lottery));
       
       setLotteries(extendedLotteries);
@@ -175,6 +184,14 @@ export const useLotteries = () => {
   };
 };
 
+/**
+ * Function to get active lotteries only 
+ */
+export const getActiveLotteries = async (): Promise<ExtendedLottery[]> => {
+  const allLotteries = await getAllLotteries();
+  return allLotteries.filter(lottery => lottery.status === 'active');
+};
+
 // Récupérer toutes les loteries
 export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
   try {
@@ -197,7 +214,7 @@ export const getAllLotteries = async (): Promise<ExtendedLottery[]> => {
         status: rawLottery.status,
         image: rawLottery.image || '',
         linkedProducts: rawLottery.linked_products || [],
-        endDate: rawLottery.end_date || new Date().toISOString(), // Ensuring endDate is properly mapped
+        endDate: rawLottery.end_date || new Date().toISOString(), // Fixed to use end_date
         drawDate: rawLottery.draw_date,
         featured: rawLottery.featured || false
       };
