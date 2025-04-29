@@ -1,426 +1,75 @@
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/lib/toast';
+import { snakeToCamel, camelToSnake } from '@/lib/utils';
+import type { ValidTableName } from '@/integrations/supabase/client';
 
-// Import the supabase client and required types directly
-import { 
-  supabase, 
-  checkSupabaseConnection as checkConnection,
-  requiredTables,
-  checkRequiredTables,
-  syncLocalDataToSupabase as syncData
-} from '@/integrations/supabase/client';
-
-// Re-export the required types and functions from client
-export { 
-  supabase, 
-  requiredTables,
-  checkRequiredTables,
-};
-
-// Export renamed functions to avoid name clashes
-export const checkSupabaseConnection = checkConnection;
-export const syncLocalDataToSupabase = syncData;
-
-// Export type definitions with proper syntax for isolated modules
-export type { ValidTableName } from '@/integrations/supabase/client';
-
-// HomeIntro related types and functions
-export type SlideType = {
-  id: number;
-  title: string;
-  subtitle: string;
-  backgroundImage: string;
-  textColor: string;
-  buttonText?: string;
-  buttonLink?: string;
-  order: number;
-};
-
-export interface HomeIntroConfig {
-  slides: SlideType[];
-  autoPlay: boolean;
-  transitionTime: number;
-  showButtons: boolean;
-  showIndicators: boolean;
-}
-
-// Default configuration for home intro
-export const getDefaultHomeIntroConfig = (): HomeIntroConfig => ({
-  slides: [
-    {
-      id: 1,
-      title: "Achetez des vêtements, Gagnez des cadeaux incroyables",
-      subtitle: "WinShirt révolutionne le shopping en ligne avec nos loteries exclusives",
-      backgroundImage: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200",
-      textColor: "#ffffff",
-      buttonText: "Voir les produits",
-      buttonLink: "/products",
-      order: 0
-    },
-    {
-      id: 2,
-      title: "Découvrez nos loteries exclusives",
-      subtitle: "Tentez votre chance et gagnez des prix exceptionnels",
-      backgroundImage: "https://images.unsplash.com/photo-1592991538534-36a434169a8a?w=1200",
-      textColor: "#ffffff",
-      buttonText: "Voir les loteries",
-      buttonLink: "/lotteries",
-      order: 1
-    }
-  ],
-  autoPlay: true,
-  transitionTime: 5000,
-  showButtons: true,
-  showIndicators: true
-});
-
-// FTP configuration for image uploads
-export const ftpConfig = {
-  enabled: false,
-  uploadEndpoint: '',
-  baseUrl: ''
-};
-
-// Function to check if Supabase is configured
-export const isSupabaseConfigured = (): boolean => {
+/**
+ * Fonction pour vérifier la connexion à Supabase
+ */
+export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    const connected = localStorage.getItem('supabase_connected');
-    return connected === 'true';
-  } catch (e) {
-    console.error("Error checking Supabase configuration:", e);
-    return false;
-  }
-};
-
-// Helper function to get home intro configuration
-export const getHomeIntroConfig = async (): Promise<HomeIntroConfig> => {
-  try {
-    // First check if we have a configuration in localStorage
-    const localConfig = localStorage.getItem('homeIntroConfig');
-    if (localConfig) {
-      return JSON.parse(localConfig);
-    }
-
-    // If no local config, check if we have a connection to Supabase
-    const isConnected = await checkSupabaseConnection();
-    if (isConnected) {
-      try {
-        // Try to fetch from Supabase
-        const { data, error } = await supabase
-          .from('app_config')
-          .select('*')
-          .eq('key', 'home_intro')
-          .single();
-          
-        if (!error && data && data.value) {
-          const config = data.value as HomeIntroConfig;
-          localStorage.setItem('homeIntroConfig', JSON.stringify(config));
-          return config;
-        }
-      } catch (e) {
-        console.error("Error retrieving config from Supabase:", e);
-      }
-    }
-    
-    // If everything fails, return the default config
-    const defaultConfig = getDefaultHomeIntroConfig();
-    localStorage.setItem('homeIntroConfig', JSON.stringify(defaultConfig));
-    return defaultConfig;
-  } catch (e) {
-    console.error("Error loading home intro config:", e);
-    return getDefaultHomeIntroConfig();
-  }
-};
-
-// Save home intro configuration
-export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<boolean> => {
-  try {
-    // Always save to localStorage
-    localStorage.setItem('homeIntroConfig', JSON.stringify(config));
-    
-    // Check if we have a connection to Supabase
-    const isConnected = await checkSupabaseConnection();
-    if (isConnected) {
-      try {
-        // Try to save to Supabase
-        const { error } = await supabase
-          .from('app_config')
-          .upsert({ 
-            key: 'home_intro',
-            value: config,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'key' });
-          
-        if (error) {
-          console.error("Error saving config to Supabase:", error);
-          return false;
-        }
-        return true;
-      } catch (e) {
-        console.error("Error saving config to Supabase:", e);
-        return false;
-      }
-    }
-    
-    return true;
-  } catch (e) {
-    console.error("Error saving home intro config:", e);
-    return false;
-  }
-};
-
-// Upload image function for FTP or Supabase storage
-export const uploadImage = async (file: File, folder: string = 'general'): Promise<string | null> => {
-  try {
-    // Check if FTP is enabled
-    if (ftpConfig.enabled && ftpConfig.uploadEndpoint && ftpConfig.baseUrl) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', folder);
-      
-      const response = await fetch(ftpConfig.uploadEndpoint, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Upload failed with status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      return `${ftpConfig.baseUrl}/${folder}/${result.filename}`;
-    } else {
-      // Fall back to Supabase storage
-      const isConnected = await checkSupabaseConnection();
-      if (isConnected) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-        const filePath = `${folder}/${fileName}`;
-        
-        const { data, error } = await supabase.storage
-          .from('images')
-          .upload(filePath, file);
-          
-        if (error) {
-          console.error("Error uploading to Supabase Storage:", error);
-          throw error;
-        }
-        
-        const { data: urlData } = supabase.storage
-          .from('images')
-          .getPublicUrl(filePath);
-          
-        return urlData.publicUrl;
-      } else {
-        // If not connected to Supabase, store locally (temporary)
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(file);
-        });
-      }
-    }
-  } catch (e) {
-    console.error("Error uploading image:", e);
-    toast.error(`Upload failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
-    return null;
-  }
-};
-
-// Force Supabase connection
-export const forceSupabaseConnection = async (): Promise<boolean> => {
-  try {
-    const result = await checkSupabaseConnection();
-    if (result) {
-      localStorage.setItem('supabase_connected', 'true');
-    } else {
-      localStorage.setItem('supabase_connected', 'false');
-    }
-    return result;
-  } catch (e) {
-    console.error("Error forcing Supabase connection:", e);
-    localStorage.setItem('supabase_connected', 'false');
-    return false;
-  }
-};
-
-// Function to create tables or fix schema issues if needed
-export const ensureDatabaseSchema = async (): Promise<boolean> => {
-  try {
-    console.log("Vérification et mise à jour du schéma de la base de données...");
-    
-    const isConnected = await checkSupabaseConnection();
-    if (!isConnected) {
-      console.log("Pas de connexion à Supabase");
-      return false;
-    }
-
-    // Create functions to help with schema management
-    await supabase.rpc('create_schema_helper_functions');
-    
-    // Add category_name column to visuals table if it doesn't exist
-    await addCategoryNameColumn();
-    
-    return true;
-  } catch (error) {
-    console.error("Erreur lors de la mise à jour du schéma:", error);
-    return false;
-  }
-};
-
-// Ajouter la colonne manquante 'category_name' à la table 'visuals' dans Supabase
-export const addCategoryNameColumn = async (): Promise<boolean> => {
-  try {
-    console.log("Vérification et ajout de la colonne category_name à la table visuals...");
-    
-    // Vérifier d'abord si la connexion à Supabase est établie
-    const isConnected = await checkSupabaseConnection();
-    if (!isConnected) {
-      console.log("Pas de connexion à Supabase");
-      return false;
-    }
-
-    // Vérifier si la colonne existe déjà
-    const { data: columns, error: columnError } = await supabase
-      .rpc('get_column_info', { 
-        p_table_name: 'visuals',
-        p_column_name: 'category_name'
-      });
-    
-    if (columnError) {
-      console.error("Erreur lors de la vérification de la colonne:", columnError);
-      return false;
-    }
-    
-    // Si la colonne existe déjà, ne rien faire
-    if (columns && columns.length > 0) {
-      console.log("La colonne 'category_name' existe déjà dans la table 'visuals'");
-      return true;
-    }
-    
-    // Ajouter la colonne si elle n'existe pas
-    const { error: alterError } = await supabase.rpc('add_column_if_not_exists', {
-      p_table_name: 'visuals',
-      p_column_name: 'category_name',
-      p_column_type: 'text'
-    });
-    
-    if (alterError) {
-      console.error("Erreur lors de l'ajout de la colonne:", alterError);
-      return false;
-    }
-
-    console.log("Colonne 'category_name' ajoutée avec succès à la table 'visuals'");
-    
-    // Mettre à jour les données existantes pour ajouter le category_name
-    const { data: visuals, error: visualsError } = await supabase
-      .from('visuals')
-      .select('id, category_id');
-    
-    if (visualsError) {
-      console.error("Erreur lors de la récupération des visuels:", visualsError);
-      return false;
-    }
-    
-    // Récupérer les catégories pour obtenir les noms
-    const { data: categories, error: categoriesError } = await supabase
-      .from('visual_categories')
-      .select('id, name');
-    
-    if (categoriesError) {
-      console.error("Erreur lors de la récupération des catégories:", categoriesError);
-      return false;
-    }
-    
-    // Mettre à jour chaque visuel avec le nom de sa catégorie
-    if (visuals && categories) {
-      for (const visual of visuals) {
-        const category = categories.find(c => c.id === visual.category_id);
-        if (category) {
-          await supabase
-            .from('visuals')
-            .update({ category_name: category.name })
-            .eq('id', visual.id);
-        }
-      }
-      console.log("Données de category_name mises à jour avec succès");
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Erreur lors de l'ajout de la colonne category_name:", error);
-    return false;
-  }
-};
-
-// Fonction utilitaire pour convertir de snake_case à camelCase
-export const snakeToCamel = (obj: any): any => {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(item => snakeToCamel(item));
-  }
-  
-  return Object.keys(obj).reduce((acc, key) => {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    acc[camelKey] = snakeToCamel(obj[key]);
-    return acc;
-  }, {} as any);
-};
-
-// Fonction utilitaire pour convertir de camelCase à snake_case
-export const camelToSnake = (obj: any): any => {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(item => camelToSnake(item));
-  }
-  
-  return Object.keys(obj).reduce((acc, key) => {
-    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-    acc[snakeKey] = camelToSnake(obj[key]);
-    return acc;
-  }, {} as any);
-};
-
-// Fetch data from Supabase for a specific table
-export const fetchDataFromSupabase = async (tableName: string): Promise<any[]> => {
-  try {
-    console.log(`Récupération des données depuis Supabase pour ${tableName}...`);
-    
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*');
+    console.log("Vérification de la connexion Supabase...");
+    const { data, error } = await supabase.from('lotteries').select('count').limit(1);
     
     if (error) {
-      console.error(`Erreur lors de la récupération des données de ${tableName}:`, error);
+      console.error("Erreur de connexion à Supabase:", error);
+      return false;
+    }
+    
+    console.log("Connexion à Supabase établie avec succès");
+    return true;
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la connexion à Supabase:", error);
+    return false;
+  }
+};
+
+/**
+ * Fonction pour récupérer des données depuis Supabase
+ */
+export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<any[]> => {
+  try {
+    console.log(`Récupération des données depuis Supabase pour ${tableName}...`);
+    const isConnected = await checkSupabaseConnection();
+    
+    if (!isConnected) {
+      console.log(`Mode hors-ligne, récupération des données depuis localStorage pour ${tableName}`);
+      const localData = localStorage.getItem(tableName);
+      return localData ? JSON.parse(localData) : [];
+    }
+    
+    const { data, error } = await supabase.from(tableName).select('*');
+    
+    if (error) {
+      console.error(`Erreur lors de la récupération des données depuis Supabase pour ${tableName}:`, error);
       throw error;
     }
     
-    if (data) {
-      const camelCaseData = data.map(item => snakeToCamel(item));
-      localStorage.setItem(tableName, JSON.stringify(camelCaseData));
-      console.log(`Données de ${tableName} mises à jour: ${camelCaseData.length} éléments`);
-      return camelCaseData;
+    if (!data || data.length === 0) {
+      console.log(`Aucune donnée trouvée dans Supabase pour ${tableName}`);
+      return [];
     }
     
-    return [];
-  } catch (error) {
-    console.error(`Erreur lors de la récupération des données de ${tableName}:`, error);
+    // Convertir les données de snake_case à camelCase
+    const camelCaseData = data.map(item => snakeToCamel(item));
     
-    // Récupérer depuis localStorage en cas d'erreur
+    console.log(`Données de ${tableName} récupérées depuis Supabase:`, camelCaseData.length, "éléments");
+    
+    // Mettre à jour localStorage
+    localStorage.setItem(tableName, JSON.stringify(camelCaseData));
+    
+    return camelCaseData;
+  } catch (error) {
+    console.error(`Erreur lors de la récupération des données depuis Supabase pour ${tableName}:`, error);
+    
+    // Fallback aux données locales
     const localData = localStorage.getItem(tableName);
     if (localData) {
       try {
-        const parsedData = JSON.parse(localData);
-        console.log(`Données récupérées depuis localStorage pour ${tableName}: ${parsedData.length} éléments`);
-        return parsedData;
-      } catch (parseError) {
-        console.error(`Erreur lors de l'analyse des données locales:`, parseError);
+        console.log(`Utilisation des données locales pour ${tableName}`);
+        return JSON.parse(localData);
+      } catch (e) {
+        console.error(`Erreur lors du parsing des données locales pour ${tableName}:`, e);
       }
     }
     
@@ -428,5 +77,214 @@ export const fetchDataFromSupabase = async (tableName: string): Promise<any[]> =
   }
 };
 
-// Make sure toast is imported for error handling
-import { toast } from './toast';
+/**
+ * Fonction pour synchroniser les données locales vers Supabase
+ */
+export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
+  try {
+    console.log(`Début de la synchronisation des données locales vers Supabase pour ${tableName}...`);
+    const localData = localStorage.getItem(tableName);
+    
+    if (!localData) {
+      console.log(`Aucune donnée locale à synchroniser pour ${tableName}`);
+      toast.warning(`Aucune donnée locale à synchroniser pour ${tableName}`, { position: "bottom-right" });
+      return false;
+    }
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(localData);
+    } catch (e) {
+      console.error(`Erreur lors du parsing des données locales pour ${tableName}:`, e);
+      toast.error(`Erreur lors du parsing des données locales pour ${tableName}`, { position: "bottom-right" });
+      return false;
+    }
+    
+    if (!Array.isArray(parsedData) || parsedData.length === 0) {
+      console.log(`Aucune donnée valide à synchroniser pour ${tableName}`);
+      toast.warning(`Aucune donnée valide à synchroniser pour ${tableName}`, { position: "bottom-right" });
+      return false;
+    }
+    
+    // Convertir les données de camelCase à snake_case pour Supabase
+    const snakeCaseData = parsedData.map(item => camelToSnake(item));
+    console.log(`Données préparées pour Supabase (${tableName}):`, snakeCaseData.length, "éléments");
+    
+    // Utiliser upsert pour insérer ou mettre à jour
+    const { error } = await supabase
+      .from(tableName)
+      .upsert(snakeCaseData, { 
+        onConflict: 'id',
+        ignoreDuplicates: false // Mettre à jour les enregistrements existants
+      });
+    
+    if (error) {
+      console.error(`Erreur lors de la synchronisation vers Supabase pour ${tableName}:`, error);
+      toast.error(`Erreur lors de la synchronisation: ${error.message || 'Erreur inconnue'}`, { position: "bottom-right" });
+      return false;
+    }
+    
+    console.log(`Synchronisation réussie pour ${tableName}`);
+    toast.success(`Synchronisation réussie pour ${tableName} (${parsedData.length} éléments)`, { position: "bottom-right" });
+    
+    return true;
+  } catch (error) {
+    console.error(`Erreur lors de la synchronisation des données vers Supabase pour ${tableName}:`, error);
+    toast.error(`Erreur de synchronisation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return false;
+  }
+};
+
+/**
+ * Test connection to Supabase
+ */
+export const testSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    console.log("Testing Supabase connection...");
+    const { data, error, status } = await supabase
+      .from('lotteries')
+      .select('count')
+      .limit(1);
+
+    if (error) {
+      console.error("Supabase connection test failed:", error);
+      console.error("HTTP Status:", status);
+      return false;
+    }
+    
+    console.log("Supabase connection successful!");
+    return true;
+  } catch (error) {
+    console.error("Error testing Supabase connection:", error);
+    return false;
+  }
+};
+
+/**
+ * Get data counts for local and remote storage
+ */
+export const getDataCounts = async (): Promise<Record<string, { local: number, remote: number }>> => {
+  const tables: ValidTableName[] = ['lotteries', 'products', 'visuals'];
+  const results: Record<string, { local: number, remote: number }> = {};
+
+  for (const table of tables) {
+    // Get local count
+    const localData = localStorage.getItem(table);
+    const localCount = localData ? JSON.parse(localData).length : 0;
+    
+    // Get remote count
+    let remoteCount = 0;
+    try {
+      const { count, error } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true });
+      
+      if (!error && count !== null) {
+        remoteCount = count;
+      }
+    } catch (e) {
+      console.error(`Error getting remote count for ${table}:`, e);
+    }
+    
+    results[table] = { local: localCount, remote: remoteCount };
+  }
+
+  return results;
+};
+
+/**
+ * Push data from local storage to Supabase using upsert
+ */
+export const pushDataToSupabase = async (tableName: ValidTableName): Promise<any> => {
+  try {
+    console.log(`Starting synchronization: pushing ${tableName} to Supabase...`);
+    
+    // Check connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      throw new Error("Unable to connect to Supabase");
+    }
+    
+    // Get local data
+    const localData = localStorage.getItem(tableName);
+    if (!localData) {
+      throw new Error(`No local ${tableName} data to sync`);
+    }
+    
+    const parsedData = JSON.parse(localData);
+    if (!Array.isArray(parsedData) || parsedData.length === 0) {
+      throw new Error(`No ${tableName} data to sync`);
+    }
+    
+    // Convert data from camelCase to snake_case for Supabase
+    const supabaseData = parsedData.map(item => camelToSnake(item));
+    
+    // Use upsert instead of delete+insert to preserve IDs and related references
+    // This will update existing records and insert new ones
+    const { error } = await supabase
+      .from(tableName)
+      .upsert(supabaseData, { 
+        onConflict: 'id', // Use 'id' as the conflict resolution column
+        ignoreDuplicates: false // Update existing records
+      });
+      
+    if (error) {
+      console.error(`Error syncing ${tableName} to Supabase:`, error);
+      throw error;
+    }
+    
+    console.log(`Successfully synced ${parsedData.length} ${tableName} to Supabase`);
+    return { success: true, tableName, localCount: parsedData.length };
+  } catch (error: any) {
+    console.error(`Error during ${tableName} sync:`, error);
+    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+    return { success: false, tableName, error: error.message || 'Unknown error' };
+  }
+};
+
+/**
+ * Pull data from Supabase to local storage
+ */
+export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<any> => {
+  try {
+    console.log(`Starting synchronization: pulling ${tableName} from Supabase...`);
+    
+    // Check connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      throw new Error("Unable to connect to Supabase");
+    }
+    
+    // Get data from Supabase
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*');
+      
+    if (error) {
+      console.error(`Error fetching ${tableName} from Supabase:`, error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn(`No ${tableName} found in Supabase`);
+      return { success: true, tableName, message: `No ${tableName} found in Supabase` };
+    }
+    
+    // Convert data from snake_case to camelCase for local storage
+    const localData = data.map(item => snakeToCamel(item));
+    
+    // Save to localStorage
+    localStorage.setItem(tableName, JSON.stringify(localData));
+    
+    // Dispatch event to notify components of the update
+    const event = new Event('storageUpdate');
+    window.dispatchEvent(event);
+    
+    console.log(`Successfully pulled ${data.length} ${tableName} from Supabase`);
+    return { success: true, tableName, remoteCount: data.length };
+  } catch (error: any) {
+    console.error(`Error during ${tableName} sync:`, error);
+    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+    return { success: false, tableName, error: error.message || 'Unknown error' };
+  }
+};

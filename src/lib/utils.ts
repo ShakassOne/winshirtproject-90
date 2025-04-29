@@ -1,80 +1,65 @@
-
-// Fonction utilitaire pour convertir les clés snake_case en camelCase
-export const snakeToCamel = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  
-  if (Array.isArray(obj)) {
-    return obj.map(snakeToCamel);
-  }
-  
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    
-    // Récursivement convertir les valeurs qui sont des objets
-    const newValue = value !== null && typeof value === 'object' 
-      ? snakeToCamel(value) 
-      : value;
-    
-    return { ...acc, [camelKey]: newValue };
-  }, {});
-};
-
-// Fonction utilitaire pour convertir les clés camelCase en snake_case
-export const camelToSnake = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  
-  if (Array.isArray(obj)) {
-    return obj.map(camelToSnake);
-  }
-  
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const snakeKey = key.replace(/([A-Z])/g, (_, letter) => `_${letter.toLowerCase()}`);
-    
-    // Récursivement convertir les valeurs qui sont des objets
-    const newValue = value !== null && typeof value === 'object' 
-      ? camelToSnake(value) 
-      : value;
-    
-    return { ...acc, [snakeKey]: newValue };
-  }, {});
-};
-
-// Utility function for className merging (needed for shadcn components)
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
-// Format date utility function
-export const formatDate = (date: string | Date | null | undefined): string => {
-  if (!date) return 'N/A';
-  
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  
-  return dateObj.toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
+export function isLightColor(hex: string): boolean {
+  // Enlever le "#" si présent
+  hex = hex.replace("#", "");
 
-// Check if a color is light
-export const isLightColor = (color: string): boolean => {
-  // Remove the # if it exists
-  const hex = color.replace('#', '');
-  
-  // Convert hex to RGB
+  // Convertir en RGB si c'est une abréviation (ex: #fff)
+  if (hex.length === 3) {
+    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+  }
+
+  // Convertir hex en valeurs RGB
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
-  
-  // Calculate luminance using the formula: 0.299*R + 0.587*G + 0.114*B
+
+  // Calculer la luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  
-  // Return true if the color is light (luminance > 0.5)
+
+  // Définir un seuil (0.5 est une valeur courante)
   return luminance > 0.5;
+}
+
+/**
+ * Convertit un objet de snake_case à camelCase
+ */
+export const snakeToCamel = (obj: any): any => {
+  if (obj === null || obj === undefined || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => snakeToCamel(item));
+  }
+  
+  return Object.keys(obj).reduce((acc, key) => {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    acc[camelKey] = snakeToCamel(obj[key]);
+    return acc;
+  }, {} as any);
+};
+
+/**
+ * Convertit un objet de camelCase à snake_case
+ */
+export const camelToSnake = (obj: any): any => {
+  if (obj === null || obj === undefined || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => camelToSnake(item));
+  }
+  
+  return Object.keys(obj).reduce((acc, key) => {
+    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    acc[snakeKey] = camelToSnake(obj[key]);
+    return acc;
+  }, {} as any);
 };

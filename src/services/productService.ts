@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
@@ -5,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchDataFromSupabase, syncLocalDataToSupabase, checkSupabaseConnection } from '@/lib/supabase';
 import { mockProducts } from '@/data/mockData';
 import { ValidTableName } from '@/integrations/supabase/client';
+import { snakeToCamel, camelToSnake } from '@/lib/utils';
 
 /**
  * Hook pour récupérer les produits avec gestion d'état (chargement, erreurs)
@@ -32,11 +34,14 @@ export const useProducts = () => {
         
         if (data && data.length > 0) {
           console.log("productService: Produits récupérés depuis Supabase:", data.length);
+          // Convertir les données de snake_case à camelCase
+          const productsWithProperFormat = data.map(product => snakeToCamel(product)) as ExtendedProduct[];
+          
           // S'assurer que chaque produit a un champ 'type'
-          const productsWithType = data.map(product => ({
+          const productsWithType = productsWithProperFormat.map(product => ({
             ...product,
-            type: product.type || product.product_type || "standard"
-          })) as ExtendedProduct[];
+            type: product.type || product.productType || "standard"
+          }));
           
           setProducts(productsWithType);
           localStorage.setItem('products', JSON.stringify(productsWithType));
@@ -69,9 +74,14 @@ export const useProducts = () => {
       
       // Si aucune donnée n'est trouvée, utiliser les données mock
       console.log("productService: Utilisation des données mock");
-      // Assurez-vous que mockProducts correspond au type ExtendedProduct
-      setProducts(mockProducts as ExtendedProduct[]);
-      localStorage.setItem('products', JSON.stringify(mockProducts));
+      // Préparation des données mock avec le type
+      const preparedMockProducts = mockProducts.map(product => ({
+        ...product,
+        type: product.type || "standard"
+      })) as ExtendedProduct[];
+      
+      setProducts(preparedMockProducts);
+      localStorage.setItem('products', JSON.stringify(preparedMockProducts));
       
       // Tenter de synchroniser les données mock avec Supabase
       if (isConnected) {
@@ -84,7 +94,12 @@ export const useProducts = () => {
       toast.error("Impossible de charger les produits", { position: "bottom-right" });
       
       // En cas d'erreur, charger les données mock
-      setProducts(mockProducts as ExtendedProduct[]);
+      const preparedMockProducts = mockProducts.map(product => ({
+        ...product,
+        type: product.type || "standard"
+      })) as ExtendedProduct[];
+      
+      setProducts(preparedMockProducts);
     } finally {
       setLoading(false);
     }
@@ -143,50 +158,43 @@ export const getAllProducts = async (): Promise<ExtendedProduct[]> => {
   }
 };
 
-// Créer, mettre à jour ou supprimer un produit avec synchronisation Supabase
+// Créer un produit avec correction du format des données
 export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promise<ExtendedProduct | null> => {
   try {
+    console.log("createProduct: Début de la création du produit", product);
     const isConnected = await checkSupabaseConnection();
+    
+    // Assurer que le champ type est défini
+    const productWithType = {
+      ...product,
+      type: product.type || "standard"
+    };
     
     // Générer un ID pour le nouveau produit
     const newProductId = Date.now();
-    const newProduct = { ...product, id: newProductId };
+    const newProduct = { ...productWithType, id: newProductId };
     
     if (isConnected) {
       // Si connecté à Supabase, essayer d'insérer directement
+      console.log("createProduct: Tentative d'insertion dans Supabase");
+      
+      // Convertir en snake_case pour Supabase
+      const productForSupabase = camelToSnake(newProduct);
+      console.log("createProduct: Données converties pour Supabase:", productForSupabase);
+      
       const { data, error } = await supabase
         .from('products')
-        .insert([{ 
-          id: newProductId,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          image: product.image,
-          secondary_image: product.secondaryImage,
-          sizes: product.sizes,
-          colors: product.colors,
-          type: product.type,
-          product_type: product.productType,
-          sleeve_type: product.sleeveType,
-          linked_lotteries: product.linkedLotteries || [],
-          popularity: product.popularity || 0,
-          tickets: product.tickets || 1,
-          weight: product.weight,
-          delivery_price: product.deliveryPrice,
-          allow_customization: product.allowCustomization || false,
-          default_visual_id: product.defaultVisualId,
-          default_visual_settings: product.defaultVisualSettings,
-          visual_category_id: product.visualCategoryId
-        }])
+        .insert([productForSupabase])
         .select();
       
       if (error) {
-        console.error("productService: Erreur lors de la création du produit:", error);
+        console.error("productService: Erreur lors de la création du produit dans Supabase:", error);
         throw error;
       }
       
       // Conversion du résultat en format camelCase
       const createdProduct = data && data[0] ? snakeToCamel(data[0]) as ExtendedProduct : null;
+      console.log("createProduct: Produit créé dans Supabase:", createdProduct);
       
       // Mettre à jour le stockage local pour garder la cohérence
       const existingProducts = localStorage.getItem('products') ? JSON.parse(localStorage.getItem('products')!) : [];
@@ -196,6 +204,7 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       return createdProduct;
     } else {
       // Mode hors-ligne: stocker uniquement dans localStorage
+      console.log("createProduct: Mode hors-ligne, stockage local uniquement");
       const existingProducts = localStorage.getItem('products') ? JSON.parse(localStorage.getItem('products')!) : [];
       localStorage.setItem('products', JSON.stringify([...existingProducts, newProduct]));
       
@@ -203,7 +212,7 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       return newProduct;
     }
   } catch (error) {
-    console.error("productService: Erreur lors de la création du produit:", error);
+    console.error("productService: Erreur détaillée lors de la création du produit:", error);
     toast.error(`Erreur lors de la création du produit: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return null;
   }
@@ -211,27 +220,40 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
 
 export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
   try {
+    console.log("updateProduct: Début de la mise à jour du produit", product);
     const isConnected = await checkSupabaseConnection();
+    
+    // Assurer que le champ type est défini
+    const productWithType = {
+      ...product,
+      type: product.type || "standard"
+    };
     
     // Mettre à jour dans localStorage
     const existingProducts = localStorage.getItem('products') ? JSON.parse(localStorage.getItem('products')!) : [];
     const updatedProducts = existingProducts.map((p: ExtendedProduct) => 
-      p.id === product.id ? { ...p, ...product } : p
+      p.id === productWithType.id ? { ...p, ...productWithType } : p
     );
     localStorage.setItem('products', JSON.stringify(updatedProducts));
     
-    const updatedProduct = updatedProducts.find((p: ExtendedProduct) => p.id === product.id);
+    const updatedProduct = updatedProducts.find((p: ExtendedProduct) => p.id === productWithType.id);
     
     if (isConnected) {
       // Mettre à jour dans Supabase
+      console.log("updateProduct: Tentative de mise à jour dans Supabase");
+      
+      // Convertir en snake_case pour Supabase
+      const productForSupabase = camelToSnake(productWithType);
+      console.log("updateProduct: Données converties pour Supabase:", productForSupabase);
+      
       const { data, error } = await supabase
         .from('products')
-        .update(camelToSnake(product))
-        .eq('id', product.id)
+        .update(productForSupabase)
+        .eq('id', productWithType.id)
         .select();
       
       if (error) {
-        console.error("productService: Erreur lors de la mise à jour du produit:", error);
+        console.error("productService: Erreur lors de la mise à jour du produit dans Supabase:", error);
         toast.error(`Erreur lors de la mise à jour du produit: ${error.message}`, { position: "bottom-right" });
         return updatedProduct;
       }
@@ -243,7 +265,7 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       return updatedProduct;
     }
   } catch (error) {
-    console.error("productService: Erreur lors de la mise à jour du produit:", error);
+    console.error("productService: Erreur détaillée lors de la mise à jour du produit:", error);
     toast.error(`Erreur lors de la mise à jour du produit: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return null;
   }
@@ -251,6 +273,7 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
 
 export const deleteProduct = async (id: number): Promise<boolean> => {
   try {
+    console.log("deleteProduct: Suppression du produit", id);
     const isConnected = await checkSupabaseConnection();
     
     // Supprimer du localStorage
@@ -260,13 +283,14 @@ export const deleteProduct = async (id: number): Promise<boolean> => {
     
     if (isConnected) {
       // Supprimer de Supabase
+      console.log("deleteProduct: Tentative de suppression dans Supabase");
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', id);
       
       if (error) {
-        console.error("productService: Erreur lors de la suppression du produit:", error);
+        console.error("productService: Erreur lors de la suppression du produit dans Supabase:", error);
         toast.error(`Erreur lors de la suppression du produit: ${error.message}`, { position: "bottom-right" });
         return false;
       }
@@ -278,42 +302,11 @@ export const deleteProduct = async (id: number): Promise<boolean> => {
     
     return true;
   } catch (error) {
-    console.error("productService: Erreur lors de la suppression du produit:", error);
+    console.error("productService: Erreur détaillée lors de la suppression du produit:", error);
     toast.error(`Erreur lors de la suppression du produit: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return false;
   }
 };
 
-// Fonction utilitaire pour convertir de snake_case à camelCase
-const snakeToCamel = (obj: any): any => {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(item => snakeToCamel(item));
-  }
-  
-  return Object.keys(obj).reduce((acc, key) => {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    acc[camelKey] = snakeToCamel(obj[key]);
-    return acc;
-  }, {} as any);
-};
-
-// Fonction utilitaire pour convertir de camelCase à snake_case
-const camelToSnake = (obj: any): any => {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(item => camelToSnake(item));
-  }
-  
-  return Object.keys(obj).reduce((acc, key) => {
-    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-    acc[snakeKey] = camelToSnake(obj[key]);
-    return acc;
-  }, {} as any);
-};
+// Fonctions utilitaires pour la conversion de case
+// Ces fonctions sont déjà définies dans lib/utils.ts, nous les utilisons ici directement

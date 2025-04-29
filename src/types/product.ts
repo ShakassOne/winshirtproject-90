@@ -1,4 +1,3 @@
-
 import { ProductVisualSettings } from './visual';
 
 export interface ExtendedProduct {
@@ -7,10 +6,10 @@ export interface ExtendedProduct {
   description: string;
   price: number;
   image: string;
-  secondaryImage?: string; // Nouvelle propriété pour une image secondaire
+  secondaryImage?: string;
   sizes: string[];
   colors: string[];
-  type: string; // Quality type: entry level, standard, premium
+  type: string; // Quality type: entry level, standard, premium - IMPORTANT: non facultatif
   productType?: string; // T-shirts, sweatshirt, polo
   sleeveType?: string; // courtes ou longues
   linkedLotteries?: number[];
