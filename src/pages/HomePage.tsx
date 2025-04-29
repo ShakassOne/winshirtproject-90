@@ -45,7 +45,7 @@ const HomePage: React.FC = () => {
               
             // Filtrer uniquement les loteries actives
             const active = camelCasedLotteries.filter(lottery => 
-              lottery.status === 'active' || lottery.status === 'Active' || lottery.status === 'ACTIVE'
+              lottery.status === 'active'
             );
             
             console.log("HomePage: Loteries actives trouvées:", active.length);
@@ -68,11 +68,11 @@ const HomePage: React.FC = () => {
           value: lottery.value,
           status: lottery.status,
           featured: lottery.featured || false,
-          targetParticipants: lottery.targetParticipants || lottery.target_participants,
-          currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
-          drawDate: lottery.drawDate || lottery.draw_date,
-          endDate: lottery.endDate || lottery.end_date,
-          linkedProducts: lottery.linkedProducts || lottery.linked_products || [],
+          targetParticipants: lottery.target_participants,
+          currentParticipants: lottery.current_participants || 0,
+          drawDate: lottery.draw_date,
+          endDate: lottery.end_date,
+          linkedProducts: lottery.linked_products || [],
         })) as ExtendedLottery[];
       
       console.log("HomePage: Utilisation des loteries mock:", mockActiveLotteries.length);
