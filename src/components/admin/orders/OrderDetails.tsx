@@ -1,18 +1,14 @@
 
 import React from 'react';
-import { Order } from '@/types/order';
+import { Circle, Package, Truck, CreditCard, MapPin, CalendarClock } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FileText, Package, Search, Trash } from 'lucide-react';
-import DeliveryTracking from './DeliveryTracking';
-import InvoiceModal from './InvoiceModal';
-import { supabase } from '@/integrations/supabase/client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Visual } from '@/types/visual';
-import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Order, OrderItem, DeliveryStatus } from '@/types/order';
 import OrderItemVisualPreview from './OrderItemVisualPreview';
+import InvoiceModal from './InvoiceModal';
+import DeliveryTracking from './DeliveryTracking';
 
 interface OrderDetailsProps {
   order: Order;
@@ -20,61 +16,8 @@ interface OrderDetailsProps {
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
   const [showInvoice, setShowInvoice] = React.useState(false);
-  const [lotteryTitles, setLotteryTitles] = React.useState<{[key: number]: string}>({});
   
-  // Récupérer les titres des loteries
-  React.useEffect(() => {
-    const fetchLotteryTitles = async () => {
-      let allLotteryIds: number[] = [];
-      
-      // Collecter tous les IDs de loteries des articles
-      order.items.forEach(item => {
-        if (item.lotteriesEntries && item.lotteriesEntries.length > 0) {
-          allLotteryIds = [...allLotteryIds, ...item.lotteriesEntries];
-        }
-      });
-      
-      // Supprimer les doublons
-      const uniqueLotteryIds = [...new Set(allLotteryIds)];
-      
-      if (uniqueLotteryIds.length > 0) {
-        try {
-          // Récupérer les titres depuis Supabase ou localStorage
-          const { data, error } = await supabase
-            .from('lotteries')
-            .select('id, title')
-            .in('id', uniqueLotteryIds);
-            
-          if (error) throw error;
-          
-          const titlesMap: {[key: number]: string} = {};
-          if (data) {
-            data.forEach(lottery => {
-              titlesMap[lottery.id] = lottery.title;
-            });
-          } else {
-            // Fallback à localStorage si pas de données Supabase
-            const storedLotteries = localStorage.getItem('lotteries');
-            if (storedLotteries) {
-              const lotteries = JSON.parse(storedLotteries);
-              lotteries.forEach((lottery: any) => {
-                if (uniqueLotteryIds.includes(lottery.id)) {
-                  titlesMap[lottery.id] = lottery.title;
-                }
-              });
-            }
-          }
-          
-          setLotteryTitles(titlesMap);
-        } catch (error) {
-          console.error("Erreur lors de la récupération des loteries:", error);
-        }
-      }
-    };
-    
-    fetchLotteryTitles();
-  }, [order.items]);
-  
+  // Status colors
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending': return 'bg-yellow-500';
@@ -87,250 +30,226 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
     }
   };
   
-  const getDeliveryStatusColor = (status: string) => {
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  
+  // Get delivery status color
+  const getDeliveryStatusColor = (status: DeliveryStatus) => {
     switch (status) {
       case 'preparing': return 'bg-yellow-500';
       case 'ready_to_ship': return 'bg-blue-500';
       case 'in_transit': return 'bg-purple-500';
-      case 'out_for_delivery': return 'bg-purple-700';
+      case 'out_for_delivery': return 'bg-indigo-500';
       case 'delivered': return 'bg-green-500';
       case 'failed': return 'bg-red-500';
       case 'returned': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
   };
-  
+
   return (
-    <div className="space-y-6">
-      {/* Informations générales */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-sm text-gray-400">Date de commande</p>
-          <p className="text-white">{new Date(order.orderDate).toLocaleDateString('fr-FR', { 
-            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
-          })}</p>
+    <div className="space-y-6 text-white">
+      {/* Order header information */}
+      <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 text-winshirt-purple-light" />
+            <span className="text-gray-300">
+              Commande passée le {formatDate(order.orderDate)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-winshirt-purple-light" />
+            <span className="text-gray-300">
+              Paiement: {order.payment?.method || 'Carte bancaire'} ({order.payment?.status || 'completed'})
+            </span>
+          </div>
         </div>
-        <div>
-          <p className="text-sm text-gray-400">Statut</p>
-          <Badge className={`${getStatusColor(order.status)}`}>
+        
+        <div className="flex gap-2">
+          <Badge className={getStatusColor(order.status)}>
             {order.status}
           </Badge>
-        </div>
-        <div>
-          <p className="text-sm text-gray-400">Email client</p>
-          <p className="text-white">{order.clientEmail}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-400">Paiement</p>
-          <Badge className={order.payment.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}>
-            {order.payment.method} - {order.payment.status}
+          <Badge className={getDeliveryStatusColor(order.delivery?.status || 'preparing')}>
+            {order.delivery?.status || 'preparing'}
           </Badge>
+          <Button size="sm" variant="outline" onClick={() => setShowInvoice(true)}>
+            Facture
+          </Button>
         </div>
       </div>
-
+      
       <Separator />
       
-      {/* Produits */}
-      <div>
-        <h3 className="text-lg font-medium text-white mb-4">Articles</h3>
-        <div className="space-y-4">
-          {order.items.map((item) => (
-            <div key={item.id} className="winshirt-card p-4 border border-winshirt-space-light rounded-lg">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="w-full md:w-1/4">
-                  <img 
-                    src={item.productImage} 
-                    alt={item.productName}
-                    className="w-full h-32 object-cover rounded-md"
-                  />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-lg font-medium text-white">{item.productName}</h4>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+      {/* Order Items */}
+      <Card className="bg-transparent border-winshirt-purple/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Package className="h-5 w-5" /> Articles
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {order.items.map((item: OrderItem) => (
+              <div key={item.id} className="border border-winshirt-purple/10 rounded-lg p-4 bg-winshirt-space-light/30">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Item info */}
+                  <div className="flex items-center space-x-4">
+                    <img 
+                      src={item.productImage || '/placeholder.svg'} 
+                      alt={item.productName}
+                      className="h-24 w-24 object-cover rounded"
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                    />
                     <div>
-                      <p className="text-sm text-gray-400">Quantité</p>
-                      <p className="text-white">{item.quantity}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Prix unitaire</p>
-                      <p className="text-white">{item.price.toFixed(2)} €</p>
-                    </div>
-                    {item.size && (
-                      <div>
-                        <p className="text-sm text-gray-400">Taille</p>
-                        <p className="text-white">{item.size}</p>
+                      <h3 className="font-medium text-white">{item.productName}</h3>
+                      <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-300">
+                        <span className="flex items-center gap-1">
+                          Quantité: {item.quantity}
+                        </span>
+                        {item.size && (
+                          <span className="flex items-center gap-1">
+                            • Taille: {item.size}
+                          </span>
+                        )}
+                        {item.color && (
+                          <span className="flex items-center gap-1">
+                            • Couleur: 
+                            <span className="flex items-center">
+                              <Circle className="h-3 w-3 mr-1 fill-current" style={{ color: item.color }} />
+                              {item.color}
+                            </span>
+                          </span>
+                        )}
                       </div>
-                    )}
-                    {item.color && (
-                      <div>
-                        <p className="text-sm text-gray-400">Couleur</p>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded-full" 
-                            style={{ 
-                              backgroundColor: item.color.toLowerCase() === 'noir' ? 'black' : 
-                                            item.color.toLowerCase() === 'blanc' ? 'white' : 
-                                            item.color.toLowerCase() === 'bleu' ? 'blue' : 
-                                            item.color.toLowerCase() === 'rouge' ? 'red' : 
-                                            item.color.toLowerCase() === 'vert' ? 'green' : 'gray',
-                              border: item.color.toLowerCase() === 'blanc' ? '1px solid #ccc' : 'none'
-                            }}
-                          />
-                          <span className="text-white">{item.color}</span>
+                      <div className="mt-2">
+                        <span className="font-semibold text-winshirt-purple-light">
+                          {item.price.toFixed(2)} €
+                        </span>
+                      </div>
+                      
+                      {/* Lottery entries */}
+                      {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {item.lotteriesEntries.map((lotteryId) => (
+                            <Badge key={lotteryId} variant="secondary" className="bg-winshirt-purple/20 text-xs">
+                              Loterie #{lotteryId}
+                            </Badge>
+                          ))}
                         </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Visual preview */}
+                  <div className="col-span-2">
+                    {item.visualDesign ? (
+                      <OrderItemVisualPreview
+                        productImage={item.productImage || '/placeholder.svg'}
+                        visualDesign={item.visualDesign}
+                        productName={item.productName}
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center border rounded p-4 bg-winshirt-space-light/20">
+                        <p className="text-gray-400">Pas de personnalisation</p>
                       </div>
                     )}
                   </div>
-
-                  {/* Visuel personnalisé amélioré avec aperçu */}
-                  {item.visualDesign && (
-                    <div className="mt-4 border border-winshirt-purple/20 rounded-lg p-4 bg-winshirt-space-light/30">
-                      <p className="text-sm text-winshirt-purple-light font-medium mb-2">Visuel personnalisé</p>
-                      
-                      {/* Aperçu complet du produit avec le visuel */}
-                      <OrderItemVisualPreview orderItem={item} />
-                    </div>
-                  )}
-
-                  {/* Participation à des loteries avec titres */}
-                  {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-400">Participations loterie</p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {item.lotteriesEntries.map((lotteryId, index) => (
-                          <Badge key={index} className="bg-winshirt-blue">
-                            {lotteryTitles[lotteryId] || `Loterie #${lotteryId}`}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-                <div className="w-full md:w-1/6">
-                  <p className="text-sm text-gray-400">Sous-total</p>
-                  <p className="text-white font-semibold">{(item.price * item.quantity).toFixed(2)} €</p>
-                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Order totals */}
+          <div className="flex flex-col items-end mt-6 space-y-1">
+            <div className="grid grid-cols-2 gap-x-8 text-sm text-gray-300 w-full max-w-xs">
+              <span>Sous-total:</span>
+              <span className="text-right">{order.subtotal?.toFixed(2) || order.total.toFixed(2)} €</span>
+              
+              <span>Livraison:</span>
+              <span className="text-right">{order.shipping?.cost || 0} €</span>
+              
+              <div className="col-span-2 my-1">
+                <Separator className="bg-white/20" />
+              </div>
+              
+              <span className="font-semibold text-white">Total:</span>
+              <span className="text-right font-semibold text-white">{order.total.toFixed(2)} €</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Shipping info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="bg-transparent border-winshirt-purple/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5" /> Adresse de livraison
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-gray-300">
+              <p className="font-medium text-white">{order.clientName}</p>
+              <p>{order.shipping?.address}</p>
+              <p>{order.shipping?.postalCode} {order.shipping?.city}</p>
+              <p>{order.shipping?.country}</p>
+              <p className="text-winshirt-purple-light">{order.clientEmail}</p>
+              <div className="mt-4 flex items-center gap-2">
+                <Badge variant="outline" className="bg-winshirt-space-light">
+                  {order.shipping?.method || 'Standard'}
+                </Badge>
+                <span className="text-sm text-gray-400">
+                  {order.shipping?.cost ? `${order.shipping.cost.toFixed(2)} €` : 'Gratuit'}
+                </span>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <Separator />
-      
-      {/* Adresse de livraison */}
-      <div>
-        <h3 className="text-lg font-medium text-white mb-3">Adresse de livraison</h3>
-        <div className="winshirt-card p-4 border border-winshirt-space-light rounded-lg">
-          <p className="text-white">{order.shipping.address}</p>
-          <p className="text-white">{order.shipping.postalCode} {order.shipping.city}</p>
-          <p className="text-white">{order.shipping.country}</p>
-          <div className="mt-2">
-            <p className="text-sm text-gray-400">Méthode</p>
-            <p className="text-white">{order.shipping.method} - {order.shipping.cost.toFixed(2)} €</p>
-          </div>
-        </div>
-      </div>
-      
-      {/* Statut de livraison */}
-      <div>
-        <h3 className="text-lg font-medium text-white mb-3">Statut de livraison</h3>
-        <div className="winshirt-card p-4 border border-winshirt-space-light rounded-lg">
-          <div className="flex justify-between items-center mb-3">
-            <Badge className={`${getDeliveryStatusColor(order.delivery.status)}`}>
-              {order.delivery.status}
-            </Badge>
-            {order.delivery.trackingNumber && (
-              <div className="flex items-center text-sm">
-                <span className="text-gray-400 mr-1">N° Suivi:</span>
-                <span className="text-white">{order.delivery.trackingNumber}</span>
-                {order.delivery.trackingUrl && (
-                  <a href={order.delivery.trackingUrl} target="_blank" rel="noopener noreferrer"
-                    className="ml-2 text-winshirt-blue hover:text-winshirt-blue-light">
-                    <Search size={14} />
-                  </a>
-                )}
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-transparent border-winshirt-purple/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Truck className="h-5 w-5" /> Suivi de livraison
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {order.delivery ? (
+              <DeliveryTracking delivery={order.delivery} />
+            ) : (
+              <div className="flex items-center justify-center h-32 text-gray-400">
+                Pas d'informations de suivi disponibles
               </div>
             )}
-          </div>
-          
-          {order.delivery.estimatedDeliveryDate && (
-            <p className="text-sm">
-              <span className="text-gray-400">Livraison estimée: </span>
-              <span className="text-white">{new Date(order.delivery.estimatedDeliveryDate).toLocaleDateString('fr-FR')}</span>
-            </p>
-          )}
-          
-          {order.delivery.lastUpdate && (
-            <p className="text-sm">
-              <span className="text-gray-400">Dernière mise à jour: </span>
-              <span className="text-white">{new Date(order.delivery.lastUpdate).toLocaleDateString('fr-FR', {
-                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-              })}</span>
-            </p>
-          )}
-          
-          {order.delivery.history && order.delivery.history.length > 0 && (
-            <DeliveryTracking history={order.delivery.history} />
-          )}
-        </div>
-      </div>
-      
-      {/* Résumé financier */}
-      <div>
-        <h3 className="text-lg font-medium text-white mb-3">Récapitulatif</h3>
-        <div className="winshirt-card p-4 border border-winshirt-space-light rounded-lg">
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-400">Sous-total</span>
-            <span className="text-white">{order.subtotal.toFixed(2)} €</span>
-          </div>
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-400">Frais de livraison</span>
-            <span className="text-white">{order.shipping.cost.toFixed(2)} €</span>
-          </div>
-          <div className="flex justify-between mb-2">
-            <span className="text-white font-semibold">Total</span>
-            <span className="text-white font-semibold">{order.total.toFixed(2)} €</span>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Notes */}
       {order.notes && (
-        <div>
-          <h3 className="text-lg font-medium text-white mb-3">Notes</h3>
-          <Alert className="bg-winshirt-space-light border-winshirt-purple/20">
-            <AlertTitle>Notes de commande</AlertTitle>
-            <AlertDescription>{order.notes}</AlertDescription>
-          </Alert>
+        <div className="p-4 bg-winshirt-space-light/30 rounded-lg border border-winshirt-purple/10">
+          <h3 className="font-medium mb-2">Notes:</h3>
+          <p className="text-gray-300">{order.notes}</p>
         </div>
       )}
       
-      <div className="flex justify-between pt-4">
-        <Button
-          variant="outline"
-          className="border-red-500 text-red-500 hover:bg-red-500/10"
-        >
-          <Trash className="mr-2 h-4 w-4" /> Supprimer
-        </Button>
-        
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            className="border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"
-            onClick={() => setShowInvoice(true)}
-          >
-            <FileText className="mr-2 h-4 w-4" /> Facture
-          </Button>
-          <Button className="bg-winshirt-purple hover:bg-winshirt-purple-dark">
-            <Package className="mr-2 h-4 w-4" /> Mettre à jour
-          </Button>
-        </div>
-      </div>
-      
-      {showInvoice && order && (
-        <InvoiceModal order={order} open={showInvoice} onOpenChange={setShowInvoice} />
-      )}
+      {/* Invoice modal */}
+      <InvoiceModal
+        open={showInvoice} 
+        onOpenChange={setShowInvoice} 
+        order={order}
+      />
     </div>
   );
 };

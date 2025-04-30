@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, Check, Database, RefreshCw, Server, Shield } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
@@ -119,30 +120,24 @@ const AdminSyncPage: React.FC = () => {
   // Sync all tables
   const handleSyncAll = async (direction: 'push' | 'pull') => {
     // Mark all tables as syncing
-    for (const table of allTables) {
-      setIsSyncing(prev => ({ ...prev, [table]: true }));
-    }
+    const newSyncingState: Record<string, boolean> = {};
+    allTables.forEach(table => {
+      newSyncingState[table] = true;
+    });
+    setIsSyncing(newSyncingState);
     
     try {
-      // We need to sync each table individually since syncAllTables only handles the first three
-      if (direction === 'push') {
-        for (const table of allTables) {
-          await pushDataToSupabase(table as ValidTableName);
-        }
-      } else {
-        for (const table of allTables) {
-          await pullDataFromSupabase(table as ValidTableName);
-        }
-      }
-      
+      await syncAllTables(direction);
       // Refresh counts after sync
       await loadDataCounts();
       updateSyncHistory();
     } finally {
       // Mark all tables as not syncing
-      for (const table of allTables) {
-        setIsSyncing(prev => ({ ...prev, [table]: false }));
-      }
+      const completedState: Record<string, boolean> = {};
+      allTables.forEach(table => {
+        completedState[table] = false;
+      });
+      setIsSyncing(completedState);
     }
   };
   
@@ -303,7 +298,7 @@ const AdminSyncPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {allTables.slice(0, 6).map(table => (
+                  {allTables.map(table => (
                     <div key={table} className="flex justify-between items-center">
                       <span>{formatTableName(table)}:</span>
                       <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">

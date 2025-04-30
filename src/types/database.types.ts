@@ -95,6 +95,15 @@ export interface DatabaseTables {
     payment_status: string | null;
     created_at: string | null;
     updated_at: string | null;
+    order_date: string | null;
+    subtotal: number | null;
+    delivery: any | null;
+    payment: any | null;
+    client_name: string | null;
+    client_email: string | null;
+    tracking_number: string | null;
+    notes: string | null;
+    invoice_url: string | null;
   };
   
   order_items: {
@@ -103,7 +112,13 @@ export interface DatabaseTables {
     product_id: number;
     quantity: number;
     price: number;
+    product_name: string | null;
+    product_image: string | null;
+    size: string | null;
+    color: string | null;
     customization: any | null;
+    visual_design: any | null;
+    lotteries_entries: number[] | null;
     created_at: string | null;
   };
   
@@ -114,6 +129,10 @@ export interface DatabaseTables {
     email: string | null;
     phone: string | null;
     address: any | null;
+    // Add these fields to match Supabase schema
+    city: string | null;
+    postal_code: string | null;
+    country: string | null;
     created_at: string | null;
     updated_at: string | null;
     orderCount?: number; // Optional for extended client information
@@ -134,7 +153,7 @@ export interface DatabaseTables {
   };
 }
 
-// Add any helper types or interfaces below if needed
+// Add helper types or interfaces
 export type ValidTableName = 
   | 'lotteries' 
   | 'lottery_participants' 

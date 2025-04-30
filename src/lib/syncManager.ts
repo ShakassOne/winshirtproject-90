@@ -176,10 +176,44 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       return status;
     }
     
-    // Convert data from camelCase to snake_case for Supabase with special handling for visuals table
+    // Convert data from camelCase to snake_case for Supabase with special handling for specific tables
     const supabaseData = parsedData.map(item => {
+      // Special handling for clients table - structure the address field correctly
+      if (tableName === 'clients') {
+        const processedItem = { ...item };
+        
+        if (typeof processedItem.address === 'string') {
+          // If address is a string, convert it to an object
+          processedItem.address = {
+            address: processedItem.address,
+            city: processedItem.city || null,
+            postal_code: processedItem.postalCode || null,
+            country: processedItem.country || null
+          };
+          
+          // Remove separate fields that are now part of address
+          delete processedItem.city;
+          delete processedItem.postalCode;
+          delete processedItem.country;
+        } else if (!processedItem.address) {
+          // If no address, create an empty one with the fields from the client
+          processedItem.address = {
+            address: '',
+            city: processedItem.city || null,
+            postal_code: processedItem.postalCode || null,
+            country: processedItem.country || null
+          };
+          
+          // Remove separate fields that are now part of address
+          delete processedItem.city;
+          delete processedItem.postalCode;
+          delete processedItem.country;
+        }
+        
+        return camelToSnake(processedItem);
+      }
       // Special handling for visuals table
-      if (tableName === 'visuals') {
+      else if (tableName === 'visuals') {
         const processedItem = { ...item };
         if (processedItem.image) {
           processedItem.image_url = processedItem.image;
@@ -187,6 +221,8 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
         }
         return camelToSnake(processedItem);
       }
+      
+      // Default case - just convert camelCase to snake_case
       return camelToSnake(item);
     });
     
@@ -325,7 +361,25 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     
     // Convert data from snake_case to camelCase for local storage
     const localData = data.map(item => {
-      if (tableName === 'visuals') {
+      // Special handling for specific tables
+      if (tableName === 'clients') {
+        // Convert Supabase client format to local app format
+        const camelItem = snakeToCamel(item);
+        
+        // Extract address fields if they exist
+        if (camelItem.address && typeof camelItem.address === 'object') {
+          camelItem.city = camelItem.address.city || '';
+          camelItem.postalCode = camelItem.address.postal_code || camelItem.address.postalCode || '';
+          camelItem.country = camelItem.address.country || '';
+          // Keep address as the street address string
+          if (typeof camelItem.address.address === 'string') {
+            camelItem.address = camelItem.address.address;
+          }
+        }
+        
+        return camelItem;
+      }
+      else if (tableName === 'visuals') {
         // Convert from Supabase format to local app format
         const camelItem = snakeToCamel(item);
         if (camelItem.imageUrl && !camelItem.image) {
@@ -334,6 +388,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         }
         return camelItem;
       }
+      
       return snakeToCamel(item);
     });
     

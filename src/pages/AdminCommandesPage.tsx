@@ -13,7 +13,7 @@ import { toast } from '@/lib/toast';
 import OrderDetails from '@/components/admin/orders/OrderDetails';
 import { pushDataToSupabase, pullDataFromSupabase } from '@/lib/syncManager';
 import { Client } from '@/types/client';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 const AdminOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -21,7 +21,7 @@ const AdminOrdersPage: React.FC = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Charger les commandes depuis localStorage et créer les clients si nécessaire
+  // Load orders from localStorage and create clients if needed
   useEffect(() => {
     const loadOrders = async () => {
       try {
@@ -33,16 +33,16 @@ const AdminOrdersPage: React.FC = () => {
           parsedOrders = JSON.parse(ordersStr);
           setOrders(parsedOrders);
           
-          // Traiter les clients à partir des commandes
+          // Process clients from orders
           await processClientsFromOrders(parsedOrders);
         } else {
-          // Si aucune commande n'existe, créer un tableau vide
+          // If no orders exist, create an empty array
           localStorage.setItem('orders', JSON.stringify([]));
           setOrders([]);
         }
       } catch (error) {
-        console.error("Erreur lors du chargement des commandes:", error);
-        toast.error("Erreur lors du chargement des commandes");
+        console.error("Error loading orders:", error);
+        toast.error("Error loading orders");
       } finally {
         setLoading(false);
       }
@@ -50,7 +50,7 @@ const AdminOrdersPage: React.FC = () => {
 
     loadOrders();
     
-    // Écouter les mises à jour du stockage
+    // Listen for storage updates
     const handleStorageUpdate = () => loadOrders();
     window.addEventListener('storageUpdate', handleStorageUpdate);
     
@@ -59,21 +59,21 @@ const AdminOrdersPage: React.FC = () => {
     };
   }, []);
 
-  // Fonction pour traiter les clients à partir des commandes
+  // Process clients from orders
   const processClientsFromOrders = async (orders: Order[]) => {
     try {
-      // Récupérer les clients existants
+      // Get existing clients
       const clientsStr = localStorage.getItem('clients');
       let clients: Client[] = clientsStr ? JSON.parse(clientsStr) : [];
       
-      // Ensemble pour suivre les emails déjà traités
+      // Set to track processed emails
       const processedEmails = new Set(clients.map(client => client.email));
       let clientsChanged = false;
       
-      // Pour chaque commande, créer un client s'il n'existe pas déjà
+      // For each order, create a client if it doesn't exist
       for (const order of orders) {
         if (order.clientEmail && !processedEmails.has(order.clientEmail)) {
-          // Ajouter un nouveau client
+          // Add new client
           const newClient: Client = {
             id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
             name: order.clientName || 'Client',
@@ -92,9 +92,13 @@ const AdminOrdersPage: React.FC = () => {
           processedEmails.add(order.clientEmail);
           clientsChanged = true;
           
-          console.log(`Nouveau client créé: ${newClient.name} (${newClient.email})`);
+          console.log(`New client created: ${newClient.name} (${newClient.email})`);
+          
+          // Create an auth account with this email so the user can log in
+          // This will be enabled in a future update
+          // Right now we're just adding the client to the database
         } else if (order.clientEmail) {
-          // Mettre à jour les statistiques du client existant
+          // Update existing client stats
           const existingClient = clients.find(client => client.email === order.clientEmail);
           if (existingClient) {
             existingClient.orderCount = (existingClient.orderCount || 0) + 1;
@@ -104,53 +108,74 @@ const AdminOrdersPage: React.FC = () => {
         }
       }
       
-      // Si des clients ont été ajoutés ou modifiés, mettre à jour localStorage
+      // If clients have been added or modified, update localStorage
       if (clientsChanged) {
         localStorage.setItem('clients', JSON.stringify(clients));
-        console.log(`${clients.length} clients sauvegardés dans localStorage`);
+        console.log(`${clients.length} clients saved to localStorage`);
         
-        // Synchroniser avec Supabase si possible
+        // Try to sync with Supabase
         try {
+          // Map client data to match the Supabase schema
+          const supabaseClients = clients.map(client => ({
+            id: client.id,
+            name: client.name,
+            email: client.email,
+            phone: client.phone || null,
+            address: {
+              address: client.address,
+              city: client.city,
+              postal_code: client.postalCode,
+              country: client.country
+            },
+            created_at: client.registrationDate,
+            updated_at: new Date().toISOString(),
+            user_id: null, // We don't have auth user IDs yet
+          }));
+          
+          // Save to localStorage with the correct structure before syncing
+          localStorage.setItem('clients', JSON.stringify(supabaseClients));
+          
+          // Sync to Supabase
           await pushDataToSupabase('clients');
-          console.log('Clients synchronisés avec Supabase');
+          console.log('Clients synchronized with Supabase');
         } catch (error) {
-          console.error('Erreur lors de la synchronisation des clients avec Supabase:', error);
+          console.error('Error syncing clients with Supabase:', error);
         }
         
-        // Déclencher un événement pour informer les autres composants
+        // Trigger event to inform other components
         const event = new Event('storageUpdate');
         window.dispatchEvent(event);
       }
     } catch (error) {
-      console.error("Erreur lors du traitement des clients:", error);
+      console.error("Error processing clients:", error);
     }
   };
 
   const syncOrders = async () => {
     setLoading(true);
     try {
-      // Synchroniser les commandes avec Supabase
+      // Sync orders with Supabase
       const result = await pushDataToSupabase('orders');
       if (result.success) {
-        toast.success(`${result.localCount} commandes synchronisées avec Supabase`);
+        toast.success(`${result.localCount} orders synchronized with Supabase`);
       } else {
-        toast.error(`Erreur lors de la synchronisation: ${result.error || 'Erreur inconnue'}`);
+        toast.error(`Sync error: ${result.error || 'Unknown error'}`);
       }
       
-      // Synchroniser les éléments de commande
+      // Sync order items
       const itemsResult = await pushDataToSupabase('order_items');
       if (itemsResult.success) {
-        toast.success(`${itemsResult.localCount} articles de commande synchronisés`);
+        toast.success(`${itemsResult.localCount} order items synchronized`);
       }
       
-      // Synchroniser les clients
+      // Sync clients
       const clientsResult = await pushDataToSupabase('clients');
       if (clientsResult.success) {
-        toast.success(`${clientsResult.localCount} clients synchronisés`);
+        toast.success(`${clientsResult.localCount} clients synchronized`);
       }
     } catch (error) {
-      console.error("Erreur lors de la synchronisation:", error);
-      toast.error("Erreur lors de la synchronisation des commandes");
+      console.error("Sync error:", error);
+      toast.error("Error syncing orders");
     } finally {
       setLoading(false);
     }
@@ -159,29 +184,29 @@ const AdminOrdersPage: React.FC = () => {
   const pullOrders = async () => {
     setLoading(true);
     try {
-      // Récupérer les commandes depuis Supabase
+      // Get orders from Supabase
       const result = await pullDataFromSupabase('orders');
       if (result.success) {
-        toast.success(`${result.remoteCount} commandes récupérées depuis Supabase`);
+        toast.success(`${result.remoteCount} orders retrieved from Supabase`);
         
-        // Récupérer également les éléments de commande
+        // Also get order items
         await pullDataFromSupabase('order_items');
         
-        // Récupérer également les clients
+        // Also get clients
         await pullDataFromSupabase('clients');
         
-        // Mettre à jour les commandes affichées
+        // Update displayed orders
         const ordersStr = localStorage.getItem('orders');
         if (ordersStr) {
           const parsedOrders = JSON.parse(ordersStr);
           setOrders(parsedOrders);
         }
       } else {
-        toast.error(`Erreur lors de la récupération: ${result.error || 'Erreur inconnue'}`);
+        toast.error(`Retrieval error: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération:", error);
-      toast.error("Erreur lors de la récupération des commandes");
+      console.error("Retrieval error:", error);
+      toast.error("Error retrieving orders");
     } finally {
       setLoading(false);
     }
@@ -302,7 +327,7 @@ const AdminOrdersPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Popup glassmorphism pour les détails de commande */}
+      {/* Glassmorphism dialog for order details */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-4xl bg-winshirt-space/30 backdrop-blur-md border border-winshirt-purple/30 shadow-xl">
           <DialogHeader>

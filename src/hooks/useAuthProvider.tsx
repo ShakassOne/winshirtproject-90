@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '@/types/auth';
 import { toast } from '@/lib/toast';
+import { Client } from '@/types/client';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -23,7 +24,53 @@ export const useAuthProvider = () => {
         localStorage.removeItem('user');
       }
     }
+
+    // Check if we need to auto-create accounts from client data
+    tryCreateUserAccountsFromClients();
   }, []);
+
+  // Function to try and create user accounts from existing clients
+  const tryCreateUserAccountsFromClients = () => {
+    try {
+      // Get all clients from localStorage
+      const clientsStr = localStorage.getItem('clients');
+      if (clientsStr) {
+        const clients: Client[] = JSON.parse(clientsStr);
+        
+        if (clients.length > 0) {
+          console.log(`Found ${clients.length} clients that could be converted to user accounts`);
+          
+          // For each client, create a user object if it doesn't exist
+          clients.forEach(client => {
+            if (client.email) {
+              // Create a simple user account for this client
+              // Real apps would use proper auth, but this is for demo/dev purposes
+              const clientUser: User = {
+                id: Math.floor(Math.random() * 1000) + 2,
+                name: client.name || client.email.split('@')[0],
+                email: client.email,
+                role: 'user',
+                registrationDate: client.registrationDate || new Date().toISOString(),
+                clientId: client.id // Link to the actual client record
+              };
+              
+              // Store in localStorage with email as key for demo purposes
+              localStorage.setItem(`user_${client.email}`, JSON.stringify(clientUser));
+              console.log(`Created user account for client: ${client.name || client.email}`);
+            }
+          });
+          
+          // Let the user know accounts were created
+          toast.success("Des comptes utilisateur ont été créés à partir des données clients", {
+            position: "bottom-right",
+            duration: 5000
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error creating user accounts from clients:", error);
+    }
+  };
   
   const login = (email: string, password: string) => {
     // Admin account hardcoded for demo
@@ -45,7 +92,24 @@ export const useAuthProvider = () => {
       return;
     }
     
-    // Demo user account
+    // Check if this is a client user
+    const clientUserStr = localStorage.getItem(`user_${email}`);
+    if (clientUserStr && password.length >= 1) { // Simple password check for demo
+      try {
+        const clientUser = JSON.parse(clientUserStr);
+        setUser(clientUser);
+        setIsAuthenticated(true);
+        setIsAdmin(false);
+        localStorage.setItem('user', JSON.stringify(clientUser));
+        
+        toast.success("Connexion réussie en tant que client");
+        return;
+      } catch (error) {
+        console.error("Error parsing client user:", error);
+      }
+    }
+    
+    // Demo user account for other cases
     if (email && password.length >= 6) {
       const demoUser: User = {
         id: Math.floor(Math.random() * 1000) + 2,
@@ -64,7 +128,7 @@ export const useAuthProvider = () => {
       return;
     }
     
-    toast.error("Identifiants invalides. Essayez admin@winshirt.com / admin123 pour un accès admin.");
+    toast.error("Identifiants invalides. Essayez admin@winshirt.com / admin123 pour un accès admin ou utilisez un email de client.");
   };
   
   const register = (name: string, email: string, password: string) => {
@@ -81,6 +145,26 @@ export const useAuthProvider = () => {
       setIsAuthenticated(true);
       setIsAdmin(false);
       localStorage.setItem('user', JSON.stringify(newUser));
+      
+      // Also store this user as a client for demo purposes
+      const clientsStr = localStorage.getItem('clients');
+      let clients: Client[] = clientsStr ? JSON.parse(clientsStr) : [];
+      
+      const newClient: Client = {
+        id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
+        name: name,
+        email: email,
+        phone: '',
+        registrationDate: new Date().toISOString(),
+        orderCount: 0,
+        totalSpent: 0
+      };
+      
+      clients.push(newClient);
+      localStorage.setItem('clients', JSON.stringify(clients));
+      
+      // Store the user keyed by email for login purposes
+      localStorage.setItem(`user_${email}`, JSON.stringify(newUser));
       
       toast.success("Inscription réussie");
       return;
@@ -130,6 +214,29 @@ export const useAuthProvider = () => {
       registrationDate: "2023-01-01T00:00:00.000Z",
     };
     
+    // Get client users too
+    const clientUsers: User[] = [];
+    try {
+      const clientsStr = localStorage.getItem('clients');
+      if (clientsStr) {
+        const clients: Client[] = JSON.parse(clientsStr);
+        clients.forEach(client => {
+          if (client.email) {
+            clientUsers.push({
+              id: client.id + 1000, // Avoid ID collisions
+              name: client.name || client.email.split('@')[0],
+              email: client.email,
+              role: 'user',
+              registrationDate: client.registrationDate,
+              clientId: client.id
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error getting client users:", error);
+    }
+    
     const demoUsers: User[] = [
       adminUser,
       {
@@ -145,7 +252,8 @@ export const useAuthProvider = () => {
         email: "marie@example.com",
         role: 'user',
         registrationDate: "2023-02-10T00:00:00.000Z",
-      }
+      },
+      ...clientUsers
     ];
     
     return demoUsers;
