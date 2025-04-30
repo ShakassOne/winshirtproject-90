@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { useForm } from 'react-hook-form';
@@ -25,8 +24,7 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
       sizes: [],
       colors: [],
       type: 'shirt',
-      // Remove 'status' as it doesn't exist in the type
-      featured: false,
+      featured: false, // This exists in ExtendedProduct now
       allowCustomization: true,
       tickets: 0,
       weight: 0,
@@ -43,7 +41,7 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
       if (product) {
         form.reset({
           ...product,
-          // Don't include 'status' here as it's not in the type
+          featured: product.featured || false, // Set default if missing
         });
         
         // Initialize print areas
@@ -225,22 +223,14 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
   };
   
   // Handle add print area
-  const addPrintArea = (position: 'front' | 'back') => {
-    const newArea: PrintArea = {
+  const addPrintArea = (newArea: Omit<PrintArea, 'id'>) => {
+    const printAreaWithId: PrintArea = {
+      ...newArea,
       id: Date.now(),
-      name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${printAreas.filter(a => a.position === position).length + 1}`,
-      position,
-      format: 'custom', // Add the format property that was missing
-      bounds: {
-        x: 50,
-        y: 50,
-        width: 200,
-        height: 200
-      }
     };
     
-    setPrintAreas(prev => [...prev, newArea]);
-    setSelectedPrintAreaId(newArea.id);
+    setPrintAreas(prev => [...prev, printAreaWithId]);
+    setSelectedPrintAreaId(printAreaWithId.id);
   };
   
   // Handle update print area

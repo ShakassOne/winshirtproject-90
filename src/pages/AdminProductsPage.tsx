@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedProduct, PrintArea } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import { VisualCategory } from '@/types/visual';
 import { useProductForm } from '@/hooks/useProductForm';
@@ -145,12 +145,12 @@ const AdminProductsPage: React.FC = () => {
     selectAllLotteries(availableLotteryIds);
   };
   
-  // Fixed to match the expected parameter type
+  // Fixed to correctly create a PrintArea object
   const handleAddPrintArea = (position: 'front' | 'back') => {
-    const newArea: Omit<PrintArea, 'id'> = {
+    const newArea = {
       name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${(form.getValues().printAreas || []).filter(a => a.position === position).length + 1}`,
       position,
-      format: 'custom',
+      format: 'custom' as const,
       bounds: {
         x: 50,
         y: 50,

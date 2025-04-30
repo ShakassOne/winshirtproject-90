@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UseFormReturn } from "react-hook-form";
 import { Form } from '@/components/ui/form';
@@ -30,9 +29,9 @@ interface EnhancedProductFormProps {
   toggleLottery: (lotteryId: string) => void;
   selectAllLotteries: () => void;
   deselectAllLotteries: () => void;
-  addPrintArea?: (printArea: Omit<PrintArea, 'id'>) => void;
-  updatePrintArea?: (id: number, data: Partial<PrintArea>) => void;
-  removePrintArea?: (id: number) => void;
+  addPrintArea: (printArea: Omit<PrintArea, 'id'>) => void;
+  updatePrintArea: (id: number, data: Partial<PrintArea>) => void;
+  removePrintArea: (id: number) => void;
 }
 
 const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
@@ -58,9 +57,22 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
   const [selectedTab, setSelectedTab] = useState("basic-info");
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   
-  const handleAddPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
+  const handleAddPrintArea = (position: 'front' | 'back') => {
     if (addPrintArea) {
-      addPrintArea(printArea);
+      const newArea: Omit<PrintArea, 'id'> = {
+        name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${form.getValues().printAreas.filter(a => a.position === position).length + 1}`,
+        position,
+        format: 'custom',
+        bounds: {
+          x: 50,
+          y: 50,
+          width: 200,
+          height: 200
+        },
+        allowCustomPosition: true
+      };
+      
+      addPrintArea(newArea);
     }
   };
   
