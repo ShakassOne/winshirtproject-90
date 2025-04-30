@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Circle, Package, Truck, CreditCard, MapPin, CalendarClock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -225,8 +224,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {order.delivery ? (
-              <DeliveryTracking delivery={order.delivery} />
+            {order.delivery && order.delivery.history ? (
+              <DeliveryTracking history={order.delivery.history} />
             ) : (
               <div className="flex items-center justify-center h-32 text-gray-400">
                 Pas d'informations de suivi disponibles
