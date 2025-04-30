@@ -5,24 +5,22 @@ import { ExtendedProduct } from '@/types/product';
 import StarBackground from '@/components/StarBackground';
 import ProductCard from '@/components/product/ProductCard';
 import { Input } from '@/components/ui/input';
-import { Search, Sliders } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import AdvancedFilters from '@/components/product/AdvancedFilters';
 
 const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<ExtendedProduct[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState({
-    productTypes: [] as string[],
-    sleeveTypes: [] as string[],
-    genders: [] as string[],
-    materials: [] as string[],
-    fits: [] as string[],
-    brands: [] as string[],
-    allowCustomization: false,
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState('all');
+  const [selectedProductType, setSelectedProductType] = useState('all');
+  const [selectedSleeveType, setSelectedSleeveType] = useState('all');
+  const [selectedGender, setSelectedGender] = useState('all');
+  const [selectedMaterial, setSelectedMaterial] = useState('all');
+  const [selectedFit, setSelectedFit] = useState('all');
+  const [selectedBrand, setSelectedBrand] = useState('all');
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
   
   // Chargement des produits
   useEffect(() => {
@@ -67,46 +65,49 @@ const ProductsPage: React.FC = () => {
   const filteredProducts = products.filter(product => {
     // Filtrage par recherche
     const matchesSearch = 
-      !searchQuery || 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+      !searchTerm || 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Filtrage par type de produit
     const matchesProductType = 
-      filters.productTypes.length === 0 || 
-      (product.productType && filters.productTypes.includes(product.productType));
+      selectedProductType === 'all' || 
+      (product.productType && product.productType === selectedProductType);
     
     // Filtrage par type de manches
     const matchesSleeveType = 
-      filters.sleeveTypes.length === 0 || 
-      (product.sleeveType && filters.sleeveTypes.includes(product.sleeveType));
+      selectedSleeveType === 'all' || 
+      (product.sleeveType && product.sleeveType === selectedSleeveType);
     
     // Filtrage par genre
     const matchesGender = 
-      filters.genders.length === 0 || 
-      (product.gender && filters.genders.includes(product.gender));
+      selectedGender === 'all' || 
+      (product.gender && product.gender === selectedGender);
     
     // Filtrage par matière
     const matchesMaterial = 
-      filters.materials.length === 0 || 
-      (product.material && filters.materials.some(mat => 
-        product.material!.toLowerCase().includes(mat.toLowerCase())
-      ));
+      selectedMaterial === 'all' || 
+      (product.material && product.material.toLowerCase().includes(selectedMaterial.toLowerCase()));
     
     // Filtrage par coupe
     const matchesFit = 
-      filters.fits.length === 0 || 
-      (product.fit && filters.fits.includes(product.fit));
+      selectedFit === 'all' || 
+      (product.fit && product.fit === selectedFit);
     
     // Filtrage par marque
     const matchesBrand = 
-      filters.brands.length === 0 || 
-      (product.brand && filters.brands.includes(product.brand));
+      selectedBrand === 'all' || 
+      (product.brand && product.brand === selectedBrand);
     
-    // Filtrage par personnalisation
-    const matchesCustomization = 
-      !filters.allowCustomization || 
-      product.allowCustomization === true;
+    // Filtrage par tailles
+    const matchesSizes = 
+      selectedSizes.length === 0 || 
+      (product.sizes && selectedSizes.some(size => product.sizes!.includes(size)));
+    
+    // Filtrage par couleurs
+    const matchesColors = 
+      selectedColors.length === 0 || 
+      (product.colors && selectedColors.some(color => product.colors!.includes(color)));
     
     return matchesSearch && 
            matchesProductType && 
@@ -114,45 +115,23 @@ const ProductsPage: React.FC = () => {
            matchesGender && 
            matchesMaterial && 
            matchesFit && 
-           matchesBrand && 
-           matchesCustomization;
+           matchesBrand &&
+           matchesSizes && 
+           matchesColors;
   });
-  
-  // Mise à jour d'un filtre
-  const toggleFilter = (category: string, value: string) => {
-    setFilters(prevFilters => {
-      const currentFilters = [...(prevFilters[category as keyof typeof prevFilters] as string[])];
-      const index = currentFilters.indexOf(value);
-      
-      if (index === -1) {
-        // Ajouter le filtre s'il n'existe pas
-        return {
-          ...prevFilters,
-          [category]: [...currentFilters, value]
-        };
-      } else {
-        // Retirer le filtre s'il existe déjà
-        currentFilters.splice(index, 1);
-        return {
-          ...prevFilters,
-          [category]: currentFilters
-        };
-      }
-    });
-  };
   
   // Réinitialiser tous les filtres
   const resetFilters = () => {
-    setFilters({
-      productTypes: [],
-      sleeveTypes: [],
-      genders: [],
-      materials: [],
-      fits: [],
-      brands: [],
-      allowCustomization: false,
-    });
-    setSearchQuery('');
+    setSearchTerm('');
+    setSelectedType('all');
+    setSelectedProductType('all');
+    setSelectedSleeveType('all');
+    setSelectedGender('all');
+    setSelectedMaterial('all');
+    setSelectedFit('all');
+    setSelectedBrand('all');
+    setSelectedSizes([]);
+    setSelectedColors([]);
   };
   
   return (
@@ -165,201 +144,95 @@ const ProductsPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-white">Nos Produits</h1>
             
             <div className="flex items-center gap-2">
-              <div className="relative">
+              <div className="relative lg:hidden">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <Input
                   placeholder="Rechercher un produit..."
                   className="pl-10 bg-winshirt-space-light border-winshirt-purple/30 w-full md:w-64"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="border-winshirt-purple/30">
-                    <Sliders size={18} className="mr-2" />
-                    Filtres
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="bg-winshirt-space border-l border-winshirt-purple/30 overflow-y-auto">
-                  <SheetHeader>
-                    <SheetTitle className="text-white">Filtres</SheetTitle>
-                  </SheetHeader>
-                  
-                  <div className="py-4 space-y-6">
-                    {/* Filtre Personnalisable */}
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="custom"
-                          checked={filters.allowCustomization}
-                          onCheckedChange={(checked) => 
-                            setFilters(prev => ({ ...prev, allowCustomization: checked === true }))
-                          }
-                          className="data-[state=checked]:bg-winshirt-purple"
-                        />
-                        <Label htmlFor="custom">Personnalisable</Label>
-                      </div>
-                    </div>
-                    
-                    {/* Types de produit */}
-                    {availableFilters.productTypes.length > 0 && (
-                      <div>
-                        <h3 className="font-medium text-white mb-2">Type de produit</h3>
-                        <div className="space-y-2">
-                          {availableFilters.productTypes.map(type => (
-                            <div key={type} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`type-${type}`}
-                                checked={filters.productTypes.includes(type)}
-                                onCheckedChange={() => toggleFilter('productTypes', type)}
-                                className="data-[state=checked]:bg-winshirt-purple"
-                              />
-                              <Label htmlFor={`type-${type}`}>{type}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Types de manches */}
-                    {availableFilters.sleeveTypes.length > 0 && (
-                      <div>
-                        <h3 className="font-medium text-white mb-2">Type de manches</h3>
-                        <div className="space-y-2">
-                          {availableFilters.sleeveTypes.map(type => (
-                            <div key={type} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`sleeve-${type}`}
-                                checked={filters.sleeveTypes.includes(type)}
-                                onCheckedChange={() => toggleFilter('sleeveTypes', type)}
-                                className="data-[state=checked]:bg-winshirt-purple"
-                              />
-                              <Label htmlFor={`sleeve-${type}`}>{type}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Genres */}
-                    {availableFilters.genders.length > 0 && (
-                      <div>
-                        <h3 className="font-medium text-white mb-2">Genre</h3>
-                        <div className="space-y-2">
-                          {availableFilters.genders.map(gender => (
-                            <div key={gender} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`gender-${gender}`}
-                                checked={filters.genders.includes(gender)}
-                                onCheckedChange={() => toggleFilter('genders', gender)}
-                                className="data-[state=checked]:bg-winshirt-purple"
-                              />
-                              <Label htmlFor={`gender-${gender}`}>
-                                {gender.charAt(0).toUpperCase() + gender.slice(1)}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Coupes */}
-                    {availableFilters.fits.length > 0 && (
-                      <div>
-                        <h3 className="font-medium text-white mb-2">Coupe</h3>
-                        <div className="space-y-2">
-                          {availableFilters.fits.map(fit => (
-                            <div key={fit} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`fit-${fit}`}
-                                checked={filters.fits.includes(fit)}
-                                onCheckedChange={() => toggleFilter('fits', fit)}
-                                className="data-[state=checked]:bg-winshirt-purple"
-                              />
-                              <Label htmlFor={`fit-${fit}`}>
-                                {fit.charAt(0).toUpperCase() + fit.slice(1)}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Matières */}
-                    {availableFilters.materials.length > 0 && (
-                      <div>
-                        <h3 className="font-medium text-white mb-2">Matière</h3>
-                        <div className="space-y-2">
-                          {availableFilters.materials.map(material => (
-                            <div key={material} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`material-${material}`}
-                                checked={filters.materials.includes(material)}
-                                onCheckedChange={() => toggleFilter('materials', material)}
-                                className="data-[state=checked]:bg-winshirt-purple"
-                              />
-                              <Label htmlFor={`material-${material}`}>{material}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Marques */}
-                    {availableFilters.brands.length > 0 && (
-                      <div>
-                        <h3 className="font-medium text-white mb-2">Marque</h3>
-                        <div className="space-y-2">
-                          {availableFilters.brands.map(brand => (
-                            <div key={brand} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`brand-${brand}`}
-                                checked={filters.brands.includes(brand)}
-                                onCheckedChange={() => toggleFilter('brands', brand)}
-                                className="data-[state=checked]:bg-winshirt-purple"
-                              />
-                              <Label htmlFor={`brand-${brand}`}>{brand}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-6 border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"
-                      onClick={resetFilters}
-                    >
-                      Réinitialiser les filtres
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
             </div>
           </div>
           
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Filtres fixes à gauche sur grands écrans */}
+            <div className="hidden lg:block w-full lg:w-1/4 xl:w-1/5">
+              <div className="winshirt-card p-6 sticky top-32">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold mb-4">Filtres</h2>
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <Input
+                      placeholder="Rechercher un produit..."
+                      className="pl-10 bg-winshirt-space-light border-winshirt-purple/30"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <AdvancedFilters 
+                  availableFilters={availableFilters}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  selectedType={selectedType}
+                  setSelectedType={setSelectedType}
+                  selectedProductType={selectedProductType}
+                  setSelectedProductType={setSelectedProductType}
+                  selectedSleeveType={selectedSleeveType}
+                  setSelectedSleeveType={setSelectedSleeveType}
+                  selectedGender={selectedGender}
+                  setSelectedGender={setSelectedGender}
+                  selectedMaterial={selectedMaterial}
+                  setSelectedMaterial={setSelectedMaterial}
+                  selectedFit={selectedFit}
+                  setSelectedFit={setSelectedFit}
+                  selectedBrand={selectedBrand}
+                  setSelectedBrand={setSelectedBrand}
+                  selectedSizes={selectedSizes}
+                  setSelectedSizes={setSelectedSizes}
+                  selectedColors={selectedColors}
+                  setSelectedColors={setSelectedColors}
+                />
+                
+                <div className="mt-6">
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"
+                    onClick={resetFilters}
+                  >
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="winshirt-card p-8 text-center">
-              <h2 className="text-xl text-white mb-2">Aucun produit trouvé</h2>
-              <p className="text-gray-400">
-                Essayez de modifier vos critères de recherche ou de réinitialiser les filtres.
-              </p>
-              <Button 
-                className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
-                onClick={resetFilters}
-              >
-                Réinitialiser les filtres
-              </Button>
+            
+            {/* Liste des produits */}
+            <div className="w-full lg:w-3/4 xl:w-4/5">
+              {filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                  {filteredProducts.map(product => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="winshirt-card p-8 text-center">
+                  <h2 className="text-xl text-white mb-2">Aucun produit trouvé</h2>
+                  <p className="text-gray-400">
+                    Essayez de modifier vos critères de recherche ou de réinitialiser les filtres.
+                  </p>
+                  <Button 
+                    className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                    onClick={resetFilters}
+                  >
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
     </>

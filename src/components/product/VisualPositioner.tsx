@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -343,7 +342,6 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
                 width: `${visualSettings.size.width}px`,
                 height: `${visualSettings.size.height}px`,
                 opacity: visualSettings.opacity,
-                mixBlendMode: 'multiply',
                 zIndex: 10
               }}
               onMouseDown={handleMouseDown}
@@ -428,7 +426,6 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
                 width: `${visualSettings.size.width}px`,
                 height: `${visualSettings.size.height}px`,
                 opacity: visualSettings.opacity,
-                mixBlendMode: 'multiply',
                 zIndex: 10
               }}
               onMouseDown={handleMouseDown}
