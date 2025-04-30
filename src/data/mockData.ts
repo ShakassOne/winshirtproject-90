@@ -1,4 +1,3 @@
-
 import { ExtendedProduct } from '@/types/product';
 import { Visual } from '@/types/visual';
 import { Client } from '@/types/client';
@@ -171,6 +170,9 @@ export const getMockLotteries = () => {
     },
   ];
 };
+
+// Export a constant for backward compatibility
+export const mockLotteries = getMockLotteries();
 
 /**
  * Get a lottery by its ID
@@ -686,8 +688,11 @@ export const getMockProducts = (): ExtendedProduct[] => {
   ];
 };
 
+// Export a constant for backward compatibility
+export const mockProducts = getMockProducts();
+
 /**
- * Mock data for visuals
+ * Mock data for visuals - Updated to use categoryId and categoryName instead of category
  */
 export const getMockVisuals = (): Visual[] => {
   return [
@@ -695,70 +700,80 @@ export const getMockVisuals = (): Visual[] => {
       id: 1,
       name: "Flammes",
       image: "/img/visuals/flames.png",
-      category: "Abstrait",
+      categoryId: 4, // "Abstrait" category
+      categoryName: "Abstrait",
       tags: ["feu", "chaud", "abstrait"],
     },
     {
       id: 2,
       name: "Etoiles",
       image: "/img/visuals/stars.png",
-      category: "Espace",
+      categoryId: 2, // "Espace" category
+      categoryName: "Espace",
       tags: ["nuit", "ciel", "galaxie"],
     },
     {
       id: 3,
       name: "Vagues",
       image: "/img/visuals/waves.png",
-      category: "Nature",
+      categoryId: 3, // "Nature" category
+      categoryName: "Nature",
       tags: ["mer", "océan", "bleu"],
     },
     {
       id: 4,
       name: "Coeurs",
       image: "/img/visuals/hearts.png",
-      category: "Amour",
+      categoryId: 5, // "Amour" category
+      categoryName: "Amour",
       tags: ["saint valentin", "romantique", "rouge"],
     },
     {
       id: 5,
       name: "Fleurs",
       image: "/img/visuals/flowers.png",
-      category: "Nature",
+      categoryId: 3, // "Nature" category
+      categoryName: "Nature",
       tags: ["printemps", "floral", "couleurs"],
     },
     {
       id: 6,
       name: "Animaux",
       image: "/img/visuals/animals.png",
-      category: "Animaux",
+      categoryId: 2, // "Animaux" category
+      categoryName: "Animaux",
       tags: ["faune", "mignon", "sauvage"],
     },
     {
       id: 7,
       name: "Technologie",
       image: "/img/visuals/technology.png",
-      category: "Technologie",
+      categoryId: 6, // "Technologie" category
+      categoryName: "Technologie",
       tags: ["futuriste", "électronique", "innovation"],
     },
     {
       id: 8,
       name: "Musique",
       image: "/img/visuals/music.png",
-      category: "Musique",
+      categoryId: 2, // "Musique" category
+      categoryName: "Musique",
       tags: ["notes", "instruments", "mélodie"],
     },
     {
       id: 9,
       name: "Voyage",
       image: "/img/visuals/travel.png",
-      category: "Voyage",
+      categoryId: 7, // "Voyage" category
+      categoryName: "Voyage",
       tags: ["aventure", "monde", "exploration"],
     },
     {
       id: 10,
       name: "Nourriture",
       image: "/img/visuals/food.png",
-      category: "Nourriture",
+      categoryId: 8, // "Nourriture" category
+      categoryName: "Nourriture",
       tags: ["délicieux", "gourmand", "saveurs"],
     },
   ];
@@ -812,38 +827,4 @@ export const getMockClients = (): Client[] => {
       email: "alice.martin@example.com",
       phone: "0798765432",
       address: "25 avenue des Champs-Élysées",
-      city: "Paris",
-      postalCode: "75008",
-      country: "France",
-      registrationDate: "2023-02-20",
-      orderCount: 3,
-      totalSpent: 180.50,
-    },
-    {
-      id: 3,
-      name: "Pierre Lefevre",
-      email: "pierre.lefevre@example.com",
-      phone: "0655555555",
-      address: "5 rue du Louvre",
-      city: "Paris",
-      postalCode: "75001",
-      country: "France",
-      registrationDate: "2023-03-10",
-      orderCount: 2,
-      totalSpent: 120.00,
-    },
-    {
-      id: 4,
-      name: "Marie Dubois",
-      email: "marie.dubois@example.com",
-      phone: "0622334455",
-      address: "8 boulevard Saint-Michel",
-      city: "Paris",
-      postalCode: "75005",
-      country: "France",
-      registrationDate: "2023-04-05",
-      orderCount: 1,
-      totalSpent: 75.00,
-    }
-  ];
-};
+      city:

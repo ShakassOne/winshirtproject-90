@@ -1,545 +1,724 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, CheckCircle, XCircle, RefreshCw, Database, Server, Link2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { syncConfig, syncData } from '@/lib/initSupabase';
-import { checkSupabaseConnection, requiredTables, ValidTableName, forceSupabaseConnection, camelToSnake, snakeToCamel } from '@/lib/supabase';
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/types/supabase';
+import { useToast } from "@/components/ui/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
+import { MoreVertical, Copy, CheckCircle2, Loader2 } from 'lucide-react';
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Switch } from "@/components/ui/switch"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  pullDataFromSupabase,
+  pushDataToSupabase,
+  clearLocalStorage,
+  SyncStatus,
+  getSyncStatus,
+  setSyncStatus,
+  ValidTableName,
+  getAllValidTableNames
+} from '@/lib/syncManager';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { showNotification } from '@/lib/notifications';
+
+// Define a schema for the settings form
+const formSchema = z.object({
+  autoSync: z.boolean().default(false),
+  syncInterval: z.number().min(5).max(60).default(15),
+})
 
 interface SyncSettingsManagerProps {
-  isInitiallyConnected?: boolean;
+  onSettingsChange: (autoSync: boolean, syncInterval: number) => void;
 }
 
-const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ isInitiallyConnected = false }) => {
-  const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
-  const [syncSuccess, setSyncSuccess] = useState<Record<string, boolean | null>>({});
-  const [autoSync, setAutoSync] = useState(syncConfig.autoSync);
-  const [isConnected, setIsConnected] = useState<boolean>(isInitiallyConnected);
-  const [isConnecting, setIsConnecting] = useState<boolean>(false);
-  const [localStorageData, setLocalStorageData] = useState<Record<string, boolean>>({});
-  const [supabaseStorage, setSupabaseStorage] = useState<Record<string, boolean>>({});
-  const [storageStats, setStorageStats] = useState<Record<string, {local: number; supabase: number}>>({});
-  
-  // Check if connected to Supabase on mount and check data existence
+const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsChange }) => {
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(15);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatuses, setSyncStatuses] = useState<Record<ValidTableName, SyncStatus>>({
+    lotteries: { lastSync: null, success: true },
+    lottery_participants: { lastSync: null, success: true },
+    lottery_winners: { lastSync: null, success: true },
+    products: { lastSync: null, success: true },
+    visuals: { lastSync: null, success: true },
+		orders: { lastSync: null, success: true },
+		order_items: { lastSync: null, success: true },
+    clients: { lastSync: null, success: true },
+  });
+	const [isLocalStorageEmpty, setIsLocalStorageEmpty] = useState(false);
+  const [isClearingLocalStorage, setIsClearingLocalStorage] = useState(false);
+  const [isPushingData, setIsPushingData] = useState(false);
+  const [isPullingData, setIsPullingData] = useState(false);
+  const [isResettingSyncStatus, setIsResettingSyncStatus] = useState(false);
+  const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const [isCheckingSupabase, setIsCheckingSupabase] = useState(true);
+  const [isSyncSettingsLoading, setIsSyncSettingsLoading] = useState(true);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [isResettingAllSyncStatuses, setIsResettingAllSyncStatuses] = useState(false);
+  const [isPullingAllData, setIsPullingAllData] = useState(false);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      autoSync: false,
+      syncInterval: 15,
+    },
+  })
+
+  const { toast } = useToast()
+
+  // Load settings from localStorage on component mount
   useEffect(() => {
-    const checkConnection = async () => {
-      // Essayer d'abord de lire l'état de connexion du localStorage pour la cohérence
-      const storedConnectionState = localStorage.getItem('supabase_connected');
-      const initialConnected = storedConnectionState === 'true' || isInitiallyConnected;
-      
-      setIsConnected(initialConnected);
-      
-      // Puis vérifier la connexion réelle
-      const connected = await checkSupabaseConnection();
-      setIsConnected(connected);
-      localStorage.setItem('supabase_connected', connected ? 'true' : 'false');
-      
-      if (connected) {
-        checkDataExistence();
-        // Afficher un toast uniquement si l'état a changé
-        if (!initialConnected) {
-          toast.info("Connexion à Supabase établie", { position: "top-right", duration: 3000 });
+    const loadSettings = () => {
+      setIsSyncSettingsLoading(true);
+      try {
+        const autoSync = localStorage.getItem('autoSyncEnabled');
+        const interval = localStorage.getItem('syncIntervalMinutes');
+
+        if (autoSync !== null) {
+          setAutoSyncEnabled(autoSync === 'true');
+          form.setValue('autoSync', autoSync === 'true');
         }
+
+        if (interval !== null) {
+          const parsedInterval = parseInt(interval, 10);
+          setSyncIntervalMinutes(parsedInterval);
+          form.setValue('syncInterval', parsedInterval);
+        }
+      } catch (error) {
+        console.error("Error loading sync settings:", error);
+        toast({
+          variant: "destructive",
+          title: "Error loading sync settings",
+          description: "Failed to load sync settings from local storage.",
+        })
+      } finally {
+        setIsSyncSettingsLoading(false);
       }
     };
-    
-    checkConnection();
-    
-    // Check connection every 60 seconds (reduced from 30s to reduce load)
-    const intervalId = setInterval(checkConnection, 60000);
-    
-    return () => clearInterval(intervalId);
-  }, [isInitiallyConnected]);
-  
-  // Fonction pour vérifier l'existence de données dans chaque table
-  const checkDataExistence = async () => {
-    // Vérifier l'existence des données locales
-    const localData: Record<string, boolean> = {};
-    const localStats: Record<string, number> = {};
-    
-    for (const table of requiredTables) {
-      const storedData = window.localStorage.getItem(table);
-      if (storedData) {
+
+    loadSettings();
+  }, [form, toast]);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('autoSyncEnabled', String(autoSyncEnabled));
+    localStorage.setItem('syncIntervalMinutes', String(syncIntervalMinutes));
+    onSettingsChange(autoSyncEnabled, syncIntervalMinutes);
+  }, [autoSyncEnabled, syncIntervalMinutes, onSettingsChange]);
+
+  // Load sync statuses from localStorage on component mount
+  useEffect(() => {
+    const loadSyncStatuses = async () => {
+      const statuses: Partial<Record<ValidTableName, SyncStatus>> = {};
+      for (const table of getAllValidTableNames()) {
         try {
-          const parsed = JSON.parse(storedData);
-          localData[table] = Array.isArray(parsed) && parsed.length > 0;
-          localStats[table] = Array.isArray(parsed) ? parsed.length : 0;
-        } catch (e) {
-          localData[table] = false;
-          localStats[table] = 0;
-        }
-      } else {
-        localData[table] = false;
-        localStats[table] = 0;
-      }
-    }
-    
-    setLocalStorageData(localData);
-    
-    // Vérifier l'existence des données Supabase si connecté
-    if (isConnected) {
-      const supabaseData: Record<string, boolean> = {};
-      const supabaseStats: Record<string, number> = {};
-      
-      for (const table of requiredTables) {
-        try {
-          const { data, error, count } = await supabase
-            .from(table)
-            .select('*', { count: 'exact', head: true });
-          
-          supabaseData[table] = !error && count !== null && count > 0;
-          supabaseStats[table] = count || 0;
-        } catch (e) {
-          supabaseData[table] = false;
-          supabaseStats[table] = 0;
-        }
-      }
-      
-      setSupabaseStorage(supabaseData);
-      
-      // Combiner les statistiques
-      const combinedStats: Record<string, {local: number; supabase: number}> = {};
-      
-      for (const table of requiredTables) {
-        combinedStats[table] = {
-          local: localStats[table] || 0,
-          supabase: supabaseStats[table] || 0
-        };
-      }
-      
-      setStorageStats(combinedStats);
-    }
-  };
-  
-  const handleSyncTable = async (table: ValidTableName) => {
-    setIsLoading(prev => ({ ...prev, [table]: true }));
-    setSyncSuccess(prev => ({ ...prev, [table]: null }));
-    
-    try {
-      // Vérifier d'abord si nous sommes connectés à Supabase
-      if (!isConnected) {
-        const connected = await checkSupabaseConnection();
-        if (!connected) {
-          toast.error("Impossible de se connecter à Supabase", { position: "top-right" });
-          setIsLoading(prev => ({ ...prev, [table]: false }));
-          setSyncSuccess(prev => ({ ...prev, [table]: false }));
-          return;
-        }
-        setIsConnected(true);
-        localStorage.setItem('supabase_connected', 'true');
-      }
-    
-      // Récupérer les données du localStorage
-      const localData = localStorage.getItem(table);
-      let parsedData = [];
-    
-      if (localData) {
-        try {
-          parsedData = JSON.parse(localData);
-          console.log(`Loaded ${parsedData.length} items from localStorage for ${table}`);
-        } catch (e) {
-          console.error(`Error parsing localStorage data for ${table}:`, e);
-        }
-      }
-    
-      // Tableau vide mais existant - gérer ce cas spécial pour visual_categories
-      if (Array.isArray(parsedData) && parsedData.length === 0 && table === 'visual_categories') {
-        // Créer une catégorie par défaut si aucune n'existe
-        parsedData = [{
-          id: 1,
-          name: "Catégorie par défaut",
-          description: "Catégorie par défaut pour les visuels",
-          slug: "default",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }];
-        
-        // Sauvegarder dans le localStorage
-        localStorage.setItem(table, JSON.stringify(parsedData));
-        
-        toast.info("Création d'une catégorie par défaut", { position: "top-right" });
-      }
-    
-      if (!Array.isArray(parsedData) || parsedData.length === 0) {
-        toast.warning(`Pas de données locales pour ${table}`, { position: "top-right" });
-        setIsLoading(prev => ({ ...prev, [table]: false }));
-        setSyncSuccess(prev => ({ ...prev, [table]: false }));
-        return;
-      }
-    
-      // Ensure authentication for protected tables
-      const session = await supabase.auth.getSession();
-      const isAuthenticated = !!session.data.session;
-      
-      console.log(`Authentication status for ${table} sync: ${isAuthenticated ? "Authenticated" : "Not authenticated"}`);
-      
-      if (!isAuthenticated) {
-        try {
-          // Try to sign in with stored admin credentials
-          const adminCredentials = localStorage.getItem('winshirt_admin');
-          if (adminCredentials) {
-            const { email, password } = JSON.parse(adminCredentials);
-            const { data, error } = await supabase.auth.signInWithPassword({
-              email,
-              password
-            });
-            
-            if (error) {
-              console.error("Auto-sign in failed:", error);
-              toast.error(`Authentification requise pour synchroniser ${table}`, { position: "top-right" });
-              setSyncSuccess(prev => ({ ...prev, [table]: false }));
-              setIsLoading(prev => ({ ...prev, [table]: false }));
-              return;
-            }
-            
-            console.log("Auto-sign in successful");
-          } else {
-            toast.error(`Authentification requise pour synchroniser ${table}`, { position: "top-right" });
-            setSyncSuccess(prev => ({ ...prev, [table]: false }));
-            setIsLoading(prev => ({ ...prev, [table]: false }));
-            return;
+          const status = await getSyncStatus(table);
+          if (status) {
+            statuses[table] = status;
           }
-        } catch (e) {
-          console.error("Error during authentication:", e);
-          toast.error("Erreur d'authentification", { position: "top-right" });
-          setSyncSuccess(prev => ({ ...prev, [table]: false }));
-          setIsLoading(prev => ({ ...prev, [table]: false }));
-          return;
+        } catch (error) {
+          console.error(`Error loading sync status for ${table}:`, error);
         }
       }
-    
-      // Conversion des données camelCase vers snake_case pour Supabase
-      const snakeCaseData = parsedData.map(item => camelToSnake(item));
-    
-      // Utiliser upsert au lieu de delete+insert pour préserver les données existantes
-      const { error: upsertError } = await supabase
-        .from(table)
-        .upsert(snakeCaseData, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
-      
-      if (upsertError) {
-        console.error(`Error upserting data to ${table}:`, upsertError);
-        toast.error(`Erreur lors de la synchronisation: ${upsertError.message}`, { position: "top-right" });
-        setSyncSuccess(prev => ({ ...prev, [table]: false }));
-      
-        setIsLoading(prev => ({ ...prev, [table]: false }));
-        return;
+      setSyncStatuses(prev => ({ ...prev, ...statuses }));
+    };
+
+    loadSyncStatuses();
+  }, []);
+
+  // Check if local storage is empty
+	useEffect(() => {
+    const checkLocalStorage = () => {
+      try {
+        const hasData = getAllValidTableNames().some(table => localStorage.getItem(table) !== null);
+        setIsLocalStorageEmpty(!hasData);
+      } catch (error) {
+        console.error("Error checking local storage:", error);
+        toast({
+          variant: "destructive",
+          title: "Error checking local storage",
+          description: "Failed to check local storage for data.",
+        })
       }
-    
-      setSyncSuccess(prev => ({ ...prev, [table]: true }));
-    
-      toast.success(`Synchronisation réussie pour ${table} (${parsedData.length} éléments)`, { position: "top-right" });
-    
-      // Vérifier le résultat
-      const { count, error } = await supabase
-        .from(table)
-        .select('*', { count: 'exact', head: true });
-      
-      console.log(`Verified ${count} items in Supabase for ${table}`);
-    
-      // Récupérer les données depuis Supabase pour mettre à jour le localStorage
-      const { data, error: fetchError } = await supabase
-        .from(table)
-        .select('*');
-      
-      if (!fetchError && data) {
-        // Convertir les données snake_case en camelCase
-        const camelCaseData = data.map(item => snakeToCamel(item));
-      
-        // Mettre à jour le localStorage
-        localStorage.setItem(table, JSON.stringify(camelCaseData));
-        console.log(`Updated localStorage with ${camelCaseData.length} items for ${table}`);
+    };
+
+    checkLocalStorage();
+  }, [toast]);
+
+  // Check Supabase connection status on component mount
+  useEffect(() => {
+    const checkSupabaseConnection = async () => {
+      setIsCheckingSupabase(true);
+      try {
+        const { error } = await supabase.from('products').select('id').limit(1);
+        setIsSupabaseConnected(!error);
+      } catch (err) {
+        setIsSupabaseConnected(false);
+        console.error("Supabase connection check failed:", err);
+        toast({
+          variant: "destructive",
+          title: "Supabase connection check failed",
+          description: "Could not verify the connection to Supabase.",
+        })
+      } finally {
+        setIsCheckingSupabase(false);
       }
-    
-      // Mettre à jour les statistiques
-      checkDataExistence();
-    } catch (error: any) {
-      console.error(`Erreur lors de la synchronisation de ${table}:`, error);
-      toast.error(`Erreur lors de la synchronisation: ${error.message || 'Erreur inconnue'}`, { position: "top-right" });
-      setSyncSuccess(prev => ({ ...prev, [table]: false }));
-    } finally {
-      setIsLoading(prev => ({ ...prev, [table]: false }));
-    }
+    };
+
+    checkSupabaseConnection();
+  }, [toast]);
+
+  // Handle auto sync toggle
+  const handleAutoSyncToggle = (value: boolean) => {
+    setAutoSyncEnabled(value);
   };
-  
-  const handleSyncAll = async () => {
-    toast.info("Démarrage de la synchronisation de toutes les tables...", { position: "top-right" });
-    
-    // Synchroniser toutes les tables
-    for (const table of syncConfig.tables) {
-      await handleSyncTable(table);
-    }
-    
-    toast.success('Synchronisation de toutes les tables terminée', { position: "top-right" });
-    
-    // Mettre à jour les statistiques
-    checkDataExistence();
+
+  // Handle sync interval change
+  const handleSyncIntervalChange = (value: number) => {
+    setSyncIntervalMinutes(value);
   };
-  
-  const handleToggleAutoSync = (checked: boolean) => {
-    setAutoSync(checked);
-    // Ici, dans une version future, on pourrait sauvegarder cette préférence
-    // dans la configuration générale
-    toast.success(`Synchronisation automatique ${checked ? 'activée' : 'désactivée'}`, { position: "top-right" });
-  };
-  
-  const handleForceConnection = async () => {
-    setIsConnecting(true);
-    
+
+  // Function to trigger data synchronization for a specific table
+  const syncData = async (table: ValidTableName) => {
+    setIsSyncing(true);
     try {
-      const success = await forceSupabaseConnection();
-      setIsConnected(success);
-      localStorage.setItem('supabase_connected', success ? 'true' : 'false');
-      
-      if (success) {
-        toast.success("Connexion à Supabase établie avec succès!", { position: "top-right" });
-        // Mettre à jour les statistiques
-        await checkDataExistence();
-      } else {
-        toast.error("Impossible de se connecter à Supabase", { position: "top-right" });
-      }
+      const result = await pushDataToSupabase(table);
+      setSyncStatuses(prev => ({ ...prev, [table]: result }));
+      toast({
+        title: `Sync ${table} data`,
+        description: result.success
+          ? `Successfully synced ${table} data with Supabase.`
+          : `Failed to sync ${table} data with Supabase.`,
+      })
+      showNotification('sync', table, result.success, result.error?.message);
     } catch (error) {
-      console.error("Erreur lors de la tentative de connexion:", error);
-      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "top-right" });
+      console.error(`Sync ${table} failed:`, error);
+      toast({
+        variant: "destructive",
+        title: `Sync ${table} failed`,
+        description: `Failed to sync ${table} data with Supabase.`,
+      })
+      showNotification('sync', table, false, error instanceof Error ? error.message : 'Unknown error');
     } finally {
-      setIsConnecting(false);
-    }
-  };
-  
-  const getStatusIcon = (table: string) => {
-    if (isLoading[table]) {
-      return <Loader2 className="h-5 w-5 animate-spin text-winshirt-blue" />;
-    }
-    
-    if (syncSuccess[table] === true) {
-      return <CheckCircle className="h-5 w-5 text-green-500" />;
-    }
-    
-    if (syncSuccess[table] === false) {
-      return <XCircle className="h-5 w-5 text-red-500" />;
-    }
-    
-    return null;
-  };
-  
-  // Formater le nom de la table pour l'affichage
-  const formatTableName = (table: string) => {
-    return table.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
-  
-  // Déterminer le statut de stockage d'une table
-  const getStorageStatus = (table: string) => {
-    const local = localStorageData[table];
-    const supabase = supabaseStorage[table];
-    
-    if (local && supabase) {
-      return 'both';
-    } else if (local) {
-      return 'local';
-    } else if (supabase) {
-      return 'supabase';
-    } else {
-      return 'none';
-    }
-  };
-  
-  // Obtenir l'icône et la couleur pour le statut de stockage
-  const getStorageStatusIcon = (table: string) => {
-    const status = getStorageStatus(table);
-    
-    switch (status) {
-      case 'both':
-        return <Cloud className="h-4 w-4 text-green-500" aria-label="Données présentes en local et sur Supabase" />;
-      case 'local':
-        return <CloudOff className="h-4 w-4 text-yellow-500" aria-label="Données présentes uniquement en local" />;
-      case 'supabase':
-        return <Database className="h-4 w-4 text-blue-500" aria-label="Données présentes uniquement sur Supabase" />;
-      case 'none':
-        return <AlertCircle className="h-4 w-4 text-red-500" aria-label="Aucune donnée trouvée" />;
-      default:
-        return null;
+      setIsSyncing(false);
     }
   };
 
-  // Afficher le badge de statut
-  const renderStorageStatusBadge = (table: string) => {
-    const status = getStorageStatus(table);
-    let bgColor = '';
-    let textColor = '';
-    let statusText = '';
-    
-    switch (status) {
-      case 'both':
-        bgColor = 'bg-green-500/20';
-        textColor = 'text-green-300';
-        statusText = 'Local+Supabase';
-        break;
-      case 'local':
-        bgColor = 'bg-yellow-500/20';
-        textColor = 'text-yellow-300';
-        statusText = 'Local uniquement';
-        break;
-      case 'supabase':
-        bgColor = 'bg-blue-500/20';
-        textColor = 'text-blue-300';
-        statusText = 'Supabase uniquement';
-        break;
-      case 'none':
-        bgColor = 'bg-red-500/20';
-        textColor = 'text-red-300';
-        statusText = 'Aucune donnée';
-        break;
+  // Function to pull data from Supabase for a specific table
+  const pullData = async (table: ValidTableName) => {
+    setIsPullingData(true);
+    try {
+      const result = await pullDataFromSupabase(table);
+      setSyncStatuses(prev => ({ ...prev, [table]: result }));
+      toast({
+        title: `Pull ${table} data`,
+        description: result.success
+          ? `Successfully pulled ${table} data from Supabase.`
+          : `Failed to pull ${table} data from Supabase.`,
+      })
+      showNotification('pull', table, result.success, result.error?.message);
+    } catch (error) {
+      console.error(`Pull ${table} failed:`, error);
+      toast({
+        variant: "destructive",
+        title: `Pull ${table} failed`,
+        description: `Failed to pull ${table} data from Supabase.`,
+      })
+      showNotification('pull', table, false, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsPullingData(false);
     }
-    
-    return (
-      <span className={`${bgColor} ${textColor} text-xs px-2 py-1 rounded-full flex items-center gap-1`}>
-        {getStorageStatusIcon(table)}
-        <span>{statusText}</span>
-      </span>
-    );
   };
+
+  // Function to clear local storage
+  const handleClearLocalStorage = async () => {
+    setIsClearingLocalStorage(true);
+    try {
+      await clearLocalStorage();
+      setIsLocalStorageEmpty(true);
+      toast({
+        title: "Local storage cleared",
+        description: "Successfully cleared all data from local storage.",
+      })
+      showNotification('clear', 'localStorage', true);
+    } catch (error) {
+      console.error("Failed to clear local storage:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to clear local storage",
+        description: "Failed to clear all data from local storage.",
+      })
+      showNotification('clear', 'localStorage', false, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsClearingLocalStorage(false);
+    }
+  };
+
+  const handleResetSyncStatus = async (table: ValidTableName) => {
+    setIsResettingSyncStatus(true);
+    try {
+      await setSyncStatus(table, { lastSync: null, success: true });
+      setSyncStatuses(prev => ({
+        ...prev,
+        [table]: { lastSync: null, success: true },
+      }));
+      toast({
+        title: `Reset ${table} sync status`,
+        description: `Successfully reset sync status for ${table}.`,
+      })
+      showNotification('reset', table, true);
+    } catch (error) {
+      console.error(`Failed to reset ${table} sync status:`, error);
+      toast({
+        variant: "destructive",
+        title: `Failed to reset ${table} sync status`,
+        description: `Failed to reset sync status for ${table}.`,
+      })
+      showNotification('reset', table, false, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsResettingSyncStatus(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    setIsSyncingAll(true);
+    try {
+      for (const table of getAllValidTableNames()) {
+        try {
+          const result = await pushDataToSupabase(table);
+          setSyncStatuses(prev => ({ ...prev, [table]: result }));
+          showNotification('sync', table, result.success, result.error?.message);
+        } catch (error) {
+          console.error(`Sync ${table} failed:`, error);
+          showNotification('sync', table, false, error instanceof Error ? error.message : 'Unknown error');
+        }
+      }
+      toast({
+        title: "All data synced",
+        description: "Successfully synced all data with Supabase.",
+      })
+      showNotification('sync', 'all', true);
+    } catch (error) {
+      console.error("Failed to sync all data:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to sync all data",
+        description: "Failed to sync all data with Supabase.",
+      })
+      showNotification('sync', 'all', false, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
+
+  const handleResetAllSyncStatuses = async () => {
+    setIsResettingAllSyncStatuses(true);
+    try {
+      for (const table of getAllValidTableNames()) {
+        try {
+          await setSyncStatus(table, { lastSync: null, success: true });
+          setSyncStatuses(prev => ({
+            ...prev,
+            [table]: { lastSync: null, success: true },
+          }));
+        } catch (error) {
+          console.error(`Failed to reset ${table} sync status:`, error);
+        }
+      }
+      toast({
+        title: "All sync statuses reset",
+        description: "Successfully reset all sync statuses.",
+      })
+      showNotification('reset', 'all', true);
+    } catch (error) {
+      console.error("Failed to reset all sync statuses:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to reset all sync statuses",
+        description: "Failed to reset all sync statuses.",
+      })
+      showNotification('reset', 'all', false, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsResettingAllSyncStatuses(false);
+    }
+  };
+
+  const handlePullAllData = async () => {
+    setIsPullingAllData(true);
+    try {
+      for (const table of getAllValidTableNames()) {
+        try {
+          const result = await pullDataFromSupabase(table);
+          setSyncStatuses(prev => ({ ...prev, [table]: result }));
+          showNotification('pull', table, result.success, result.error?.message);
+        } catch (error) {
+          console.error(`Pull ${table} failed:`, error);
+          showNotification('pull', table, false, error instanceof Error ? error.message : 'Unknown error');
+        }
+      }
+      toast({
+        title: "All data pulled",
+        description: "Successfully pulled all data from Supabase.",
+      })
+      showNotification('pull', 'all', true);
+    } catch (error) {
+      console.error("Failed to pull all data:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to pull all data",
+        description: "Failed to pull all data from Supabase.",
+      })
+      showNotification('pull', 'all', false, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsPullingAllData(false);
+    }
+  };
+
+  const isVisualCategoriesTable = false;
   
   return (
-    <Card className="winshirt-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-white flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          Synchronisation des données
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <p className="text-gray-300">
-                {isConnected ? 'Connecté à Supabase' : 'Non connecté à Supabase (mode hors-ligne)'}
-              </p>
-            </div>
-            
+    <div className="space-y-6">
+      <div className="rounded-md border p-4">
+        <h2 className="text-lg font-medium">Paramètres de synchronisation</h2>
+        <p className="text-sm text-muted-foreground">
+          Configurez la synchronisation automatique des données avec Supabase.
+        </p>
+        <Form {...form}>
+          <form className="space-y-4">
+            <FormField
+              control={form.control}
+              name="autoSync"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Synchronisation automatique</FormLabel>
+                    <FormDescription>
+                      Activer la synchronisation automatique des données avec Supabase.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        handleAutoSyncToggle(checked);
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="syncInterval"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Intervalle de synchronisation (minutes)</FormLabel>
+                  <FormDescription>
+                    Définir l'intervalle de temps entre chaque synchronisation automatique.
+                  </FormDescription>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="5"
+                      max="60"
+                      placeholder="Intervalle en minutes"
+                      value={field.value}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        field.onChange(value);
+                        handleSyncIntervalChange(value);
+                      }}
+                      className="bg-background border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
+      </div>
+
+      <div className="rounded-md border p-4">
+        <h2 className="text-lg font-medium">Actions de synchronisation</h2>
+        <p className="text-sm text-muted-foreground">
+          Effectuez des actions manuelles de synchronisation des données.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {getAllValidTableNames().map((table) => (
+            <Card key={table} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium capitalize">{table}</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Ouvrir le menu</span>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => {
+                      navigator.clipboard.writeText(JSON.stringify(syncStatuses[table]))
+                      toast({
+                        description: "Sync status copied to clipboard.",
+                      })
+                    }}>
+                      <Copy className="mr-2 h-4 w-4" /> Copier le statut
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem>
+                          Réinitialiser le statut
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Cette action réinitialisera le statut de synchronisation de la table {table}.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleResetSyncStatus(table)}>
+                            {isResettingSyncStatus ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                            )}
+                            Confirmer
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              {syncStatuses[table] ? (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Dernière synchronisation:{" "}
+                    {syncStatuses[table].lastSync
+                      ? new Date(syncStatuses[table].lastSync).toLocaleString()
+                      : "Jamais"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Statut:{" "}
+                    {syncStatuses[table].success ? "Succès" : "Échec"}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Statut de synchronisation inconnu.
+                </p>
+              )}
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => syncData(table)}
+                  disabled={isSyncing || isCheckingSupabase || !isSupabaseConnected}
+                  className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
+                >
+                  {isSyncing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Synchronisation...
+                    </>
+                  ) : (
+                    "Synchroniser"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => pullData(table)}
+                  disabled={isPullingData || isCheckingSupabase || !isSupabaseConnected}
+                  className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
+                >
+                  {isPullingData ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Récupération...
+                    </>
+                  ) : (
+                    "Récupérer"
+                  )}
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-md border p-4">
+        <h2 className="text-lg font-medium">Actions globales</h2>
+        <p className="text-sm text-muted-foreground">
+          Effectuez des actions globales sur toutes les données.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="space-y-2">
+            <h3 className="text-sm font-medium">Synchroniser toutes les données</h3>
+            <p className="text-xs text-muted-foreground">
+              Synchroniser toutes les données avec Supabase.
+            </p>
             <Button
               variant="outline"
               size="sm"
-              onClick={handleForceConnection}
-              disabled={isConnecting || isConnected}
-              className="border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
-            >
-              {isConnecting ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Link2 className="h-4 w-4 mr-1" />
-              )}
-              {isConnected ? 'Connecté' : 'Établir la connexion'}
-            </Button>
-          </div>
-          
-          <p className="text-gray-300 mb-4">
-            Configurez la synchronisation des données entre le stockage local et Supabase.
-            Vous pouvez synchroniser manuellement les tables ou activer la synchronisation automatique.
-          </p>
-          
-          <div className="flex items-center space-x-2 mb-6">
-            <Switch 
-              id="auto-sync" 
-              checked={autoSync} 
-              onCheckedChange={handleToggleAutoSync} 
-              disabled={!isConnected}
-            />
-            <Label htmlFor="auto-sync" className="text-white">
-              Synchronisation automatique
-            </Label>
-          </div>
-          
-          {!isConnected && (
-            <div className="bg-red-950/30 border border-red-500/30 p-4 rounded-md mb-6 max-w-[100%]">
-              <p className="text-red-200 text-sm">
-                La connexion à Supabase n'est pas établie. Veuillez cliquer sur "Établir la connexion" pour vous connecter à votre base de données.
-              </p>
-              <div className="mt-4 text-sm text-red-200">
-                <p className="font-semibold">Instructions pour établir la connexion:</p>
-                <ol className="list-decimal pl-4 mt-2 space-y-1">
-                  <li>Vérifiez que le serveur Supabase est accessible</li>
-                  <li>Assurez-vous que votre clé API Supabase est valide</li>
-                  <li>Cliquez sur le bouton "Établir la connexion" ci-dessus</li>
-                  <li>Une fois connecté, vous pourrez synchroniser vos données</li>
-                </ol>
-              </div>
-            </div>
-          )}
-          
-          <Separator className="my-4 bg-winshirt-purple/20" />
-          
-          <div className="space-y-4 mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {requiredTables.map(table => {
-                const stats = storageStats[table] || { local: 0, supabase: 0 };
-                
-                return (
-                  <Card key={table} className="bg-winshirt-space-light border border-winshirt-purple/20">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col gap-3">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <Server className="h-4 w-4 text-winshirt-purple-light" />
-                            <span className="text-white">{formatTableName(table)}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(table)}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              disabled={isLoading[table] || !isConnected}
-                              onClick={() => handleSyncTable(table as ValidTableName)}
-                              className="h-8 border-winshirt-purple/30 text-winshirt-purple-light hover:bg-winshirt-purple/10"
-                            >
-                              <RefreshCw className="h-4 w-4 mr-1" />
-                              Synchroniser
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center">
-                          {renderStorageStatusBadge(table)}
-                          
-                          <div className="text-xs text-gray-400">
-                            <span className="mr-3">Local: {stats.local} éléments</span>
-                            <span>Supabase: {stats.supabase} éléments</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-            
-            <Button 
-              className="w-full mt-4 bg-winshirt-purple hover:bg-winshirt-purple/80" 
               onClick={handleSyncAll}
-              disabled={Object.values(isLoading).some(value => value) || !isConnected}
+              disabled={isSyncingAll || isCheckingSupabase || !isSupabaseConnected}
+              className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Synchroniser toutes les tables
+              {isSyncingAll ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Synchronisation...
+                </>
+              ) : (
+                "Synchroniser tout"
+              )}
             </Button>
-            
+          </Card>
+          <Card className="space-y-2">
+            <h3 className="text-sm font-medium">Récupérer toutes les données</h3>
+            <p className="text-xs text-muted-foreground">
+              Récupérer toutes les données depuis Supabase.
+            </p>
             <Button
-              className="w-full mt-2 bg-winshirt-blue hover:bg-winshirt-blue/80"
-              onClick={checkDataExistence}
-              disabled={Object.values(isLoading).some(value => value)}
+              variant="outline"
+              size="sm"
+              onClick={handlePullAllData}
+              disabled={isPullingAllData || isCheckingSupabase || !isSupabaseConnected}
+              className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
             >
-              <Database className="h-4 w-4 mr-2" />
-              Vérifier l'état des données
+              {isPullingAllData ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Récupération...
+                </>
+              ) : (
+                "Récupérer tout"
+              )}
             </Button>
-          </div>
+          </Card>
+          <Card className="space-y-2">
+            <h3 className="text-sm font-medium">Réinitialiser tous les status</h3>
+            <p className="text-xs text-muted-foreground">
+              Réinitialiser tous les status de synchronisation.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetAllSyncStatuses}
+              disabled={isResettingAllSyncStatuses}
+              className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
+            >
+              {isResettingAllSyncStatuses ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Réinitialisation...
+                </>
+              ) : (
+                "Réinitialiser tout"
+              )}
+            </Button>
+          </Card>
+          <Card className="space-y-2">
+            <h3 className="text-sm font-medium">Effacer le stockage local</h3>
+            <p className="text-xs text-muted-foreground">
+              Effacer toutes les données stockées localement.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isClearingLocalStorage || isLocalStorageEmpty}
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                >
+                  Effacer le stockage local
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action supprimera toutes les données stockées localement.
+                    Êtes-vous sûr(e) de vouloir continuer ?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearLocalStorage}>
+                    {isClearingLocalStorage ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                    )}
+                    Confirmer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </Card>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {isCheckingSupabase && (
+        <div className="rounded-md border p-4">
+          <h2 className="text-lg font-medium">Vérification de la connexion à Supabase...</h2>
+          <p className="text-sm text-muted-foreground">
+            Vérification de la connexion à Supabase. Veuillez patienter...
+          </p>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        </div>
+      )}
+
+      {!isSupabaseConnected && !isCheckingSupabase && (
+        <div className="rounded-md border p-4 bg-red-500/10 border-red-500 text-red-500">
+          <h2 className="text-lg font-medium">Non connecté à Supabase</h2>
+          <p className="text-sm text-muted-foreground">
+            La connexion à Supabase n'a pas pu être établie. Veuillez vérifier
+            vos paramètres de connexion.
+          </p>
+        </div>
+      )}
+    </div>
   );
 };
 
