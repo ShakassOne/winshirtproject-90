@@ -1,7 +1,23 @@
 
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
-export type DeliveryStatus = 'preparing' | 'ready_to_ship' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'failed' | 'returned';
+// Define delivery status types
+export type DeliveryStatus = 
+  | 'preparing'
+  | 'ready_to_ship'
+  | 'in_transit'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'failed'
+  | 'returned';
 
+// Define delivery history entry
+export interface DeliveryHistoryEntry {
+  timestamp: string;
+  type: string;
+  description: string;
+  location?: string;
+}
+
+// Define order item interface
 export interface OrderItem {
   id: number;
   productId: number;
@@ -11,103 +27,62 @@ export interface OrderItem {
   price: number;
   size?: string;
   color?: string;
+  customization?: any;
+  visualDesign?: any;
   lotteriesEntries?: number[];
-  visualDesign?: {
-    visualId: number;
-    visualName: string;
-    visualImage: string;
-    settings?: {
-      position?: {
-        x: number;
-        y: number;
-      };
-      size?: {
-        width: number;
-        height: number;
-      };
-      opacity?: number;
-    };
-    printAreaId?: number | null;
-  } | null;
+  created_at?: string;
 }
 
+// Define shipping information interface
+export interface ShippingInfo {
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  method?: string;
+  cost?: number;
+}
+
+// Define payment information interface
+export interface PaymentInfo {
+  method: string;
+  status: string;
+  transactionId?: string;
+  date?: string;
+  amount?: number;
+}
+
+// Define delivery information interface
+export interface DeliveryInfo {
+  status: DeliveryStatus;
+  estimatedDeliveryDate?: string;
+  actualDeliveryDate?: string;
+  carrier?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  deliveryInstructions?: string;
+  signatureRequired?: boolean;
+  lastUpdate?: string;
+  history?: DeliveryHistoryEntry[];
+}
+
+// Define order interface
 export interface Order {
   id: number;
-  clientId: number;
+  userId?: number;
   clientName: string;
   clientEmail: string;
-  orderDate: string;
-  status: OrderStatus;
-  items: OrderItem[];
-  shipping: {
-    address: string;
-    city: string;
-    postalCode: string;
-    country: string;
-    method: string;
-    cost: number;
-  };
-  delivery: {
-    status: DeliveryStatus;
-    estimatedDeliveryDate?: string;
-    actualDeliveryDate?: string;
-    carrier?: string;
-    trackingNumber?: string;
-    trackingUrl?: string;
-    deliveryInstructions?: string;
-    signatureRequired?: boolean;
-    lastUpdate?: string;
-    history?: DeliveryHistoryEntry[];
-  };
-  payment: {
-    method: string;
-    transactionId?: string;
-    status: 'pending' | 'completed' | 'failed';
-  };
-  subtotal: number;
+  status: string;
   total: number;
-  trackingNumber?: string;
+  subtotal?: number;
+  shipping?: ShippingInfo;
+  payment?: PaymentInfo;
+  delivery?: DeliveryInfo;
+  items: OrderItem[];
+  orderDate: string;
+  created_at?: string;
+  updated_at?: string;
   notes?: string;
-  invoiceUrl?: string;
-}
-
-export interface DeliveryHistoryEntry {
-  date: string;
-  status: DeliveryStatus;
-  location?: string;
-  description: string;
-}
-
-export interface AdminSettings {
-  notificationEmails: string[];
-  autoDrawEnabled: boolean;
-  securityOptions: {
-    requireTwoFactor: boolean;
-    sessionTimeout: number;
-  };
-  stripeSettings: {
-    liveMode: boolean;
-    webhookEnabled: boolean;
-  };
-  generalSettings: {
-    currency: string;
-    language: string;
-    orderPrefix: string;
-  };
-  deliverySettings: {
-    defaultCarriers: string[];
-    defaultHandlingTime: number;
-    freeShippingThreshold: number;
-    internationalShipping: boolean;
-    defaultShippingRates: {
-      national: {
-        standard: number;
-        express: number;
-      };
-      international: {
-        standard: number;
-        express: number;
-      };
-    };
-  };
+  tracking_number?: string;
+  invoice_url?: string;
 }

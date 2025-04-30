@@ -1,54 +1,60 @@
 
 import React from 'react';
-import { DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+import { DeliveryHistoryEntry } from '@/types/order';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { CheckCircle, Clock, Package, Truck } from 'lucide-react';
 
-export interface DeliveryTrackingProps {
+interface DeliveryTrackingProps {
   history: DeliveryHistoryEntry[];
 }
 
 const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({ history }) => {
-  if (!history || history.length === 0) return null;
+  if (!history || history.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32 text-gray-400">
+        Pas d'informations de suivi disponibles
+      </div>
+    );
+  }
 
-  const sortedHistory = [...history].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
+  // Sort history by date (newest first)
+  const sortedHistory = [...history].sort((a, b) => 
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 
-  const getStatusColor = (status: DeliveryStatus) => {
-    switch (status) {
-      case 'preparing': return 'bg-yellow-500';
-      case 'ready_to_ship': return 'bg-blue-500';
-      case 'in_transit': return 'bg-purple-500';
-      case 'out_for_delivery': return 'bg-purple-700';
-      case 'delivered': return 'bg-green-500';
-      case 'failed': return 'bg-red-500';
-      case 'returned': return 'bg-orange-500';
-      default: return 'bg-gray-500';
+  // Get icon based on status type
+  const getStatusIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'shipped':
+        return <Truck className="h-4 w-4" />;
+      case 'delivered':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'prepared':
+        return <Package className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
     }
   };
 
   return (
-    <div className="mt-4 space-y-3">
-      <p className="text-sm text-gray-400 font-medium">Historique de livraison</p>
-      <div className="space-y-4">
-        {sortedHistory.map((entry, index) => (
-          <div key={index} className={cn(
-            "relative pl-6 pb-4",
-            index !== sortedHistory.length - 1 ? "border-l-2 border-winshirt-space-light ml-2" : ""
-          )}>
-            <div className={`absolute w-4 h-4 rounded-full -left-2 ${getStatusColor(entry.status)}`} />
-            <div className="mb-1 flex justify-between">
-              <span className="font-medium text-white">{new Date(entry.date).toLocaleDateString('fr-FR', {
-                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-              })}</span>
-              {entry.location && <span className="text-sm text-gray-400">{entry.location}</span>}
-            </div>
-            <p className="text-sm text-gray-300">{entry.description}</p>
-            {index !== sortedHistory.length - 1 && <Separator className="my-2 opacity-0" />}
+    <div className="space-y-3 text-sm">
+      {sortedHistory.map((entry, index) => (
+        <div key={index} className="flex items-start gap-3 pb-3 border-b border-winshirt-purple/10 last:border-0">
+          <div className="mt-1">
+            {getStatusIcon(entry.type)}
           </div>
-        ))}
-      </div>
+          <div className="flex-1">
+            <div className="font-medium">{entry.description}</div>
+            <div className="text-gray-400">
+              {formatDistanceToNow(new Date(entry.timestamp), {
+                addSuffix: true,
+                locale: fr
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

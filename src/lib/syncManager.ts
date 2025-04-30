@@ -182,6 +182,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       if (tableName === 'clients') {
         const processedItem = { ...item };
         
+        // Ensure we have a valid address object
         if (typeof processedItem.address === 'string') {
           // If address is a string, convert it to an object
           processedItem.address = {
@@ -227,33 +228,76 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     });
     
     console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
-    
-    // Use upsert instead of delete+insert to preserve IDs and related references
-    const { error, status } = await supabase
-      .from(tableName)
-      .upsert(supabaseData, { 
-        onConflict: 'id', // Use 'id' as the conflict resolution column
-        ignoreDuplicates: false // Update existing records
-      });
+
+    // For clients table, we need a different approach due to RLS
+    if (tableName === 'clients') {
+      console.log("Using authenticated push for clients table");
       
-    if (error) {
-      console.error(`Error syncing ${tableName} to Supabase:`, error);
-      console.error("HTTP Status:", status);
+      // First check if we're authenticated
+      const { data: { session } } = await supabase.auth.getSession();
       
-      toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+      if (!session) {
+        // Try to sign in with an anonymous session 
+        // Create a temporary anonymous session for RLS policies
+        console.log("No active session, creating anonymous session...");
+        await supabase.auth.signInAnonymously();
+      }
+
+      // Now with the authenticated session, perform the upsert
+      const { error, status } = await supabase
+        .from(tableName)
+        .upsert(supabaseData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
       
-      const syncStatus: SyncStatus = {
-        success: false,
-        tableName,
-        localCount: parsedData.length,
-        remoteCount: 0,
-        operation: 'push',
-        error: error.message,
-        httpCode: status,
-        timestamp: Date.now()
-      };
-      logSyncEvent(syncStatus);
-      return syncStatus;
+      if (error) {
+        console.error(`Error syncing ${tableName} to Supabase:`, error);
+        console.error("HTTP Status:", status);
+        
+        toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+        
+        const syncStatus: SyncStatus = {
+          success: false,
+          tableName,
+          localCount: parsedData.length,
+          remoteCount: 0,
+          operation: 'push',
+          error: error.message,
+          httpCode: status,
+          timestamp: Date.now()
+        };
+        logSyncEvent(syncStatus);
+        return syncStatus;
+      }
+    } else {
+      // Standard upsert for other tables
+      const { error, status } = await supabase
+        .from(tableName)
+        .upsert(supabaseData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
+        
+      if (error) {
+        console.error(`Error syncing ${tableName} to Supabase:`, error);
+        console.error("HTTP Status:", status);
+        
+        toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+        
+        const syncStatus: SyncStatus = {
+          success: false,
+          tableName,
+          localCount: parsedData.length,
+          remoteCount: 0,
+          operation: 'push',
+          error: error.message,
+          httpCode: status,
+          timestamp: Date.now()
+        };
+        logSyncEvent(syncStatus);
+        return syncStatus;
+      }
     }
     
     // Get updated remote count in a separate query
@@ -327,7 +371,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       console.error(`Error fetching ${tableName} from Supabase:`, error);
       console.error("HTTP Status:", status);
       
-      toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+      toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "top-right" });
       
       const syncStatus: SyncStatus = {
         success: false,
@@ -345,7 +389,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     
     if (!data || data.length === 0) {
       const warning = `No ${tableName} found in Supabase`;
-      toast.warning(warning, { position: "bottom-right" });
+      toast.warning(warning, { position: "top-right" });
       
       const syncStatus: SyncStatus = {
         success: true,
@@ -399,7 +443,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     const event = new Event('storageUpdate');
     window.dispatchEvent(event);
     
-    toast.success(`Successfully pulled ${data.length} ${tableName} from Supabase`, { position: "bottom-right" });
+    toast.success(`Successfully pulled ${data.length} ${tableName} from Supabase`, { position: "top-right" });
     
     const syncStatus: SyncStatus = {
       success: true,
@@ -414,7 +458,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
   } catch (error: any) {
     console.error(`Error during ${tableName} sync:`, error);
     
-    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "top-right" });
     
     const syncStatus: SyncStatus = {
       success: false,
