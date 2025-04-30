@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
-import { fetchDataFromSupabase, syncLocalDataToSupabase, checkSupabaseConnection } from '@/lib/supabase';
+import { checkSupabaseConnection } from '@/lib/supabase';
+import { fetchDataFromSupabase, syncLocalDataToSupabase } from '@/lib/syncManager';
 import { mockLotteries } from '@/data/mockData';
 
 /**

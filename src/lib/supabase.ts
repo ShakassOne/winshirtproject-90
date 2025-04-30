@@ -191,3 +191,4 @@ export const applySpecialFieldMappings = (entity: any, tableName: string, direct
 
 // Note: The syncLocalDataToSupabase and fetchDataFromSupabase functions 
 // are now imported from syncManager.ts to avoid duplication
+
