@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,7 @@ interface PrintAreaManagerProps {
   printAreas: PrintArea[];
   selectedAreaId: number | null;
   onSelectArea: (id: number) => void;
-  onAddArea: (printArea: Omit<PrintArea, 'id'>) => void;
+  onAddArea: (position: 'front' | 'back') => void;
   onUpdateArea: (id: number, updatedData: Partial<PrintArea>) => void;
   onRemoveArea: (id: number) => void;
 }
@@ -46,7 +45,7 @@ const PrintAreaManager: React.FC<PrintAreaManagerProps> = ({
   const handleAddArea = () => {
     if (!newArea.name.trim()) return;
     
-    onAddArea(newArea);
+    onAddArea(newArea.position);
     setNewArea(defaultArea);
   };
   

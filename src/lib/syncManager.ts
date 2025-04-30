@@ -402,7 +402,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
             // Address is already an object, no need to change the structure
         } else if (processedItem.address && typeof processedItem.address === 'string') {
           // If address is a string, convert it to an object
-          const addressStr = processedItem.address as string;
+          const addressStr = processedItem.address;
           processedItem.address = {
             address: addressStr,
             city: processedItem.city || null,
@@ -434,9 +434,12 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       // Special handling for visuals table
       else if (tableName === 'visuals') {
         const processedItem = { ...item };
-        if (processedItem.image && typeof processedItem.image === 'string' && !processedItem.imageUrl) {
-          processedItem.image_url = processedItem.image as string;
+        if (typeof processedItem.image === 'string' && !processedItem.imageUrl) {
+          processedItem.image_url = processedItem.image;
           delete processedItem.image;
+        } else if (processedItem.imageUrl && !processedItem.image) {
+          processedItem.image_url = processedItem.imageUrl;
+          delete processedItem.imageUrl;
         }
         return camelToSnake(processedItem);
       }

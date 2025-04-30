@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedProduct, PrintArea } from '@/types/product';
@@ -67,7 +68,7 @@ const AdminProductsPage: React.FC = () => {
     handleDeleteProduct,
     onSubmit,
     handleCancel,
-    addSize, // Methods below are now properly exported from useProductForm
+    addSize,
     removeSize,
     addColor,
     removeColor,
@@ -147,7 +148,7 @@ const AdminProductsPage: React.FC = () => {
   
   // Fixed to correctly create a PrintArea object
   const handleAddPrintArea = (position: 'front' | 'back') => {
-    const newArea = {
+    const newArea: Omit<PrintArea, 'id'> = {
       name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${(form.getValues().printAreas || []).filter(a => a.position === position).length + 1}`,
       position,
       format: 'custom' as const,
@@ -236,7 +237,7 @@ const AdminProductsPage: React.FC = () => {
                   toggleLottery={toggleLottery}
                   selectAllLotteries={handleSelectAllLotteries}
                   deselectAllLotteries={deselectAllLotteries}
-                  addPrintArea={handleAddPrintArea}
+                  addPrintArea={addPrintArea}
                   updatePrintArea={updatePrintArea}
                   removePrintArea={removePrintArea}
                 />
