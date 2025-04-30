@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
@@ -392,7 +393,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     console.log(`Successfully authenticated, proceeding with ${tableName} sync...`);
     
     // Convert data from camelCase to snake_case for Supabase with special handling for specific tables
-    const supabaseData = parsedData.map(item => {
+    const supabaseData = parsedData.map((item: any) => {
       // Special handling for clients table - structure the address field correctly
       if (tableName === 'clients') {
         const processedItem = { ...item };
@@ -402,7 +403,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
             // Address is already an object, no need to change the structure
         } else if (processedItem.address && typeof processedItem.address === 'string') {
           // If address is a string, convert it to an object
-          const addressStr = processedItem.address as string;
+          const addressStr = processedItem.address;
           processedItem.address = {
             address: addressStr,
             city: processedItem.city || null,
@@ -435,10 +436,10 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       else if (tableName === 'visuals') {
         const processedItem = { ...item };
         if (processedItem.image && typeof processedItem.image === 'string' && !processedItem.imageUrl) {
-          processedItem.image_url = processedItem.image as string;
+          processedItem.image_url = processedItem.image;
           delete processedItem.image;
         } else if (processedItem.imageUrl && !processedItem.image) {
-          processedItem.image_url = processedItem.imageUrl as string;
+          processedItem.image_url = processedItem.imageUrl;
           delete processedItem.imageUrl;
         }
         return camelToSnake(processedItem);
@@ -527,7 +528,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       const error = "Unable to connect to Supabase";
       toast.error(`Sync failed: ${error}`, { position: "top-right" });
       
-      const status: SyncStatus = {
+      const syncStatus: SyncStatus = {
         success: false,
         tableName,
         localCount: 0,
@@ -536,8 +537,8 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         error,
         timestamp: Date.now()
       };
-      logSyncEvent(status);
-      return status;
+      logSyncEvent(syncStatus);
+      return syncStatus;
     }
     
     // Make sure we have an authenticated session for tables that need it
@@ -549,7 +550,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         const error = "Authentication required. Please log in to sync data.";
         // No toast needed here as ensureAuthSession already shows one
         
-        const status: SyncStatus = {
+        const syncStatus: SyncStatus = {
           success: false,
           tableName,
           localCount: 0,
@@ -558,8 +559,8 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
           error,
           timestamp: Date.now()
         };
-        logSyncEvent(status);
-        return status;
+        logSyncEvent(syncStatus);
+        return syncStatus;
       }
     }
     
@@ -611,45 +612,69 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         // Convert Supabase client format to local app format
         const camelItem = snakeToCamel(item);
         
+        // Create type for the client with address structure for type safety
+        interface ClientWithAddress {
+          address?: string | {
+            city?: string;
+            postal_code?: string;
+            postalCode?: string;
+            country?: string;
+            address?: string;
+          };
+          city?: string;
+          postalCode?: string;
+          country?: string;
+        }
+        
+        // Type assertion for better type safety
+        const clientItem = camelItem as ClientWithAddress;
+        
         // Extract address fields if they exist
-        if (camelItem.address && typeof camelItem.address === 'object') {
-          // Type assertion to avoid TypeScript errors
-          const addressObj = camelItem.address as { 
+        if (clientItem.address && typeof clientItem.address === 'object') {
+          // Type assertion for nested address object
+          const addressObj = clientItem.address as { 
             city?: string; 
             postal_code?: string; 
             postalCode?: string;
             country?: string; 
-            address?: string 
+            address?: string;
           };
           
-          camelItem.city = addressObj.city || '';
-          camelItem.postalCode = addressObj.postal_code || addressObj.postalCode || '';
-          camelItem.country = addressObj.country || '';
+          // Extract address fields to top-level properties
+          clientItem.city = addressObj.city || '';
+          clientItem.postalCode = addressObj.postal_code || addressObj.postalCode || '';
+          clientItem.country = addressObj.country || '';
           
-          // Keep address as the street address string
+          // Set address to just the street address string
           if (addressObj.address && typeof addressObj.address === 'string') {
-            camelItem.address = addressObj.address;
+            clientItem.address = addressObj.address;
           } else {
-            camelItem.address = '';
+            clientItem.address = '';
           }
         }
         
-        return camelItem;
+        return clientItem;
       }
       else if (tableName === 'visuals') {
         // Convert from Supabase format to local app format
         const camelItem = snakeToCamel(item);
         
-        // Type assertion for visual items
-        const visualItem = camelItem as { 
-          imageUrl?: string; 
+        // Define a type for visual items
+        interface VisualItem {
+          imageUrl?: string;
           image?: string;
-        };
+          [key: string]: any;
+        }
         
+        // Type assertion for visual items
+        const visualItem = camelItem as VisualItem;
+        
+        // Handle image field conversion
         if (visualItem.imageUrl && !visualItem.image) {
           visualItem.image = visualItem.imageUrl;
           delete visualItem.imageUrl;
         }
+        
         return visualItem;
       }
       
