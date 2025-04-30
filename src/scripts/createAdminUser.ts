@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -9,9 +8,8 @@ export const createAdminUserInSupabase = async () => {
   try {
     // Check if admin user already exists to avoid duplicates
     const { data: existingUsers, error: searchError } = await supabase.auth.admin.listUsers({
-      filter: {
-        email: 'admin@winshirt.com'
-      }
+      // The filter doesn't seem to be supported in this version of Supabase
+      // Let's list all users and filter manually
     });
     
     if (searchError) {
@@ -19,7 +17,12 @@ export const createAdminUserInSupabase = async () => {
       return { success: false, error: searchError };
     }
     
-    if (existingUsers?.users && existingUsers.users.length > 0) {
+    // Manually filter users to find admin
+    const adminUser = existingUsers?.users?.find(user => 
+      user.email === 'admin@winshirt.com'
+    );
+    
+    if (adminUser) {
       console.log("Admin user already exists in Supabase");
       return { success: true, message: "Admin user already exists" };
     }

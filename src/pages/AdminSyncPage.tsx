@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, Check, Database, RefreshCw, Server, Shield } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
@@ -23,6 +24,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ValidTableName } from '@/types/database.types';
+import { supabase } from '@/lib/supabase'; // Added missing import
 
 import AdminSetup from '@/components/AdminSetup';
 import { useAuth } from '@/contexts/AuthContext';
