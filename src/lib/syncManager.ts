@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
@@ -23,6 +22,27 @@ export interface SyncStatus {
   httpCode?: number;
   timestamp?: number;
   lastSync?: number | null;
+}
+
+// Type definitions for special cases
+interface ClientItem {
+  address?: string | {
+    address?: string;
+    city?: string;
+    postal_code?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  [key: string]: any;
+}
+
+interface VisualItem {
+  imageUrl?: string;
+  image?: string;
+  [key: string]: any;
 }
 
 // Track the history of synchronizations
@@ -396,7 +416,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     const supabaseData = parsedData.map((item: any) => {
       // Special handling for clients table - structure the address field correctly
       if (tableName === 'clients') {
-        const processedItem = { ...item };
+        const processedItem = { ...item } as ClientItem;
         
         // Ensure we have a valid address object
         if (processedItem.address && typeof processedItem.address === 'object') {
@@ -434,7 +454,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       }
       // Special handling for visuals table
       else if (tableName === 'visuals') {
-        const processedItem = { ...item };
+        const processedItem = { ...item } as VisualItem;
         if (processedItem.image && typeof processedItem.image === 'string' && !processedItem.imageUrl) {
           processedItem.image_url = processedItem.image;
           delete processedItem.image;
@@ -612,22 +632,8 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         // Convert Supabase client format to local app format
         const camelItem = snakeToCamel(item);
         
-        // Create type for the client with address structure for type safety
-        interface ClientWithAddress {
-          address?: string | {
-            city?: string;
-            postal_code?: string;
-            postalCode?: string;
-            country?: string;
-            address?: string;
-          };
-          city?: string;
-          postalCode?: string;
-          country?: string;
-        }
-        
         // Type assertion for better type safety
-        const clientItem = camelItem as ClientWithAddress;
+        const clientItem = camelItem as ClientItem;
         
         // Extract address fields if they exist
         if (clientItem.address && typeof clientItem.address === 'object') {
@@ -658,13 +664,6 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       else if (tableName === 'visuals') {
         // Convert from Supabase format to local app format
         const camelItem = snakeToCamel(item);
-        
-        // Define a type for visual items
-        interface VisualItem {
-          imageUrl?: string;
-          image?: string;
-          [key: string]: any;
-        }
         
         // Type assertion for visual items
         const visualItem = camelItem as VisualItem;
