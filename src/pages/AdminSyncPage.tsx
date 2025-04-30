@@ -38,6 +38,19 @@ const AdminSyncPage: React.FC = () => {
   
   const [syncHistory, setSyncHistory] = useState<SyncStatus[]>([]);
 
+  // All available tables for synchronization
+  const allTables: ValidTableName[] = [
+    'lotteries', 
+    'products', 
+    'visuals', 
+    'visual_categories',
+    'orders',
+    'order_items',
+    'clients',
+    'lottery_participants',
+    'lottery_winners'
+  ];
+
   // Check Supabase connection on load
   useEffect(() => {
     checkConnection();
@@ -106,17 +119,28 @@ const AdminSyncPage: React.FC = () => {
   
   // Sync all tables
   const handleSyncAll = async (direction: 'push' | 'pull') => {
-    const allTables: ValidTableName[] = ['lotteries', 'products', 'visuals'];
+    // Mark all tables as syncing
     for (const table of allTables) {
       setIsSyncing(prev => ({ ...prev, [table]: true }));
     }
     
     try {
-      await syncAllTables(direction);
+      // We need to sync each table individually since syncAllTables only handles the first three
+      if (direction === 'push') {
+        for (const table of allTables) {
+          await pushDataToSupabase(table as ValidTableName);
+        }
+      } else {
+        for (const table of allTables) {
+          await pullDataFromSupabase(table as ValidTableName);
+        }
+      }
+      
       // Refresh counts after sync
       await loadDataCounts();
       updateSyncHistory();
     } finally {
+      // Mark all tables as not syncing
       for (const table of allTables) {
         setIsSyncing(prev => ({ ...prev, [table]: false }));
       }
@@ -127,6 +151,76 @@ const AdminSyncPage: React.FC = () => {
   const handleClearHistory = () => {
     clearSyncHistory();
     updateSyncHistory();
+  };
+
+  // Format table name for display
+  const formatTableName = (table: string) => {
+    return table
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  // Create a sync tab for each table
+  const renderTableTab = (tableName: ValidTableName) => {
+    return (
+      <TabsContent value={tableName} key={tableName}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Synchronisation de {formatTableName(tableName)}</CardTitle>
+            <CardDescription>
+              Gestion des données de {formatTableName(tableName).toLowerCase()} entre le stockage local et Supabase
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">LocalStorage:</span>
+                  {isLoadingCounts ? (
+                    <Skeleton className="h-6 w-16" />
+                  ) : (
+                    <span>{dataCounts?.[tableName]?.local || 0} éléments</span>
+                  )}
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Supabase:</span>
+                  {isLoadingCounts ? (
+                    <Skeleton className="h-6 w-16" />
+                  ) : (
+                    <span>{dataCounts?.[tableName]?.remote || 0} éléments</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => handlePushData(tableName)}
+                  disabled={!isConnected || isSyncing[tableName]}
+                >
+                  {isSyncing[tableName] ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowUpFromLine className="h-4 w-4 mr-2" />
+                  )}
+                  Envoyer
+                </Button>
+                <Button 
+                  variant="secondary"
+                  onClick={() => handlePullData(tableName)}
+                  disabled={!isConnected || isSyncing[tableName]}
+                >
+                  {isSyncing[tableName] ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowDownToLine className="h-4 w-4 mr-2" />
+                  )}
+                  Récupérer
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    );
   };
 
   return (
@@ -210,27 +304,15 @@ const AdminSyncPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span>Loteries:</span>
-                    <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">
-                      <Check className="h-3 w-3 mr-1" />
-                      Configuré
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Produits:</span>
-                    <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">
-                      <Check className="h-3 w-3 mr-1" />
-                      Configuré
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Visuels:</span>
-                    <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">
-                      <Check className="h-3 w-3 mr-1" />
-                      Configuré
-                    </Badge>
-                  </div>
+                  {allTables.slice(0, 6).map(table => (
+                    <div key={table} className="flex justify-between items-center">
+                      <span>{formatTableName(table)}:</span>
+                      <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">
+                        <Check className="h-3 w-3 mr-1" />
+                        Configuré
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
               <CardFooter>
@@ -298,189 +380,17 @@ const AdminSyncPage: React.FC = () => {
           </div>
           
           <Tabs defaultValue="lotteries" className="mt-8">
-            <TabsList>
-              <TabsTrigger value="lotteries">Loteries</TabsTrigger>
-              <TabsTrigger value="products">Produits</TabsTrigger>
-              <TabsTrigger value="visuals">Visuels</TabsTrigger>
+            <TabsList className="flex flex-wrap">
+              {allTables.map(table => (
+                <TabsTrigger key={table} value={table}>
+                  {formatTableName(table)}
+                </TabsTrigger>
+              ))}
               <TabsTrigger value="history">Historique</TabsTrigger>
             </TabsList>
             
-            {/* Lotteries Tab */}
-            <TabsContent value="lotteries">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Synchronisation des loteries</CardTitle>
-                  <CardDescription>
-                    Gestion des données de loteries entre le stockage local et Supabase
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium">LocalStorage:</span>
-                        {isLoadingCounts ? (
-                          <Skeleton className="h-6 w-16" />
-                        ) : (
-                          <span>{dataCounts?.lotteries?.local || 0} loteries</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Supabase:</span>
-                        {isLoadingCounts ? (
-                          <Skeleton className="h-6 w-16" />
-                        ) : (
-                          <span>{dataCounts?.lotteries?.remote || 0} loteries</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => handlePushData('lotteries')}
-                        disabled={!isConnected || isSyncing['lotteries']}
-                      >
-                        {isSyncing['lotteries'] ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ArrowUpFromLine className="h-4 w-4 mr-2" />
-                        )}
-                        Envoyer
-                      </Button>
-                      <Button 
-                        variant="secondary"
-                        onClick={() => handlePullData('lotteries')}
-                        disabled={!isConnected || isSyncing['lotteries']}
-                      >
-                        {isSyncing['lotteries'] ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ArrowDownToLine className="h-4 w-4 mr-2" />
-                        )}
-                        Récupérer
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Products Tab */}
-            <TabsContent value="products">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Synchronisation des produits</CardTitle>
-                  <CardDescription>
-                    Gestion des données de produits entre le stockage local et Supabase
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium">LocalStorage:</span>
-                        {isLoadingCounts ? (
-                          <Skeleton className="h-6 w-16" />
-                        ) : (
-                          <span>{dataCounts?.products?.local || 0} produits</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Supabase:</span>
-                        {isLoadingCounts ? (
-                          <Skeleton className="h-6 w-16" />
-                        ) : (
-                          <span>{dataCounts?.products?.remote || 0} produits</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => handlePushData('products')}
-                        disabled={!isConnected || isSyncing['products']}
-                      >
-                        {isSyncing['products'] ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ArrowUpFromLine className="h-4 w-4 mr-2" />
-                        )}
-                        Envoyer
-                      </Button>
-                      <Button 
-                        variant="secondary"
-                        onClick={() => handlePullData('products')}
-                        disabled={!isConnected || isSyncing['products']}
-                      >
-                        {isSyncing['products'] ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ArrowDownToLine className="h-4 w-4 mr-2" />
-                        )}
-                        Récupérer
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Visuals Tab */}
-            <TabsContent value="visuals">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Synchronisation des visuels</CardTitle>
-                  <CardDescription>
-                    Gestion des données de visuels entre le stockage local et Supabase
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium">LocalStorage:</span>
-                        {isLoadingCounts ? (
-                          <Skeleton className="h-6 w-16" />
-                        ) : (
-                          <span>{dataCounts?.visuals?.local || 0} visuels</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Supabase:</span>
-                        {isLoadingCounts ? (
-                          <Skeleton className="h-6 w-16" />
-                        ) : (
-                          <span>{dataCounts?.visuals?.remote || 0} visuels</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => handlePushData('visuals')}
-                        disabled={!isConnected || isSyncing['visuals']}
-                      >
-                        {isSyncing['visuals'] ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ArrowUpFromLine className="h-4 w-4 mr-2" />
-                        )}
-                        Envoyer
-                      </Button>
-                      <Button 
-                        variant="secondary"
-                        onClick={() => handlePullData('visuals')}
-                        disabled={!isConnected || isSyncing['visuals']}
-                      >
-                        {isSyncing['visuals'] ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ArrowDownToLine className="h-4 w-4 mr-2" />
-                        )}
-                        Récupérer
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {/* Generate tabs for all tables */}
+            {allTables.map(table => renderTableTab(table as ValidTableName))}
             
             {/* History Tab */}
             <TabsContent value="history">
@@ -544,40 +454,31 @@ const AdminSyncPage: React.FC = () => {
                                     </span>
                                   )}
                                 </TableCell>
-                                <TableCell>
-                                  {item.tableName}
-                                </TableCell>
+                                <TableCell>{formatTableName(item.tableName)}</TableCell>
                                 <TableCell>
                                   {item.success ? (
-                                    <Badge className="bg-green-500/20 text-green-500 border-green-500/40">
+                                    <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">
+                                      <Check className="h-3 w-3 mr-1" />
                                       Succès
                                     </Badge>
                                   ) : (
-                                    <Badge variant="destructive">
+                                    <Badge variant="outline" className="bg-red-500/20 text-red-500 border-red-500/40">
+                                      <AlertCircle className="h-3 w-3 mr-1" />
                                       Échec
                                     </Badge>
                                   )}
                                 </TableCell>
-                                <TableCell>
-                                  <span className="text-sm">
-                                    {item.operation === 'push' ? (
-                                      <>Local: {item.localCount}</>
-                                    ) : (
-                                      <>Remote: {item.remoteCount}</>
-                                    )}
-                                  </span>
+                                <TableCell className="whitespace-nowrap">
+                                  {item.operation === 'push' ? 
+                                    `${item.localCount} → ${item.remoteCount}` :
+                                    `${item.remoteCount} → ${item.localCount}`
+                                  }
                                 </TableCell>
-                                <TableCell className="max-w-xs truncate">
-                                  {item.error && (
-                                    <span className="text-sm text-red-400" title={item.error}>
-                                      {item.error.length > 30 
-                                        ? `${item.error.substring(0, 30)}...` 
-                                        : item.error}
-                                    </span>
-                                  )}
+                                <TableCell className="max-w-[200px] truncate">
+                                  {item.error || '-'}
                                 </TableCell>
                               </TableRow>
-                          ))}
+                            ))}
                         </TableBody>
                       </Table>
                     )}

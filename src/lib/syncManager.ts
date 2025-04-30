@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
@@ -74,7 +75,18 @@ export const testSupabaseConnection = async (): Promise<boolean> => {
  * Get data counts for local and remote storage
  */
 export const getDataCounts = async (): Promise<Record<string, { local: number, remote: number }>> => {
-  const tables: ValidTableName[] = ['lotteries', 'products', 'visuals'];
+  const tables: ValidTableName[] = [
+    'lotteries', 
+    'products', 
+    'visuals', 
+    'visual_categories',
+    'orders',
+    'order_items',
+    'clients',
+    'lottery_participants',
+    'lottery_winners'
+  ];
+  
   const results: Record<string, { local: number, remote: number }> = {};
 
   for (const table of tables) {
@@ -370,7 +382,18 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
  * Sync all tables data between local storage and Supabase
  */
 export const syncAllTables = async (direction: 'push' | 'pull'): Promise<SyncStatus[]> => {
-  const tables: ValidTableName[] = ['lotteries', 'products', 'visuals'];
+  const tables: ValidTableName[] = [
+    'lotteries', 
+    'products', 
+    'visuals', 
+    'visual_categories',
+    'orders',
+    'order_items',
+    'clients',
+    'lottery_participants',
+    'lottery_winners'
+  ];
+  
   const results: SyncStatus[] = [];
   
   for (const table of tables) {

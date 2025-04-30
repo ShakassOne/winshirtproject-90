@@ -76,20 +76,37 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
             <TabsTrigger value="front">Recto</TabsTrigger>
             <TabsTrigger value="back">Verso</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="front">
+            <VisualPositioner
+              productImage={productImage}
+              productSecondaryImage={productSecondaryImage}
+              visual={visual}
+              visualSettings={visualSettings}
+              onUpdateSettings={onUpdateSettings}
+              position={'front'}
+              readOnly={true}
+              printAreas={printAreas}
+              selectedPrintArea={selectedPrintArea}
+              hideOpacityControl={true}
+            />
+          </TabsContent>
+          
+          <TabsContent value="back">
+            <VisualPositioner
+              productImage={productSecondaryImage || productImage}
+              productSecondaryImage={productSecondaryImage}
+              visual={visual}
+              visualSettings={visualSettings}
+              onUpdateSettings={onUpdateSettings}
+              position={'back'}
+              readOnly={true}
+              printAreas={printAreas?.filter(area => area.position === 'back')}
+              selectedPrintArea={selectedPrintArea}
+              hideOpacityControl={true}
+            />
+          </TabsContent>
         </Tabs>
-        
-        <VisualPositioner
-          productImage={productImage}
-          productSecondaryImage={productSecondaryImage}
-          visual={visual}
-          visualSettings={visualSettings}
-          onUpdateSettings={onUpdateSettings}
-          position={position}
-          readOnly={true}
-          printAreas={printAreas}
-          selectedPrintArea={selectedPrintArea}
-          hideOpacityControl={true}
-        />
       </TabsContent>
       
       <TabsContent value="customize" className="mt-0 space-y-6">
