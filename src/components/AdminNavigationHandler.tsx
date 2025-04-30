@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import AdminNavigation from './admin/AdminNavigation';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/lib/toast';
 
 interface AdminNavigationHandlerProps {
   children: React.ReactNode;
@@ -17,39 +18,58 @@ const AdminNavigationHandler: React.FC<AdminNavigationHandlerProps> = ({ childre
   const location = useLocation();
   const [shouldShow, setShouldShow] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
+        setIsLoading(true);
+        
         // Check if user is logged in with Supabase
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        // Check if the user exists and has admin metadata
-        const isAdmin = user?.user_metadata?.isAdmin === true;
-        
-        console.log("Admin check:", { user, isAdmin });
-        
-        // Also check localStorage for backward compatibility
-        let localStorageAdmin = false;
-        try {
-          const localUser = localStorage.getItem('user');
-          if (localUser) {
-            const userData = JSON.parse(localUser);
-            localStorageAdmin = userData?.isAdmin === true;
-          }
-        } catch (e) {
-          console.error("Erreur lors de la lecture des données utilisateur:", e);
+        if (!session) {
+          console.log("No active session found. Admin menu will not be shown.");
+          setShouldShow(false);
+          setIsInitialized(true);
+          setIsLoading(false);
+          return;
         }
         
-        // Always show admin menu for testing purposes
-        setShouldShow(true);
+        // Check if the user exists and has admin metadata
+        const isAdmin = session.user?.user_metadata?.isAdmin === true;
+        
+        console.log("Admin check:", { 
+          user: session.user,
+          hasMetadata: !!session.user?.user_metadata, 
+          isAdmin, 
+          email: session.user?.email 
+        });
+        
+        // Only show admin menu if path includes /admin
+        const isAdminPath = location.pathname.includes('/admin');
+        
+        // Show admin menu if:
+        // 1. User is authenticated AND
+        // 2. Either they are an admin OR they are on an admin path
+        setShouldShow(!!session && (isAdmin || isAdminPath));
+        
+        if (!isAdmin && isAdminPath) {
+          // If they're trying to access admin section but aren't an admin
+          // We'll show a warning but still show the menu for demo purposes
+          toast.warning("Note: You're accessing admin features without admin privileges.");
+        }
+        
         setIsInitialized(true);
+        setIsLoading(false);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsInitialized(true);
+        setIsLoading(false);
         
-        // Fallback: montrer quand même la navigation admin en cas d'erreur
-        setShouldShow(true);
+        // Fallback: don't show admin navigation in case of error
+        setShouldShow(false);
+        toast.error("Erreur lors de la vérification des droits administrateur");
       }
     };
     
@@ -66,11 +86,11 @@ const AdminNavigationHandler: React.FC<AdminNavigationHandlerProps> = ({ childre
   }, [location.pathname]);
   
   // Don't render anything until we know if we should show the admin navigation
-  if (!isInitialized) return null;
+  if (!isInitialized || isLoading) return null;
   
   return (
     <>
-      <AdminNavigation />
+      {shouldShow && <AdminNavigation />}
       {children}
     </>
   );

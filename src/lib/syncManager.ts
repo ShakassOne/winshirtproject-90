@@ -115,50 +115,72 @@ export const getDataCounts = async (): Promise<Record<string, { local: number, r
 };
 
 /**
- * Create a mock user session for anonymous operations if needed
+ * Check if user is authenticated with Supabase
  */
-const ensureAuthSession = async () => {
+const isAuthenticated = async (): Promise<boolean> => {
   const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session) {
-    console.log("No authenticated session found, attempting to sign in as admin...");
-    
-    try {
-      // Try to sign in with a stored admin user if available
-      const adminCredentials = localStorage.getItem('winshirt_admin');
-      if (adminCredentials) {
-        const { email, password } = JSON.parse(adminCredentials);
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (!error) {
-          console.log("Successfully signed in with stored admin credentials");
-          return true;
-        }
-      }
-      
-      // If admin sign-in failed, try with the hardcoded admin
-      const { error } = await supabase.auth.signInWithPassword({
-        email: "admin@winshirt.com",
-        password: "admin123"
+  return session !== null;
+};
+
+/**
+ * Attempt to sign in with admin credentials if available
+ */
+const signInWithAdmin = async (): Promise<boolean> => {
+  try {
+    // Try to sign in with a stored admin user if available
+    const adminCredentials = localStorage.getItem('winshirt_admin');
+    if (adminCredentials) {
+      const { email, password } = JSON.parse(adminCredentials);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
       
-      if (!error) {
-        console.log("Successfully signed in with default admin credentials");
+      if (!error && data.user) {
+        console.log("Successfully signed in with stored admin credentials");
         return true;
       }
-      
-      console.error("Failed to authenticate with admin credentials");
-      return false;
-    } catch (error) {
-      console.error("Error during authentication attempt:", error);
-      return false;
     }
+    
+    // If admin sign-in failed or no stored credentials, try with the hardcoded admin
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: "admin@winshirt.com",
+      password: "admin123"
+    });
+    
+    if (!error && data.user) {
+      console.log("Successfully signed in with default admin credentials");
+      // Store successful credentials for future use
+      localStorage.setItem('winshirt_admin', JSON.stringify({
+        email: "admin@winshirt.com",
+        password: "admin123"
+      }));
+      return true;
+    }
+    
+    console.error("Failed to authenticate with admin credentials");
+    return false;
+  } catch (error) {
+    console.error("Error during authentication attempt:", error);
+    return false;
+  }
+};
+
+/**
+ * Create a mock user session for anonymous operations if needed
+ * Returns true if already authenticated or successfully authenticated
+ */
+const ensureAuthSession = async (): Promise<boolean> => {
+  // First check if we're already authenticated
+  if (await isAuthenticated()) {
+    return true;
   }
   
-  return true;
+  // If not authenticated, try to sign in
+  const authSuccess = await signInWithAdmin();
+  
+  // Return authentication status
+  return authSuccess;
 };
 
 /**
@@ -225,7 +247,6 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     }
     
     // Make sure we have an authenticated session
-    // CRITICAL FIX: Ensure we're authenticated before attempting data ops
     const isAuthenticated = await ensureAuthSession();
     
     if (!isAuthenticated) {
@@ -373,7 +394,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     const isConnected = await testSupabaseConnection();
     if (!isConnected) {
       const error = "Unable to connect to Supabase";
-      toast.error(`Sync failed: ${error}`, { position: "bottom-right" });
+      toast.error(`Sync failed: ${error}`, { position: "top-right" });
       
       const status: SyncStatus = {
         success: false,
@@ -389,24 +410,26 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     }
     
     // Make sure we have an authenticated session for tables that need it
-    // CRITICAL FIX: Ensure we're authenticated before attempting data ops
-    const isAuthenticated = await ensureAuthSession();
-    
-    if (!isAuthenticated && ['clients', 'orders', 'order_items'].includes(tableName)) {
-      const error = "Authentication failed. Cannot pull protected data without a valid session.";
-      toast.error(error, { position: "bottom-right" });
+    const needsAuth = ['clients', 'orders', 'order_items'].includes(tableName);
+    if (needsAuth) {
+      const isAuthenticated = await ensureAuthSession();
       
-      const status: SyncStatus = {
-        success: false,
-        tableName,
-        localCount: 0,
-        remoteCount: 0,
-        operation: 'pull',
-        error,
-        timestamp: Date.now()
-      };
-      logSyncEvent(status);
-      return status;
+      if (!isAuthenticated) {
+        const error = "Authentication failed. Cannot pull protected data without a valid session.";
+        toast.error(error, { position: "top-right" });
+        
+        const status: SyncStatus = {
+          success: false,
+          tableName,
+          localCount: 0,
+          remoteCount: 0,
+          operation: 'pull',
+          error,
+          timestamp: Date.now()
+        };
+        logSyncEvent(status);
+        return status;
+      }
     }
     
     // Get data from Supabase
