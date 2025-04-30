@@ -168,31 +168,49 @@ export type Database = {
       }
       order_items: {
         Row: {
+          color: string | null
           created_at: string | null
           customization: Json | null
           id: number
+          lotteries_entries: number[] | null
           order_id: number
           price: number
           product_id: number
+          product_image: string | null
+          product_name: string | null
           quantity: number
+          size: string | null
+          visual_design: Json | null
         }
         Insert: {
+          color?: string | null
           created_at?: string | null
           customization?: Json | null
           id?: number
+          lotteries_entries?: number[] | null
           order_id: number
           price: number
           product_id: number
+          product_image?: string | null
+          product_name?: string | null
           quantity?: number
+          size?: string | null
+          visual_design?: Json | null
         }
         Update: {
+          color?: string | null
           created_at?: string | null
           customization?: Json | null
           id?: number
+          lotteries_entries?: number[] | null
           order_id?: number
           price?: number
           product_id?: number
+          product_image?: string | null
+          product_name?: string | null
           quantity?: number
+          size?: string | null
+          visual_design?: Json | null
         }
         Relationships: [
           {
@@ -206,41 +224,68 @@ export type Database = {
       }
       orders: {
         Row: {
+          client_email: string | null
+          client_name: string | null
           created_at: string | null
+          delivery: Json | null
           id: number
+          invoice_url: string | null
+          notes: string | null
+          order_date: string | null
+          payment: Json | null
           payment_method: string | null
           payment_status: string | null
           shipping_address: Json | null
           shipping_cost: number | null
           shipping_method: string | null
           status: string | null
+          subtotal: number | null
           total: number
+          tracking_number: string | null
           updated_at: string | null
           user_id: number | null
         }
         Insert: {
+          client_email?: string | null
+          client_name?: string | null
           created_at?: string | null
+          delivery?: Json | null
           id?: number
+          invoice_url?: string | null
+          notes?: string | null
+          order_date?: string | null
+          payment?: Json | null
           payment_method?: string | null
           payment_status?: string | null
           shipping_address?: Json | null
           shipping_cost?: number | null
           shipping_method?: string | null
           status?: string | null
+          subtotal?: number | null
           total: number
+          tracking_number?: string | null
           updated_at?: string | null
           user_id?: number | null
         }
         Update: {
+          client_email?: string | null
+          client_name?: string | null
           created_at?: string | null
+          delivery?: Json | null
           id?: number
+          invoice_url?: string | null
+          notes?: string | null
+          order_date?: string | null
+          payment?: Json | null
           payment_method?: string | null
           payment_status?: string | null
           shipping_address?: Json | null
           shipping_cost?: number | null
           shipping_method?: string | null
           status?: string | null
+          subtotal?: number | null
           total?: number
+          tracking_number?: string | null
           updated_at?: string | null
           user_id?: number | null
         }

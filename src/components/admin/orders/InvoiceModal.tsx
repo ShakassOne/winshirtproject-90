@@ -6,15 +6,15 @@ import { Order } from '@/types/order';
 import { FileText, Download } from 'lucide-react';
 import { InvoiceDownloadLink } from '@/utils/invoiceGenerator';
 
-interface InvoiceModalProps {
+export interface InvoiceModalProps {
   order: Order;
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, isOpen, onClose }) => {
+const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, open, onOpenChange }) => {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="winshirt-card max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
