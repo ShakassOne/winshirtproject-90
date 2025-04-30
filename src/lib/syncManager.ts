@@ -600,7 +600,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         operation: 'pull',
         timestamp: Date.now()
       };
-      logSyncEvent(status);
+      logSyncEvent(syncStatus);
       return syncStatus;
     }
     
@@ -613,12 +613,24 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         
         // Extract address fields if they exist
         if (camelItem.address && typeof camelItem.address === 'object') {
-          camelItem.city = camelItem.address.city || '';
-          camelItem.postalCode = camelItem.address.postal_code || camelItem.address.postalCode || '';
-          camelItem.country = camelItem.address.country || '';
+          // Type assertion to avoid TypeScript errors
+          const addressObj = camelItem.address as { 
+            city?: string; 
+            postal_code?: string; 
+            postalCode?: string;
+            country?: string; 
+            address?: string 
+          };
+          
+          camelItem.city = addressObj.city || '';
+          camelItem.postalCode = addressObj.postal_code || addressObj.postalCode || '';
+          camelItem.country = addressObj.country || '';
+          
           // Keep address as the street address string
-          if (typeof camelItem.address.address === 'string') {
-            camelItem.address = camelItem.address.address;
+          if (addressObj.address && typeof addressObj.address === 'string') {
+            camelItem.address = addressObj.address;
+          } else {
+            camelItem.address = '';
           }
         }
         
@@ -627,11 +639,18 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       else if (tableName === 'visuals') {
         // Convert from Supabase format to local app format
         const camelItem = snakeToCamel(item);
-        if (camelItem.imageUrl && !camelItem.image) {
-          camelItem.image = camelItem.imageUrl;
-          delete camelItem.imageUrl;
+        
+        // Type assertion for visual items
+        const visualItem = camelItem as { 
+          imageUrl?: string; 
+          image?: string;
+        };
+        
+        if (visualItem.imageUrl && !visualItem.image) {
+          visualItem.image = visualItem.imageUrl;
+          delete visualItem.imageUrl;
         }
-        return camelItem;
+        return visualItem;
       }
       
       return snakeToCamel(item);

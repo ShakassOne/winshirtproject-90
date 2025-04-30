@@ -145,22 +145,9 @@ const AdminProductsPage: React.FC = () => {
     selectAllLotteries(availableLotteryIds);
   };
   
-  // Fixed to correctly create a PrintArea object
-  const handleAddPrintArea = (position: 'front' | 'back') => {
-    const newArea: Omit<PrintArea, 'id'> = {
-      name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${(form.getValues().printAreas || []).filter(a => a.position === position).length + 1}`,
-      position,
-      format: 'custom' as const,
-      bounds: {
-        x: 50,
-        y: 50,
-        width: 200,
-        height: 200
-      },
-      allowCustomPosition: true
-    };
-    
-    addPrintArea(newArea);
+  // Fixed to correctly create a PrintArea object and match the expected type
+  const handleAddPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
+    addPrintArea(printArea);
   };
   
   return (
