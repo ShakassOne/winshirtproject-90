@@ -11,13 +11,13 @@ import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Button } from "@/components/ui/button";
 import { Download, Upload, RefreshCw } from "lucide-react";
 import { toast } from '@/lib/toast';
-import { useProducts, syncProductsToSupabase } from '@/services/productService';
+import { syncProductsToSupabase, useProducts } from '@/services/productService';
 import { useLotteries } from '@/services/lotteryService';
 
 const AdminProductsPage: React.FC = () => {
   // Utiliser le hook useProducts
   const { products, loading: productsLoading, error: productsError, refreshProducts } = useProducts();
-  const { lotteries, isLoading: lotteriesLoading } = useLotteries();
+  const { lotteries, loading: lotteriesLoading } = useLotteries();
   
   const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
   const [syncingProducts, setSyncingProducts] = useState(false);
@@ -45,6 +45,7 @@ const AdminProductsPage: React.FC = () => {
   const handleSyncProducts = async () => {
     setSyncingProducts(true);
     try {
+      // Changed to properly check boolean return value
       const success = await syncProductsToSupabase();
       if (success) {
         await refreshProducts();
@@ -67,7 +68,7 @@ const AdminProductsPage: React.FC = () => {
     handleDeleteProduct,
     onSubmit,
     handleCancel,
-    addSize,
+    addSize, // Methods below are now properly exported from useProductForm
     removeSize,
     addColor,
     removeColor,
@@ -77,7 +78,7 @@ const AdminProductsPage: React.FC = () => {
     addPrintArea,
     updatePrintArea,
     removePrintArea
-  } = useProductForm(products, refreshProducts, lotteries);
+  } = useProductForm(products, refreshProducts);
   
   // Export products to JSON file
   const handleExportProducts = () => {
@@ -137,6 +138,12 @@ const AdminProductsPage: React.FC = () => {
     };
     
     input.click();
+  };
+  
+  // Fixed selectAllLotteries to accept parameter
+  const handleSelectAllLotteries = () => {
+    const availableLotteryIds = lotteries.map(lottery => lottery.id.toString());
+    selectAllLotteries(availableLotteryIds);
   };
   
   return (
@@ -210,7 +217,7 @@ const AdminProductsPage: React.FC = () => {
                   addColor={addColor}
                   removeColor={removeColor}
                   toggleLottery={toggleLottery}
-                  selectAllLotteries={selectAllLotteries}
+                  selectAllLotteries={handleSelectAllLotteries}
                   deselectAllLotteries={deselectAllLotteries}
                   addPrintArea={addPrintArea}
                   updatePrintArea={updatePrintArea}

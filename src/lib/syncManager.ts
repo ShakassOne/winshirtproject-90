@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
@@ -399,10 +398,11 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
         const processedItem = { ...item };
         
         // Ensure we have a valid address object
-        if (typeof processedItem.address === 'string') {
+        if (processedItem.address && typeof processedItem.address === 'string') {
           // If address is a string, convert it to an object
+          const addressStr = processedItem.address;
           processedItem.address = {
-            address: processedItem.address,
+            address: addressStr,
             city: processedItem.city || null,
             postal_code: processedItem.postalCode || null,
             country: processedItem.country || null
@@ -432,7 +432,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       // Special handling for visuals table
       else if (tableName === 'visuals') {
         const processedItem = { ...item };
-        if (processedItem.image) {
+        if (processedItem.image && !processedItem.imageUrl) {
           processedItem.image_url = processedItem.image;
           delete processedItem.image;
         }

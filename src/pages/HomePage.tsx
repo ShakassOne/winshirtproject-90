@@ -37,7 +37,7 @@ const HomePage: React.FC = () => {
               featured: lottery.featured || false,
               targetParticipants: lottery.targetParticipants || lottery.target_participants || 10,
               currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
-              drawDate: lottery.drawDate || lottery.draw_date || null,
+              drawDate: lottery.drawDate || lottery.draw_date || null, // Map drawDate from draw_date
               endDate: lottery.endDate || lottery.end_date || null,
               linkedProducts: lottery.linkedProducts || lottery.linked_products || [],
             })) as ExtendedLottery[];
@@ -70,7 +70,7 @@ const HomePage: React.FC = () => {
             featured: false, // Default value
             targetParticipants: lottery.totalParticipants || 10,
             currentParticipants: lottery.currentParticipants || 0,
-            drawDate: lottery.drawDate || null,
+            drawDate: lottery.endDate || null, // Using endDate from mock data for drawDate
             endDate: lottery.endDate || null,
             linkedProducts: [],
           })) as ExtendedLottery[];

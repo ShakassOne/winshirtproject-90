@@ -1,3 +1,4 @@
+
 export const getLotteries = async (activeOnly = false) => {
   try {
     // Try to get from localStorage first
@@ -22,16 +23,31 @@ export const getLotteries = async (activeOnly = false) => {
   }
 };
 
-// Export any missing functions
+// Implement useLotteries hook properly
+import { useState, useEffect } from 'react';
+
 export const useLotteries = () => {
-  // Implementation would depend on the existing code
-  // This is just a placeholder to fix the missing export
-  return {
-    lotteries: [],
-    loading: false,
-    error: null
-  };
+  const [lotteries, setLotteries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchLotteries = async () => {
+      try {
+        const data = await getLotteries();
+        setLotteries(data);
+        setLoading(false);
+      } catch (err) {
+        setError(err);
+        setLoading(false);
+      }
+    };
+
+    fetchLotteries();
+  }, []);
+
+  return { lotteries, loading, error };
 };
 
-// If getAllLotteries was referenced but not defined, alias it to getLotteries
+// Export getAllLotteries as an alias to getLotteries
 export const getAllLotteries = getLotteries;

@@ -50,12 +50,12 @@ export interface DeliveryInfo {
   shippingRestrictions?: string[]; // Pays où la livraison n'est pas possible
 }
 
-// Mise à jour pour n'utiliser que le format personnalisé (custom uniquement)
+// Updated to make format optional
 export interface PrintArea {
   id: number;
   name: string; // Nom de la zone (ex: "Recto", "Verso")
   position: 'front' | 'back'; // Recto ou verso
-  format: 'custom'; // Seulement format personnalisé (utilisé comme type littéral)
+  format?: 'custom'; // Format personnalisé (rendu optional)
   bounds: {
     x: number;
     y: number;
