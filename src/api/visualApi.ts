@@ -26,6 +26,23 @@ const validateCategoryData = (category: Partial<VisualCategory>): string | null 
   return null;
 };
 
+// Helpers locaux - defined once at the top of the file
+const updateLocalStorage = (visual: Visual) => {
+  const localData = localStorage.getItem('visuals');
+  let visuals: Visual[] = localData ? JSON.parse(localData) : [];
+  visuals = visuals.filter(v => v.id !== visual.id);
+  visuals.push(visual);
+  localStorage.setItem('visuals', JSON.stringify(visuals));
+};
+
+const removeFromLocalStorage = (id: number) => {
+  const localData = localStorage.getItem('visuals');
+  if (!localData) return;
+  let visuals: Visual[] = JSON.parse(localData);
+  visuals = visuals.filter(v => v.id !== id);
+  localStorage.setItem('visuals', JSON.stringify(visuals));
+};
+
 // Récupération des visuels
 export const fetchVisuals = async (): Promise<Visual[]> => {
   try {
@@ -261,23 +278,6 @@ export const syncVisualsToSupabase = async (): Promise<boolean> => {
   }
 };
 
-// Helpers locaux
-const updateLocalStorage = (visual: Visual) => {
-  const localData = localStorage.getItem('visuals');
-  let visuals: Visual[] = localData ? JSON.parse(localData) : [];
-  visuals = visuals.filter(v => v.id !== visual.id);
-  visuals.push(visual);
-  localStorage.setItem('visuals', JSON.stringify(visuals));
-};
-
-const removeFromLocalStorage = (id: number) => {
-  const localData = localStorage.getItem('visuals');
-  if (!localData) return;
-  let visuals: Visual[] = JSON.parse(localData);
-  visuals = visuals.filter(v => v.id !== id);
-  localStorage.setItem('visuals', JSON.stringify(visuals));
-};
-
 // Catégories
 export const fetchVisualCategories = async (): Promise<VisualCategory[]> => {
   try {
@@ -418,21 +418,4 @@ export const updateVisualCategory = async (id: number, category: Partial<VisualC
     toast.error("Erreur mise à jour catégorie");
     return null;
   }
-};
-
-// Helpers locaux
-const updateLocalStorage = (visual: Visual) => {
-  const localData = localStorage.getItem('visuals');
-  let visuals: Visual[] = localData ? JSON.parse(localData) : [];
-  visuals = visuals.filter(v => v.id !== visual.id);
-  visuals.push(visual);
-  localStorage.setItem('visuals', JSON.stringify(visuals));
-};
-
-const removeFromLocalStorage = (id: number) => {
-  const localData = localStorage.getItem('visuals');
-  if (!localData) return;
-  let visuals: Visual[] = JSON.parse(localData);
-  visuals = visuals.filter(v => v.id !== id);
-  localStorage.setItem('visuals', JSON.stringify(visuals));
 };
