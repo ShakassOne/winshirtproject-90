@@ -4,6 +4,8 @@ import { checkSupabaseConnection } from '@/lib/supabase';
 import { pullDataFromSupabase, pushDataToSupabase } from '@/lib/syncManager';
 import { getMockLotteries } from '@/data/mockData';
 import { toast } from '@/lib/toast';
+import { useState, useEffect } from 'react';
+import { showNotification } from '@/lib/notifications';
 
 // Helper function to convert lottery from API to our expected format
 const mapApiLotteryToLottery = (lottery: any): Lottery => {
@@ -11,8 +13,8 @@ const mapApiLotteryToLottery = (lottery: any): Lottery => {
     id: lottery.id,
     title: lottery.title,
     description: lottery.description || '',
-    value: lottery.value || 0,
-    status: lottery.status.toLowerCase(),
+    value: lottery.value || lottery.ticketPrice || 0,
+    status: lottery.status?.toLowerCase() || 'active',
     image: lottery.image || '',
     endDate: lottery.end_date || lottery.endDate || new Date().toISOString(),
     participants: lottery.current_participants || lottery.currentParticipants || 0,
@@ -24,6 +26,42 @@ const mapApiLotteryToLottery = (lottery: any): Lottery => {
     winnerEmail: lottery.winner_email || lottery.winnerEmail || undefined,
     drawDate: lottery.draw_date || lottery.drawDate || null,
     createdAt: lottery.created_at || lottery.createdAt || new Date().toISOString(),
+  };
+};
+
+/**
+ * Custom hook for managing lotteries
+ * @param filterActive - Only return active lotteries if true
+ * @returns Object containing lotteries, loading state, error, and refresh function
+ */
+export const useLotteries = (filterActive = false) => {
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchLotteries = async () => {
+    setLoading(true);
+    try {
+      const lotteriesData = await getLotteries(filterActive);
+      setLotteries(lotteriesData);
+      setError(null);
+    } catch (err) {
+      setError(err as Error);
+      console.error("Error in useLotteries hook:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLotteries();
+  }, [filterActive]);
+
+  return { 
+    lotteries, 
+    loading, 
+    error, 
+    refreshLotteries: fetchLotteries 
   };
 };
 
@@ -111,6 +149,14 @@ export const getLotteries = async (filterActive = false): Promise<Lottery[]> => 
     toast.error('Erreur lors du chargement des loteries');
     return [];
   }
+};
+
+/**
+ * Get all lotteries - alias for getLotteries
+ * @returns Promise containing all lotteries
+ */
+export const getAllLotteries = async (): Promise<Lottery[]> => {
+  return getLotteries(false);
 };
 
 /**

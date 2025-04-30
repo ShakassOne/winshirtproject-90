@@ -1,4 +1,3 @@
-
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -66,4 +65,25 @@ export function camelToSnakeObject<T extends object>(obj: T): any {
     result[snakeKey] = typeof value === 'object' ? camelToSnakeObject(value) : value;
     return result;
   }, {} as any);
+}
+
+/**
+ * Determine if a color is light
+ * @param color The color in hex format
+ * @returns Boolean indicating if the color is light
+ */
+export function isLightColor(color: string): boolean {
+  // Remove # if present
+  const hex = color.replace('#', '');
+  
+  // Convert to RGB
+  const r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.substring(0, 2), 16);
+  const g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.substring(2, 4), 16);
+  const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.substring(4, 6), 16);
+  
+  // Calculate luminance - https://www.w3.org/TR/WCAG20/#relativeluminancedef
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return true if color is light
+  return luminance > 0.5;
 }

@@ -8,7 +8,7 @@ import { Visual, VisualCategory } from '@/types/visual';
 import StarBackground from '@/components/StarBackground';
 import { useVisualSelector } from '@/hooks/useVisualSelector';
 import { useVisuals } from '@/data/mockVisuals';
-import { getAllLotteries } from '@/services/lotteryService';
+import { getLotteries } from '@/services/lotteryService';
 
 // Import refactored components
 import ProductGallery from '@/components/product/ProductDetail/ProductGallery';
@@ -210,7 +210,7 @@ const ProductDetailPage: React.FC = () => {
     const cart = cartString ? JSON.parse(cartString) : [];
     
     // Récupérer les loteries actives pour avoir les informations complètes
-    const allLotteries = await getAllLotteries();
+    const allLotteries = await getLotteries();
     const activeLotteries = allLotteries.filter(lottery => lottery.status === 'active');
     
     // Obtenir les informations des loteries sélectionnées

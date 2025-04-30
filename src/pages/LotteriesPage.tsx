@@ -1,12 +1,34 @@
 
 import React from 'react';
-import { useLotteries } from '@/services/lotteryService';
+import { getLotteries } from '@/services/lotteryService';
 import LotteryGrid from '@/components/lottery/LotteryGrid';
 import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { useState, useEffect } from 'react';
+import { ExtendedLottery } from '@/types/lottery';
 
 const LotteriesPage: React.FC = () => {
-  const { lotteries, loading, error, refreshLotteries } = useLotteries();
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const fetchLotteries = async () => {
+    setLoading(true);
+    try {
+      const data = await getLotteries();
+      setLotteries(data as ExtendedLottery[]);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching lotteries:", err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchLotteries();
+  }, []);
   
   // Filtrer les loteries en vedette pour le slider
   const featuredLotteries = lotteries.filter(lottery => lottery.featured === true);
@@ -35,7 +57,7 @@ const LotteriesPage: React.FC = () => {
             <div className="text-center text-red-500 py-10">
               Une erreur est survenue lors du chargement des loteries.
               <button 
-                onClick={() => refreshLotteries()}
+                onClick={() => fetchLotteries()}
                 className="mt-4 bg-winshirt-pink hover:bg-winshirt-pink-dark text-black font-bold py-2 px-4 rounded"
               >
                 Réessayer

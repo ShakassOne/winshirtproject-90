@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ExtendedLottery } from '@/types/lottery';
 import { Card } from '@/components/ui/card';
-import { getAllLotteries } from '@/services/lotteryService';
+import { getLotteries } from '@/services/lotteryService';
 
 interface LotterySelectionProps {
   tickets: number;
@@ -28,17 +27,15 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     const loadActiveLotteries = async () => {
       setIsLoading(true);
       try {
-        const allLotteries = await getAllLotteries();
-        // Filtrer uniquement les loteries actives
-        const lotteries = allLotteries.filter(lottery => lottery.status === 'active');
+        const allLotteries = await getLotteries(true); // Only get active lotteries
         
-        console.log("LotterySelection - Active lotteries loaded:", lotteries);
-        setActiveLotteries(lotteries);
+        console.log("LotterySelection - Active lotteries loaded:", allLotteries);
+        setActiveLotteries(allLotteries as ExtendedLottery[]);
         
         // Check consistency of selected data
         if (selectedLotteries.length > 0) {
           console.log("LotterySelection - Verifying selected lotteries:", selectedLotteries);
-          const validLotteryIds = lotteries.map(l => l.id.toString());
+          const validLotteryIds = allLotteries.map(l => l.id.toString());
           const invalidSelections = selectedLotteries.filter(id => id && !validLotteryIds.includes(id));
           
           if (invalidSelections.length > 0) {
@@ -63,9 +60,8 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     const intervalId = setInterval(async () => {
       try {
         console.log("LotterySelection - Refreshing active lotteries");
-        const allLotteries = await getAllLotteries();
-        const activeLots = allLotteries.filter(lottery => lottery.status === 'active');
-        setActiveLotteries(activeLots);
+        const allLotteries = await getLotteries(true);
+        setActiveLotteries(allLotteries as ExtendedLottery[]);
       } catch (error) {
         console.error("LotterySelection - Error refreshing lotteries:", error);
       }
