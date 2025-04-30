@@ -9,6 +9,10 @@ import { FileText, Package, Search, Trash } from 'lucide-react';
 import DeliveryTracking from './DeliveryTracking';
 import InvoiceModal from './InvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
+import VisualPositioner from '@/components/product/VisualPositioner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Visual } from '@/types/visual';
+import { useState } from 'react';
 
 interface OrderDetailsProps {
   order: Order;
@@ -17,6 +21,7 @@ interface OrderDetailsProps {
 const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
   const [showInvoice, setShowInvoice] = React.useState(false);
   const [lotteryTitles, setLotteryTitles] = React.useState<{[key: number]: string}>({});
+  const [activePreviewPosition, setActivePreviewPosition] = useState<'front' | 'back'>('front');
   
   // Récupérer les titres des loteries
   React.useEffect(() => {
@@ -178,34 +183,41 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
                     )}
                   </div>
 
-                  {/* Visuel personnalisé amélioré */}
+                  {/* Visuel personnalisé amélioré avec aperçu */}
                   {item.visualDesign && (
                     <div className="mt-4 border border-winshirt-purple/20 rounded-lg p-4 bg-winshirt-space-light/30">
                       <p className="text-sm text-winshirt-purple-light font-medium mb-2">Visuel personnalisé</p>
-                      <div className="flex items-start gap-4">
-                        <div className="relative bg-winshirt-space-dark rounded-md p-1 w-24 h-24 flex items-center justify-center">
-                          <img 
-                            src={item.visualDesign.visualImage}
-                            alt={item.visualDesign.visualName}
-                            className="max-w-full max-h-full object-contain"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white font-medium">{item.visualDesign.visualName}</p>
-                          {item.visualDesign.settings && (
-                            <p className="text-sm text-gray-300 mt-1">
-                              Position: {item.visualDesign.settings.position ? 
-                                `x:${item.visualDesign.settings.position.x.toFixed(0)}% y:${item.visualDesign.settings.position.y.toFixed(0)}%` : 
-                                'Défaut'
-                              }
-                            </p>
-                          )}
-                          {item.visualDesign.settings && item.visualDesign.settings.opacity !== undefined && (
-                            <p className="text-sm text-gray-300">
-                              Opacité: {(item.visualDesign.settings.opacity * 100).toFixed(0)}%
-                            </p>
-                          )}
-                        </div>
+                      
+                      {/* Aperçu complet du produit avec le visuel */}
+                      <div className="mb-4">
+                        <Tabs 
+                          defaultValue="front" 
+                          onValueChange={(val) => setActivePreviewPosition(val as 'front' | 'back')}
+                          className="w-full"
+                        >
+                          <TabsList className="grid grid-cols-2 w-full mb-2">
+                            <TabsTrigger value="front">Recto</TabsTrigger>
+                            <TabsTrigger value="back">Verso</TabsTrigger>
+                          </TabsList>
+                          
+                          <TabsContent value="front" className="h-64">
+                            {createVisualPreview(item, 'front')}
+                          </TabsContent>
+                          
+                          <TabsContent value="back" className="h-64">
+                            {createVisualPreview(item, 'back')}
+                          </TabsContent>
+                        </Tabs>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 text-sm text-gray-300">
+                        <p>Position: {item.visualDesign.settings?.position ? 
+                          `x:${item.visualDesign.settings.position.x.toFixed(0)}% y:${item.visualDesign.settings.position.y.toFixed(0)}%` : 
+                          'Défaut'
+                        }</p>
+                        {item.visualDesign.settings?.opacity !== undefined && (
+                          <p>Opacité: {(item.visualDesign.settings.opacity * 100).toFixed(0)}%</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -352,5 +364,43 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
     </div>
   );
 };
+
+// Fonction pour créer l'aperçu du produit avec le visuel
+function createVisualPreview(item: any, position: 'front' | 'back') {
+  if (!item.visualDesign) return null;
+  
+  // Créer un objet Visual à partir des données du visualDesign
+  const visual: Visual = {
+    id: item.visualDesign.visualId,
+    name: item.visualDesign.visualName,
+    image: item.visualDesign.visualImage,
+    categoryId: 0,
+    categoryName: '',
+    description: ''
+  };
+
+  // Utiliser l'image principale pour le recto et l'image secondaire (si disponible) pour le verso
+  const productImage = item.productImage;
+  
+  // Créer un placeholder pour l'image secondaire si elle n'existe pas (pour le verso)
+  const productSecondaryImage = productImage;
+
+  return (
+    <VisualPositioner
+      productImage={productImage}
+      productSecondaryImage={productSecondaryImage}
+      visual={visual}
+      visualSettings={item.visualDesign.settings || {
+        position: { x: 50, y: 50 },
+        size: { width: 150, height: 150 },
+        opacity: 1
+      }}
+      onUpdateSettings={() => {}} // En lecture seule, pas de mise à jour
+      position={position}
+      readOnly={true}
+      hideOpacityControl={true}
+    />
+  );
+}
 
 export default OrderDetails;

@@ -1,6 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Visual, ProductVisualSettings } from '@/types/visual';
 import { PrintArea } from '@/types/product';
 
@@ -10,11 +10,12 @@ interface VisualPositionerProps {
   visual: Visual | null;
   visualSettings: ProductVisualSettings;
   onUpdateSettings: (settings: ProductVisualSettings) => void;
-  onPositionChange?: (position: 'front' | 'back') => void; // Callback pour notifier du changement
-  position: 'front' | 'back'; // Position actuelle passée en prop
+  onPositionChange?: (position: 'front' | 'back') => void;
+  position: 'front' | 'back';
   readOnly?: boolean;
-  printAreas?: PrintArea[]; // Zones d'impression
-  selectedPrintArea?: PrintArea | null; // Zone d'impression sélectionnée
+  printAreas?: PrintArea[];
+  selectedPrintArea?: PrintArea | null;
+  hideOpacityControl?: boolean;
 }
 
 const VisualPositioner: React.FC<VisualPositionerProps> = ({
@@ -27,7 +28,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   position,
   readOnly = false,
   printAreas = [],
-  selectedPrintArea = null
+  selectedPrintArea = null,
+  hideOpacityControl = false
 }) => {
   const frontContainerRef = useRef<HTMLDivElement>(null);
   const backContainerRef = useRef<HTMLDivElement>(null);
@@ -295,11 +297,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   
   const visualRef = useRef<HTMLDivElement>(null);
   
-  // Afficher directement le contenu correspondant à la position actuelle sans les onglets
-  // pour éviter la duplication avec les onglets de ProductDetailPage
   return (
     <div className="space-y-4">
-      {/* Nous retirons les TabsList et TabsTrigger et utilisons directement le contenu */}
       {position === 'front' ? (
         <div 
           ref={frontContainerRef}
@@ -462,8 +461,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
         </div>
       )}
       
-      {/* Contrôle d'opacité */}
-      {visual && !readOnly && (
+      {/* Contrôle d'opacité - ne s'affiche que si hideOpacityControl est false */}
+      {visual && !readOnly && !hideOpacityControl && (
         <div className="p-4 bg-gray-800/30 rounded-lg">
           <div className="flex items-center justify-between">
             <span>Opacité</span>

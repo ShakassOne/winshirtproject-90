@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from '@/components/ui/label';
@@ -66,6 +67,17 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
       </TabsList>
       
       <TabsContent value="preview" className="mt-0">
+        <Tabs 
+          defaultValue={position} 
+          onValueChange={handleTabChange} 
+          className="w-full mb-4"
+        >
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="front">Recto</TabsTrigger>
+            <TabsTrigger value="back">Verso</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
         <VisualPositioner
           productImage={productImage}
           productSecondaryImage={productSecondaryImage}
@@ -76,6 +88,7 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
           readOnly={true}
           printAreas={printAreas}
           selectedPrintArea={selectedPrintArea}
+          hideOpacityControl={true}
         />
       </TabsContent>
       
@@ -90,6 +103,7 @@ const ProductCustomization: React.FC<ProductCustomizationProps> = ({
             position={position}
             printAreas={printAreas?.filter(area => area.position === position)}
             selectedPrintArea={selectedPrintArea}
+            hideOpacityControl={true}
           />
         </div>
         
