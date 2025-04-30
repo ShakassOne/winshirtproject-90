@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
@@ -156,13 +157,27 @@ export const syncProductsToSupabase = async (): Promise<boolean> => {
   }
   
   const tableName: ValidTableName = 'products';
-  return await syncLocalDataToSupabase(tableName);
+  // Fix: syncLocalDataToSupabase returns SyncStatus, not boolean
+  const result = await syncLocalDataToSupabase(tableName);
+  return result.success; // Extract boolean success value
 };
 
 // Récupérer tous les produits
 export const getAllProducts = async (): Promise<ExtendedProduct[]> => {
   try {
-    return await fetchDataFromSupabase('products') as ExtendedProduct[];
+    // Fix: fetchDataFromSupabase returns SyncStatus, not ExtendedProduct[]
+    const response = await fetchDataFromSupabase('products');
+    
+    // If successful, get the data from localStorage (where fetchDataFromSupabase stores it)
+    if (response.success) {
+      const localData = localStorage.getItem('products');
+      if (localData) {
+        return JSON.parse(localData) as ExtendedProduct[];
+      }
+    }
+    
+    // Return empty array if no data
+    return [];
   } catch (error) {
     console.error("productService: Erreur lors de la récupération des produits:", error);
     toast.error("Impossible de récupérer les produits", { position: "bottom-right" });

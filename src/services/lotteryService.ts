@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
@@ -45,35 +44,44 @@ export const useLotteries = () => {
       const isConnected = await checkSupabaseConnection();
       
       if (isConnected) {
-        const supabaseLotteries = await fetchDataFromSupabase('lotteries') as any[];
-        
-        if (supabaseLotteries && supabaseLotteries.length > 0) {
-          console.log("lotteryService: Loteries récupérées depuis Supabase:", supabaseLotteries.length);
-          
-          // Convertir les données brutes en objets de type Lottery puis ExtendedLottery
-          const lotteryObjects = supabaseLotteries.map(rawLottery => ({
-            id: rawLottery.id,
-            title: rawLottery.title,
-            description: rawLottery.description || '',
-            value: rawLottery.value,
-            participants: rawLottery.current_participants || 0, // Pour satisfaire l'interface Lottery
-            targetParticipants: rawLottery.target_participants,
-            currentParticipants: rawLottery.current_participants || 0,
-            status: rawLottery.status,
-            image: rawLottery.image || '',
-            linkedProducts: rawLottery.linked_products || [],
-            // Use the correct format for endDate mapping from end_date
-            endDate: rawLottery.end_date || new Date().toISOString(), // Fixed to match the Lottery interface
-            drawDate: rawLottery.draw_date,
-            featured: rawLottery.featured || false
-          } as Lottery));
-          
-          // Convertir en ExtendedLottery
-          const extendedLotteries = lotteryObjects.map(lottery => convertToExtendedLottery(lottery));
-          
-          setLotteries(extendedLotteries);
-          localStorage.setItem('lotteries', JSON.stringify(lotteryObjects));
-          return;
+        // Fix: fetchDataFromSupabase returns SyncStatus, so extract data property if needed
+        const response = await fetchDataFromSupabase('lotteries');
+        // Only proceed if successful and we have data
+        if (response.success && response.tableName === 'lotteries') {
+          // Get the actual data from localStorage since that's where fetchDataFromSupabase stores it
+          const localData = localStorage.getItem('lotteries');
+          if (localData) {
+            const supabaseLotteries = JSON.parse(localData);
+            
+            if (supabaseLotteries && supabaseLotteries.length > 0) {
+              console.log("lotteryService: Loteries récupérées depuis Supabase:", supabaseLotteries.length);
+              
+              // Convertir les données brutes en objets de type Lottery puis ExtendedLottery
+              const lotteryObjects = supabaseLotteries.map((rawLottery: any) => ({
+                id: rawLottery.id,
+                title: rawLottery.title,
+                description: rawLottery.description || '',
+                value: rawLottery.value,
+                participants: rawLottery.current_participants || 0, // Pour satisfaire l'interface Lottery
+                targetParticipants: rawLottery.target_participants,
+                currentParticipants: rawLottery.current_participants || 0,
+                status: rawLottery.status,
+                image: rawLottery.image || '',
+                linkedProducts: rawLottery.linked_products || [],
+                // Use the correct format for endDate mapping from end_date
+                endDate: rawLottery.endDate || rawLottery.end_date || new Date().toISOString(), // Fixed to match the Lottery interface
+                drawDate: rawLottery.drawDate || rawLottery.draw_date,
+                featured: rawLottery.featured || false
+              } as Lottery));
+              
+              // Convertir en ExtendedLottery
+              const extendedLotteries = lotteryObjects.map(lottery => convertToExtendedLottery(lottery));
+              
+              setLotteries(extendedLotteries);
+              localStorage.setItem('lotteries', JSON.stringify(lotteryObjects));
+              return;
+            }
+          }
         }
       }
       
