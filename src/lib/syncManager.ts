@@ -123,14 +123,16 @@ const isAuthenticated = async (): Promise<boolean> => {
 
 /**
  * Attempt to sign in with admin credentials if available
- * This function has been updated to handle errors better and avoid error loops
+ * This function has been updated to better handle authentication
  */
 const signInWithAdmin = async (): Promise<boolean> => {
   try {
+    console.log("Checking authentication status...");
+    
     // Check if we already have an active session
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      console.log("User already authenticated");
+      console.log("User already authenticated:", session.user?.email);
       return true;
     }
     
@@ -140,7 +142,7 @@ const signInWithAdmin = async (): Promise<boolean> => {
       try {
         const adminCredentials = JSON.parse(adminCredentialsStr);
         if (adminCredentials?.email && adminCredentials?.password) {
-          console.log("Attempting to sign in with stored admin credentials");
+          console.log(`Attempting to sign in with stored admin credentials: ${adminCredentials.email}`);
           
           const { data, error } = await supabase.auth.signInWithPassword({
             email: adminCredentials.email,
@@ -151,8 +153,11 @@ const signInWithAdmin = async (): Promise<boolean> => {
             console.log("Successfully signed in with stored admin credentials");
             return true;
           } else {
-            // If stored credentials fail, remove them
             console.error("Stored admin credentials failed:", error?.message);
+            toast.error(`Erreur d'authentification: ${error?.message}`, { 
+              position: "top-right",
+              duration: 5000
+            });
             localStorage.removeItem('winshirt_admin');
           }
         }
@@ -162,11 +167,19 @@ const signInWithAdmin = async (): Promise<boolean> => {
       }
     }
     
-    // Don't try default credentials - it's better to fail gracefully
-    // and let the user manually log in than to keep trying incorrect credentials
+    // Try to use session from auth state if available
+    const authState = localStorage.getItem('supabase.auth.token');
+    if (authState) {
+      console.log("Trying to use existing auth state");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log("Successfully authenticated with existing session");
+        return true;
+      }
+    }
+    
     console.log("No valid credentials available. Authentication required.");
     return false;
-    
   } catch (error) {
     console.error("Error during authentication attempt:", error);
     return false;
@@ -179,8 +192,14 @@ const signInWithAdmin = async (): Promise<boolean> => {
  */
 const ensureAuthSession = async (): Promise<boolean> => {
   // First check if we're already authenticated
-  if (await isAuthenticated()) {
-    return true;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      console.log("Already authenticated as:", session.user.email);
+      return true;
+    }
+  } catch (e) {
+    console.error("Error checking session:", e);
   }
   
   // Only try once to sign in to avoid infinite loops
@@ -280,12 +299,12 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       return status;
     }
     
-    // Make sure we have an authenticated session
+    // Make sure we have an authenticated session - Force authentication check
+    console.log("Ensuring authenticated session before sync...");
     const isAuthenticated = await ensureAuthSession();
     
     if (!isAuthenticated) {
       const error = "Authentication required. Please log in to sync data.";
-      // No need to show toast here as ensureAuthSession already showed one
       
       const status: SyncStatus = {
         success: false,
@@ -299,6 +318,8 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       logSyncEvent(status);
       return status;
     }
+    
+    console.log(`Successfully authenticated, proceeding with ${tableName} sync...`);
     
     // Convert data from camelCase to snake_case for Supabase with special handling for specific tables
     const supabaseData = parsedData.map(item => {

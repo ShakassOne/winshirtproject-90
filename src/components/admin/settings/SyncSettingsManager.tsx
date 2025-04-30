@@ -146,11 +146,70 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ isInitiallyCo
         }
       }
     
+      // Tableau vide mais existant - gérer ce cas spécial pour visual_categories
+      if (Array.isArray(parsedData) && parsedData.length === 0 && table === 'visual_categories') {
+        // Créer une catégorie par défaut si aucune n'existe
+        parsedData = [{
+          id: 1,
+          name: "Catégorie par défaut",
+          description: "Catégorie par défaut pour les visuels",
+          slug: "default",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }];
+        
+        // Sauvegarder dans le localStorage
+        localStorage.setItem(table, JSON.stringify(parsedData));
+        
+        toast.info("Création d'une catégorie par défaut", { position: "top-right" });
+      }
+    
       if (!Array.isArray(parsedData) || parsedData.length === 0) {
         toast.warning(`Pas de données locales pour ${table}`, { position: "top-right" });
         setIsLoading(prev => ({ ...prev, [table]: false }));
         setSyncSuccess(prev => ({ ...prev, [table]: false }));
         return;
+      }
+    
+      // Ensure authentication for protected tables
+      const session = await supabase.auth.getSession();
+      const isAuthenticated = !!session.data.session;
+      
+      console.log(`Authentication status for ${table} sync: ${isAuthenticated ? "Authenticated" : "Not authenticated"}`);
+      
+      if (!isAuthenticated) {
+        try {
+          // Try to sign in with stored admin credentials
+          const adminCredentials = localStorage.getItem('winshirt_admin');
+          if (adminCredentials) {
+            const { email, password } = JSON.parse(adminCredentials);
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+            
+            if (error) {
+              console.error("Auto-sign in failed:", error);
+              toast.error(`Authentification requise pour synchroniser ${table}`, { position: "top-right" });
+              setSyncSuccess(prev => ({ ...prev, [table]: false }));
+              setIsLoading(prev => ({ ...prev, [table]: false }));
+              return;
+            }
+            
+            console.log("Auto-sign in successful");
+          } else {
+            toast.error(`Authentification requise pour synchroniser ${table}`, { position: "top-right" });
+            setSyncSuccess(prev => ({ ...prev, [table]: false }));
+            setIsLoading(prev => ({ ...prev, [table]: false }));
+            return;
+          }
+        } catch (e) {
+          console.error("Error during authentication:", e);
+          toast.error("Erreur d'authentification", { position: "top-right" });
+          setSyncSuccess(prev => ({ ...prev, [table]: false }));
+          setIsLoading(prev => ({ ...prev, [table]: false }));
+          return;
+        }
       }
     
       // Conversion des données camelCase vers snake_case pour Supabase

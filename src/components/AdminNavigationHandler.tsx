@@ -44,6 +44,10 @@ const AdminNavigationHandler: React.FC<AdminNavigationHandlerProps> = ({ childre
           isAuthenticated
         });
         
+        // Store admin status in localStorage for consistency
+        localStorage.setItem('is_admin', isAdmin ? 'true' : 'false');
+        localStorage.setItem('is_authenticated', isAuthenticated ? 'true' : 'false');
+        
         // Show admin menu if user is authenticated AND:
         // 1. Either they are an admin OR
         // 2. They are on an admin path
@@ -80,7 +84,9 @@ const AdminNavigationHandler: React.FC<AdminNavigationHandlerProps> = ({ childre
     });
     
     return () => {
-      authListener.subscription.unsubscribe();
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, [location.pathname]);
   
