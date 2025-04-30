@@ -7,6 +7,13 @@ import { mockProducts } from '@/data/mockData';
 import { ValidTableName } from '@/integrations/supabase/client';
 import { snakeToCamel, camelToSnake } from '@/lib/utils';
 
+// Helper function to validate product data
+const validateProductData = (product: Partial<ExtendedProduct>): string | null => {
+  if (!product.name || product.name.trim() === '') return "Le nom du produit est requis";
+  if (!product.price || isNaN(Number(product.price))) return "Le prix du produit est invalide";
+  return null;
+};
+
 /**
  * Hook pour récupérer les produits avec gestion d'état (chargement, erreurs)
  */
@@ -40,9 +47,11 @@ export const useProducts = () => {
           const productsWithType = productsWithProperFormat.map(product => ({
             ...product,
             type: product.type || product.productType || "standard",
-            // Assurer que brand est présent, même si null
+            // Assurer que brand, material et autres champs facultatifs sont présents, même si null
             brand: product.brand || null,
-            material: product.material || null
+            material: product.material || null,
+            fit: product.fit || "regular",
+            gender: product.gender || "unisexe"
           }));
           
           setProducts(productsWithType);
@@ -160,20 +169,28 @@ export const getAllProducts = async (): Promise<ExtendedProduct[]> => {
   }
 };
 
-// Créer un produit avec correction du format des données
+// Créer un produit avec validation et correction du format des données
 export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promise<ExtendedProduct | null> => {
   try {
     console.log("createProduct: Début de la création du produit", product);
+    
+    // Validate product data before proceeding
+    const validationError = validateProductData(product);
+    if (validationError) {
+      toast.error(validationError, { position: "bottom-right" });
+      return null;
+    }
+    
     const isConnected = await checkSupabaseConnection();
     
     // Assurer que les champs requis sont définis
     const productWithDefaults = {
       ...product,
       type: product.type || "standard",
-      brand: product.brand || null, // Assurer que brand est présent même si null
-      fit: product.fit || "regular", // Assurer que fit est présent même si null
-      gender: product.gender || "unisexe", // Assurer que gender est présent même si null
-      material: product.material || null // Assurer que material est présent même si null
+      brand: product.brand || null,
+      fit: product.fit || "regular",
+      gender: product.gender || "unisexe",
+      material: product.material || null
     };
     
     // Générer un ID pour le nouveau produit - Fix: use a smaller integer value
@@ -228,16 +245,24 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
 export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
   try {
     console.log("updateProduct: Début de la mise à jour du produit", product);
+    
+    // Validate product data before proceeding
+    const validationError = validateProductData(product);
+    if (validationError) {
+      toast.error(validationError, { position: "bottom-right" });
+      return null;
+    }
+    
     const isConnected = await checkSupabaseConnection();
     
     // Assurer que les champs requis sont définis
     const productWithDefaults = {
       ...product,
       type: product.type || "standard",
-      brand: product.brand || null, // Assurer que brand est présent même si null
-      fit: product.fit || "regular", // Assurer que fit est présent même si null
-      gender: product.gender || "unisexe", // Assurer que gender est présent même si null
-      material: product.material || null // Assurer que material est présent même si null
+      brand: product.brand || null,
+      fit: product.fit || "regular",
+      gender: product.gender || "unisexe",
+      material: product.material || null
     };
     
     // Mettre à jour dans localStorage

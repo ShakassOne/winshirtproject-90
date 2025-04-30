@@ -230,3 +230,117 @@ export const uploadImage = async (file: File, folder: string = 'slides'): Promis
     throw error;
   }
 };
+
+// Add specific field mapping function for known entity conversions
+export const applySpecialFieldMappings = (entity: any, tableName: string, direction: 'toSupabase' | 'fromSupabase'): any => {
+  // Create a copy of the entity to avoid mutating the original
+  const result = { ...entity };
+  
+  if (tableName === 'visuals') {
+    if (direction === 'toSupabase') {
+      // Convert from frontend format to Supabase format
+      if (result.image) {
+        result.image_url = result.image;
+        delete result.image;
+      }
+      if (result.categoryId) {
+        result.category_id = result.categoryId;
+        delete result.categoryId;
+      }
+      if (result.categoryName) {
+        result.category_name = result.categoryName;
+        delete result.categoryName;
+      }
+    } else {
+      // Convert from Supabase format to frontend format
+      if (result.image_url) {
+        result.image = result.image_url;
+        delete result.image_url;
+      }
+      if (result.category_id) {
+        result.categoryId = result.category_id;
+        delete result.category_id;
+      }
+      if (result.category_name) {
+        result.categoryName = result.category_name;
+        delete result.category_name;
+      }
+    }
+  }
+  
+  return result;
+};
+
+// Enhanced syncLocalDataToSupabase function with improved handling
+export const syncLocalDataToSupabase = async (tableName: ValidTableName): Promise<boolean> => {
+  try {
+    console.log(`Syncing ${tableName} data to Supabase`);
+    
+    // Get local data from localStorage
+    const localData = localStorage.getItem(tableName);
+    if (!localData) {
+      console.log(`No local data found for ${tableName}`);
+      return false;
+    }
+    
+    let localItems = JSON.parse(localData);
+    if (!Array.isArray(localItems) || localItems.length === 0) {
+      console.log(`No items found in local data for ${tableName}`);
+      return false;
+    }
+    
+    console.log(`Found ${localItems.length} items in local data for ${tableName}`);
+    
+    // Apply special field mappings before snake_case conversion
+    localItems = localItems.map(item => applySpecialFieldMappings(item, tableName, 'toSupabase'));
+    
+    // Convert camelCase properties to snake_case for Supabase
+    const snakeCaseItems = localItems.map(item => camelToSnake(item));
+    
+    console.log(`Prepared ${snakeCaseItems.length} items for upload to Supabase`);
+    
+    // Use upsert to add/update the records
+    const { error } = await supabase
+      .from(tableName)
+      .upsert(snakeCaseItems, { 
+        onConflict: 'id', 
+        ignoreDuplicates: false 
+      });
+    
+    if (error) {
+      console.error(`Error syncing ${tableName} to Supabase:`, error);
+      return false;
+    }
+    
+    console.log(`Successfully synced ${tableName} to Supabase`);
+    return true;
+  } catch (error) {
+    console.error(`Error syncing ${tableName} to Supabase:`, error);
+    return false;
+  }
+};
+
+// Enhanced fetchDataFromSupabase function with improved field mapping
+export const fetchDataFromSupabase = async (tableName: ValidTableName): Promise<any[]> => {
+  try {
+    console.log(`Fetching ${tableName} data from Supabase`);
+    const { data, error } = await supabase.from(tableName).select('*');
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      return [];
+    }
+    
+    // First convert from snake_case to camelCase
+    const camelCaseItems = data.map(item => snakeToCamel(item));
+    
+    // Then apply any special field mappings specific to this entity
+    const processedItems = camelCaseItems.map(item => applySpecialFieldMappings(item, tableName, 'fromSupabase'));
+    
+    console.log(`Successfully retrieved and processed ${processedItems.length} items from ${tableName}`);
+    return processedItems;
+  } catch (error) {
+    console.error(`Error fetching ${tableName} from Supabase:`, error);
+    return [];
+  }
+};

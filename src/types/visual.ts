@@ -3,7 +3,7 @@ export interface Visual {
   id: number;
   name: string;
   description?: string;
-  image: string; // Pour l'application
+  image: string; // Used in the application (maps to image_url in Supabase)
   categoryId?: number;
   categoryName?: string;
   createdAt?: string;
@@ -16,8 +16,8 @@ export interface VisualCategory {
   name: string;
   description?: string;
   slug?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string; // Now standardized as timestamp with time zone in DB
+  updatedAt?: string; // Now standardized as timestamp with time zone in DB
 }
 
 export interface ProductVisualSettings {
@@ -25,14 +25,14 @@ export interface ProductVisualSettings {
     x: number;
     y: number;
   };
-  size?: {  // Ajout de la propriété manquante
+  size?: {
     width: number;
     height: number;
   };
   scale?: number;
   rotation?: number;
   printAreaId?: number;
-  visualId?: number; // Ajout de la propriété manquante
+  visualId?: number;
   colorMode?: 'original' | 'monochrome' | 'custom';
   customColor?: string;
   opacity?: number;
