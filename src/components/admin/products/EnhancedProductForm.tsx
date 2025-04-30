@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormReturn } from "react-hook-form";
 import { Form } from '@/components/ui/form';
@@ -57,10 +58,11 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
   const [selectedTab, setSelectedTab] = useState("basic-info");
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   
-  const handleAddPrintArea = (position: 'front' | 'back') => {
+  // Create a handler that adapts between the two interfaces
+  const handleAddPrintAreaAdapter = (position: 'front' | 'back') => {
     if (addPrintArea) {
       const newArea: Omit<PrintArea, 'id'> = {
-        name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${form.getValues().printAreas.filter(a => a.position === position).length + 1}`,
+        name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${form.getValues().printAreas.filter((a: PrintArea) => a.position === position).length + 1}`,
         position,
         format: 'custom',
         bounds: {
@@ -146,7 +148,7 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
               toggleLottery={toggleLottery}
               selectAllLotteries={selectAllLotteries}
               deselectAllLotteries={deselectAllLotteries}
-              addPrintArea={addPrintArea}
+              addPrintArea={handleAddPrintAreaAdapter}
               updatePrintArea={updatePrintArea}
               removePrintArea={removePrintArea}
               hideTabList={true} // Ajouter cette prop pour cacher les onglets internes
@@ -167,7 +169,7 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <PrintAreaManager
                 printAreas={form.getValues().printAreas || []}
-                onAddArea={handleAddPrintArea}
+                onAddArea={handleAddPrintAreaAdapter}
                 onRemoveArea={handleRemovePrintArea}
                 onUpdateArea={handleUpdatePrintArea}
                 selectedAreaId={selectedAreaId}

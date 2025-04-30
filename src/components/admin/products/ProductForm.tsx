@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import {
   Form,
@@ -26,27 +25,6 @@ import { VisualCategory } from '@/types/visual';
 import { ExtendedLottery } from '@/types/lottery';
 import { PrintArea } from '@/types/product';
 
-interface LotterySelectionProps {
-  lotteries: any[];
-  selectedLotteries: string[];
-  onToggleLottery: (lotteryId: string) => void;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
-}
-
-interface PrintAreaManagerProps {
-  printAreas: any[];
-  selectedAreaId: number | null;
-  onSelectArea: (id: number) => void;
-  onAddArea: (printArea: any) => void;
-  onUpdateArea: (id: number, updatedData: any) => void;
-  onRemoveArea: (id: number) => void;
-}
-
-// Import components
-import LotterySelection from './LotterySelection';
-import PrintAreaManager from './PrintAreaManager';
-
 export interface ProductFormProps {
   isCreating: boolean;
   selectedProductId: number | null;
@@ -63,7 +41,7 @@ export interface ProductFormProps {
   toggleLottery: (lotteryId: string) => void;
   selectAllLotteries?: () => void;
   deselectAllLotteries?: () => void;
-  addPrintArea?: (printArea: Omit<PrintArea, 'id'>) => void;
+  addPrintArea?: (position: 'front' | 'back') => void;
   updatePrintArea?: (id: number, updatedData: Partial<PrintArea>) => void;
   removePrintArea?: (id: number) => void;
   hideTabList?: boolean; // Nouvelle prop pour cacher les onglets internes
@@ -552,39 +530,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
       </TabsContent>
       
       <TabsContent value="loteries" className="space-y-6">
-        <LotterySelection
-          lotteries={activeLotteries}
-          selectedLotteries={form.getValues().linkedLotteries || []}
-          onToggleLottery={toggleLottery}
-          onSelectAll={selectAllLotteries}
-          onDeselectAll={deselectAllLotteries}
-        />
+        
       </TabsContent>
       
       <TabsContent value="printAreas" className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <PrintAreaManager
-            printAreas={form.getValues().printAreas || []}
-            onAddArea={addPrintArea}
-            onRemoveArea={removePrintArea}
-            onUpdateArea={updatePrintArea}
-            selectedAreaId={selectedPrintAreaId}
-            onSelectArea={handlePrintAreaSelect}
-          />
-          
-          <PrintAreaVisualizer
-            productImage={form.getValues().image || ''}
-            productSecondaryImage={form.getValues().secondaryImage || ''}
-            printAreas={form.getValues().printAreas || []}
-            onSelectPrintArea={handlePrintAreaSelect}
-            onUpdateAreaPosition={handleUpdatePrintAreaPosition}
-            selectedAreaId={selectedPrintAreaId}
-          />
-        </div>
+        
       </TabsContent>
       
       <TabsContent value="filters" className="space-y-6">
-        <AdvancedFiltersForm form={form} />
+        
       </TabsContent>
     </Tabs>
   );

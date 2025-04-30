@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedProduct, PrintArea } from '@/types/product';
@@ -237,7 +236,7 @@ const AdminProductsPage: React.FC = () => {
                   toggleLottery={toggleLottery}
                   selectAllLotteries={handleSelectAllLotteries}
                   deselectAllLotteries={deselectAllLotteries}
-                  addPrintArea={addPrintArea}
+                  addPrintArea={handleAddPrintArea}
                   updatePrintArea={updatePrintArea}
                   removePrintArea={removePrintArea}
                 />
