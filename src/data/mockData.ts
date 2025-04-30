@@ -1,4 +1,3 @@
-
 // Add this code if the mockData.ts file doesn't exist or append to it
 
 // If you already have a mockLotteries export, replace it with this one
@@ -217,4 +216,24 @@ export const initializeLotteryData = () => {
   } catch (error) {
     console.error('Error initializing data:', error);
   }
+};
+
+// Ajouter la fonction manquante getLotteryById
+export const getLotteryById = (id: number) => {
+  // Chercher d'abord dans localStorage
+  try {
+    const storedLotteries = localStorage.getItem('lotteries');
+    if (storedLotteries) {
+      const lotteries = JSON.parse(storedLotteries);
+      const foundLottery = lotteries.find((lottery: any) => lottery.id === id);
+      if (foundLottery) {
+        return foundLottery;
+      }
+    }
+  } catch (error) {
+    console.error("Erreur lors de la recherche de la loterie dans localStorage:", error);
+  }
+
+  // Sinon, chercher dans les données mockées
+  return mockLotteries.find(lottery => lottery.id === id);
 };
