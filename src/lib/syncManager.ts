@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
@@ -183,14 +182,13 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
     
     // Use upsert instead of delete+insert to preserve IDs and related references
-    // This will update existing records and insert new ones
-    const { error, status, count } = await supabase
+    // Fix: Remove the select('count') that was causing the error
+    const { error, status } = await supabase
       .from(tableName)
       .upsert(supabaseData, { 
         onConflict: 'id', // Use 'id' as the conflict resolution column
         ignoreDuplicates: false // Update existing records
-      })
-      .select('count');
+      });
       
     if (error) {
       console.error(`Error syncing ${tableName} to Supabase:`, error);
@@ -212,7 +210,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       return syncStatus;
     }
     
-    // Get updated remote count
+    // Get updated remote count in a separate query
     const { count: remoteCount } = await supabase
       .from(tableName)
       .select('*', { count: 'exact', head: true });
