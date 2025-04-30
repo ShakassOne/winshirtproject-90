@@ -450,7 +450,8 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
           delete processedItem.country;
         }
         
-        return camelToSnake(processedItem as unknown as Record<string, any>);
+        // Fix: Use camelToSnakeObject instead of camelToSnake for objects
+        return camelToSnakeObject(processedItem);
       }
       // Special handling for visuals table
       else if (tableName === 'visuals') {
@@ -462,7 +463,8 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
           processedItem.image_url = processedItem.imageUrl;
           delete processedItem.imageUrl;
         }
-        return camelToSnake(processedItem as unknown as Record<string, any>);
+        // Fix: Use camelToSnakeObject instead of camelToSnake for objects
+        return camelToSnakeObject(processedItem);
       }
       
       // Default case - just convert camelCase to snake_case
@@ -776,3 +778,25 @@ export const checkSupabaseConnectionWithDetails = async (): Promise<{
     };
   }
 };
+
+/**
+ * Helper function for object conversion: Converts an object with camelCase keys to snake_case keys
+ * @param obj The object with camelCase keys
+ * @returns The object with snake_case keys
+ */
+function camelToSnakeObject<T extends object>(obj: T): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => camelToSnakeObject(item));
+  }
+  
+  return Object.keys(obj).reduce((result, key) => {
+    const snakeKey = camelToSnake(key);
+    const value = obj[key as keyof T];
+    result[snakeKey] = typeof value === 'object' ? camelToSnakeObject(value) : value;
+    return result;
+  }, {} as any);
+}
