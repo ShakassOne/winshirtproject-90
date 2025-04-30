@@ -29,4 +29,14 @@ export interface ProductVisualSettings {
   flipX?: boolean;
   flipY?: boolean;
   colorFilter?: string;
+  // Add these properties to match how VisualPositioner is using them
+  position?: {
+    x: number;
+    y: number;
+  };
+  size?: {
+    width: number;
+    height: number;
+  };
+  visualId?: number;
 }

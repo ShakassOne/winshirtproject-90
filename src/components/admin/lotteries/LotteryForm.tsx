@@ -102,22 +102,18 @@ const LotteryForm: React.FC<LotteryFormProps> = ({
         // Appeler directement onSubmit avec les valeurs du formulaire
         onSubmit(formValues);
         
-        const storageType = supabaseConnected ? 'both' : 'local';
-        showNotification(isCreating ? 'create' : 'update', 'lottery', true, undefined, undefined, storageType);
+        showNotification(isCreating ? 'create' : 'update', 'lottery', true);
         
         // Notification admin spécifique
         const action = isCreating ? 'Création' : 'Mise à jour';
         showAdminAction('lottery', `${action} de "${formValues.title}"`, storageType);
       } catch (error) {
         console.error('Error submitting form:', error);
-        const storageType = supabaseConnected ? 'both' : 'local';
         showNotification(
           isCreating ? 'create' : 'update', 
           'lottery', 
           false, 
-          error instanceof Error ? error.message : 'Erreur inconnue',
-          undefined,
-          storageType
+          error instanceof Error ? error.message : 'Erreur inconnue'
         );
       }
     } else {

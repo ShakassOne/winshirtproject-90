@@ -1,255 +1,316 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { useForm } from 'react-hook-form';
-import { ExtendedLottery } from '@/types/lottery';
 import { toast } from '@/lib/toast';
-import { createProduct, updateProduct, deleteProduct } from '@/services/productService';
-import { checkSupabaseConnection } from '@/lib/supabase';
+import { showNotification } from '@/lib/notifications';
+import { createProduct, updateProduct, deleteProduct, syncProductsToSupabase } from '@/services/productService';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
-export const useProductForm = (
-  products: ExtendedProduct[],
-  refreshProducts: () => Promise<void>,
-  activeLotteries: ExtendedLottery[]
-) => {
+export const useProductForm = (products: ExtendedProduct[], setProducts: React.Dispatch<React.SetStateAction<ExtendedProduct[]>>) => {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [printAreas, setPrintAreas] = useState<PrintArea[]>([]);
+  const [selectedPrintAreaId, setSelectedPrintAreaId] = useState<number | null>(null);
+  const [selectedLotteries, setSelectedLotteries] = useState<string[]>([]);
   
-  // Form initialization
-  const form = useForm({
+  // Initialize form with default values
+  const form = useForm<ExtendedProduct>({
     defaultValues: {
       name: '',
       description: '',
       price: 0,
-      sizes: [] as string[],
-      colors: [] as string[],
       image: '',
       secondaryImage: '',
-      type: 'standard',
-      productType: '',
-      sleeveType: '',
-      linkedLotteries: [] as string[],
-      popularity: 0,
-      tickets: 1,
+      sizes: [],
+      colors: [],
+      type: 'shirt',
+      status: 'active',
+      featured: false,
+      allowCustomization: true,
+      tickets: 0,
       weight: 0,
       deliveryPrice: 0,
-      allowCustomization: false,
-      printAreas: [] as PrintArea[],
-      defaultVisualId: null,
-      defaultVisualSettings: {},
-      visualCategoryId: null,
+      printAreas: [],
+      linkedLotteries: []
     }
   });
-
-  // Handler for creating a new product
+  
+  // Reset form when selected product changes
+  useEffect(() => {
+    if (selectedProductId) {
+      const product = products.find(p => p.id === selectedProductId);
+      if (product) {
+        form.reset(product);
+        
+        // Initialize print areas
+        setPrintAreas(product.printAreas || []);
+        
+        // Initialize selected lotteries
+        setSelectedLotteries((product.linkedLotteries || []).map(id => id.toString()));
+      }
+    } else if (isCreating) {
+      form.reset({
+        name: '',
+        description: '',
+        price: 0,
+        image: '',
+        secondaryImage: '',
+        sizes: [],
+        colors: [],
+        type: 'shirt',
+        status: 'active',
+        featured: false,
+        allowCustomization: true,
+        tickets: 0,
+        weight: 0,
+        deliveryPrice: 0,
+        printAreas: [],
+        linkedLotteries: []
+      });
+      setPrintAreas([]);
+      setSelectedLotteries([]);
+    }
+  }, [selectedProductId, isCreating, products]);
+  
+  // Handle create product button click
   const handleCreateProduct = () => {
-    console.log("Creating new product");
     setIsCreating(true);
     setSelectedProductId(null);
-    form.reset();
+    setPrintAreas([]);
+    setSelectedLotteries([]);
   };
-
-  // Handler for editing an existing product
-  const handleEditProduct = (product: ExtendedProduct) => {
-    console.log("Editing product:", product.id);
-    if (product) {
-      setIsCreating(false);
-      setSelectedProductId(product.id);
-      form.reset({
-        name: product.name,
-        description: product.description || '',
-        price: product.price,
-        sizes: product.sizes || [],
-        colors: product.colors || [],
-        image: product.image || '',
-        secondaryImage: product.secondaryImage || '',
-        type: product.type || 'standard',
-        productType: product.productType || '',
-        sleeveType: product.sleeveType || '',
-        linkedLotteries: product.linkedLotteries?.map(String) || [],
-        popularity: product.popularity || 0,
-        tickets: product.tickets || 1,
-        weight: product.weight || 0,
-        deliveryPrice: product.deliveryPrice || 0,
-        allowCustomization: product.allowCustomization || false,
-        printAreas: product.printAreas || [],
-        defaultVisualId: product.defaultVisualId || null,
-        defaultVisualSettings: product.defaultVisualSettings || {},
-        visualCategoryId: product.visualCategoryId || null,
-      });
-    }
-  };
-
-  // Handler for deleting a product
-  const handleDeleteProduct = async (productId: number) => {
-    const isConnected = await checkSupabaseConnection();
+  
+  // Handle edit product button click
+  const handleEditProduct = (productId: number) => {
+    setIsCreating(false);
+    setSelectedProductId(productId);
     
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
-      console.log("Deleting product:", productId);
-      
-      try {
-        // Fix: Make sure we call deleteProduct with only one argument
-        // as expected by the function signature
-        const success = await deleteProduct(productId);
-        
-        if (success) {
-          if (selectedProductId === productId) {
-            setSelectedProductId(null);
-            setIsCreating(false);
-            form.reset();
-          }
-          
-          await refreshProducts();
-        }
-      } catch (error) {
-        console.error("Error deleting product:", error);
-        toast.error("Erreur lors de la suppression du produit", { position: "bottom-right" });
-      }
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setPrintAreas(product.printAreas || []);
+      setSelectedLotteries((product.linkedLotteries || []).map(id => id.toString()));
     }
   };
-
-  // Form submission handler
-  const onSubmit = async (data: any) => {
+  
+  // Handle form submission
+  const onSubmit = async (data: ExtendedProduct) => {
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-      console.log("Submitting product form:", data);
+      // Add print areas to the data
+      data.printAreas = printAreas;
       
-      // Convert linkedLotteries from string[] to number[]
-      const productData = {
-        ...data,
-        linkedLotteries: data.linkedLotteries.map(Number),
-        price: Number(data.price),
-        weight: Number(data.weight),
-        deliveryPrice: Number(data.deliveryPrice),
-        popularity: Number(data.popularity),
-        tickets: Number(data.tickets),
-        printAreas: data.printAreas || []
-      };
-
+      // Add linked lotteries to the data
+      data.linkedLotteries = selectedLotteries.map(id => parseInt(id));
+      
       if (isCreating) {
-        const newProduct = await createProduct(productData);
+        // Create new product
+        data.id = Date.now(); // Temporary ID for local storage
         
-        if (newProduct) {
-          await refreshProducts();
-          setIsCreating(false);
-          form.reset();
-          toast.success("Produit créé avec succès", { position: "bottom-right" });
-        }
-      } else if (selectedProductId) {
-        // Fix: Call updateProduct with the correct parameters
-        const updatedProduct = await updateProduct({
-          ...productData,
-          id: selectedProductId
-        });
+        // Create product and update state
+        createProduct(data);
+        setProducts(prev => [...prev, data]);
         
-        if (updatedProduct) {
-          await refreshProducts();
-          setSelectedProductId(null);
-          form.reset();
-          toast.success("Produit mis à jour avec succès", { position: "bottom-right" });
-        }
+        // Show success notification
+        showNotification('create', 'product', true);
+        toast.success(`Produit "${data.name}" créé avec succès`);
+      } else {
+        // Update existing product
+        updateProduct(data.id, data);
+        
+        // Update products state
+        setProducts(prev => prev.map(p => p.id === data.id ? data : p));
+        
+        // Show success notification
+        showNotification('update', 'product', true);
+        toast.success(`Produit "${data.name}" mis à jour avec succès`);
       }
+      
+      // Reset form state
+      handleCancel();
     } catch (error) {
-      console.error("Form submission error:", error);
-      toast.error("Erreur lors de la sauvegarde", { position: "bottom-right" });
+      console.error('Error submitting product form:', error);
+      showNotification(isCreating ? 'create' : 'update', 'product', false, error instanceof Error ? error.message : 'Unknown error');
+      toast.error(`Erreur lors de la ${isCreating ? 'création' : 'mise à jour'} du produit`);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // Cancel form handler
+  
+  // Handle delete product
+  const handleDeleteProduct = async (productId: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+      try {
+        // Delete product
+        deleteProduct(productId);
+        
+        // Update products state
+        setProducts(prev => prev.filter(p => p.id !== productId));
+        
+        // Reset selection if the deleted product was selected
+        if (selectedProductId === productId) {
+          setSelectedProductId(null);
+          setIsCreating(false);
+        }
+        
+        // Show success notification
+        showNotification('delete', 'product', true);
+        toast.success('Produit supprimé avec succès');
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        showNotification('delete', 'product', false, error instanceof Error ? error.message : 'Unknown error');
+        toast.error('Erreur lors de la suppression du produit');
+      }
+    }
+  };
+  
+  // Handle cancel button click
   const handleCancel = () => {
     setIsCreating(false);
     setSelectedProductId(null);
     form.reset();
+    setPrintAreas([]);
+    setSelectedLotteries([]);
   };
-
-  // Size handlers
-  const addSize = (size: string) => {
-    const currentSizes = form.getValues('sizes') || [];
-    if (!currentSizes.includes(size)) {
-      form.setValue('sizes', [...currentSizes, size]);
+  
+  // Handle sync to Supabase
+  const handleSyncToSupabase = async () => {
+    if (!isSupabaseConfigured()) {
+      toast.error('Supabase n\'est pas configuré. Veuillez configurer Supabase dans les paramètres.');
+      return;
+    }
+    
+    try {
+      await syncProductsToSupabase();
+      toast.success('Produits synchronisés avec Supabase avec succès');
+    } catch (error) {
+      console.error('Error syncing products to Supabase:', error);
+      toast.error('Erreur lors de la synchronisation des produits avec Supabase');
     }
   };
-
-  const removeSize = (size: string) => {
-    const currentSizes = form.getValues('sizes') || [];
-    form.setValue('sizes', currentSizes.filter(s => s !== size));
+  
+  // Handle print area selection
+  const handleSelectPrintArea = (areaId: number) => {
+    setSelectedPrintAreaId(areaId);
   };
-
-  // Color handlers
-  const addColor = (color: string) => {
-    const currentColors = form.getValues('colors') || [];
-    if (!currentColors.includes(color)) {
-      form.setValue('colors', [...currentColors, color]);
+  
+  // Handle print area position update
+  const handleUpdateAreaPosition = (areaId: number, x: number, y: number) => {
+    setPrintAreas(prev => prev.map(area => {
+      if (area.id === areaId) {
+        return {
+          ...area,
+          bounds: {
+            ...area.bounds,
+            x,
+            y
+          }
+        };
+      }
+      return area;
+    }));
+  };
+  
+  // Handle add print area
+  const handleAddPrintArea = (position: 'front' | 'back') => {
+    const newArea: PrintArea = {
+      id: Date.now(),
+      name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${printAreas.filter(a => a.position === position).length + 1}`,
+      position,
+      bounds: {
+        x: 50,
+        y: 50,
+        width: 200,
+        height: 200
+      }
+    };
+    
+    setPrintAreas(prev => [...prev, newArea]);
+    setSelectedPrintAreaId(newArea.id);
+  };
+  
+  // Handle delete print area
+  const handleDeletePrintArea = (areaId: number) => {
+    setPrintAreas(prev => prev.filter(area => area.id !== areaId));
+    if (selectedPrintAreaId === areaId) {
+      setSelectedPrintAreaId(null);
     }
   };
-
-  const removeColor = (color: string) => {
-    const currentColors = form.getValues('colors') || [];
-    form.setValue('colors', currentColors.filter(c => c !== color));
+  
+  // Handle update print area name
+  const handleUpdatePrintAreaName = (areaId: number, name: string) => {
+    setPrintAreas(prev => prev.map(area => {
+      if (area.id === areaId) {
+        return {
+          ...area,
+          name
+        };
+      }
+      return area;
+    }));
   };
-
-  // Lottery handlers
+  
+  // Handle update print area size
+  const handleUpdatePrintAreaSize = (areaId: number, width: number, height: number) => {
+    setPrintAreas(prev => prev.map(area => {
+      if (area.id === areaId) {
+        return {
+          ...area,
+          bounds: {
+            ...area.bounds,
+            width,
+            height
+          }
+        };
+      }
+      return area;
+    }));
+  };
+  
+  // Handle lottery selection
   const toggleLottery = (lotteryId: string) => {
-    const currentLotteries = form.getValues('linkedLotteries') || [];
-    const newLotteries = currentLotteries.includes(lotteryId)
-      ? currentLotteries.filter(id => id !== lotteryId)
-      : [...currentLotteries, lotteryId];
-    form.setValue('linkedLotteries', newLotteries);
+    setSelectedLotteries(prev => {
+      if (prev.includes(lotteryId)) {
+        return prev.filter(id => id !== lotteryId);
+      } else {
+        return [...prev, lotteryId];
+      }
+    });
   };
-
-  const selectAllLotteries = () => {
-    const allLotteryIds = activeLotteries.map(lottery => lottery.id.toString());
-    form.setValue('linkedLotteries', allLotteryIds);
+  
+  // Handle select all lotteries
+  const selectAllLotteries = (availableLotteryIds: string[]) => {
+    setSelectedLotteries(availableLotteryIds);
   };
-
+  
+  // Handle deselect all lotteries
   const deselectAllLotteries = () => {
-    form.setValue('linkedLotteries', []);
+    setSelectedLotteries([]);
   };
-
-  // Print area handlers
-  const addPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
-    const currentPrintAreas = form.getValues('printAreas') || [];
-    form.setValue('printAreas', [...currentPrintAreas, { 
-      ...printArea,
-      id: Date.now(), 
-    }]);
-  };
-
-  const updatePrintArea = (id: number, data: Partial<PrintArea>) => {
-    const currentPrintAreas = form.getValues('printAreas') || [];
-    const updatedAreas = currentPrintAreas.map(area => 
-      area.id === id ? { ...area, ...data } : area
-    );
-    form.setValue('printAreas', updatedAreas);
-  };
-
-  const removePrintArea = (id: number) => {
-    const currentPrintAreas = form.getValues('printAreas') || [];
-    form.setValue('printAreas', currentPrintAreas.filter(area => area.id !== id));
-  };
-
+  
   return {
     isCreating,
     selectedProductId,
     form,
     isSubmitting,
+    printAreas,
+    selectedPrintAreaId,
+    selectedLotteries,
     handleCreateProduct,
     handleEditProduct,
-    handleDeleteProduct,
     onSubmit,
+    handleDeleteProduct,
     handleCancel,
-    addSize,
-    removeSize,
-    addColor,
-    removeColor,
+    handleSyncToSupabase,
+    handleSelectPrintArea,
+    handleUpdateAreaPosition,
+    handleAddPrintArea,
+    handleDeletePrintArea,
+    handleUpdatePrintAreaName,
+    handleUpdatePrintAreaSize,
     toggleLottery,
     selectAllLotteries,
-    deselectAllLotteries,
-    addPrintArea,
-    updatePrintArea,
-    removePrintArea
+    deselectAllLotteries
   };
 };

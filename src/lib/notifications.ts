@@ -3,7 +3,7 @@ import { toast } from './toast';
 
 // Define allowed action types
 export type ActionType = 'sync' | 'update' | 'delete' | 'create' | 'success' | 'error' | 'info' | 'warning' | 'pull' | 'clear' | 'reset';
-export type EntityType = string | 'all'; // Allow 'all' as a special entity type
+export type EntityType = string; // Allow any string as entity type
 
 /**
  * Show notification for an action
@@ -52,32 +52,21 @@ export const showNotification = (
  */
 export const showFormValidation = (
   formName: string,
-  success: boolean,
   message?: string
 ): void => {
-  if (success) {
-    toast.success(`${formName} validé avec succès.`, { position: "bottom-right" });
-  } else {
-    toast.error(`Erreur de validation du ${formName}${message ? `: ${message}` : '.'}`, { position: "bottom-right" });
-  }
+  toast.error(`Erreur de validation du ${formName}${message ? `: ${message}` : '.'}`, { position: "bottom-right" });
 };
 
 /**
  * Show admin action notification
- * @param action Action name
  * @param entity Entity type
- * @param success Whether the action was successful
- * @param message Optional message
+ * @param message Message to display
+ * @param storageType Type of storage (local, supabase, both)
  */
 export const showAdminAction = (
-  action: string,
   entity: string,
-  success: boolean,
-  message?: string
+  message: string,
+  storageType?: string
 ): void => {
-  if (success) {
-    toast.success(`${action} ${entity} réussi.`, { position: "bottom-right" });
-  } else {
-    toast.error(`Échec de ${action} ${entity}${message ? `: ${message}` : '.'}`, { position: "bottom-right" });
-  }
+  toast.success(`${message}`, { position: "bottom-right" });
 };

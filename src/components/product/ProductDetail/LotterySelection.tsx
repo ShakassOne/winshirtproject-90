@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import { ExtendedLottery } from '@/types/lottery';
+import { ExtendedLottery, Lottery } from '@/types/lottery';
 import { Card } from '@/components/ui/card';
 import { getLotteries } from '@/services/lotteryService';
 
@@ -30,12 +31,25 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
         const allLotteries = await getLotteries(true); // Only get active lotteries
         
         console.log("LotterySelection - Active lotteries loaded:", allLotteries);
-        setActiveLotteries(allLotteries as ExtendedLottery[]);
+        
+        // Convert Lottery[] to ExtendedLottery[]
+        const extendedLotteries: ExtendedLottery[] = allLotteries.map(lottery => ({
+          ...lottery,
+          // Add missing properties needed for ExtendedLottery
+          participants: lottery.participants ? 
+                      (Array.isArray(lottery.participants) ? lottery.participants : []) : 
+                      [],
+          currentParticipants: lottery.currentParticipants || 0,
+          targetParticipants: lottery.targetParticipants || 10,
+          winner: null
+        }));
+        
+        setActiveLotteries(extendedLotteries);
         
         // Check consistency of selected data
         if (selectedLotteries.length > 0) {
           console.log("LotterySelection - Verifying selected lotteries:", selectedLotteries);
-          const validLotteryIds = allLotteries.map(l => l.id.toString());
+          const validLotteryIds = extendedLotteries.map(l => l.id.toString());
           const invalidSelections = selectedLotteries.filter(id => id && !validLotteryIds.includes(id));
           
           if (invalidSelections.length > 0) {
@@ -61,7 +75,19 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
       try {
         console.log("LotterySelection - Refreshing active lotteries");
         const allLotteries = await getLotteries(true);
-        setActiveLotteries(allLotteries as ExtendedLottery[]);
+        
+        // Convert Lottery[] to ExtendedLottery[]
+        const extendedLotteries: ExtendedLottery[] = allLotteries.map(lottery => ({
+          ...lottery,
+          participants: lottery.participants ? 
+                      (Array.isArray(lottery.participants) ? lottery.participants : []) : 
+                      [],
+          currentParticipants: lottery.currentParticipants || 0,
+          targetParticipants: lottery.targetParticipants || 10,
+          winner: null
+        }));
+        
+        setActiveLotteries(extendedLotteries);
       } catch (error) {
         console.error("LotterySelection - Error refreshing lotteries:", error);
       }
