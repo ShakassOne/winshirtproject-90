@@ -2,19 +2,23 @@
 import React from 'react';
 import { useLotteries } from '@/services/lotteryService';
 import LotteryGrid from '@/components/lottery/LotteryGrid';
-import SiteHeader from '@/components/SiteHeader';
-import StarBackground from '@/components/StarBackground';
+import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const LotteriesPage: React.FC = () => {
   const { lotteries, loading, error, refreshLotteries } = useLotteries();
+  
+  // Filtrer les loteries en vedette pour le slider
+  const featuredLotteries = lotteries.filter(lottery => lottery.featured === true);
 
   return (
-    <>
-      <StarBackground />
-      <SiteHeader />
+    <section className="min-h-screen">
+      {/* Afficher le slider des loteries en vedette seulement s'il y en a */}
+      {featuredLotteries.length > 0 && (
+        <FeaturedLotterySlider lotteries={featuredLotteries} />
+      )}
 
-      <section className="min-h-screen pt-32 pb-32">
+      <section className="pt-32 pb-32">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">Nos Loteries</h1>
@@ -46,7 +50,7 @@ const LotteriesPage: React.FC = () => {
           )}
         </div>
       </section>
-    </>
+    </section>
   );
 };
 
