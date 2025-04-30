@@ -86,3 +86,23 @@ export interface Order {
   tracking_number?: string;
   invoice_url?: string;
 }
+
+// Define admin settings interface
+export interface AdminSettings {
+  deliverySettings: {
+    freeShippingThreshold: number;
+    defaultShippingRates: {
+      national: {
+        standard: number;
+        express: number;
+      };
+      international: {
+        standard: number;
+        express: number;
+      };
+    };
+    defaultCarriers: string[];
+    defaultHandlingTime: number;
+    internationalShipping: boolean;
+  };
+}

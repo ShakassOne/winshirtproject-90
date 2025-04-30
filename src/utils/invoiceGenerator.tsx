@@ -196,6 +196,6 @@ export const generateAndStoreInvoiceUrl = (order: Order): Order => {
   // Retourne une copie de la commande avec l'URL de la facture
   return {
     ...order,
-    invoiceUrl
+    invoice_url: invoiceUrl
   };
 };
