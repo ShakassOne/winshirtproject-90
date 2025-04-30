@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/types/supabase';
 import { useToast } from "@/components/ui/use-toast"
 import {
   AlertDialog,
@@ -44,13 +44,19 @@ import {
   pushDataToSupabase,
   clearLocalStorage,
   SyncStatus,
-  getSyncStatus,
-  setSyncStatus,
+  getSyncHistory,
   ValidTableName,
-  getAllValidTableNames
+  getAllValidTableNames,
+  getSyncStatus,
+  setSyncStatus
 } from '@/lib/syncManager';
+import { Card } from "@/components/ui/card";
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { showNotification } from '@/lib/notifications';
+
+// Define action types for notifications
+type ActionType = 'sync' | 'update' | 'delete' | 'create';
+type EntityType = string;
 
 // Define a schema for the settings form
 const formSchema = z.object({
@@ -66,17 +72,17 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
   const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(15);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatuses, setSyncStatuses] = useState<Record<ValidTableName, SyncStatus>>({
-    lotteries: { lastSync: null, success: true },
-    lottery_participants: { lastSync: null, success: true },
-    lottery_winners: { lastSync: null, success: true },
-    products: { lastSync: null, success: true },
-    visuals: { lastSync: null, success: true },
-		orders: { lastSync: null, success: true },
-		order_items: { lastSync: null, success: true },
-    clients: { lastSync: null, success: true },
+  const [syncStatuses, setSyncStatuses] = useState<Record<string, SyncStatus>>({
+    lotteries: { success: true, lastSync: null },
+    lottery_participants: { success: true, lastSync: null },
+    lottery_winners: { success: true, lastSync: null },
+    products: { success: true, lastSync: null },
+    visuals: { success: true, lastSync: null },
+    orders: { success: true, lastSync: null },
+    order_items: { success: true, lastSync: null },
+    clients: { success: true, lastSync: null },
   });
-	const [isLocalStorageEmpty, setIsLocalStorageEmpty] = useState(false);
+  const [isLocalStorageEmpty, setIsLocalStorageEmpty] = useState(false);
   const [isClearingLocalStorage, setIsClearingLocalStorage] = useState(false);
   const [isPushingData, setIsPushingData] = useState(false);
   const [isPullingData, setIsPullingData] = useState(false);
@@ -141,7 +147,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
   // Load sync statuses from localStorage on component mount
   useEffect(() => {
     const loadSyncStatuses = async () => {
-      const statuses: Partial<Record<ValidTableName, SyncStatus>> = {};
+      const statuses: Partial<Record<string, SyncStatus>> = {};
       for (const table of getAllValidTableNames()) {
         try {
           const status = await getSyncStatus(table);
@@ -159,7 +165,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
   }, []);
 
   // Check if local storage is empty
-	useEffect(() => {
+  useEffect(() => {
     const checkLocalStorage = () => {
       try {
         const hasData = getAllValidTableNames().some(table => localStorage.getItem(table) !== null);
@@ -222,7 +228,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
           ? `Successfully synced ${table} data with Supabase.`
           : `Failed to sync ${table} data with Supabase.`,
       })
-      showNotification('sync', table, result.success, result.error?.message);
+      showNotification('sync', table, result.success, result.error);
     } catch (error) {
       console.error(`Sync ${table} failed:`, error);
       toast({
@@ -248,7 +254,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
           ? `Successfully pulled ${table} data from Supabase.`
           : `Failed to pull ${table} data from Supabase.`,
       })
-      showNotification('pull', table, result.success, result.error?.message);
+      showNotification('update', table, result.success, result.error);
     } catch (error) {
       console.error(`Pull ${table} failed:`, error);
       toast({
@@ -256,7 +262,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: `Pull ${table} failed`,
         description: `Failed to pull ${table} data from Supabase.`,
       })
-      showNotification('pull', table, false, error instanceof Error ? error.message : 'Unknown error');
+      showNotification('update', table, false, error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsPullingData(false);
     }
@@ -272,7 +278,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: "Local storage cleared",
         description: "Successfully cleared all data from local storage.",
       })
-      showNotification('clear', 'localStorage', true);
+      showNotification('delete', 'localStorage', true);
     } catch (error) {
       console.error("Failed to clear local storage:", error);
       toast({
@@ -280,7 +286,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: "Failed to clear local storage",
         description: "Failed to clear all data from local storage.",
       })
-      showNotification('clear', 'localStorage', false, error instanceof Error ? error.message : 'Unknown error');
+      showNotification('delete', 'localStorage', false, error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsClearingLocalStorage(false);
     }
@@ -298,7 +304,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: `Reset ${table} sync status`,
         description: `Successfully reset sync status for ${table}.`,
       })
-      showNotification('reset', table, true);
+      showNotification('update', table, true);
     } catch (error) {
       console.error(`Failed to reset ${table} sync status:`, error);
       toast({
@@ -306,7 +312,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: `Failed to reset ${table} sync status`,
         description: `Failed to reset sync status for ${table}.`,
       })
-      showNotification('reset', table, false, error instanceof Error ? error.message : 'Unknown error');
+      showNotification('update', table, false, error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsResettingSyncStatus(false);
     }
@@ -319,7 +325,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         try {
           const result = await pushDataToSupabase(table);
           setSyncStatuses(prev => ({ ...prev, [table]: result }));
-          showNotification('sync', table, result.success, result.error?.message);
+          showNotification('sync', table, result.success, result.error);
         } catch (error) {
           console.error(`Sync ${table} failed:`, error);
           showNotification('sync', table, false, error instanceof Error ? error.message : 'Unknown error');
@@ -329,7 +335,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: "All data synced",
         description: "Successfully synced all data with Supabase.",
       })
-      showNotification('sync', 'all', true);
+      showNotification('sync', 'database', true);
     } catch (error) {
       console.error("Failed to sync all data:", error);
       toast({
@@ -337,7 +343,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: "Failed to sync all data",
         description: "Failed to sync all data with Supabase.",
       })
-      showNotification('sync', 'all', false, error instanceof Error ? error.message : 'Unknown error');
+      showNotification('sync', 'database', false, error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsSyncingAll(false);
     }
@@ -361,7 +367,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: "All sync statuses reset",
         description: "Successfully reset all sync statuses.",
       })
-      showNotification('reset', 'all', true);
+      showNotification('update', 'syncStatuses', true);
     } catch (error) {
       console.error("Failed to reset all sync statuses:", error);
       toast({
@@ -369,7 +375,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: "Failed to reset all sync statuses",
         description: "Failed to reset all sync statuses.",
       })
-      showNotification('reset', 'all', false, error instanceof Error ? error.message : 'Unknown error');
+      showNotification('update', 'syncStatuses', false, error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsResettingAllSyncStatuses(false);
     }
@@ -382,17 +388,17 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         try {
           const result = await pullDataFromSupabase(table);
           setSyncStatuses(prev => ({ ...prev, [table]: result }));
-          showNotification('pull', table, result.success, result.error?.message);
+          showNotification('update', table, result.success, result.error);
         } catch (error) {
           console.error(`Pull ${table} failed:`, error);
-          showNotification('pull', table, false, error instanceof Error ? error.message : 'Unknown error');
+          showNotification('update', table, false, error instanceof Error ? error.message : 'Unknown error');
         }
       }
       toast({
         title: "All data pulled",
         description: "Successfully pulled all data from Supabase.",
       })
-      showNotification('pull', 'all', true);
+      showNotification('update', 'database', true);
     } catch (error) {
       console.error("Failed to pull all data:", error);
       toast({
@@ -400,14 +406,12 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         title: "Failed to pull all data",
         description: "Failed to pull all data from Supabase.",
       })
-      showNotification('pull', 'all', false, error instanceof Error ? error.message : 'Unknown error');
+      showNotification('update', 'database', false, error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsPullingAllData(false);
     }
   };
 
-  const isVisualCategoriesTable = false;
-  
   return (
     <div className="space-y-6">
       <div className="rounded-md border p-4">
@@ -479,7 +483,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {getAllValidTableNames().map((table) => (
-            <Card key={table} className="space-y-2">
+            <Card key={table} className="space-y-2 p-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium capitalize">{table}</h3>
                 <DropdownMenu>
@@ -515,7 +519,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Annuler</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleResetSyncStatus(table)}>
+                          <AlertDialogAction onClick={() => handleResetSyncStatus(table as ValidTableName)}>
                             {isResettingSyncStatus ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
@@ -551,7 +555,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => syncData(table)}
+                  onClick={() => syncData(table as ValidTableName)}
                   disabled={isSyncing || isCheckingSupabase || !isSupabaseConnected}
                   className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
                 >
@@ -567,7 +571,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => pullData(table)}
+                  onClick={() => pullData(table as ValidTableName)}
                   disabled={isPullingData || isCheckingSupabase || !isSupabaseConnected}
                   className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
                 >
@@ -592,7 +596,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
           Effectuez des actions globales sur toutes les données.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="space-y-2">
+          <Card className="space-y-2 p-4">
             <h3 className="text-sm font-medium">Synchroniser toutes les données</h3>
             <p className="text-xs text-muted-foreground">
               Synchroniser toutes les données avec Supabase.
@@ -614,7 +618,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
               )}
             </Button>
           </Card>
-          <Card className="space-y-2">
+          <Card className="space-y-2 p-4">
             <h3 className="text-sm font-medium">Récupérer toutes les données</h3>
             <p className="text-xs text-muted-foreground">
               Récupérer toutes les données depuis Supabase.
@@ -636,7 +640,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
               )}
             </Button>
           </Card>
-          <Card className="space-y-2">
+          <Card className="space-y-2 p-4">
             <h3 className="text-sm font-medium">Réinitialiser tous les status</h3>
             <p className="text-xs text-muted-foreground">
               Réinitialiser tous les status de synchronisation.
@@ -658,7 +662,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
               )}
             </Button>
           </Card>
-          <Card className="space-y-2">
+          <Card className="space-y-2 p-4">
             <h3 className="text-sm font-medium">Effacer le stockage local</h3>
             <p className="text-xs text-muted-foreground">
               Effacer toutes les données stockées localement.

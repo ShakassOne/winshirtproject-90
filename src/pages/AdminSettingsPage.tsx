@@ -85,6 +85,11 @@ const AdminSettingsPage: React.FC = () => {
     }
   };
 
+  const handleSettingsChange = (autoSync: boolean, syncInterval: number) => {
+    // Handle settings changes if needed
+    console.log("Settings changed:", { autoSync, syncInterval });
+  };
+
   return (
     <>
       <DynamicBackground key={`background-${updateTrigger}`} />
@@ -138,7 +143,7 @@ const AdminSettingsPage: React.FC = () => {
             </TabsContent>
             
             <TabsContent value="sync" className="space-y-6">
-              <SyncSettingsManager isInitiallyConnected={isConnected} />
+              <SyncSettingsManager onSettingsChange={handleSettingsChange} />
             </TabsContent>
             
             <TabsContent value="ftp" className="space-y-6">

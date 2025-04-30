@@ -1,90 +1,69 @@
 
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-
-export function isLightColor(hex: string): boolean {
-  // Enlever le "#" si présent
-  hex = hex.replace("#", "");
-
-  // Convertir en RGB si c'est une abréviation (ex: #fff)
-  if (hex.length === 3) {
-    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-  }
-
-  // Convertir hex en valeurs RGB
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  // Calculer la luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  // Définir un seuil (0.5 est une valeur courante)
-  return luminance > 0.5;
+  return twMerge(clsx(inputs));
 }
 
 /**
- * Convertit un objet de snake_case à camelCase
+ * Converts a snake_case string to camelCase
+ * @param str The snake_case string to convert
+ * @returns The camelCase string
  */
-export const snakeToCamel = (obj: any): any => {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
+export const snakeToCamel = (str: string): string => {
+  return str.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
+};
+
+/**
+ * Converts an object with snake_case keys to camelCase keys
+ * @param obj The object with snake_case keys
+ * @returns The object with camelCase keys
+ */
+export function snakeToCamelObject<T extends object>(obj: T): any {
+  if (obj === null || typeof obj !== 'object') {
     return obj;
   }
   
   if (Array.isArray(obj)) {
-    return obj.map(item => snakeToCamel(item));
+    return obj.map(item => snakeToCamelObject(item));
   }
   
-  return Object.keys(obj).reduce((acc, key) => {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    acc[camelKey] = snakeToCamel(obj[key]);
-    return acc;
+  return Object.keys(obj).reduce((result, key) => {
+    const camelKey = snakeToCamel(key);
+    const value = obj[key as keyof T];
+    result[camelKey] = typeof value === 'object' ? snakeToCamelObject(value) : value;
+    return result;
   }, {} as any);
+}
+
+/**
+ * Converts a camelCase string to snake_case
+ * @param str The camelCase string to convert
+ * @returns The snake_case string
+ */
+export const camelToSnake = (str: string): string => {
+  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 };
 
 /**
- * Convertit un objet de camelCase à snake_case
+ * Converts an object with camelCase keys to snake_case keys
+ * @param obj The object with camelCase keys
+ * @returns The object with snake_case keys
  */
-export const camelToSnake = (obj: any): any => {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
+export function camelToSnakeObject<T extends object>(obj: T): any {
+  if (obj === null || typeof obj !== 'object') {
     return obj;
   }
   
   if (Array.isArray(obj)) {
-    return obj.map(item => camelToSnake(item));
+    return obj.map(item => camelToSnakeObject(item));
   }
   
-  return Object.keys(obj).reduce((acc, key) => {
-    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-    acc[snakeKey] = camelToSnake(obj[key]);
-    return acc;
+  return Object.keys(obj).reduce((result, key) => {
+    const snakeKey = camelToSnake(key);
+    const value = obj[key as keyof T];
+    result[snakeKey] = typeof value === 'object' ? camelToSnakeObject(value) : value;
+    return result;
   }, {} as any);
-};
-
-/**
- * Format a date in a friendly format
- */
-export const formatDate = (date: string | Date, includeTime: boolean = false): string => {
-  if (!date) return 'N/A';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  if (isNaN(d.getTime())) return 'Invalid date';
-  
-  const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  };
-  
-  if (includeTime) {
-    options.hour = '2-digit';
-    options.minute = '2-digit';
-  }
-  
-  return d.toLocaleDateString('fr-FR', options);
-};
+}

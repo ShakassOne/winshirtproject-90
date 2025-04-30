@@ -1,20 +1,28 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
-import type { ValidTableName } from '@/types/database.types';
+
+/**
+ * Define valid table names for type safety
+ */
+export type ValidTableName = 'lotteries' | 'lottery_participants' | 'lottery_winners' | 
+                            'products' | 'visuals' | 'visual_categories' | 'orders' | 
+                            'order_items' | 'clients';
 
 /**
  * Interface for defining synchronization status
  */
 export interface SyncStatus {
   success: boolean;
-  tableName: string;
-  localCount: number;
-  remoteCount: number;
-  operation: 'push' | 'pull';
+  tableName?: string;
+  localCount?: number;
+  remoteCount?: number;
+  operation?: 'push' | 'pull';
   error?: string;
   httpCode?: number;
-  timestamp: number;
+  timestamp?: number;
+  lastSync?: number | null;
 }
 
 // Track the history of synchronizations
@@ -43,6 +51,70 @@ export const getSyncHistory = (): SyncStatus[] => {
  */
 export const clearSyncHistory = (): void => {
   syncHistory.length = 0;
+};
+
+/**
+ * Get all valid table names
+ */
+export const getAllValidTableNames = (): ValidTableName[] => {
+  return [
+    'lotteries', 
+    'products', 
+    'visuals', 
+    'visual_categories', 
+    'orders', 
+    'order_items', 
+    'clients', 
+    'lottery_participants', 
+    'lottery_winners'
+  ];
+};
+
+/**
+ * Clear local storage
+ */
+export const clearLocalStorage = async (): Promise<void> => {
+  try {
+    getAllValidTableNames().forEach(tableName => {
+      localStorage.removeItem(tableName);
+    });
+    console.log("Local storage cleared");
+    return Promise.resolve();
+  } catch (error) {
+    console.error("Error clearing local storage:", error);
+    return Promise.reject(error);
+  }
+};
+
+/**
+ * Get sync status for a table
+ */
+export const getSyncStatus = async (table: ValidTableName): Promise<SyncStatus> => {
+  try {
+    const statusKey = `sync_status_${table}`;
+    const statusStr = localStorage.getItem(statusKey);
+    if (statusStr) {
+      return JSON.parse(statusStr);
+    }
+    return { success: true, lastSync: null };
+  } catch (error) {
+    console.error(`Error getting sync status for ${table}:`, error);
+    return { success: true, lastSync: null };
+  }
+};
+
+/**
+ * Set sync status for a table
+ */
+export const setSyncStatus = async (table: ValidTableName, status: SyncStatus): Promise<void> => {
+  try {
+    const statusKey = `sync_status_${table}`;
+    localStorage.setItem(statusKey, JSON.stringify(status));
+    return Promise.resolve();
+  } catch (error) {
+    console.error(`Error setting sync status for ${table}:`, error);
+    return Promise.reject(error);
+  }
 };
 
 /**
@@ -123,7 +195,6 @@ const isAuthenticated = async (): Promise<boolean> => {
 
 /**
  * Attempt to sign in with admin credentials if available
- * This function has been updated to better handle authentication
  */
 const signInWithAdmin = async (): Promise<boolean> => {
   try {
