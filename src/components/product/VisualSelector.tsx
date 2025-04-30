@@ -105,7 +105,7 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
     <div className="border border-winshirt-purple/30 rounded-lg overflow-hidden">
       <div className="flex justify-between items-center p-4 border-b border-winshirt-purple/30">
         <h3 className="text-lg font-medium">
-          Choisissez un visuel
+          Choisissez un visuel pour {activePosition === 'front' ? 'le recto' : 'le verso'}
         </h3>
         {!hideUploader && (
           <CustomVisualUploader
@@ -136,6 +136,9 @@ const VisualSelector: React.FC<VisualSelectorProps> = ({
                   src={visual.image} 
                   alt={visual.name} 
                   className="w-full aspect-square object-contain bg-gray-800/50"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder.svg';
+                  }}
                 />
                 <div className="p-2 text-center">
                   <p className="text-xs truncate">{visual.name}</p>

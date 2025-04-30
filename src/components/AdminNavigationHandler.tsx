@@ -28,36 +28,35 @@ const AdminNavigationHandler: React.FC<AdminNavigationHandlerProps> = ({ childre
         // Check if user is logged in with Supabase
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session) {
-          console.log("No active session found. Admin menu will not be shown.");
-          setShouldShow(false);
-          setIsInitialized(true);
-          setIsLoading(false);
-          return;
-        }
+        // Only show admin menu if user is authenticated AND on an admin path
+        const isAdminPath = location.pathname.includes('/admin');
+        const isAuthenticated = !!session;
         
-        // Check if the user exists and has admin metadata
-        const isAdmin = session.user?.user_metadata?.isAdmin === true;
+        // Check if user exists and has admin metadata if authenticated
+        const isAdmin = isAuthenticated && session.user?.user_metadata?.isAdmin === true;
         
         console.log("Admin check:", { 
-          user: session.user,
-          hasMetadata: !!session.user?.user_metadata, 
+          user: session?.user,
+          hasMetadata: !!session?.user?.user_metadata, 
           isAdmin, 
-          email: session.user?.email 
+          email: session?.user?.email,
+          isAdminPath,
+          isAuthenticated
         });
         
-        // Only show admin menu if path includes /admin
-        const isAdminPath = location.pathname.includes('/admin');
+        // Show admin menu if user is authenticated AND:
+        // 1. Either they are an admin OR
+        // 2. They are on an admin path
+        const showMenu = isAuthenticated && (isAdmin || isAdminPath);
+        setShouldShow(showMenu);
         
-        // Show admin menu if:
-        // 1. User is authenticated AND
-        // 2. Either they are an admin OR they are on an admin path
-        setShouldShow(!!session && (isAdmin || isAdminPath));
-        
-        if (!isAdmin && isAdminPath) {
+        if (!isAdmin && isAdminPath && isAuthenticated) {
           // If they're trying to access admin section but aren't an admin
           // We'll show a warning but still show the menu for demo purposes
           toast.warning("Note: You're accessing admin features without admin privileges.");
+        } else if (isAdminPath && !isAuthenticated) {
+          // If user is not authenticated but tries to access admin path
+          toast.error("Authentification requise pour accéder à l'administration.");
         }
         
         setIsInitialized(true);

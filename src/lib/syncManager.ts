@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
@@ -124,42 +123,50 @@ const isAuthenticated = async (): Promise<boolean> => {
 
 /**
  * Attempt to sign in with admin credentials if available
+ * This function has been updated to handle errors better and avoid error loops
  */
 const signInWithAdmin = async (): Promise<boolean> => {
   try {
-    // Try to sign in with a stored admin user if available
-    const adminCredentials = localStorage.getItem('winshirt_admin');
-    if (adminCredentials) {
-      const { email, password } = JSON.parse(adminCredentials);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (!error && data.user) {
-        console.log("Successfully signed in with stored admin credentials");
-        return true;
-      }
-    }
-    
-    // If admin sign-in failed or no stored credentials, try with the hardcoded admin
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: "admin@winshirt.com",
-      password: "admin123"
-    });
-    
-    if (!error && data.user) {
-      console.log("Successfully signed in with default admin credentials");
-      // Store successful credentials for future use
-      localStorage.setItem('winshirt_admin', JSON.stringify({
-        email: "admin@winshirt.com",
-        password: "admin123"
-      }));
+    // Check if we already have an active session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      console.log("User already authenticated");
       return true;
     }
     
-    console.error("Failed to authenticate with admin credentials");
+    // First try to sign in with a stored admin user
+    const adminCredentialsStr = localStorage.getItem('winshirt_admin');
+    if (adminCredentialsStr) {
+      try {
+        const adminCredentials = JSON.parse(adminCredentialsStr);
+        if (adminCredentials?.email && adminCredentials?.password) {
+          console.log("Attempting to sign in with stored admin credentials");
+          
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: adminCredentials.email,
+            password: adminCredentials.password
+          });
+          
+          if (!error && data.user) {
+            console.log("Successfully signed in with stored admin credentials");
+            return true;
+          } else {
+            // If stored credentials fail, remove them
+            console.error("Stored admin credentials failed:", error?.message);
+            localStorage.removeItem('winshirt_admin');
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing stored admin credentials:", e);
+        localStorage.removeItem('winshirt_admin');
+      }
+    }
+    
+    // Don't try default credentials - it's better to fail gracefully
+    // and let the user manually log in than to keep trying incorrect credentials
+    console.log("No valid credentials available. Authentication required.");
     return false;
+    
   } catch (error) {
     console.error("Error during authentication attempt:", error);
     return false;
@@ -176,8 +183,15 @@ const ensureAuthSession = async (): Promise<boolean> => {
     return true;
   }
   
-  // If not authenticated, try to sign in
+  // Only try once to sign in to avoid infinite loops
   const authSuccess = await signInWithAdmin();
+  
+  if (!authSuccess) {
+    toast.error("Authentification requise. Veuillez vous connecter pour synchroniser les données.", { 
+      position: "top-right",
+      duration: 5000
+    });
+  }
   
   // Return authentication status
   return authSuccess;
@@ -228,10 +242,30 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       return status;
     }
     
-    const parsedData = JSON.parse(localData);
-    if (!Array.isArray(parsedData) || parsedData.length === 0) {
-      const error = `No ${tableName} data to sync`;
-      toast.warning(error, { position: "bottom-right" });
+    let parsedData;
+    try {
+      parsedData = JSON.parse(localData);
+      
+      if (!Array.isArray(parsedData) || parsedData.length === 0) {
+        const error = `No ${tableName} data to sync`;
+        toast.warning(error, { position: "bottom-right" });
+        
+        const status: SyncStatus = {
+          success: false,
+          tableName,
+          localCount: 0,
+          remoteCount: 0,
+          operation: 'push',
+          error,
+          timestamp: Date.now()
+        };
+        logSyncEvent(status);
+        return status;
+      }
+    } catch (e) {
+      console.error(`Error parsing local ${tableName} data:`, e);
+      const error = `Error parsing local ${tableName} data`;
+      toast.error(error, { position: "bottom-right" });
       
       const status: SyncStatus = {
         success: false,
@@ -250,8 +284,8 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     const isAuthenticated = await ensureAuthSession();
     
     if (!isAuthenticated) {
-      const error = "Authentication failed. Cannot sync data without a valid session.";
-      toast.error(error, { position: "bottom-right" });
+      const error = "Authentication required. Please log in to sync data.";
+      // No need to show toast here as ensureAuthSession already showed one
       
       const status: SyncStatus = {
         success: false,
@@ -415,8 +449,8 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       const isAuthenticated = await ensureAuthSession();
       
       if (!isAuthenticated) {
-        const error = "Authentication failed. Cannot pull protected data without a valid session.";
-        toast.error(error, { position: "top-right" });
+        const error = "Authentication required. Please log in to sync data.";
+        // No toast needed here as ensureAuthSession already shows one
         
         const status: SyncStatus = {
           success: false,

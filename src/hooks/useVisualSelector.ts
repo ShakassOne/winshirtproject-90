@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Visual, ProductVisualSettings } from '@/types/visual';
 import { useVisuals } from '@/data/mockVisuals';
@@ -123,8 +124,8 @@ export const useVisualSelector = (
         const { bounds } = activePrintArea;
         
         // Centrer le visuel dans la zone d'impression
-        const centerX = bounds.x + (bounds.width - visualSettings[activePosition].size.width) / 2;
-        const centerY = bounds.y + (bounds.height - visualSettings[activePosition].size.height) / 2;
+        const centerX = bounds.x + (bounds.width - (visualSettings[activePosition].size?.width || 200)) / 2;
+        const centerY = bounds.y + (bounds.height - (visualSettings[activePosition].size?.height || 200)) / 2;
         
         setVisualSettings(prev => ({
           ...prev,

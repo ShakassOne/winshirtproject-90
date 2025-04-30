@@ -9,6 +9,7 @@ import { Order, OrderItem, DeliveryStatus } from '@/types/order';
 import OrderItemVisualPreview from './OrderItemVisualPreview';
 import InvoiceModal from './InvoiceModal';
 import DeliveryTracking from './DeliveryTracking';
+import { getLotteryById } from '@/data/mockData'; // Import pour accéder aux données des loteries
 
 interface OrderDetailsProps {
   order: Order;
@@ -53,6 +54,12 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
       case 'returned': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
+  };
+
+  // Function to get lottery name by ID
+  const getLotteryName = (lotteryId: number) => {
+    const lottery = getLotteryById(lotteryId);
+    return lottery ? `${lottery.title}` : `Loterie #${lotteryId}`;
   };
 
   return (
@@ -144,7 +151,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
                         <div className="mt-2 flex flex-wrap gap-1">
                           {item.lotteriesEntries.map((lotteryId) => (
                             <Badge key={lotteryId} variant="secondary" className="bg-winshirt-purple/20 text-xs">
-                              Loterie #{lotteryId}
+                              {getLotteryName(lotteryId)}
                             </Badge>
                           ))}
                         </div>
