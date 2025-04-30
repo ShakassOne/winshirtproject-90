@@ -74,6 +74,15 @@ export interface DatabaseTables {
     created_at: string | null;
   };
   
+  visual_categories: {
+    id: number;
+    name: string;
+    description: string | null;
+    slug: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+  };
+  
   orders: {
     id: number;
     user_id: number | null;
@@ -126,3 +135,13 @@ export interface DatabaseTables {
 }
 
 // Add any helper types or interfaces below if needed
+export type ValidTableName = 
+  | 'lotteries' 
+  | 'lottery_participants' 
+  | 'lottery_winners' 
+  | 'products' 
+  | 'visuals'
+  | 'visual_categories'
+  | 'orders'
+  | 'order_items'
+  | 'clients';

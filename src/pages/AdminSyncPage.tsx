@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, Check, Database, RefreshCw, Server, Shield } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
@@ -23,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ValidTableName } from '@/integrations/supabase/client';
+import { ValidTableName } from '@/types/database.types';
 
 const AdminSyncPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);

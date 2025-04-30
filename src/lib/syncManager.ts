@@ -1,8 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
-import type { ValidTableName } from '@/integrations/supabase/client';
+import type { ValidTableName } from '@/types/database.types';
 
 /**
  * Interface for defining synchronization status
@@ -194,7 +193,6 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
     
     // Use upsert instead of delete+insert to preserve IDs and related references
-    // Fix: Remove the select('count') that was causing the error
     const { error, status } = await supabase
       .from(tableName)
       .upsert(supabaseData, { 
@@ -326,7 +324,6 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     }
     
     // Convert data from snake_case to camelCase for local storage
-    // with special handling for visuals table
     const localData = data.map(item => {
       if (tableName === 'visuals') {
         // Convert from Supabase format to local app format
