@@ -15,7 +15,7 @@ export interface InvoiceModalProps {
 const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, open, onOpenChange }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="winshirt-card max-w-3xl">
+      <DialogContent className="max-w-3xl bg-winshirt-space/30 backdrop-blur-md border border-winshirt-purple/30">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             <FileText className="h-5 w-5 text-winshirt-purple" /> 

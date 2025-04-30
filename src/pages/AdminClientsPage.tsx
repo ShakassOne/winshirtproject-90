@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import { mockLotteries } from '@/data/mockData';
 import { Client } from '@/types/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,74 +26,8 @@ import { toast } from '@/lib/toast';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import ClientForm from '@/components/admin/clients/ClientForm';
 import ClientDetail from '@/components/admin/clients/ClientDetail';
-
-// Exemple de clients pour démo
-const mockClients: Client[] = [
-  {
-    id: 1,
-    name: "Jean Dupont",
-    email: "jean.dupont@example.com",
-    phone: "0601020304",
-    address: "123 Rue de Paris",
-    city: "Paris",
-    postalCode: "75001",
-    country: "France",
-    registrationDate: "2023-01-15T10:30:00.000Z",
-    lastLogin: "2023-09-20T14:15:00.000Z",
-    orderCount: 5,
-    totalSpent: 349.97,
-    participatedLotteries: [1, 3],
-    wonLotteries: [1]
-  },
-  {
-    id: 2,
-    name: "Marie Martin",
-    email: "marie.martin@example.com",
-    phone: "0607080910",
-    address: "45 Avenue des Champs",
-    city: "Lyon",
-    postalCode: "69000",
-    country: "France",
-    registrationDate: "2023-02-20T09:45:00.000Z",
-    lastLogin: "2023-09-22T11:05:00.000Z",
-    orderCount: 3,
-    totalSpent: 178.50,
-    participatedLotteries: [2, 4, 5],
-    wonLotteries: []
-  },
-  {
-    id: 3,
-    name: "Pierre Dubois",
-    email: "pierre.dubois@example.com",
-    phone: "0612131415",
-    address: "87 Boulevard Saint-Michel",
-    city: "Marseille",
-    postalCode: "13000",
-    country: "France",
-    registrationDate: "2023-03-10T15:20:00.000Z",
-    lastLogin: "2023-09-18T16:30:00.000Z",
-    orderCount: 2,
-    totalSpent: 99.99,
-    participatedLotteries: [1, 2, 3],
-    wonLotteries: [3]
-  },
-  {
-    id: 4,
-    name: "Sophie Lefebvre",
-    email: "sophie.lefebvre@example.com",
-    phone: "0617181920",
-    address: "32 Rue de la République",
-    city: "Bordeaux",
-    postalCode: "33000",
-    country: "France",
-    registrationDate: "2023-04-05T11:10:00.000Z",
-    lastLogin: "2023-09-21T10:45:00.000Z",
-    orderCount: 7,
-    totalSpent: 499.95,
-    participatedLotteries: [4, 5],
-    wonLotteries: [5]
-  }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { pushDataToSupabase, pullDataFromSupabase } from '@/lib/syncManager';
 
 const AdminClientsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -104,9 +37,9 @@ const AdminClientsPage: React.FC = () => {
   const [showDetail, setShowDetail] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Ajout d'un state de chargement
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Charger les clients depuis localStorage avec optimisation
+  // Charger les clients depuis localStorage sans données fake
   useEffect(() => {
     const loadClients = () => {
       setIsLoading(true);
@@ -114,32 +47,77 @@ const AdminClientsPage: React.FC = () => {
         const savedClients = localStorage.getItem('clients');
         if (savedClients) {
           const parsedClients = JSON.parse(savedClients);
-          if (Array.isArray(parsedClients) && parsedClients.length > 0) {
+          if (Array.isArray(parsedClients)) {
             setClients(parsedClients);
             setFilteredClients(parsedClients);
           } else {
-            // Fallback aux mockClients
-            setClients(mockClients);
-            setFilteredClients(mockClients);
-            localStorage.setItem('clients', JSON.stringify(mockClients));
+            // Initialiser avec un tableau vide si format incorrect
+            setClients([]);
+            setFilteredClients([]);
+            localStorage.setItem('clients', JSON.stringify([]));
           }
         } else {
-          // Fallback aux mockClients
-          setClients(mockClients);
-          setFilteredClients(mockClients);
-          localStorage.setItem('clients', JSON.stringify(mockClients));
+          // Initialiser avec un tableau vide si pas de données
+          setClients([]);
+          setFilteredClients([]);
+          localStorage.setItem('clients', JSON.stringify([]));
         }
       } catch (error) {
         console.error("Erreur lors du chargement des clients:", error);
-        setClients(mockClients);
-        setFilteredClients(mockClients);
+        setClients([]);
+        setFilteredClients([]);
+        localStorage.setItem('clients', JSON.stringify([]));
       } finally {
         setIsLoading(false);
       }
     };
     
     loadClients();
+    
+    // Écouter les mises à jour du stockage
+    const handleStorageUpdate = () => loadClients();
+    window.addEventListener('storageUpdate', handleStorageUpdate);
+    
+    return () => {
+      window.removeEventListener('storageUpdate', handleStorageUpdate);
+    };
   }, []);
+  
+  // Synchroniser les clients avec Supabase
+  const syncClients = async () => {
+    setIsLoading(true);
+    try {
+      const result = await pushDataToSupabase('clients');
+      if (result.success) {
+        toast.success(`${result.localCount} clients synchronisés avec Supabase`);
+      } else {
+        toast.error(`Erreur lors de la synchronisation: ${result.error || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la synchronisation:", error);
+      toast.error("Erreur lors de la synchronisation des clients");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Récupérer les clients depuis Supabase
+  const pullClients = async () => {
+    setIsLoading(true);
+    try {
+      const result = await pullDataFromSupabase('clients');
+      if (result.success) {
+        toast.success(`${result.remoteCount} clients récupérés depuis Supabase`);
+      } else {
+        toast.error(`Erreur lors de la récupération: ${result.error || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération:", error);
+      toast.error("Erreur lors de la récupération des clients");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Filtrer les clients selon le terme de recherche avec debounce
   useEffect(() => {
@@ -203,8 +181,6 @@ Merci de vous être inscrit sur WinShirt. Votre compte a été créé avec succ�
 
 Bien cordialement,
 L'équipe WinShirt`);
-
-    // In a real application, you would call an API to send the email
   };
   
   const handleSaveClient = (clientData: Client) => {
@@ -317,9 +293,13 @@ L'équipe WinShirt`);
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button variant="outline" className="border-winshirt-purple/30 text-white">
+                  <Button variant="outline" className="border-winshirt-purple/30 text-white" onClick={pullClients}>
                     <Filter size={16} className="mr-2" />
-                    Filtres
+                    Récupérer
+                  </Button>
+                  <Button variant="outline" className="border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10" onClick={syncClients}>
+                    <ShoppingBag size={16} className="mr-2" />
+                    Synchroniser
                   </Button>
                   <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddClient}>
                     <UserPlus size={16} className="mr-2" />
@@ -415,7 +395,7 @@ L'équipe WinShirt`);
                       {filteredClients.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-gray-400">
-                            Aucun client trouvé
+                            Aucun client trouvé. Attendez qu'un client passe une commande ou créez-en un manuellement.
                           </TableCell>
                         </TableRow>
                       )}

@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Package, Search, Trash } from 'lucide-react';
 import DeliveryTracking from './DeliveryTracking';
 import InvoiceModal from './InvoiceModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OrderDetailsProps {
   order: Order;
@@ -15,6 +16,60 @@ interface OrderDetailsProps {
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
   const [showInvoice, setShowInvoice] = React.useState(false);
+  const [lotteryTitles, setLotteryTitles] = React.useState<{[key: number]: string}>({});
+  
+  // Récupérer les titres des loteries
+  React.useEffect(() => {
+    const fetchLotteryTitles = async () => {
+      let allLotteryIds: number[] = [];
+      
+      // Collecter tous les IDs de loteries des articles
+      order.items.forEach(item => {
+        if (item.lotteriesEntries && item.lotteriesEntries.length > 0) {
+          allLotteryIds = [...allLotteryIds, ...item.lotteriesEntries];
+        }
+      });
+      
+      // Supprimer les doublons
+      const uniqueLotteryIds = [...new Set(allLotteryIds)];
+      
+      if (uniqueLotteryIds.length > 0) {
+        try {
+          // Récupérer les titres depuis Supabase ou localStorage
+          const { data, error } = await supabase
+            .from('lotteries')
+            .select('id, title')
+            .in('id', uniqueLotteryIds);
+            
+          if (error) throw error;
+          
+          const titlesMap: {[key: number]: string} = {};
+          if (data) {
+            data.forEach(lottery => {
+              titlesMap[lottery.id] = lottery.title;
+            });
+          } else {
+            // Fallback à localStorage si pas de données Supabase
+            const storedLotteries = localStorage.getItem('lotteries');
+            if (storedLotteries) {
+              const lotteries = JSON.parse(storedLotteries);
+              lotteries.forEach((lottery: any) => {
+                if (uniqueLotteryIds.includes(lottery.id)) {
+                  titlesMap[lottery.id] = lottery.title;
+                }
+              });
+            }
+          }
+          
+          setLotteryTitles(titlesMap);
+        } catch (error) {
+          console.error("Erreur lors de la récupération des loteries:", error);
+        }
+      }
+    };
+    
+    fetchLotteryTitles();
+  }, [order.items]);
   
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -123,25 +178,31 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
                     )}
                   </div>
 
-                  {/* Visuel personnalisé */}
+                  {/* Visuel personnalisé amélioré */}
                   {item.visualDesign && (
-                    <div className="mt-4 border border-winshirt-purple/20 rounded-lg p-3 bg-winshirt-space-light/30">
-                      <p className="text-sm text-gray-400 mb-2">Visuel personnalisé</p>
-                      <div className="flex items-center gap-4">
-                        <img 
-                          src={item.visualDesign.visualImage}
-                          alt={item.visualDesign.visualName}
-                          className="w-16 h-16 object-contain bg-winshirt-space-dark rounded-md"
-                        />
-                        <div>
-                          <p className="text-white text-sm">{item.visualDesign.visualName}</p>
+                    <div className="mt-4 border border-winshirt-purple/20 rounded-lg p-4 bg-winshirt-space-light/30">
+                      <p className="text-sm text-winshirt-purple-light font-medium mb-2">Visuel personnalisé</p>
+                      <div className="flex items-start gap-4">
+                        <div className="relative bg-winshirt-space-dark rounded-md p-1 w-24 h-24 flex items-center justify-center">
+                          <img 
+                            src={item.visualDesign.visualImage}
+                            alt={item.visualDesign.visualName}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-medium">{item.visualDesign.visualName}</p>
                           {item.visualDesign.settings && (
-                            <p className="text-xs text-gray-400">
+                            <p className="text-sm text-gray-300 mt-1">
                               Position: {item.visualDesign.settings.position ? 
                                 `x:${item.visualDesign.settings.position.x.toFixed(0)}% y:${item.visualDesign.settings.position.y.toFixed(0)}%` : 
                                 'Défaut'
                               }
-                              {item.visualDesign.settings.opacity && ` - Opacité: ${item.visualDesign.settings.opacity * 100}%`}
+                            </p>
+                          )}
+                          {item.visualDesign.settings && item.visualDesign.settings.opacity !== undefined && (
+                            <p className="text-sm text-gray-300">
+                              Opacité: {(item.visualDesign.settings.opacity * 100).toFixed(0)}%
                             </p>
                           )}
                         </div>
@@ -149,14 +210,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order }) => {
                     </div>
                   )}
 
-                  {/* Participation à des loteries */}
+                  {/* Participation à des loteries avec titres */}
                   {item.lotteriesEntries && item.lotteriesEntries.length > 0 && (
-                    <div className="mt-2">
+                    <div className="mt-3">
                       <p className="text-sm text-gray-400">Participations loterie</p>
                       <div className="flex flex-wrap gap-2 mt-1">
                         {item.lotteriesEntries.map((lotteryId, index) => (
                           <Badge key={index} className="bg-winshirt-blue">
-                            Loterie #{lotteryId}
+                            {lotteryTitles[lotteryId] || `Loterie #${lotteryId}`}
                           </Badge>
                         ))}
                       </div>

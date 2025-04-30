@@ -6,7 +6,7 @@ import { Order } from '@/types/order';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Eye, FileText, Package } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -28,10 +28,9 @@ const AdminOrdersPage: React.FC = () => {
           const parsedOrders = JSON.parse(ordersStr);
           setOrders(parsedOrders);
         } else {
-          // Si aucune commande n'existe, créer des exemples de commandes
-          const sampleOrders = createSampleOrders();
-          localStorage.setItem('orders', JSON.stringify(sampleOrders));
-          setOrders(sampleOrders);
+          // Si aucune commande n'existe, créer un tableau vide (pas de données fake)
+          localStorage.setItem('orders', JSON.stringify([]));
+          setOrders([]);
         }
       } catch (error) {
         console.error("Erreur lors du chargement des commandes:", error);
@@ -112,175 +111,6 @@ const AdminOrdersPage: React.FC = () => {
       case 'refunded': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
-  };
-
-  // Fonction pour créer des commandes exemple
-  const createSampleOrders = (): Order[] => {
-    return [
-      {
-        id: 1001,
-        clientId: 1,
-        clientName: "Jean Dupont",
-        clientEmail: "jean.dupont@example.com",
-        orderDate: new Date().toISOString(),
-        status: "processing",
-        items: [
-          {
-            id: 1,
-            productId: 101,
-            productName: "T-shirt WinSpace",
-            productImage: "https://images.unsplash.com/photo-1576566588028-4147f3842717?w=500",
-            quantity: 2,
-            price: 29.99,
-            size: "M",
-            color: "Noir",
-            visualDesign: {
-              visualId: 1,
-              visualName: "Logo Spatial",
-              visualImage: "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=300",
-              settings: {
-                position: {
-                  x: 50,
-                  y: 30
-                },
-                opacity: 0.8
-              }
-            }
-          },
-          {
-            id: 2,
-            productId: 102,
-            productName: "Sweat WinGame",
-            productImage: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500",
-            quantity: 1,
-            price: 49.99,
-            size: "L",
-            color: "Bleu",
-            lotteriesEntries: [1, 3]
-          }
-        ],
-        shipping: {
-          address: "123 Rue de Paris",
-          city: "Paris",
-          postalCode: "75001",
-          country: "France",
-          method: "Standard",
-          cost: 5.99
-        },
-        delivery: {
-          status: "in_transit",
-          estimatedDeliveryDate: new Date(Date.now() + 3*24*60*60*1000).toISOString(),
-          carrier: "Chronopost",
-          trackingNumber: "CP123456789FR",
-          trackingUrl: "https://www.chronopost.fr/tracking",
-          lastUpdate: new Date().toISOString(),
-          history: [
-            {
-              date: new Date().toISOString(),
-              status: "in_transit",
-              location: "Centre de tri Paris",
-              description: "Colis en cours d'acheminement"
-            },
-            {
-              date: new Date(Date.now() - 24*60*60*1000).toISOString(),
-              status: "ready_to_ship",
-              location: "Entrepôt WinShirt",
-              description: "Colis préparé et prêt à être expédié"
-            },
-            {
-              date: new Date(Date.now() - 2*24*60*60*1000).toISOString(),
-              status: "preparing",
-              location: "Entrepôt WinShirt",
-              description: "Commande en cours de préparation"
-            }
-          ]
-        },
-        payment: {
-          method: "Carte bancaire",
-          transactionId: "TR987654321",
-          status: "completed"
-        },
-        subtotal: 109.97,
-        total: 115.96,
-        notes: "Livrer avant 18h si possible"
-      },
-      {
-        id: 1002,
-        clientId: 2,
-        clientName: "Marie Martin",
-        clientEmail: "marie.martin@example.com",
-        orderDate: new Date(Date.now() - 5*24*60*60*1000).toISOString(),
-        status: "delivered",
-        items: [
-          {
-            id: 3,
-            productId: 103,
-            productName: "T-shirt Personnalisé",
-            productImage: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
-            quantity: 3,
-            price: 24.99,
-            size: "S",
-            color: "Blanc",
-            visualDesign: {
-              visualId: 2,
-              visualName: "Logo Personnalisé",
-              visualImage: "https://images.unsplash.com/photo-1614728263952-84ea256f9679?w=300",
-              settings: {
-                position: {
-                  x: 50,
-                  y: 50
-                },
-                opacity: 1.0
-              }
-            }
-          }
-        ],
-        shipping: {
-          address: "456 Avenue des Champs-Élysées",
-          city: "Paris",
-          postalCode: "75008",
-          country: "France",
-          method: "Express",
-          cost: 9.99
-        },
-        delivery: {
-          status: "delivered",
-          actualDeliveryDate: new Date(Date.now() - 2*24*60*60*1000).toISOString(),
-          carrier: "DHL",
-          trackingNumber: "DHL987654321DE",
-          trackingUrl: "https://www.dhl.com/tracking",
-          signatureRequired: true,
-          lastUpdate: new Date(Date.now() - 2*24*60*60*1000).toISOString(),
-          history: [
-            {
-              date: new Date(Date.now() - 2*24*60*60*1000).toISOString(),
-              status: "delivered",
-              location: "Adresse de livraison",
-              description: "Colis livré et signé par le destinataire"
-            },
-            {
-              date: new Date(Date.now() - 3*24*60*60*1000).toISOString(),
-              status: "out_for_delivery",
-              location: "Paris",
-              description: "Colis en cours de livraison"
-            },
-            {
-              date: new Date(Date.now() - 4*24*60*60*1000).toISOString(),
-              status: "in_transit",
-              location: "Centre de tri Paris",
-              description: "Colis arrivé au centre de tri"
-            }
-          ]
-        },
-        payment: {
-          method: "PayPal",
-          transactionId: "PP123456789",
-          status: "completed"
-        },
-        subtotal: 74.97,
-        total: 84.96
-      }
-    ];
   };
 
   return (
@@ -381,19 +211,21 @@ const AdminOrdersPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Modal de détails de commande */}
-      <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <SheetContent className="sm:max-w-md md:max-w-lg lg:max-w-xl overflow-y-auto bg-winshirt-space border-l border-winshirt-purple/30">
-          <SheetHeader>
-            <SheetTitle className="text-winshirt-purple">Détails de la commande</SheetTitle>
-            <SheetDescription>
+      {/* Popup glassmorphism pour les détails de commande */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-4xl bg-winshirt-space/30 backdrop-blur-md border border-winshirt-purple/30 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-winshirt-purple">Détails de la commande</DialogTitle>
+            <DialogDescription>
               Commande #{selectedOrder?.id} - {selectedOrder?.clientName}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
           <Separator className="my-4" />
-          {selectedOrder && <OrderDetails order={selectedOrder} />}
-        </SheetContent>
-      </Sheet>
+          <div className="max-h-[70vh] overflow-y-auto pr-2">
+            {selectedOrder && <OrderDetails order={selectedOrder} />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

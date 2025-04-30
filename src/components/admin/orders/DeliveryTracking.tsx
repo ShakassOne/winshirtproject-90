@@ -1,16 +1,11 @@
 
 import React from 'react';
-import { DeliveryStatus } from '@/types/order';
+import { DeliveryStatus, DeliveryHistoryEntry } from '@/types/order';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 export interface DeliveryTrackingProps {
-  history: {
-    date: string;
-    status: DeliveryStatus;
-    location?: string;
-    description: string;
-  }[];
+  history: DeliveryHistoryEntry[];
 }
 
 const DeliveryTracking: React.FC<DeliveryTrackingProps> = ({ history }) => {
