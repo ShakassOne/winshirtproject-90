@@ -1,3 +1,4 @@
+
 import { ExtendedProduct } from '@/types/product';
 import { Visual } from '@/types/visual';
 import { Client } from '@/types/client';
@@ -832,3 +833,17 @@ export const getMockClients = (): Client[] => {
       totalSpent: 120.00,
     },
     {
+      id: 4,
+      name: "Marie Dubois",
+      email: "marie.dubois@example.com",
+      phone: "0622334455",
+      address: "8 boulevard Saint-Michel",
+      city: "Paris",
+      postalCode: "75005",
+      country: "France",
+      registrationDate: "2023-04-05",
+      orderCount: 1,
+      totalSpent: 75.00,
+    }
+  ];
+};
