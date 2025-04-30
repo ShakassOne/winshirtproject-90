@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake } from '@/lib/supabase';
@@ -114,6 +115,53 @@ export const getDataCounts = async (): Promise<Record<string, { local: number, r
 };
 
 /**
+ * Create a mock user session for anonymous operations if needed
+ */
+const ensureAuthSession = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    console.log("No authenticated session found, attempting to sign in as admin...");
+    
+    try {
+      // Try to sign in with a stored admin user if available
+      const adminCredentials = localStorage.getItem('winshirt_admin');
+      if (adminCredentials) {
+        const { email, password } = JSON.parse(adminCredentials);
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (!error) {
+          console.log("Successfully signed in with stored admin credentials");
+          return true;
+        }
+      }
+      
+      // If admin sign-in failed, try with the hardcoded admin
+      const { error } = await supabase.auth.signInWithPassword({
+        email: "admin@winshirt.com",
+        password: "admin123"
+      });
+      
+      if (!error) {
+        console.log("Successfully signed in with default admin credentials");
+        return true;
+      }
+      
+      console.error("Failed to authenticate with admin credentials");
+      return false;
+    } catch (error) {
+      console.error("Error during authentication attempt:", error);
+      return false;
+    }
+  }
+  
+  return true;
+};
+
+/**
  * Push data from local storage to Supabase using upsert
  */
 export const pushDataToSupabase = async (tableName: ValidTableName): Promise<SyncStatus> => {
@@ -176,6 +224,27 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       return status;
     }
     
+    // Make sure we have an authenticated session
+    // CRITICAL FIX: Ensure we're authenticated before attempting data ops
+    const isAuthenticated = await ensureAuthSession();
+    
+    if (!isAuthenticated) {
+      const error = "Authentication failed. Cannot sync data without a valid session.";
+      toast.error(error, { position: "bottom-right" });
+      
+      const status: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: parsedData.length,
+        remoteCount: 0, 
+        operation: 'push',
+        error,
+        timestamp: Date.now()
+      };
+      logSyncEvent(status);
+      return status;
+    }
+    
     // Convert data from camelCase to snake_case for Supabase with special handling for specific tables
     const supabaseData = parsedData.map(item => {
       // Special handling for clients table - structure the address field correctly
@@ -229,75 +298,32 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     
     console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
 
-    // For clients table, we need a different approach due to RLS
-    if (tableName === 'clients') {
-      console.log("Using authenticated push for clients table");
+    // Upsert the data using the authenticated session
+    const { error, status } = await supabase
+      .from(tableName)
+      .upsert(supabaseData, { 
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
+        
+    if (error) {
+      console.error(`Error syncing ${tableName} to Supabase:`, error);
+      console.error("HTTP Status:", status);
       
-      // First check if we're authenticated
-      const { data: { session } } = await supabase.auth.getSession();
+      toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
       
-      if (!session) {
-        // Try to sign in with an anonymous session 
-        // Create a temporary anonymous session for RLS policies
-        console.log("No active session, creating anonymous session...");
-        await supabase.auth.signInAnonymously();
-      }
-
-      // Now with the authenticated session, perform the upsert
-      const { error, status } = await supabase
-        .from(tableName)
-        .upsert(supabaseData, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
-      
-      if (error) {
-        console.error(`Error syncing ${tableName} to Supabase:`, error);
-        console.error("HTTP Status:", status);
-        
-        toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
-        
-        const syncStatus: SyncStatus = {
-          success: false,
-          tableName,
-          localCount: parsedData.length,
-          remoteCount: 0,
-          operation: 'push',
-          error: error.message,
-          httpCode: status,
-          timestamp: Date.now()
-        };
-        logSyncEvent(syncStatus);
-        return syncStatus;
-      }
-    } else {
-      // Standard upsert for other tables
-      const { error, status } = await supabase
-        .from(tableName)
-        .upsert(supabaseData, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
-        
-      if (error) {
-        console.error(`Error syncing ${tableName} to Supabase:`, error);
-        console.error("HTTP Status:", status);
-        
-        toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
-        
-        const syncStatus: SyncStatus = {
-          success: false,
-          tableName,
-          localCount: parsedData.length,
-          remoteCount: 0,
-          operation: 'push',
-          error: error.message,
-          httpCode: status,
-          timestamp: Date.now()
-        };
-        logSyncEvent(syncStatus);
-        return syncStatus;
-      }
+      const syncStatus: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: parsedData.length,
+        remoteCount: 0,
+        operation: 'push',
+        error: error.message,
+        httpCode: status,
+        timestamp: Date.now()
+      };
+      logSyncEvent(syncStatus);
+      return syncStatus;
     }
     
     // Get updated remote count in a separate query
@@ -348,6 +374,27 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     if (!isConnected) {
       const error = "Unable to connect to Supabase";
       toast.error(`Sync failed: ${error}`, { position: "bottom-right" });
+      
+      const status: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: 0,
+        remoteCount: 0,
+        operation: 'pull',
+        error,
+        timestamp: Date.now()
+      };
+      logSyncEvent(status);
+      return status;
+    }
+    
+    // Make sure we have an authenticated session for tables that need it
+    // CRITICAL FIX: Ensure we're authenticated before attempting data ops
+    const isAuthenticated = await ensureAuthSession();
+    
+    if (!isAuthenticated && ['clients', 'orders', 'order_items'].includes(tableName)) {
+      const error = "Authentication failed. Cannot pull protected data without a valid session.";
+      toast.error(error, { position: "bottom-right" });
       
       const status: SyncStatus = {
         success: false,

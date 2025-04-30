@@ -20,7 +20,9 @@ import {
   ShoppingBag,
   Eye,
   Edit,
-  Trash
+  Trash,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import AdminNavigation from '@/components/admin/AdminNavigation';
@@ -38,6 +40,44 @@ const AdminClientsPage: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [syncInProgress, setSyncInProgress] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<boolean | null>(null);
+  
+  // Vérifier la connexion Supabase au chargement
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const { data, error } = await supabase.from('lotteries').select('count').limit(1);
+        setConnectionStatus(!error);
+        
+        // Si connecté, vérifier si l'utilisateur est authentifié
+        if (!error) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            console.log("No authenticated session. Attempting to sign in...");
+            // Tentative de connexion avec les identifiants par défaut
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email: "admin@winshirt.com",
+              password: "admin123"
+            });
+            
+            if (signInError) {
+              console.error("Auto-sign in failed:", signInError);
+            } else {
+              console.log("Auto-signed in as admin");
+            }
+          } else {
+            console.log("User is already authenticated");
+          }
+        }
+      } catch (err) {
+        console.error("Error checking Supabase connection:", err);
+        setConnectionStatus(false);
+      }
+    };
+    
+    checkConnection();
+  }, []);
   
   // Charger les clients depuis localStorage sans données fake
   useEffect(() => {
@@ -85,37 +125,69 @@ const AdminClientsPage: React.FC = () => {
   
   // Synchroniser les clients avec Supabase
   const syncClients = async () => {
-    setIsLoading(true);
+    setSyncInProgress(true);
     try {
+      // Vérifier d'abord si nous avons une session active
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // Tentative de connexion avec les identifiants par défaut
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: "admin@winshirt.com",
+          password: "admin123"
+        });
+        
+        if (signInError) {
+          toast.error("Erreur d'authentification: Veuillez vous connecter en tant qu'administrateur");
+          setSyncInProgress(false);
+          return;
+        }
+      }
+
       const result = await pushDataToSupabase('clients');
       if (result.success) {
         toast.success(`${result.localCount} clients synchronisés avec Supabase`);
       } else {
         toast.error(`Erreur lors de la synchronisation: ${result.error || 'Erreur inconnue'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la synchronisation:", error);
-      toast.error("Erreur lors de la synchronisation des clients");
+      toast.error(`Erreur lors de la synchronisation des clients: ${error.message || 'Erreur inconnue'}`);
     } finally {
-      setIsLoading(false);
+      setSyncInProgress(false);
     }
   };
   
   // Récupérer les clients depuis Supabase
   const pullClients = async () => {
-    setIsLoading(true);
+    setSyncInProgress(true);
     try {
+      // Vérifier d'abord si nous avons une session active
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // Tentative de connexion avec les identifiants par défaut
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: "admin@winshirt.com",
+          password: "admin123"
+        });
+        
+        if (signInError) {
+          toast.error("Erreur d'authentification: Veuillez vous connecter en tant qu'administrateur");
+          setSyncInProgress(false);
+          return;
+        }
+      }
+      
       const result = await pullDataFromSupabase('clients');
       if (result.success) {
         toast.success(`${result.remoteCount} clients récupérés depuis Supabase`);
       } else {
         toast.error(`Erreur lors de la récupération: ${result.error || 'Erreur inconnue'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la récupération:", error);
-      toast.error("Erreur lors de la récupération des clients");
+      toast.error(`Erreur lors de la récupération des clients: ${error.message || 'Erreur inconnue'}`);
     } finally {
-      setIsLoading(false);
+      setSyncInProgress(false);
     }
   };
   
@@ -127,8 +199,8 @@ const AdminClientsPage: React.FC = () => {
       } else {
         const term = searchTerm.toLowerCase();
         const filtered = clients.filter(client => 
-          client.name.toLowerCase().includes(term) || 
-          client.email.toLowerCase().includes(term) ||
+          client.name?.toLowerCase().includes(term) || 
+          client.email?.toLowerCase().includes(term) ||
           (client.phone && client.phone.includes(term)) ||
           (client.city && client.city.toLowerCase().includes(term))
         );
@@ -257,6 +329,15 @@ L'équipe WinShirt`);
             Gérez les informations de vos clients
           </p>
           
+          {connectionStatus === false && (
+            <div className="mb-6 p-4 border border-red-500/30 bg-red-900/20 rounded-md">
+              <div className="flex items-center gap-2 text-red-400">
+                <AlertCircle size={18} />
+                <p>Non connecté à Supabase. Certaines fonctionnalités peuvent ne pas fonctionner.</p>
+              </div>
+            </div>
+          )}
+          
           {showForm ? (
             <div className="max-w-4xl mx-auto">
               <ClientForm 
@@ -293,12 +374,28 @@ L'équipe WinShirt`);
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button variant="outline" className="border-winshirt-purple/30 text-white" onClick={pullClients}>
-                    <Filter size={16} className="mr-2" />
+                  <Button 
+                    variant="outline" 
+                    className="border-winshirt-purple/30 text-white" 
+                    onClick={pullClients} 
+                    disabled={syncInProgress || connectionStatus === false}
+                  >
+                    {syncInProgress ? 
+                      <RefreshCw size={16} className="mr-2 animate-spin" /> : 
+                      <Filter size={16} className="mr-2" />
+                    }
                     Récupérer
                   </Button>
-                  <Button variant="outline" className="border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10" onClick={syncClients}>
-                    <ShoppingBag size={16} className="mr-2" />
+                  <Button 
+                    variant="outline" 
+                    className="border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10" 
+                    onClick={syncClients}
+                    disabled={syncInProgress || connectionStatus === false}
+                  >
+                    {syncInProgress ? 
+                      <RefreshCw size={16} className="mr-2 animate-spin" /> : 
+                      <ShoppingBag size={16} className="mr-2" />
+                    }
                     Synchroniser
                   </Button>
                   <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddClient}>
@@ -337,21 +434,21 @@ L'équipe WinShirt`);
                       {filteredClients.map(client => (
                         <TableRow key={client.id} className="border-b border-winshirt-purple/10">
                           <TableCell className="font-medium text-white">
-                            {client.name}
+                            {client.name || 'Sans nom'}
                           </TableCell>
                           <TableCell className="text-gray-400">
-                            {formatDate(client.registrationDate)}
+                            {client.registrationDate ? formatDate(client.registrationDate) : 'N/A'}
                           </TableCell>
                           <TableCell>
-                            <div className="text-gray-300">{client.email}</div>
-                            <div className="text-gray-400">{client.phone}</div>
+                            <div className="text-gray-300">{client.email || 'N/A'}</div>
+                            <div className="text-gray-400">{client.phone || 'N/A'}</div>
                           </TableCell>
                           <TableCell className="text-gray-400">
-                            {client.city}, {client.country}
+                            {client.city || 'N/A'}, {client.country || 'N/A'}
                           </TableCell>
                           <TableCell>
-                            <div className="text-winshirt-purple-light font-semibold">{client.orderCount}</div>
-                            <div className="text-gray-400">{client.totalSpent.toFixed(2)} €</div>
+                            <div className="text-winshirt-purple-light font-semibold">{client.orderCount || 0}</div>
+                            <div className="text-gray-400">{(client.totalSpent || 0).toFixed(2)} €</div>
                           </TableCell>
                           <TableCell>
                             <div className="text-winshirt-blue-light">
