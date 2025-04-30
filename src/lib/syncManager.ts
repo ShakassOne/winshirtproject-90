@@ -450,7 +450,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
           delete processedItem.country;
         }
         
-        return camelToSnake(processedItem);
+        return camelToSnake(processedItem as unknown as Record<string, any>);
       }
       // Special handling for visuals table
       else if (tableName === 'visuals') {
@@ -462,7 +462,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
           processedItem.image_url = processedItem.imageUrl;
           delete processedItem.imageUrl;
         }
-        return camelToSnake(processedItem);
+        return camelToSnake(processedItem as unknown as Record<string, any>);
       }
       
       // Default case - just convert camelCase to snake_case
@@ -633,7 +633,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         const camelItem = snakeToCamel(item);
         
         // Type assertion for better type safety
-        const clientItem = camelItem as ClientItem;
+        const clientItem = camelItem as unknown as ClientItem;
         
         // Extract address fields if they exist
         if (clientItem.address && typeof clientItem.address === 'object') {
@@ -666,7 +666,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
         const camelItem = snakeToCamel(item);
         
         // Type assertion for visual items
-        const visualItem = camelItem as VisualItem;
+        const visualItem = camelItem as unknown as VisualItem;
         
         // Handle image field conversion
         if (visualItem.imageUrl && !visualItem.image) {
