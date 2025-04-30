@@ -398,7 +398,9 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
         const processedItem = { ...item };
         
         // Ensure we have a valid address object
-        if (processedItem.address && typeof processedItem.address === 'string') {
+        if (processedItem.address && typeof processedItem.address === 'object') {
+            // Address is already an object, no need to change the structure
+        } else if (processedItem.address && typeof processedItem.address === 'string') {
           // If address is a string, convert it to an object
           const addressStr = processedItem.address;
           processedItem.address = {
@@ -432,7 +434,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       // Special handling for visuals table
       else if (tableName === 'visuals') {
         const processedItem = { ...item };
-        if (processedItem.image && !processedItem.imageUrl) {
+        if (processedItem.image && typeof processedItem.image === 'string' && !processedItem.imageUrl) {
           processedItem.image_url = processedItem.image;
           delete processedItem.image;
         }

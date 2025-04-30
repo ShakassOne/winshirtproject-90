@@ -21,6 +21,7 @@ export interface ExtendedProduct {
   deliveryInfo?: DeliveryInfo; // Information de livraison spécifique au produit
   deliveryPrice?: number; // Prix de livraison spécifique
   weight?: number; // Poids en grammes
+  featured?: boolean; // Added the featured property
   
   // Nouveaux champs pour la gestion des visuels
   allowCustomization?: boolean; // Si le produit permet la personnalisation visuelle
@@ -55,7 +56,7 @@ export interface PrintArea {
   id: number;
   name: string; // Nom de la zone (ex: "Recto", "Verso")
   position: 'front' | 'back'; // Recto ou verso
-  format?: 'custom'; // Format personnalisé (rendu optional)
+  format: 'custom'; // Format personnalisé (rendu optional)
   bounds: {
     x: number;
     y: number;

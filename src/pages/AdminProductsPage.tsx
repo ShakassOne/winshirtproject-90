@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedProduct } from '@/types/product';
@@ -146,6 +145,24 @@ const AdminProductsPage: React.FC = () => {
     selectAllLotteries(availableLotteryIds);
   };
   
+  // Fixed to match the expected parameter type
+  const handleAddPrintArea = (position: 'front' | 'back') => {
+    const newArea: Omit<PrintArea, 'id'> = {
+      name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${(form.getValues().printAreas || []).filter(a => a.position === position).length + 1}`,
+      position,
+      format: 'custom',
+      bounds: {
+        x: 50,
+        y: 50,
+        width: 200,
+        height: 200
+      },
+      allowCustomPosition: true
+    };
+    
+    addPrintArea(newArea);
+  };
+  
   return (
     <>
       <StarBackground />
@@ -219,7 +236,7 @@ const AdminProductsPage: React.FC = () => {
                   toggleLottery={toggleLottery}
                   selectAllLotteries={handleSelectAllLotteries}
                   deselectAllLotteries={deselectAllLotteries}
-                  addPrintArea={addPrintArea}
+                  addPrintArea={handleAddPrintArea}
                   updatePrintArea={updatePrintArea}
                   removePrintArea={removePrintArea}
                 />
