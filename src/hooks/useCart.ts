@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Product } from '@/types/product';
+import { ExtendedProduct } from '@/types/product';
 
 interface CartItem {
   id: number;
@@ -78,7 +78,7 @@ const useCart = () => {
   };
 
   // Update the addToCart function to call incrementLotteryParticipants
-  const addToCart = (product: Product, quantity: number = 1, options?: CartItemOptions) => {
+  const addToCart = (product: ExtendedProduct, quantity: number = 1, options?: CartItemOptions) => {
     try {
       const existingCart = getCart();
       

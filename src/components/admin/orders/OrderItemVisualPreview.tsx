@@ -9,11 +9,13 @@ interface OrderItemVisualPreviewProps {
     back?: { visualId?: number; settings?: any };
   };
   productImage?: string;
+  productName?: string; // Add this new prop
 }
 
 const OrderItemVisualPreview: React.FC<OrderItemVisualPreviewProps> = ({
   visualDesign,
-  productImage
+  productImage,
+  productName // Add to prop destructuring
 }) => {
   const { getVisualById } = useVisuals();
   
@@ -47,7 +49,7 @@ const OrderItemVisualPreview: React.FC<OrderItemVisualPreviewProps> = ({
         <div className="w-16 h-16 bg-gray-200 rounded overflow-hidden">
           <img 
             src={displayImage} 
-            alt="Product" 
+            alt={productName || "Product"} // Use productName if available
             className="w-full h-full object-cover"
             onError={(e) => {
               e.currentTarget.onerror = null;
@@ -67,7 +69,7 @@ const OrderItemVisualPreview: React.FC<OrderItemVisualPreviewProps> = ({
           <div className="w-16 h-16 bg-gray-200 rounded overflow-hidden relative">
             <img 
               src={displayImage} 
-              alt="Product front" 
+              alt={`${productName || "Product"} front`} // Use productName if available
               className="w-full h-full object-cover"
               onError={(e) => {
                 e.currentTarget.onerror = null;
@@ -95,7 +97,7 @@ const OrderItemVisualPreview: React.FC<OrderItemVisualPreviewProps> = ({
           <div className="w-16 h-16 bg-gray-200 rounded overflow-hidden relative">
             <img 
               src={displayImage} 
-              alt="Product back" 
+              alt={`${productName || "Product"} back`} // Use productName if available
               className="w-full h-full object-cover"
               onError={(e) => {
                 e.currentTarget.onerror = null;
