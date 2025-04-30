@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, Check, Database, RefreshCw, Server, Shield } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
@@ -25,6 +24,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ValidTableName } from '@/types/database.types';
 
+import AdminSetup from '@/components/AdminSetup';
+import { useAuth } from '@/contexts/AuthContext';
+
 const AdminSyncPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -37,6 +39,10 @@ const AdminSyncPage: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   
   const [syncHistory, setSyncHistory] = useState<SyncStatus[]>([]);
+  const [showAdminSetup, setShowAdminSetup] = useState(false);
+  
+  // Use auth context
+  const { isAuthenticated, isAdmin } = useAuth();
 
   // All available tables for synchronization
   const allTables: ValidTableName[] = [
@@ -217,6 +223,47 @@ const AdminSyncPage: React.FC = () => {
     );
   };
 
+  // Additional effect to check if admin setup is needed
+  useEffect(() => {
+    const checkAdminSetupNeeded = async () => {
+      try {
+        // Check if we have admin credentials stored
+        const adminCredentialsStr = localStorage.getItem('winshirt_admin');
+        if (!adminCredentialsStr) {
+          setShowAdminSetup(true);
+          return;
+        }
+        
+        // Check if credentials actually work
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          // Try to sign in with stored credentials
+          try {
+            const adminCredentials = JSON.parse(adminCredentialsStr);
+            const { error } = await supabase.auth.signInWithPassword({
+              email: adminCredentials.email,
+              password: adminCredentials.password
+            });
+            
+            if (error) {
+              console.error("Stored admin credentials failed:", error.message);
+              setShowAdminSetup(true);
+            }
+          } catch (e) {
+            console.error("Error parsing stored admin credentials:", e);
+            setShowAdminSetup(true);
+          }
+        }
+      } catch (e) {
+        console.error("Error checking admin setup:", e);
+      }
+    };
+    
+    if (isAdmin) {
+      checkAdminSetupNeeded();
+    }
+  }, [isAdmin]);
+
   return (
     <>
       <StarBackground />
@@ -227,6 +274,12 @@ const AdminSyncPage: React.FC = () => {
           <h1 className="text-3xl md:text-4xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
             Gestion de la synchronisation des données
           </h1>
+          
+          {showAdminSetup && (
+            <div className="mb-8">
+              <AdminSetup />
+            </div>
+          )}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Connection Status Card */}

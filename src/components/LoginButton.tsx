@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,8 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = "", variant = "de
   };
 
   const handleLogout = () => {
+    // Clear admin credentials on logout to force re-authentication
+    localStorage.removeItem('winshirt_admin');
     logout();
   };
 
@@ -34,6 +36,21 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = "", variant = "de
     // Sauvegarder la préférence dans localStorage pour la persistance
     localStorage.setItem('loginEnabled', checked.toString());
   };
+
+  // Listen for authentication needs from other components
+  useEffect(() => {
+    const handleNeedAuthentication = (event: CustomEvent) => {
+      if (!isAuthenticated) {
+        setIsDialogOpen(true);
+      }
+    };
+
+    window.addEventListener('needAuthentication', handleNeedAuthentication as EventListener);
+    
+    return () => {
+      window.removeEventListener('needAuthentication', handleNeedAuthentication as EventListener);
+    };
+  }, [isAuthenticated]);
 
   // Récupérer la préférence au chargement du composant
   React.useEffect(() => {

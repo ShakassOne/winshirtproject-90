@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Facebook } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
+import { supabase } from '@/lib/supabase';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,11 +42,44 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
       return;
     }
     
+    setIsLoading(true);
+    
     try {
-      await login(loginEmail, loginPassword);
-      onClose();
+      // Try to sign in with Supabase first
+      const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword
+      });
+      
+      if (supabaseData?.user) {
+        // If this is admin, store credentials for sync operations
+        if (loginEmail === 'admin@winshirt.com' && supabaseData.user.user_metadata?.isAdmin) {
+          localStorage.setItem('winshirt_admin', JSON.stringify({
+            email: loginEmail,
+            password: loginPassword
+          }));
+          
+          console.log('Admin credentials stored for synchronization');
+        }
+        
+        // Call the auth context login to update app state
+        await login(loginEmail, loginPassword);
+        toast.success("Connexion réussie via Supabase!");
+        onClose();
+        return;
+      }
+      
+      if (supabaseError) {
+        console.log('Supabase auth failed, falling back to local auth:', supabaseError.message);
+        // Fall back to local auth mechanism if Supabase fails
+        await login(loginEmail, loginPassword);
+        onClose();
+      }
     } catch (error) {
       console.error("Login error:", error);
+      toast.error("Erreur lors de la connexion");
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -61,11 +96,55 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
       return;
     }
     
+    setIsLoading(true);
+    
     try {
-      await register(registerName, registerEmail, registerPassword);
-      onClose();
+      // Try to register with Supabase first
+      const { data: supabaseData, error: supabaseError } = await supabase.auth.signUp({
+        email: registerEmail,
+        password: registerPassword,
+        options: {
+          data: {
+            full_name: registerName,
+            isAdmin: false // New users are not admins by default
+          }
+        }
+      });
+      
+      if (supabaseData?.user) {
+        toast.success("Inscription réussie via Supabase!");
+        
+        // If email confirmation is required
+        if (!supabaseData.session) {
+          toast.info("Veuillez vérifier votre email pour confirmer votre compte");
+        } else {
+          // If email confirmation is not required, user is logged in
+          await register(registerName, registerEmail, registerPassword);
+        }
+        
+        onClose();
+        return;
+      }
+      
+      if (supabaseError) {
+        console.log('Supabase registration failed, falling back to local auth:', supabaseError.message);
+        
+        // Check for existing email error
+        if (supabaseError.message.includes('email already')) {
+          toast.error("Cette adresse email est déjà utilisée");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Fall back to local auth mechanism if Supabase fails
+        await register(registerName, registerEmail, registerPassword);
+        onClose();
+      }
     } catch (error) {
       console.error("Register error:", error);
+      toast.error("Erreur lors de l'inscription");
+    } finally {
+      setIsLoading(false);
     }
   };
 

@@ -249,7 +249,7 @@ const signInWithAdmin = async (): Promise<boolean> => {
               position: "top-right",
               duration: 5000
             });
-            localStorage.removeItem('winshirt_admin');
+            // Don't remove credentials here, they might be valid but the server is down
           }
         }
       } catch (e) {
@@ -301,6 +301,12 @@ const ensureAuthSession = async (): Promise<boolean> => {
       position: "top-right",
       duration: 5000
     });
+    
+    // Redirect to login or show login dialog
+    const event = new CustomEvent('needAuthentication', {
+      detail: { reason: 'sync' }
+    });
+    window.dispatchEvent(event);
   }
   
   // Return authentication status
