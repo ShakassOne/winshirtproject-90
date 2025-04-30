@@ -3,7 +3,7 @@ import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { checkSupabaseConnection } from '@/lib/supabase';
-import { fetchDataFromSupabase, syncLocalDataToSupabase } from '@/lib/syncManager';
+import { pullDataFromSupabase as fetchDataFromSupabase, pushDataToSupabase as syncLocalDataToSupabase } from '@/lib/syncManager';
 import { mockProducts } from '@/data/mockData';
 import { ValidTableName } from '@/integrations/supabase/client';
 import { snakeToCamel, camelToSnake } from '@/lib/utils';
