@@ -8,10 +8,7 @@ import { supabase } from '@/lib/supabase';
 export const createAdminUserInSupabase = async () => {
   try {
     // Check if admin user already exists to avoid duplicates
-    const { data: existingUsers, error: searchError } = await supabase.auth.admin.listUsers({
-      // The filter doesn't seem to be supported in this version of Supabase
-      // Let's list all users and filter manually
-    });
+    const { data: existingUsers, error: searchError } = await supabase.auth.admin.listUsers();
     
     if (searchError) {
       console.error("Error searching for admin user:", searchError);

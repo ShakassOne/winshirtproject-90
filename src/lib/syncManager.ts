@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
-import { snakeToCamel, camelToSnake } from '@/lib/supabase';
+import { snakeToCamel, camelToSnake as importedCamelToSnake } from '@/lib/supabase';
 
 /**
  * Define valid table names for type safety
@@ -478,7 +478,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       
       // Default case - just convert camelCase to snake_case
       // Add a type check to ensure we only call camelToSnake on objects
-      return typeof item === 'object' ? camelToSnake(item) : item;
+      return typeof item === 'object' ? importedCamelToSnake(item) : item;
     });
     
     console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
