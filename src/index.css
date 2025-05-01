@@ -362,6 +362,8 @@ select::-ms-input-placeholder {
     color: white;
 }
 .text-sm {
-
-    color: white;
+  color: white;
+}
+.text-xs truncate {
+  color: white;
 }
