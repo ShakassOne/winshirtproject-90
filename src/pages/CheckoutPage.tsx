@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -11,13 +12,15 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
-import { CheckoutFormData, StripeCheckoutResult, StripeCheckoutError } from '@/types/checkout';
+import { CheckoutFormData, StripeCheckoutResult, StripeCheckoutError, OrderSummary } from '@/types/checkout';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { ShoppingCart, CreditCard, Truck, User, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Order } from '@/types/order';
+import { EmailService } from '@/lib/emailService';
 
 // Schéma de validation du formulaire de checkout
 const checkoutSchema = z.object({
@@ -149,6 +152,93 @@ const CheckoutPage: React.FC = () => {
     }
   }, [selectedShippingMethod, subtotal]);
 
+  // Fonction pour créer et sauvegarder une nouvelle commande
+  const saveOrder = async (formData: CheckoutFormData, currentUser: any | null): Promise<Order> => {
+    try {
+      // Récupérer les commandes existantes
+      const ordersStr = localStorage.getItem('orders');
+      let orders: Order[] = ordersStr ? JSON.parse(ordersStr) : [];
+      
+      // Générer un ID de commande unique
+      const newOrderId = orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1;
+      
+      // Configurer l'information de livraison
+      const selectedOption = shippingOptions.find(option => option.id === formData.shippingMethod);
+      
+      // Créer la nouvelle commande
+      const newOrder: Order = {
+        id: newOrderId,
+        clientName: formData.customerInfo.fullName,
+        clientEmail: formData.customerInfo.email,
+        userId: currentUser?.id,
+        total: total,
+        subtotal: subtotal,
+        status: 'pending',
+        orderDate: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        items: cartItems.map(item => ({
+          id: Math.floor(Math.random() * 10000),
+          productId: item.productId,
+          productName: item.name,
+          productImage: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          customization: item.customization,
+          visualDesign: item.visualDesign,
+          lotteriesEntries: item.selectedLotteries,
+          created_at: new Date().toISOString()
+        })),
+        shipping: {
+          address: formData.shippingAddress.address,
+          city: formData.shippingAddress.city,
+          postalCode: formData.shippingAddress.postalCode,
+          country: formData.shippingAddress.country,
+          method: selectedOption?.name || 'Standard',
+          cost: shippingCost
+        },
+        payment: {
+          method: 'Carte de crédit',
+          status: 'pending',
+          date: new Date().toISOString(),
+          amount: total
+        },
+        delivery: {
+          status: 'preparing',
+          estimatedDeliveryDate: new Date(Date.now() + (selectedOption?.estimatedDays || 3) * 86400000).toISOString()
+        },
+        notes: formData.orderNotes
+      };
+      
+      // Ajouter la nouvelle commande à la liste
+      orders.push(newOrder);
+      
+      // Sauvegarder dans localStorage
+      localStorage.setItem('orders', JSON.stringify(orders));
+      
+      console.log(`Nouvelle commande créée avec l'ID: ${newOrderId}`);
+      
+      // Émettre un événement pour informer les autres composants
+      const event = new Event('storageUpdate');
+      window.dispatchEvent(event);
+      
+      // Notifier l'administrateur de la nouvelle commande
+      try {
+        await EmailService.notifyAdminNewOrder(newOrderId.toString(), total);
+        console.log("Notification admin envoyée pour la commande");
+      } catch (e) {
+        console.error("Erreur lors de l'envoi de la notification admin", e);
+      }
+      
+      return newOrder;
+    } catch (error) {
+      console.error("Erreur lors de la création de la commande:", error);
+      throw new Error("Erreur lors de la création de la commande");
+    }
+  };
+
   // Gérer la soumission du formulaire
   const onSubmit: SubmitHandler<CheckoutFormData> = async (data) => {
     if (cartItems.length === 0) {
@@ -157,19 +247,35 @@ const CheckoutPage: React.FC = () => {
     }
 
     setIsProcessing(true);
+    let createdUser = null;
 
     try {
       // Si l'utilisateur veut créer un compte et n'est pas déjà connecté
       if (data.customerInfo.createAccount && !isAuthenticated && data.customerInfo.password) {
         try {
           // Tentative de création de compte avant de finaliser la commande
-          await register(data.customerInfo.fullName, data.customerInfo.email, data.customerInfo.password);
+          createdUser = await register(data.customerInfo.fullName, data.customerInfo.email, data.customerInfo.password);
           toast.success('Compte créé avec succès!');
         } catch (error) {
           console.error('Erreur lors de la création du compte:', error);
           toast.error('Erreur lors de la création du compte. Vérifiez si cet email existe déjà ou réessayez plus tard.');
           // Continue avec la commande malgré l'échec de création de compte
         }
+      }
+
+      // Sauvegarder la commande et récupérer son ID
+      const newOrder = await saveOrder(data, createdUser || user);
+      
+      // Envoyer l'email de confirmation de commande
+      try {
+        await EmailService.sendOrderConfirmationEmail(
+          data.customerInfo.email,
+          data.customerInfo.fullName,
+          newOrder
+        );
+        console.log("Email de confirmation de commande envoyé avec succès");
+      } catch (error) {
+        console.error("Erreur lors de l'envoi de l'email de confirmation:", error);
       }
 
       // Préparer les éléments pour le checkout
@@ -208,7 +314,8 @@ const CheckoutPage: React.FC = () => {
         orderItems: cartItems,
         subtotal: subtotal,
         shippingCost: shippingCost,
-        total: total
+        total: total,
+        orderId: newOrder.id
       }));
 
       // Redirection vers Stripe si URL est fournie
@@ -220,8 +327,8 @@ const CheckoutPage: React.FC = () => {
         // Vider le panier après le paiement réussi
         localStorage.setItem('cart', '[]');
       }
-    } catch (error) {
-      console.error('Erreur lors du traitement du paiement:', error);
+    } catch (err: any) {
+      console.error('Erreur lors du traitement du paiement:', err);
       toast.error(`Une erreur s'est produite lors du traitement du paiement.`);
     } finally {
       setIsProcessing(false);

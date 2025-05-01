@@ -8,18 +8,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Eye, FileText, Package } from 'lucide-react';
+import { Eye, FileText, Package, RefreshCw } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import OrderDetails from '@/components/admin/orders/OrderDetails';
 import { pushDataToSupabase, pullDataFromSupabase } from '@/lib/syncManager';
 import { Client } from '@/types/client';
-import { supabase } from '@/lib/supabase';
+import { EmailService } from '@/lib/emailService';
 
 const AdminOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to force re-render
 
   // Load orders from localStorage and create clients if needed
   useEffect(() => {
@@ -51,13 +52,23 @@ const AdminOrdersPage: React.FC = () => {
     loadOrders();
     
     // Listen for storage updates
-    const handleStorageUpdate = () => loadOrders();
+    const handleStorageUpdate = () => {
+      loadOrders();
+      // Force re-render
+      setRefreshKey(prev => prev + 1);
+    };
     window.addEventListener('storageUpdate', handleStorageUpdate);
     
     return () => {
       window.removeEventListener('storageUpdate', handleStorageUpdate);
     };
-  }, []);
+  }, [refreshKey]); // Add refreshKey to the dependency array
+
+  // Function to manually refresh orders
+  const refreshOrders = () => {
+    setRefreshKey(prev => prev + 1);
+    toast.info("Rafraîchissement des commandes en cours...");
+  };
 
   // Process clients from orders
   const processClientsFromOrders = async (orders: Order[]) => {
@@ -95,8 +106,29 @@ const AdminOrdersPage: React.FC = () => {
           console.log(`New client created: ${newClient.name} (${newClient.email})`);
           
           // Create an auth account with this email so the user can log in
-          // This will be enabled in a future update
-          // Right now we're just adding the client to the database
+          try {
+            // Store the user keyed by email for login purposes
+            const newUser = {
+              id: Math.floor(Math.random() * 1000) + 2,
+              name: newClient.name,
+              email: newClient.email,
+              role: 'user',
+              registrationDate: new Date().toISOString(),
+              clientId: newClient.id
+            };
+            localStorage.setItem(`user_${newClient.email}`, JSON.stringify(newUser));
+            console.log(`User account created for client: ${newClient.name} (${newClient.email})`);
+            
+            // Send welcome email
+            try {
+              await EmailService.sendAccountCreationEmail(newClient.email, newClient.name);
+              console.log(`Welcome email sent to ${newClient.email}`);
+            } catch (error) {
+              console.error("Error sending welcome email:", error);
+            }
+          } catch (error) {
+            console.error("Error creating user account:", error);
+          }
         } else if (order.clientEmail) {
           // Update existing client stats
           const existingClient = clients.find(client => client.email === order.clientEmail);
@@ -243,6 +275,14 @@ const AdminOrdersPage: React.FC = () => {
               </h1>
               
               <div className="space-x-2 flex">
+                <Button 
+                  variant="outline" 
+                  className="border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"
+                  onClick={refreshOrders}
+                  disabled={loading}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" /> Actualiser
+                </Button>
                 <Button 
                   variant="outline" 
                   className="border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"

@@ -3,304 +3,165 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle, Package, ShoppingBag, Truck, Image } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { toast } from '@/lib/toast';
+import { CheckCircle, ShoppingBag, Truck } from 'lucide-react';
+import DynamicBackground from '@/components/backgrounds/DynamicBackground';
+import { EmailService } from '@/lib/emailService';
+import { Order } from '@/types/order';
 
-interface OrderDetails {
-  customerInfo: {
-    fullName: string;
-    email: string;
-    phone: string;
-  };
-  shippingAddress: {
-    address: string;
-    city: string;
-    postalCode: string;
-    country: string;
-  };
-  shippingMethod: string;
-  orderNotes?: string;
-  orderItems: any[];
-  subtotal: number;
-  shippingCost: number;
-  total: number;
-}
-
-const ConfirmationPage: React.FC = () => {
+const ConfirmationPage = () => {
   const navigate = useNavigate();
-  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
-  const [orderId] = useState(`WS-${Date.now().toString().slice(-6)}`);
-  const [estimatedDeliveryDate] = useState(() => {
-    const date = new Date();
-    // Calculer la date de livraison en fonction de la méthode de livraison dans lastOrderDetails
-    const lastOrderDetailsString = localStorage.getItem('lastOrderDetails');
-    if (lastOrderDetailsString) {
-      try {
-        const details = JSON.parse(lastOrderDetailsString);
-        if (details.shippingMethod === 'express') {
-          date.setDate(date.getDate() + 2); // Express delivery
-        } else if (details.shippingMethod === 'priority') {
-          date.setDate(date.getDate() + 1); // Priority delivery
-        } else {
-          date.setDate(date.getDate() + 5); // Standard delivery by default
-        }
-      } catch (e) {
-        date.setDate(date.getDate() + 5); // Standard delivery by default if error
-      }
-    } else {
-      date.setDate(date.getDate() + 5); // Standard delivery by default
-    }
-    return date.toLocaleDateString('fr-FR');
-  });
+  const [orderDetails, setOrderDetails] = useState<any>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   useEffect(() => {
-    // Récupérer les détails de la commande du localStorage
-    const orderDetailsString = localStorage.getItem('lastOrderDetails');
-    if (!orderDetailsString) {
-      // Rediriger vers la page d'accueil si aucune commande n'est trouvée
-      toast.error('Aucune commande trouvée');
-      navigate('/');
+    // Get last order details from localStorage
+    const lastOrderDetailsStr = localStorage.getItem('lastOrderDetails');
+    if (!lastOrderDetailsStr) {
+      navigate('/products');
       return;
     }
 
     try {
-      const details = JSON.parse(orderDetailsString);
+      const details = JSON.parse(lastOrderDetailsStr);
       setOrderDetails(details);
-      
-      // Afficher un toast de succès
-      toast.success('Commande confirmée avec succès !');
-      
-      // Vider le panier après confirmation réussie
+
+      // Clear cart after confirmation
       localStorage.setItem('cart', '[]');
+
+      // Send confirmation email if not already sent
+      const sendConfirmationEmail = async () => {
+        if (!emailSent && details) {
+          try {
+            // Get the full order details
+            const ordersStr = localStorage.getItem('orders');
+            if (ordersStr) {
+              const orders = JSON.parse(ordersStr);
+              const orderFromStorage = orders.find((o: Order) => o.id === details.orderId);
+              
+              if (orderFromStorage) {
+                await EmailService.sendOrderConfirmationEmail(
+                  details.customerInfo.email,
+                  details.customerInfo.fullName,
+                  orderFromStorage
+                );
+                console.log("Confirmation email sent from confirmation page");
+                setEmailSent(true);
+              }
+            }
+          } catch (error) {
+            console.error("Error sending confirmation email:", error);
+          }
+        }
+      };
+
+      sendConfirmationEmail();
+
     } catch (error) {
-      console.error('Erreur lors de la récupération des détails de la commande:', error);
-      toast.error('Erreur lors de la récupération des détails de la commande');
-      navigate('/');
+      console.error("Error parsing order details:", error);
+      navigate('/products');
     }
-  }, [navigate]);
+  }, [navigate, emailSent]);
 
   if (!orderDetails) {
-    return (
-      <div className="container mx-auto py-20 px-4 text-center">
-        <h2 className="text-2xl font-bold text-white">Chargement des détails de la commande...</h2>
-      </div>
-    );
+    return <div className="flex justify-center items-center min-h-screen">Chargement...</div>;
   }
 
   return (
-    <div className="container mx-auto py-10 px-4 md:px-6">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center p-4 bg-winshirt-purple/20 rounded-full mb-4">
-          <CheckCircle size={40} className="text-winshirt-purple-light" />
-        </div>
-        <h1 className="text-3xl font-bold text-white">Merci pour votre commande !</h1>
-        <p className="text-gray-400 mt-2">
-          Votre commande #{orderId} a été confirmée et est en cours de traitement.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* État de la commande */}
-          <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-            <h2 className="text-xl font-semibold text-white mb-4">État de la commande</h2>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center text-winshirt-purple-light">
-                <CheckCircle className="mr-2" size={20} />
-                <span>Commande confirmée</span>
+    <>
+      <DynamicBackground />
+      
+      <div className="container mx-auto px-4 pt-20 pb-12">
+        <div className="max-w-3xl mx-auto">
+          <Card className="bg-winshirt-space/80 backdrop-blur-sm border border-winshirt-purple/30 p-8 shadow-xl">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="h-16 w-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+                <CheckCircle className="h-10 w-10 text-green-500" />
               </div>
-              <div className="text-sm text-gray-400">
-                {new Date().toLocaleDateString('fr-FR')}
-              </div>
-            </div>
-            
-            <div className="w-full bg-winshirt-blue/10 h-1 my-4 rounded-full">
-              <div className="bg-winshirt-purple h-full rounded-full" style={{ width: '25%' }}></div>
-            </div>
-            
-            <div className="grid grid-cols-4 text-center text-xs">
-              <div className="text-winshirt-purple-light">
-                <CheckCircle size={16} className="mx-auto mb-1" />
-                <span>Confirmée</span>
-              </div>
-              <div className="text-gray-400">
-                <Package size={16} className="mx-auto mb-1" />
-                <span>Préparation</span>
-              </div>
-              <div className="text-gray-400">
-                <Truck size={16} className="mx-auto mb-1" />
-                <span>Expédiée</span>
-              </div>
-              <div className="text-gray-400">
-                <ShoppingBag size={16} className="mx-auto mb-1" />
-                <span>Livrée</span>
-              </div>
-            </div>
-            
-            <div className="mt-4 p-3 bg-winshirt-purple/10 rounded-lg border border-winshirt-purple/20">
-              <p className="text-sm text-winshirt-purple-light">
-                Livraison estimée: <span className="font-semibold">{estimatedDeliveryDate}</span>
+              <h1 className="text-3xl font-bold text-white">Commande Confirmée!</h1>
+              <p className="text-gray-300 mt-2">
+                Merci pour votre commande. Vous recevrez bientôt un email de confirmation.
               </p>
             </div>
-          </Card>
-
-          {/* Détails de la commande */}
-          <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-            <h2 className="text-xl font-semibold text-white mb-4">Détails de la commande</h2>
             
-            <div className="space-y-4">
-              {orderDetails.orderItems.map((item, index) => (
-                <div key={index} className="py-3">
-                  <div className="flex items-start space-x-4 mb-2">
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-700">
-                      <img
-                        src={item.image}
-                        alt={item.name || "Produit"}
-                        className="h-full w-full object-cover object-center"
-                      />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="space-y-2">
+                <h2 className="text-lg font-medium text-winshirt-purple-light flex items-center">
+                  <ShoppingBag className="mr-2 h-5 w-5" /> Résumé de la commande
+                </h2>
+                <p className="text-gray-300">
+                  <span className="font-medium">Commande #{orderDetails.orderId}</span>
+                </p>
+                <p className="text-gray-400">
+                  {orderDetails.orderItems.length} article(s) pour un total de {orderDetails.total.toFixed(2)}€
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-lg font-medium text-winshirt-purple-light flex items-center">
+                  <Truck className="mr-2 h-5 w-5" /> Livraison
+                </h2>
+                <p className="text-gray-300">
+                  {orderDetails.customerInfo.fullName}
+                </p>
+                <p className="text-gray-400">
+                  {orderDetails.shippingAddress.address}, {orderDetails.shippingAddress.postalCode} {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.country}
+                </p>
+              </div>
+            </div>
+            
+            <div className="border-t border-winshirt-purple/20 pt-6 mt-6">
+              <h2 className="text-lg font-medium text-white mb-4">Articles commandés</h2>
+              
+              <div className="space-y-4">
+                {orderDetails.orderItems.map((item: any, index: number) => (
+                  <div key={index} className="flex items-center border-b border-winshirt-purple/10 pb-4">
+                    <div className="h-16 w-16 rounded bg-gray-800 mr-4 overflow-hidden">
+                      {item.image && <img src={item.image} alt={item.name} className="h-full w-full object-cover" />}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{item.name}</p>
-                      <p className="text-xs text-gray-400">
-                        {item.size && `Taille: ${item.size}`}
-                        {item.color && item.size && ' | '}
-                        {item.color && `Couleur: ${item.color}`}
-                      </p>
-                      <p className="text-xs text-gray-400">Qté: {item.quantity}</p>
-                      
-                      {/* Afficher les informations sur les loteries */}
-                      {item.selectedLotteries && item.selectedLotteries.length > 0 && (
-                        <div className="flex items-center mt-1 text-xs text-winshirt-purple-light">
-                          <span>Loteries: {item.selectedLotteries.map((lottery: any) => lottery.name).join(', ')}</span>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-sm font-medium text-white">
-                      {(item.price * item.quantity).toFixed(2)} €
-                    </p>
-                  </div>
-                  
-                  {/* Afficher le visuel personnalisé s'il existe */}
-                  {item.visualDesign && (
-                    <div className="mt-2 p-3 bg-winshirt-blue/10 rounded-lg border border-winshirt-blue/30">
-                      <p className="text-sm font-medium text-winshirt-purple-light flex items-center mb-2">
-                        <Image size={14} className="mr-1" />
-                        Visuel personnalisé: {item.visualDesign.visualName}
-                      </p>
-                      
-                      <div className="flex items-center justify-center bg-black/20 rounded-lg p-2">
-                        <img 
-                          src={item.visualDesign.visualImage} 
-                          alt="Visuel personnalisé" 
-                          className="h-24 object-contain"
-                        />
+                    <div className="flex-1">
+                      <h3 className="text-white font-medium">{item.name}</h3>
+                      <div className="text-sm text-gray-400">
+                        {item.size && <span className="mr-2">Taille: {item.size}</span>}
+                        {item.color && <span>Couleur: {item.color}</span>}
                       </div>
-                      
-                      <p className="text-xs text-gray-400 mt-2">
-                        Position: {item.visualDesign.settings?.position ? 
-                          `${item.visualDesign.settings.position.x.toFixed(0)}% horizontalement, ${item.visualDesign.settings.position.y.toFixed(0)}% verticalement` : 
-                          'Centrée'
-                        }
-                      </p>
+                      {item.visualDesign && <div className="text-xs text-winshirt-purple-light">Design personnalisé</div>}
                     </div>
-                  )}
-                </div>
-              ))}
-
-              <Separator className="bg-winshirt-blue/20" />
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <p className="text-gray-400">Sous-total</p>
-                  <p className="text-white">{orderDetails.subtotal.toFixed(2)} €</p>
-                </div>
-                <div className="flex justify-between">
-                  <p className="text-gray-400">Livraison</p>
-                  <p className="text-white">{orderDetails.shippingCost.toFixed(2)} €</p>
-                </div>
-                <Separator className="bg-winshirt-blue/20" />
-                <div className="flex justify-between text-base font-semibold">
-                  <p className="text-white">Total</p>
-                  <p className="text-winshirt-purple-light">{orderDetails.total.toFixed(2)} €</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1 space-y-6">
-          {/* Informations de livraison */}
-          <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-            <h2 className="text-xl font-semibold text-white mb-4">Informations de livraison</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-400">Adresse de livraison</h3>
-                <p className="text-white mt-1">
-                  {orderDetails.customerInfo.fullName}<br />
-                  {orderDetails.shippingAddress.address}<br />
-                  {orderDetails.shippingAddress.postalCode} {orderDetails.shippingAddress.city}<br />
-                  {orderDetails.shippingAddress.country}
-                </p>
+                    <div className="text-right">
+                      <p className="text-white font-medium">{(item.price * item.quantity).toFixed(2)}€</p>
+                      <p className="text-sm text-gray-400">Qty: {item.quantity}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
               
-              <div>
-                <h3 className="text-sm font-medium text-gray-400">Méthode de livraison</h3>
-                <p className="text-white mt-1">
-                  {orderDetails.shippingMethod === 'standard' && 'Standard (3-5 jours)'}
-                  {orderDetails.shippingMethod === 'express' && 'Express (1-2 jours)'}
-                  {orderDetails.shippingMethod === 'priority' && 'Prioritaire (24h)'}
-                </p>
-              </div>
-
-              {orderDetails.orderNotes && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-400">Notes</h3>
-                  <p className="text-white mt-1">{orderDetails.orderNotes}</p>
+              <div className="mt-6 space-y-2">
+                <div className="flex justify-between text-gray-400">
+                  <span>Sous-total:</span>
+                  <span>{orderDetails.subtotal.toFixed(2)}€</span>
                 </div>
-              )}
+                <div className="flex justify-between text-gray-400">
+                  <span>Livraison:</span>
+                  <span>{orderDetails.shippingCost.toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between text-white font-medium text-lg">
+                  <span>Total:</span>
+                  <span>{orderDetails.total.toFixed(2)}€</span>
+                </div>
+              </div>
             </div>
-          </Card>
-
-          {/* Informations de contact */}
-          <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-            <h2 className="text-xl font-semibold text-white mb-4">Informations de contact</h2>
             
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-400">Email</h3>
-                <p className="text-white mt-1">{orderDetails.customerInfo.email}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-400">Téléphone</h3>
-                <p className="text-white mt-1">{orderDetails.customerInfo.phone}</p>
-              </div>
+            <div className="flex justify-center mt-8">
+              <Button 
+                onClick={() => navigate('/products')}
+                className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+              >
+                Continuer mes achats
+              </Button>
             </div>
           </Card>
-
-          {/* Actions */}
-          <div className="space-y-3">
-            <Button 
-              variant="default" 
-              className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
-              onClick={() => navigate('/account')}
-            >
-              Suivre ma commande
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full border-winshirt-blue/30 hover:bg-winshirt-blue/10"
-              onClick={() => navigate('/products')}
-            >
-              Continuer mes achats
-            </Button>
-          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

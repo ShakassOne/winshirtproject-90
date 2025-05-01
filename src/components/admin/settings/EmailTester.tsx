@@ -8,13 +8,37 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Mail, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from '@/components/ui/switch';
 
 const EmailTester: React.FC = () => {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [subject, setSubject] = useState('Test Email from Winshirt');
   const [body, setBody] = useState('Ceci est un email de test envoyé depuis votre application Winshirt.');
+  const [htmlContent, setHtmlContent] = useState('<h1>Ceci est un email de test</h1><p>Envoyé depuis votre application <strong>Winshirt</strong>.</p>');
   const [isSending, setIsSending] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+  const [useHtml, setUseHtml] = useState(true);
+  
+  // Template d'exemple pour l'email HTML
+  const useTemplate = () => {
+    setHtmlContent(`
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #6c5ce7;">Winshirt Test Email</h2>
+  <p>Bonjour,</p>
+  <p>Ceci est un email de test formaté en HTML depuis l'application <strong>Winshirt</strong>.</p>
+  <ul>
+    <li>Les emails HTML permettent une meilleure mise en forme</li>
+    <li>Ils peuvent inclure des images, des liens et plus encore</li>
+    <li>La communication avec vos clients est ainsi plus professionnelle</li>
+  </ul>
+  <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+    <p style="margin: 0;">Cet email a été envoyé depuis le <strong>Testeur d'Email</strong> dans votre panneau d'administration.</p>
+  </div>
+  <p>Bien cordialement,<br>L'équipe WinShirt</p>
+</div>
+    `);
+  };
 
   const handleSendTest = async () => {
     if (!recipientEmail) {
@@ -31,6 +55,7 @@ const EmailTester: React.FC = () => {
           to: recipientEmail,
           subject,
           body,
+          html: useHtml ? htmlContent : undefined
         }
       });
 
@@ -86,16 +111,55 @@ const EmailTester: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="body" className="text-gray-300">Contenu</Label>
-          <Textarea
-            id="body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={5}
-            className="bg-winshirt-space-light border-winshirt-purple/30"
+        <div className="flex items-center space-x-2 my-4">
+          <Switch
+            checked={useHtml}
+            onCheckedChange={setUseHtml}
+            id="html-mode"
           />
+          <Label htmlFor="html-mode" className="text-gray-300">Utiliser le formatage HTML</Label>
         </div>
+
+        <Tabs defaultValue={useHtml ? "html" : "text"} onValueChange={(val) => setUseHtml(val === "html")}>
+          <TabsList className="bg-winshirt-space-light">
+            <TabsTrigger value="text">Texte simple</TabsTrigger>
+            <TabsTrigger value="html">HTML</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="text" className="space-y-2 mt-2">
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={5}
+              className="bg-winshirt-space-light border-winshirt-purple/30"
+              placeholder="Contenu de l'email en texte simple..."
+            />
+          </TabsContent>
+          
+          <TabsContent value="html" className="space-y-2 mt-2">
+            <div className="flex justify-end mb-1">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={useTemplate}
+                className="text-xs"
+              >
+                Utiliser un modèle
+              </Button>
+            </div>
+            <Textarea
+              value={htmlContent}
+              onChange={(e) => setHtmlContent(e.target.value)}
+              rows={10}
+              className="bg-winshirt-space-light border-winshirt-purple/30 font-mono text-sm"
+              placeholder="<h1>Titre</h1><p>Contenu HTML...</p>"
+            />
+            <div className="mt-2 p-3 border border-dashed border-winshirt-purple/30 rounded-md bg-winshirt-space-light overflow-auto max-h-60">
+              <div className="text-xs text-gray-400 mb-2">Aperçu HTML:</div>
+              <div className="text-white" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {lastResult && (
           <div className={`p-4 border rounded ${lastResult.success ? 'border-green-600 bg-green-900/20' : 'border-red-600 bg-red-900/20'}`}>

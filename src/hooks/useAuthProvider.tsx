@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User } from '@/types/auth';
 import { toast } from '@/lib/toast';
 import { Client } from '@/types/client';
+import { EmailService } from '@/lib/emailService';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -131,7 +132,7 @@ export const useAuthProvider = () => {
     toast.error("Identifiants invalides. Essayez admin@winshirt.com / admin123 pour un accès admin ou utilisez un email de client.");
   };
   
-  const register = (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string): Promise<User> => {
     if (name && email && password.length >= 6) {
       const newUser: User = {
         id: Math.floor(Math.random() * 1000) + 2,
@@ -166,11 +167,20 @@ export const useAuthProvider = () => {
       // Store the user keyed by email for login purposes
       localStorage.setItem(`user_${email}`, JSON.stringify(newUser));
       
+      // Send welcome email
+      try {
+        await EmailService.sendAccountCreationEmail(email, name);
+        console.log("Welcome email sent successfully");
+      } catch (error) {
+        console.error("Error sending welcome email:", error);
+      }
+      
       toast.success("Inscription réussie");
-      return;
+      return newUser;
     }
     
     toast.error("Informations d'inscription invalides. Le mot de passe doit contenir au moins 6 caractères.");
+    throw new Error("Invalid registration information");
   };
   
   const loginWithSocialMedia = (provider: 'facebook' | 'google') => {
@@ -204,7 +214,7 @@ export const useAuthProvider = () => {
     toast.success("Déconnexion réussie");
   };
   
-  const getAllUsers = (): User[] => {
+  const getAllUsers = useCallback((): User[] => {
     // For demo purposes only - would fetch from an API in a real app
     const adminUser: User = {
       id: 1,
@@ -257,7 +267,7 @@ export const useAuthProvider = () => {
     ];
     
     return demoUsers;
-  };
+  }, []);
   
   return {
     user,
