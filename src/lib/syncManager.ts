@@ -420,6 +420,9 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     
     // Convert data from camelCase to snake_case for Supabase with special handling for specific tables
     const supabaseData = parsedData.map((item: any) => {
+      // Safety check to ensure item is not null or undefined
+      if (!item) return item;
+      
       // Special handling for clients table - structure the address field correctly
       if (tableName === 'clients') {
         const processedItem = { ...item } as ClientItem;
@@ -474,7 +477,8 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       }
       
       // Default case - just convert camelCase to snake_case
-      return camelToSnake(item);
+      // Add a type check to ensure we only call camelToSnake on objects
+      return typeof item === 'object' ? camelToSnake(item) : item;
     });
     
     console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
@@ -800,9 +804,32 @@ function camelToSnakeObject<T extends object>(obj: T): any {
   }
   
   return Object.keys(obj).reduce((result, key) => {
-    const snakeKey = camelToSnake(key);
+    // Safe type check for key
+    if (typeof key !== 'string') {
+      result[key] = obj[key as keyof T];
+      return result;
+    }
+    
+    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
     const value = obj[key as keyof T];
-    result[snakeKey] = typeof value === 'object' ? camelToSnakeObject(value) : value;
+    result[snakeKey] = typeof value === 'object' && value !== null ? camelToSnakeObject(value) : value;
     return result;
   }, {} as any);
+}
+
+/**
+ * Fixed version of camelToSnake that checks for type safety
+ */
+function camelToSnake(obj: any): any {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return obj;
+  }
+  
+  return Object.keys(obj).reduce((result: any, key: string) => {
+    // Only apply the transformation if key is a string
+    const snakeKey = typeof key === 'string' ? key.replace(/([A-Z])/g, '_$1').toLowerCase() : key;
+    const value = obj[key];
+    result[snakeKey] = value;
+    return result;
+  }, {});
 }
