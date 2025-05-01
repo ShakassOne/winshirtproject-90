@@ -1,5 +1,4 @@
 
-
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
@@ -58,7 +57,8 @@ serve(async (req) => {
     }
 
     // Récupérer les données de la requête
-    const { to, subject, body, html } = await req.json();
+    const requestData = await req.json();
+    const { to, subject, body, html } = requestData;
 
     // Vérifier que les champs requis sont présents
     if (!to || !subject || (!body && !html)) {
@@ -105,12 +105,15 @@ serve(async (req) => {
       });
 
       // Préparer l'email
+      const content = html || body;
+      const isHtml = Boolean(html);
+      
       await client.send({
         from: FROM_EMAIL,
         to: to,
         subject: subject,
-        content: html || body,
-        html: Boolean(html),
+        content: content,
+        html: isHtml,
       });
       
       await client.close();
