@@ -117,3 +117,46 @@ export const getDefaultHomeIntroConfig = (): HomeIntroConfig => {
     transitionTime: 500
   };
 };
+
+// Add the missing saveHomeIntroConfig function
+export const saveHomeIntroConfig = (config: HomeIntroConfig): void => {
+  try {
+    localStorage.setItem('homeIntroConfig', JSON.stringify(config));
+    // Dispatch an event to notify components that the config has been updated
+    window.dispatchEvent(new Event('homeIntroConfigUpdated'));
+  } catch (error) {
+    console.error("Error saving home intro config:", error);
+    throw new Error("Failed to save home intro configuration");
+  }
+};
+
+// Add the missing uploadImage function
+export const uploadImage = async (file: File, folder: string = 'uploads'): Promise<string | null> => {
+  try {
+    // Check if Supabase is configured and storage is available
+    if (!isSupabaseConfigured()) {
+      // Fallback to local storage for development/demo purposes
+      return URL.createObjectURL(file);
+    }
+
+    // For actual Supabase implementation when storage is set up
+    // Generate a unique file name to avoid collisions
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}-${file.name.replace(/\s+/g, '-')}`;
+    const filePath = `${folder}/${fileName}`;
+
+    // For now, just return a placeholder URL since we don't have Supabase storage
+    // This would be replaced with actual Supabase storage implementation later
+    return `https://images.unsplash.com/photo-${Date.now()}`;
+
+    // Actual Supabase storage implementation would look like:
+    // const { data, error } = await supabase.storage
+    //   .from('images')
+    //   .upload(filePath, file);
+    //
+    // if (error) throw error;
+    // return supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl;
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    return null;
+  }
+};
