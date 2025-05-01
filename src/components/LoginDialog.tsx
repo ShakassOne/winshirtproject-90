@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Facebook } from 'lucide-react';
+import { Facebook, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ interface LoginDialogProps {
 
 const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
   const { login, register, loginWithSocialMedia } = useAuth();
+  const navigate = useNavigate();
 
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
@@ -33,6 +35,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [emailConfirmNeeded, setEmailConfirmNeeded] = useState(false);
+  
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setEmailConfirmNeeded(false);
+    }
+  }, [isOpen]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +53,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
     }
     
     setIsLoading(true);
+    setEmailConfirmNeeded(false);
     
     try {
       // Try to sign in with Supabase first
@@ -51,9 +62,31 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
         password: loginPassword
       });
       
-      if (supabaseData?.user) {
+      if (supabaseError) {
+        console.error("Erreur de connexion Supabase:", supabaseError);
+        
+        // Check for email not confirmed error
+        if (supabaseError.message.includes("Email not confirmed")) {
+          setEmailConfirmNeeded(true);
+          setIsLoading(false);
+          toast.warning("Email non confirmé. Veuillez vérifier votre boîte mail et confirmer votre adresse email.");
+          
+          // Resend confirmation email
+          await supabase.auth.resend({
+            type: 'signup',
+            email: loginEmail
+          });
+          
+          toast.info("Un nouvel email de confirmation vous a été envoyé.");
+          return;
+        }
+        
+        // Fall back to local auth mechanism if Supabase fails
+        await login(loginEmail, loginPassword);
+        onClose();
+      } else {
         // If this is admin, store credentials for sync operations
-        if (loginEmail === 'admin@winshirt.com' && supabaseData.user.user_metadata?.isAdmin) {
+        if (loginEmail === 'admin@winshirt.com' && supabaseData.user?.user_metadata?.isAdmin) {
           localStorage.setItem('winshirt_admin', JSON.stringify({
             email: loginEmail,
             password: loginPassword
@@ -64,16 +97,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
         
         // Call the auth context login to update app state
         await login(loginEmail, loginPassword);
-        toast.success("Connexion réussie via Supabase!");
+        toast.success("Connexion réussie !");
         onClose();
-        return;
-      }
-      
-      if (supabaseError) {
-        console.log('Supabase auth failed, falling back to local auth:', supabaseError.message);
-        // Fall back to local auth mechanism if Supabase fails
-        await login(loginEmail, loginPassword);
-        onClose();
+        navigate('/account');
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -112,17 +138,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
       });
       
       if (supabaseData?.user) {
-        toast.success("Inscription réussie via Supabase!");
+        // Successful signup
+        toast.success("Inscription réussie !");
         
         // If email confirmation is required
         if (!supabaseData.session) {
           toast.info("Veuillez vérifier votre email pour confirmer votre compte");
+          onClose();
         } else {
           // If email confirmation is not required, user is logged in
           await register(registerName, registerEmail, registerPassword);
+          onClose();
+          navigate('/account');
         }
-        
-        onClose();
         return;
       }
       
@@ -139,6 +167,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
         // Fall back to local auth mechanism if Supabase fails
         await register(registerName, registerEmail, registerPassword);
         onClose();
+        navigate('/account');
       }
     } catch (error) {
       console.error("Register error:", error);
@@ -182,6 +211,16 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
           {/* Login Tab */}
           <TabsContent value="login">
             <div className="space-y-4">
+              {emailConfirmNeeded && (
+                <div className="mb-4 p-3 bg-amber-900/30 border border-amber-500/50 rounded-md flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-200">
+                    <p className="font-medium">Email non confirmé</p>
+                    <p>Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation que nous vous avons envoyé.</p>
+                  </div>
+                </div>
+              )}
+              
               {/* Social Media Login Buttons */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <Button 
@@ -244,8 +283,12 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
                   <p>Email: admin@winshirt.com</p>
                   <p>Mot de passe: admin123</p>
                 </div>
-                <Button type="submit" className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark">
-                  Se connecter
+                <Button 
+                  type="submit" 
+                  className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Connexion en cours...' : 'Se connecter'}
                 </Button>
               </form>
             </div>
@@ -333,8 +376,12 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
                     className="bg-winshirt-space-light border-winshirt-purple/30"
                   />
                 </div>
-                <Button type="submit" className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark">
-                  S'inscrire
+                <Button 
+                  type="submit" 
+                  className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Inscription en cours...' : 'S\'inscrire'}
                 </Button>
               </form>
             </div>

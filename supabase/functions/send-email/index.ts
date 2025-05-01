@@ -102,18 +102,25 @@ serve(async (req) => {
             password: SMTP_PASSWORD,
           },
         },
+        debug: true, // Add debug mode for more detailed logs
       });
 
       // Préparer l'email
       const content = html || body;
       const isHtml = Boolean(html);
       
+      // Log content type before sending
+      console.log(`Sending email with content type: ${isHtml ? 'HTML' : 'TEXT'}`);
+      if (isHtml) {
+        console.log(`HTML content length: ${content.length}`);
+      }
+      
       await client.send({
         from: FROM_EMAIL,
         to: to,
         subject: subject,
-        content: content,
-        html: isHtml,
+        content: isHtml ? undefined : content,
+        html: isHtml ? content : undefined,
       });
       
       await client.close();

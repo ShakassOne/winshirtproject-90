@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -9,20 +9,25 @@ import { Link, useNavigate } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
-import { Facebook, Mail } from 'lucide-react';
+import { Facebook, Mail, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, register, isAuthenticated, loginWithSocialMedia } = useAuth();
   
   // Si déjà connecté, rediriger vers la page du compte
-  if (isAuthenticated) {
-    navigate('/account');
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/account');
+    }
+  }, [isAuthenticated, navigate]);
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailConfirmNeeded, setEmailConfirmNeeded] = useState(false);
   
   // Register form
   const [registerName, setRegisterName] = useState('');
@@ -30,7 +35,7 @@ const LoginPage: React.FC = () => {
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!loginEmail || !loginPassword) {
@@ -38,10 +43,50 @@ const LoginPage: React.FC = () => {
       return;
     }
     
-    login(loginEmail, loginPassword);
+    setIsLoading(true);
+    setEmailConfirmNeeded(false);
+    
+    try {
+      // Check if email is confirmed first (custom implementation)
+      const { data: userData, error: userError } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword
+      });
+      
+      if (userError) {
+        console.error("Error during login:", userError);
+        
+        // Check for email not confirmed error
+        if (userError.message.includes("Email not confirmed")) {
+          setEmailConfirmNeeded(true);
+          setIsLoading(false);
+          toast.warning("Email non confirmé. Veuillez vérifier votre boîte mail et confirmer votre adresse email.");
+          
+          // Resend confirmation email
+          await supabase.auth.resend({
+            type: 'signup',
+            email: loginEmail
+          });
+          
+          toast.info("Un nouvel email de confirmation vous a été envoyé.");
+          return;
+        }
+        
+        // Fall back to simulated login if needed
+        await login(loginEmail, loginPassword);
+      } else {
+        // Success!
+        await login(loginEmail, loginPassword);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Erreur lors de la connexion");
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!registerName || !registerEmail || !registerPassword || !confirmPassword) {
@@ -54,12 +99,29 @@ const LoginPage: React.FC = () => {
       return;
     }
     
-    register(registerName, registerEmail, registerPassword);
+    setIsLoading(true);
+    
+    try {
+      await register(registerName, registerEmail, registerPassword);
+      
+      // Show a more informative message about email confirmation
+      toast.info("Un email de confirmation a été envoyé à votre adresse. Veuillez vérifier votre boîte mail et confirmer votre inscription.");
+    } catch (error) {
+      console.error("Register error:", error);
+      toast.error("Erreur lors de l'inscription");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider: 'facebook' | 'google') => {
     loginWithSocialMedia(provider);
   };
+  
+  // If already authenticated, don't render the page
+  if (isAuthenticated) {
+    return null;
+  }
   
   return (
     <>
@@ -87,6 +149,16 @@ const LoginPage: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {emailConfirmNeeded && (
+                    <div className="mb-4 p-3 bg-amber-900/30 border border-amber-500/50 rounded-md flex items-start gap-2">
+                      <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-sm text-amber-200">
+                        <p className="font-medium">Email non confirmé</p>
+                        <p>Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation que nous vous avons envoyé.</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="space-y-4">
                     {/* Social Media Login Buttons */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -155,8 +227,12 @@ const LoginPage: React.FC = () => {
                         <p>Email: admin@winshirt.com</p>
                         <p>Mot de passe: admin123</p>
                       </div>
-                      <Button type="submit" className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark">
-                        Se connecter
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Connexion en cours...' : 'Se connecter'}
                       </Button>
                     </form>
                   </div>
@@ -252,8 +328,12 @@ const LoginPage: React.FC = () => {
                           className="bg-winshirt-space-light border-winshirt-purple/30"
                         />
                       </div>
-                      <Button type="submit" className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark">
-                        S'inscrire
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Inscription en cours...' : 'S\'inscrire'}
                       </Button>
                     </form>
                   </div>
