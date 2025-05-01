@@ -5,11 +5,11 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from "../_shared/cors.ts"
-import { SMTPClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
 
 // Configuration email SMTP
 const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME") || "";
-const SMTP_PORT = parseInt(Deno.env.get("SMTP_PORT") || "465"); // Modifié à 465 pour IONOS
+const SMTP_PORT = parseInt(Deno.env.get("SMTP_PORT") || "465"); // 465 pour IONOS avec SSL/TLS
 const SMTP_USERNAME = Deno.env.get("SMTP_USERNAME") || "";
 const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD") || "";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "admin@winshirt.fr";
@@ -88,20 +88,19 @@ serve(async (req) => {
     }
 
     // Configurer le client SMTP
-    const client = new SMTPClient({
-      connection: {
+    const client = new SmtpClient();
+    
+    try {
+      await client.connectTLS({
         hostname: SMTP_HOSTNAME,
         port: SMTP_PORT,
-        tls: true,
-        auth: {
-          username: SMTP_USERNAME,
-          password: SMTP_PASSWORD,
-        },
-      },
-    });
-
-    // Préparer et envoyer l'email
-    try {
+        username: SMTP_USERNAME,
+        password: SMTP_PASSWORD,
+      });
+      
+      console.log(`Connexion SMTP établie avec ${SMTP_HOSTNAME}:${SMTP_PORT}`);
+      
+      // Préparer et envoyer l'email
       const emailContent = {
         from: FROM_EMAIL,
         to: to,
