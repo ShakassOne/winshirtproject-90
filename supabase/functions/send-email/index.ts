@@ -5,7 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from "../_shared/cors.ts"
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 // Configuration email SMTP
 const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME") || "";
@@ -87,32 +87,31 @@ serve(async (req) => {
       );
     }
 
-    // Configurer le client SMTP
-    const client = new SmtpClient();
+    console.log(`Tentative d'envoi d'email à ${to} via ${SMTP_HOSTNAME}:${SMTP_PORT}`);
     
     try {
-      await client.connectTLS({
-        hostname: SMTP_HOSTNAME,
-        port: SMTP_PORT,
-        username: SMTP_USERNAME,
-        password: SMTP_PASSWORD,
+      // Configurer le client SMTP avec denomailer
+      const client = new SMTPClient({
+        connection: {
+          hostname: SMTP_HOSTNAME,
+          port: SMTP_PORT,
+          tls: true,
+          auth: {
+            username: SMTP_USERNAME,
+            password: SMTP_PASSWORD,
+          },
+        },
       });
-      
-      console.log(`Connexion SMTP établie avec ${SMTP_HOSTNAME}:${SMTP_PORT}`);
-      
-      // Préparer et envoyer l'email
-      const emailContent = {
+
+      // Préparer l'email
+      await client.send({
         from: FROM_EMAIL,
         to: to,
         subject: subject,
         content: html || body,
         html: Boolean(html),
-      };
+      });
       
-      console.log(`Tentative d'envoi d'email à ${to} via ${SMTP_HOSTNAME}:${SMTP_PORT}`);
-      
-      // Envoyer l'email
-      await client.send(emailContent);
       await client.close();
       
       console.log(`Email envoyé avec succès à ${to}`);
@@ -128,7 +127,7 @@ serve(async (req) => {
           } 
         }
       );
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error("Error sending email via SMTP:", emailError);
       return new Response(
         JSON.stringify({ error: "Failed to send email via SMTP", details: emailError.message }),
@@ -141,7 +140,7 @@ serve(async (req) => {
         }
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     // Gérer les erreurs
     console.error("Error in send-email function:", error);
     
