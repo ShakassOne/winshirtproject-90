@@ -9,10 +9,10 @@ import { SMTPClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
 
 // Configuration email SMTP
 const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME") || "";
-const SMTP_PORT = parseInt(Deno.env.get("SMTP_PORT") || "587");
+const SMTP_PORT = parseInt(Deno.env.get("SMTP_PORT") || "465"); // Modifié à 465 pour IONOS
 const SMTP_USERNAME = Deno.env.get("SMTP_USERNAME") || "";
 const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD") || "";
-const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "noreply@winshirt.com";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "admin@winshirt.fr";
 
 // Simple email validation function
 function isValidEmail(email: string): boolean {
@@ -110,11 +110,13 @@ serve(async (req) => {
         html: Boolean(html),
       };
       
+      console.log(`Tentative d'envoi d'email à ${to} via ${SMTP_HOSTNAME}:${SMTP_PORT}`);
+      
       // Envoyer l'email
       await client.send(emailContent);
       await client.close();
       
-      console.log(`Email sent successfully to ${to}`);
+      console.log(`Email envoyé avec succès à ${to}`);
       
       // Répondre avec succès
       return new Response(

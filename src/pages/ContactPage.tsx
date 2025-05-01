@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, MessageSquare, Phone, User } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -32,11 +33,47 @@ const ContactPage: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Simuler une soumission du formulaire
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Envoyer l'email via la fonction Supabase Edge
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: 'admin@winshirt.fr', // Adresse de notification
+          subject: `Contact: ${formData.subject}`,
+          html: `
+            <h2>Nouveau message de contact</h2>
+            <p><strong>Nom:</strong> ${formData.name}</p>
+            <p><strong>Email:</strong> ${formData.email}</p>
+            <p><strong>Téléphone:</strong> ${formData.phone || 'Non fourni'}</p>
+            <p><strong>Sujet:</strong> ${formData.subject}</p>
+            <h3>Message:</h3>
+            <p>${formData.message.replace(/\n/g, '<br>')}</p>
+          `,
+        }
+      });
       
-      // Dans une véritable implémentation, vous enverriez les données à votre backend
-      console.log('Form submitted:', formData);
+      if (error) {
+        console.error('Erreur lors de l\'envoi du message:', error);
+        throw new Error(error.message);
+      }
+      
+      // Si disponible, envoyer également un message de confirmation à l'expéditeur
+      try {
+        await supabase.functions.invoke('send-email', {
+          body: {
+            to: formData.email,
+            subject: 'Confirmation de votre message - Winshirt',
+            html: `
+              <h2>Merci de nous avoir contacté !</h2>
+              <p>Bonjour ${formData.name},</p>
+              <p>Nous avons bien reçu votre message concernant "${formData.subject}".</p>
+              <p>Notre équipe vous répondra dans les plus brefs délais.</p>
+              <p>Cordialement,<br>L'équipe Winshirt</p>
+            `,
+          }
+        });
+      } catch (confirmError) {
+        // On ne bloque pas le processus si l'email de confirmation échoue
+        console.warn('Erreur lors de l\'envoi de la confirmation:', confirmError);
+      }
       
       toast.success('Message envoyé avec succès !', {
         description: 'Nous vous répondrons dans les plus brefs délais.'

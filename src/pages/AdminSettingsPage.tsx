@@ -14,6 +14,8 @@ import { toast } from '@/lib/toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import NotificationEmailsManager from '@/components/admin/settings/NotificationEmailsManager';
+import EmailTester from '@/components/admin/settings/EmailTester';
 
 const AdminSettingsPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -122,12 +124,13 @@ const AdminSettingsPage: React.FC = () => {
           <SyncDebugTool />
           
           <Tabs defaultValue="general" className="winshirt-card p-6">
-            <TabsList className="grid grid-cols-2 md:grid-cols-5 mb-6">
+            <TabsList className="grid grid-cols-2 md:grid-cols-6 mb-6">
               <TabsTrigger value="general">Général</TabsTrigger>
               <TabsTrigger value="content">Home Intro</TabsTrigger>
               <TabsTrigger value="backgrounds">Arrière-plans</TabsTrigger>
               <TabsTrigger value="sync">Synchronisation</TabsTrigger>
               <TabsTrigger value="ftp">FTP</TabsTrigger>
+              <TabsTrigger value="email">Email</TabsTrigger>
             </TabsList>
             
             <TabsContent value="general" className="space-y-6">
@@ -148,6 +151,13 @@ const AdminSettingsPage: React.FC = () => {
             
             <TabsContent value="ftp" className="space-y-6">
               <FtpSettingsManager />
+            </TabsContent>
+            
+            <TabsContent value="email" className="space-y-6">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <NotificationEmailsManager />
+                <EmailTester />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
