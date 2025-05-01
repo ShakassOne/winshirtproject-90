@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -250,6 +249,16 @@ const CheckoutPage: React.FC = () => {
     let createdUser = null;
 
     try {
+      // Sauvegarder la commande et récupérer son ID
+      const newOrder = await saveOrder(data, createdUser || user);
+      
+      // Si l'utilisateur va créer un compte, on stocke la commande en attente
+      // pour pouvoir l'inclure dans l'email de bienvenue
+      if (data.customerInfo.createAccount && !isAuthenticated && data.customerInfo.password) {
+        // Store the order data for the welcome email
+        localStorage.setItem('pending_order', JSON.stringify(newOrder));
+      }
+
       // Si l'utilisateur veut créer un compte et n'est pas déjà connecté
       if (data.customerInfo.createAccount && !isAuthenticated && data.customerInfo.password) {
         try {
@@ -261,21 +270,18 @@ const CheckoutPage: React.FC = () => {
           toast.error('Erreur lors de la création du compte. Vérifiez si cet email existe déjà ou réessayez plus tard.');
           // Continue avec la commande malgré l'échec de création de compte
         }
-      }
-
-      // Sauvegarder la commande et récupérer son ID
-      const newOrder = await saveOrder(data, createdUser || user);
-      
-      // Envoyer l'email de confirmation de commande
-      try {
-        await EmailService.sendOrderConfirmationEmail(
-          data.customerInfo.email,
-          data.customerInfo.fullName,
-          newOrder
-        );
-        console.log("Email de confirmation de commande envoyé avec succès");
-      } catch (error) {
-        console.error("Erreur lors de l'envoi de l'email de confirmation:", error);
+      } else {
+        // Envoyer l'email de confirmation de commande
+        try {
+          await EmailService.sendOrderConfirmationEmail(
+            data.customerInfo.email,
+            data.customerInfo.fullName,
+            newOrder
+          );
+          console.log("Email de confirmation de commande envoyé avec succès");
+        } catch (error) {
+          console.error("Erreur lors de l'envoi de l'email de confirmation:", error);
+        }
       }
 
       // Préparer les éléments pour le checkout

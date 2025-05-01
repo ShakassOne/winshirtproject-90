@@ -47,6 +47,23 @@ const LoginPage: React.FC = () => {
     setEmailConfirmNeeded(false);
     
     try {
+      // Admin bypass - allow admin to login without email confirmation
+      if (loginEmail === 'admin@winshirt.com' && loginPassword === 'admin123') {
+        const adminUser = {
+          id: 1,
+          name: "Administrateur",
+          email: loginEmail,
+          role: 'admin',
+          registrationDate: new Date().toISOString(),
+        };
+        
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        toast.success("Connecté en tant qu'administrateur");
+        navigate('/account');
+        setIsLoading(false);
+        return;
+      }
+      
       // Check if email is confirmed first (custom implementation)
       const { data: userData, error: userError } = await supabase.auth.signInWithPassword({
         email: loginEmail,

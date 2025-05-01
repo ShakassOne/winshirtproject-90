@@ -1,9 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { User } from '@/types/auth';
 import { toast } from '@/lib/toast';
 import { Client } from '@/types/client';
 import { EmailService } from '@/lib/emailService';
+import { Order } from '@/types/order';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -167,10 +167,24 @@ export const useAuthProvider = () => {
       // Store the user keyed by email for login purposes
       localStorage.setItem(`user_${email}`, JSON.stringify(newUser));
       
-      // Send welcome email
+      // Check if there's a pending order for this registration
+      const pendingOrderStr = localStorage.getItem('pending_order');
+      let order: Order | undefined = undefined;
+      
+      if (pendingOrderStr) {
+        try {
+          order = JSON.parse(pendingOrderStr);
+          // Clear the pending order after using it
+          localStorage.removeItem('pending_order');
+        } catch (e) {
+          console.error("Error parsing pending order:", e);
+        }
+      }
+      
+      // Send welcome email with order details if available
       try {
-        await EmailService.sendAccountCreationEmail(email, name);
-        console.log("Welcome email sent successfully");
+        await EmailService.sendAccountCreationEmail(email, name, order);
+        console.log("Welcome email sent successfully", order ? "with order details" : "without order");
       } catch (error) {
         console.error("Error sending welcome email:", error);
       }

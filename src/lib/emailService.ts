@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { simulateSendEmail } from "@/utils/authUtils";
@@ -16,13 +15,156 @@ const emailTemplates = {
   accountCreation: (name: string): EmailTemplate => ({
     subject: "Bienvenue sur WinShirt",
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <h2 style="color: #6c5ce7;">Bienvenue sur WinShirt !</h2>
-        <p>Bonjour ${name},</p>
-        <p>Merci de vous être inscrit sur WinShirt. Votre compte a été créé avec succès.</p>
-        <p>Vous pouvez maintenant participer à nos loteries et commander nos produits personnalisés.</p>
-        <p>Bien cordialement,<br>L'équipe WinShirt</p>
-      </div>
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <title>Bienvenue chez WinShirt</title>
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #c0e0ff, #f8f9ff);
+          }
+          .email-container {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+            text-align: center;
+            padding-bottom: 1rem;
+          }
+          .header img {
+            width: 100px;
+            border-radius: 50%;
+          }
+          h1 {
+            font-size: 24px;
+            color: #003366;
+          }
+          p {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.6;
+          }
+          .cta-button {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 12px 24px;
+            background-color: #0055ff;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 30px;
+            transition: background 0.3s ease;
+          }
+          .cta-button:hover {
+            background-color: #003dcc;
+          }
+          .user-info {
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+          }
+          .user-info p {
+            margin: 5px 0;
+          }
+          .order-summary {
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+          }
+          .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+          }
+          .order-table th,
+          .order-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+          }
+          .order-table th {
+            background-color: rgba(0, 85, 255, 0.1);
+          }
+          .footer {
+            margin-top: 2rem;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <div class="header">
+            <img src="https://yourdomain.com/logo-winshirt.png" alt="WinShirt">
+          </div>
+          <h1>Bienvenue dans l'univers WinShirt !</h1>
+          <p>Bonjour ${name} 👋</p>
+          <p>Merci de rejoindre notre communauté ✨</p>
+          
+          <div class="user-info">
+            <p><strong>Nom:</strong> ${name}</p>
+            <p><strong>Email:</strong> {{email}}</p>
+            <p><strong>Date d'inscription:</strong> {{registrationDate}}</p>
+          </div>
+          
+          {{#if order}}
+          <div class="order-summary">
+            <h2>Récapitulatif de votre commande</h2>
+            <p><strong>Commande #:</strong> {{order.id}}</p>
+            <p><strong>Date:</strong> {{order.orderDate}}</p>
+            <p><strong>Total:</strong> {{order.total}} €</p>
+            
+            <table class="order-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th>Quantité</th>
+                  <th>Prix</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each order.items}}
+                <tr>
+                  <td>{{productName}}{{#if size}} - {{size}}{{/if}}{{#if color}} - {{color}}{{/if}}</td>
+                  <td>{{quantity}}</td>
+                  <td>{{price}} €</td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+            
+            <p><strong>Adresse de livraison:</strong><br>
+              {{order.shipping.address}}<br>
+              {{order.shipping.postalCode}} {{order.shipping.city}}<br>
+              {{order.shipping.country}}
+            </p>
+          </div>
+          {{/if}}
+          
+          <p>Personnalise tes vêtements, organise des loteries, et crée ta marque facilement avec WinShirt.</p>
+          <p>Pour commencer, connecte-toi à ton espace en cliquant ci-dessous :</p>
+          <a href="https://winshirt.com/mon-espace" class="cta-button">Accéder à mon compte</a>
+          <div class="footer">
+            © 2025 WinShirt — Tous droits réservés<br>
+            Cet email vous a été envoyé suite à votre inscription sur winshirt.com
+          </div>
+        </div>
+      </body>
+      </html>
     `,
     body: `Bonjour ${name},\n\nMerci de vous être inscrit sur WinShirt. Votre compte a été créé avec succès.\n\nBien cordialement,\nL'équipe WinShirt`
   }),
@@ -254,8 +396,59 @@ export class EmailService {
   }
   
   // Account related emails
-  static async sendAccountCreationEmail(email: string, name: string): Promise<boolean> {
-    const template = emailTemplates.accountCreation(name);
+  static async sendAccountCreationEmail(email: string, name: string, order?: Order): Promise<boolean> {
+    let template = emailTemplates.accountCreation(name);
+    
+    // Replace placeholders in the HTML template
+    if (template.html) {
+      template.html = template.html
+        .replace(/{{email}}/g, email)
+        .replace(/{{registrationDate}}/g, new Date().toLocaleDateString('fr-FR'));
+        
+      // Replace order placeholders if an order is provided
+      if (order) {
+        template.html = template.html
+          .replace(/{{#if order}}/g, '')
+          .replace(/{{\/if}}/g, '')
+          .replace(/{{order\.id}}/g, order.id.toString())
+          .replace(/{{order\.orderDate}}/g, new Date(order.orderDate).toLocaleDateString('fr-FR'))
+          .replace(/{{order\.total}}/g, order.total.toFixed(2));
+          
+        // Format the order items
+        let itemsHtml = '';
+        if (order.items && order.items.length > 0) {
+          order.items.forEach(item => {
+            const itemName = item.productName || 'Produit';
+            const itemSize = item.size ? ` - ${item.size}` : '';
+            const itemColor = item.color ? ` - ${item.color}` : '';
+            
+            itemsHtml += `
+              <tr>
+                <td>${itemName}${itemSize}${itemColor}</td>
+                <td>${item.quantity}</td>
+                <td>${item.price.toFixed(2)} €</td>
+              </tr>
+            `;
+          });
+          
+          // Replace the items placeholder
+          template.html = template.html.replace(/{{#each order.items}}[\s\S]*?{{\/each}}/g, itemsHtml);
+        }
+        
+        // Replace shipping address
+        if (order.shipping) {
+          template.html = template.html
+            .replace(/{{order\.shipping\.address}}/g, order.shipping.address || '')
+            .replace(/{{order\.shipping\.postalCode}}/g, order.shipping.postalCode || '')
+            .replace(/{{order\.shipping\.city}}/g, order.shipping.city || '')
+            .replace(/{{order\.shipping\.country}}/g, order.shipping.country || '');
+        }
+      } else {
+        // Remove the order section if no order is provided
+        template.html = template.html.replace(/{{#if order}}[\s\S]*?{{\/if}}/g, '');
+      }
+    }
+    
     return await this.sendEmail(email, template.subject, template.body, template.html);
   }
   

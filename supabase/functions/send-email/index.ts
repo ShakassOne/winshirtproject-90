@@ -105,24 +105,31 @@ serve(async (req) => {
         debug: true, // Add debug mode for more detailed logs
       });
 
-      // Préparer l'email
-      const content = html || body;
+      // Préparer l'email - Important: ne pas définir content et html en même temps
+      const emailContent = html || body;
       const isHtml = Boolean(html);
       
       // Log content type before sending
       console.log(`Sending email with content type: ${isHtml ? 'HTML' : 'TEXT'}`);
       if (isHtml) {
-        console.log(`HTML content length: ${content.length}`);
+        console.log(`HTML content length: ${emailContent.length}`);
       }
       
-      await client.send({
+      // Création de l'objet email en fonction du type de contenu
+      const emailData: any = {
         from: FROM_EMAIL,
         to: to,
         subject: subject,
-        content: isHtml ? undefined : content,
-        html: isHtml ? content : undefined,
-      });
+      };
       
+      // Ajouter le bon type de contenu
+      if (isHtml) {
+        emailData.html = emailContent;
+      } else {
+        emailData.content = emailContent;
+      }
+      
+      await client.send(emailData);
       await client.close();
       
       console.log(`Email envoyé avec succès à ${to}`);
