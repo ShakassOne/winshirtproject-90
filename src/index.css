@@ -367,3 +367,6 @@ select::-ms-input-placeholder {
 .text-xs truncate {
   color: white;
 }
+.flex items-center mt-2 {
+  color: white;
+}
