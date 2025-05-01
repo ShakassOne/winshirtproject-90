@@ -1,4 +1,3 @@
-
 import { Visual, VisualCategory } from "@/types/visual";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
@@ -242,16 +241,26 @@ export const syncVisualsToSupabase = async (): Promise<boolean> => {
 
     // Préparer les données pour Supabase (convertir de camelCase à snake_case)
     // et assurer que 'image' est envoyée comme 'image_url'
-    const supabaseData = visuals.map(visual => ({
-      id: visual.id,
-      name: visual.name,
-      description: visual.description || null,
-      image_url: visual.image, // Map 'image' to 'image_url'
-      category_id: visual.categoryId || null,
-      category_name: visual.categoryName || null,
-      created_at: visual.createdAt || new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }));
+    const supabaseData = visuals.map(visual => {
+      // Vérifier que visual est un objet valide
+      if (!visual || typeof visual !== 'object') {
+        console.error("Visual invalide:", visual);
+        return null;
+      }
+      
+      // Création d'un nouvel objet avec les propriétés nécessaires
+      return {
+        id: visual.id,
+        name: visual.name || '',
+        description: visual.description || null,
+        image_url: visual.image || '', // Map 'image' to 'image_url'
+        category_id: visual.categoryId || null,
+        category_name: visual.categoryName || null,
+        created_at: visual.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tags: Array.isArray(visual.tags) ? visual.tags : []
+      };
+    }).filter(Boolean); // Filtrer les entrées nulles ou invalides
 
     console.log("Données préparées pour Supabase:", supabaseData);
 

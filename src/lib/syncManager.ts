@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
-import { snakeToCamel, camelToSnake as importedCamelToSnake } from '@/lib/supabase';
+import { snakeToCamel, camelToSnake as importedCamelToSnake } from '@/lib/utils';
 
 /**
  * Define valid table names for type safety
@@ -821,15 +821,17 @@ function camelToSnakeObject<T extends object>(obj: T): any {
  * Fixed version of camelToSnake that checks for type safety
  */
 function camelToSnake(obj: any): any {
+  // If not an object or null/undefined, return as is
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
     return obj;
   }
   
   return Object.keys(obj).reduce((result: any, key: string) => {
-    // Only apply the transformation if key is a string
-    const snakeKey = typeof key === 'string' ? key.replace(/([A-Z])/g, '_$1').toLowerCase() : key;
-    const value = obj[key];
-    result[snakeKey] = value;
+    // Create safe snake-cased key only if the key is a string
+    const snakeKey = typeof key === 'string' ? key.replace(/([A-Z])/g, (k) => `_${k.toLowerCase()}`) : key;
+    
+    // Copy the value without transformation
+    result[snakeKey] = obj[key];
     return result;
   }, {});
 }

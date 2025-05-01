@@ -1,6 +1,5 @@
 
 import { supabase as supabaseClient, requiredTables, ValidTableName, checkSupabaseConnection as checkConnection, checkRequiredTables as checkTables } from '@/integrations/supabase/client';
-import { snakeToCamel as snakeToC, camelToSnake as camelToS } from '@/lib/utils';
 
 // Re-export the supabase client
 export const supabase = supabaseClient;
@@ -24,9 +23,22 @@ export const forceSupabaseConnection = async (): Promise<boolean> => {
   }
 };
 
-// Make sure data conversion utilities are exported
-export const snakeToCamel = snakeToC;
-export const camelToSnake = camelToS;
+// Safe string conversion utilities that handle non-string values
+export const snakeToCamel = (str: any): any => {
+  // Return original value if not a string
+  if (typeof str !== 'string') {
+    return str;
+  }
+  return str.replace(/(_\w)/g, (k) => k[1].toUpperCase());
+};
+
+export const camelToSnake = (str: any): any => {
+  // Return original value if not a string
+  if (typeof str !== 'string') {
+    return str;
+  }
+  return str.replace(/([A-Z])/g, (k) => `_${k.toLowerCase()}`);
+};
 
 // Add a function to check if Supabase is configured
 export const isSupabaseConfigured = (): boolean => {
@@ -93,102 +105,15 @@ export const getHomeIntroConfig = (): HomeIntroConfig => {
   }
 };
 
+// Add missing function that was referenced
 export const getDefaultHomeIntroConfig = (): HomeIntroConfig => {
   return {
-    slides: [
-      {
-        id: 1,
-        title: "Gagnez des t-shirts exclusifs",
-        subtitle: "Participez à nos loteries pour gagner des produits uniques",
-        image: "https://images.unsplash.com/photo-1576566588028-4147f3842717?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1064&q=80",
-        link: "/lotteries",
-        backgroundImage: "https://images.unsplash.com/photo-1576566588028-4147f3842717?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1064&q=80",
-        textColor: "#FFFFFF",
-        buttonText: "Participer",
-        buttonLink: "/lotteries",
-        order: 1
-      },
-      {
-        id: 2,
-        title: "Designs personnalisés",
-        subtitle: "Créez votre t-shirt sur mesure",
-        image: "https://images.unsplash.com/photo-1562157873-818bc0726f68?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=654&q=80",
-        link: "/customize",
-        backgroundImage: "https://images.unsplash.com/photo-1562157873-818bc0726f68?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=654&q=80",
-        textColor: "#FFFFFF",
-        buttonText: "Personnaliser",
-        buttonLink: "/customize",
-        order: 2
-      },
-    ],
+    slides: [],
     autoplay: true,
+    autoPlay: true, // For compatibility
     interval: 5000,
-    transitionTime: 5000,
     showButtons: true,
     showIndicators: true,
-    autoPlay: true // Include both naming conventions for compatibility
+    transitionTime: 500
   };
 };
-
-export const saveHomeIntroConfig = (config: HomeIntroConfig): void => {
-  try {
-    localStorage.setItem('homeIntroConfig', JSON.stringify(config));
-  } catch (error) {
-    console.error("Error saving home intro config:", error);
-  }
-};
-
-// Add image upload utility
-export const uploadImage = async (file: File, folder: string = 'slides'): Promise<string> => {
-  try {
-    // Simulating image upload
-    return URL.createObjectURL(file);
-  } catch (error) {
-    console.error("Error uploading image:", error);
-    throw error;
-  }
-};
-
-// Add specific field mapping function for known entity conversions
-export const applySpecialFieldMappings = (entity: any, tableName: string, direction: 'toSupabase' | 'fromSupabase'): any => {
-  // Create a copy of the entity to avoid mutating the original
-  const result = { ...entity };
-  
-  if (tableName === 'visuals') {
-    if (direction === 'toSupabase') {
-      // Convert from frontend format to Supabase format
-      if (result.image) {
-        result.image_url = result.image;
-        delete result.image;
-      }
-      if (result.categoryId) {
-        result.category_id = result.categoryId;
-        delete result.categoryId;
-      }
-      if (result.categoryName) {
-        result.category_name = result.categoryName;
-        delete result.categoryName;
-      }
-    } else {
-      // Convert from Supabase format to frontend format
-      if (result.image_url) {
-        result.image = result.image_url;
-        delete result.image_url;
-      }
-      if (result.category_id) {
-        result.categoryId = result.category_id;
-        delete result.category_id;
-      }
-      if (result.category_name) {
-        result.categoryName = result.category_name;
-        delete result.category_name;
-      }
-    }
-  }
-  
-  return result;
-};
-
-// Note: The syncLocalDataToSupabase and fetchDataFromSupabase functions 
-// are now imported from syncManager.ts to avoid duplication
-
