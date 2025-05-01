@@ -5,14 +5,20 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from "../_shared/cors.ts"
+import { SMTPClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
 
-// On peut utiliser SendGrid, Mailgun, ou Amazon SES
-// Pour cet exemple, nous utilisons SendGrid
-import * as SendGrid from "https://esm.sh/@sendgrid/mail"
-
-// Récupérer les clés API depuis les variables d'environnement de Supabase
-const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY") || "";
+// Configuration email SMTP
+const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME") || "";
+const SMTP_PORT = parseInt(Deno.env.get("SMTP_PORT") || "587");
+const SMTP_USERNAME = Deno.env.get("SMTP_USERNAME") || "";
+const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD") || "";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "noreply@winshirt.com";
+
+// Simple email validation function
+function isValidEmail(email: string): boolean {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email.toLowerCase());
+}
 
 serve(async (req) => {
   // Gestion des requêtes CORS
@@ -35,11 +41,11 @@ serve(async (req) => {
       );
     }
 
-    // Vérifier l'API Key
-    if (!SENDGRID_API_KEY) {
-      console.error("SENDGRID_API_KEY is not set");
+    // Vérifier la configuration SMTP
+    if (!SMTP_HOSTNAME || !SMTP_USERNAME || !SMTP_PASSWORD) {
+      console.error("SMTP configuration is missing");
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
+        JSON.stringify({ error: "Email service not configured properly. Please set up SMTP credentials." }),
         { 
           status: 500, 
           headers: { 
@@ -67,40 +73,80 @@ serve(async (req) => {
       );
     }
 
-    // Configurer SendGrid
-    const sgMail = SendGrid.default;
-    sgMail.setApiKey(SENDGRID_API_KEY);
-    
-    // Préparer l'email
-    const msg = {
-      to,
-      from: FROM_EMAIL,
-      subject,
-      text: body || "",
-      html: html || (body ? body.replace(/\n/g, "<br>") : "")
-    };
-    
-    // Envoyer l'email
-    await sgMail.send(msg);
-    
-    // Répondre avec succès
-    return new Response(
-      JSON.stringify({ success: true, message: "Email sent successfully" }),
-      { 
-        status: 200, 
-        headers: { 
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        } 
-      }
-    );
+    // Valider l'email du destinataire
+    if (!isValidEmail(to)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email address" }),
+        { 
+          status: 400, 
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          } 
+        }
+      );
+    }
+
+    // Configurer le client SMTP
+    const client = new SMTPClient({
+      connection: {
+        hostname: SMTP_HOSTNAME,
+        port: SMTP_PORT,
+        tls: true,
+        auth: {
+          username: SMTP_USERNAME,
+          password: SMTP_PASSWORD,
+        },
+      },
+    });
+
+    // Préparer et envoyer l'email
+    try {
+      const emailContent = {
+        from: FROM_EMAIL,
+        to: to,
+        subject: subject,
+        content: html || body,
+        html: Boolean(html),
+      };
+      
+      // Envoyer l'email
+      await client.send(emailContent);
+      await client.close();
+      
+      console.log(`Email sent successfully to ${to}`);
+      
+      // Répondre avec succès
+      return new Response(
+        JSON.stringify({ success: true, message: "Email sent successfully" }),
+        { 
+          status: 200, 
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          } 
+        }
+      );
+    } catch (emailError) {
+      console.error("Error sending email via SMTP:", emailError);
+      return new Response(
+        JSON.stringify({ error: "Failed to send email via SMTP", details: emailError.message }),
+        { 
+          status: 500, 
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "application/json"
+          } 
+        }
+      );
+    }
   } catch (error) {
     // Gérer les erreurs
-    console.error("Error sending email:", error);
+    console.error("Error in send-email function:", error);
     
     return new Response(
       JSON.stringify({ 
-        error: "Failed to send email", 
+        error: "Failed to process email request", 
         details: error.message 
       }),
       { 

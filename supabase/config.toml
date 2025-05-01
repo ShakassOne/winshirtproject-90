@@ -1,1 +1,19 @@
+
+# This file controls the configuration for your Supabase project.
+# For the full list of options available, visit the project settings page.
+
 project_id = "uwgclposhhdovfjnazlp"
+
+[api]
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[functions.send-email]
+verify_jwt = true
