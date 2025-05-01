@@ -16,7 +16,8 @@ export const createAdminUserInSupabase = async () => {
     }
     
     // Manually filter users to find admin
-    const adminUser = existingUsers?.users?.find(user => 
+    // Add proper type checking to fix the TS error
+    const adminUser = existingUsers?.users?.find((user: any) => 
       user.email === 'admin@winshirt.com'
     );
     
