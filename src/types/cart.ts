@@ -1,5 +1,6 @@
 
-import { Product } from './product';
+// Import from product.d.ts instead of product.ts
+import { ExtendedProduct } from './product';
 
 export interface CartItem {
   id: number;
@@ -12,6 +13,8 @@ export interface CartItem {
   productId?: number;
   lotteryId?: number;
   lotteryName?: string;
+  // Add the linkedLotteries property that is used in confirmation.tsx
+  linkedLotteries?: number[];
 }
 
 export interface CartContextType {
