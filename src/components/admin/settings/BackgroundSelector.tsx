@@ -5,20 +5,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Palette, Image as ImageIcon, Stars, Upload, Globe } from 'lucide-react';
+import { Palette, Image as ImageIcon, Stars, Upload, Globe, AlertTriangle } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { BackgroundSetting } from '@/types/background';
 import { predefinedBackgrounds, saveBackgroundSetting, getBackgroundSetting, removeBackgroundSetting } from '@/services/backgroundService';
 import { toast } from '@/lib/toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface BackgroundSelectorProps {
   pageId: string;
   pageTitle?: string;
+  isGlobal?: boolean;
 }
 
-const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ pageId, pageTitle = "cette page" }) => {
+const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ 
+  pageId, 
+  pageTitle = "cette page",
+  isGlobal = false
+}) => {
   const [currentTab, setCurrentTab] = useState<string>('color');
   const [customBackground, setCustomBackground] = useState<BackgroundSetting>({
     pageId,
@@ -125,6 +131,15 @@ const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ pageId, pageTit
   return (
     <Card className="p-4 space-y-4">
       <h3 className="text-lg font-medium text-white">Fond d'écran pour {pageTitle}</h3>
+      
+      {isGlobal && (
+        <Alert className="bg-winshirt-purple/10 border-winshirt-purple/20">
+          <AlertTriangle className="h-4 w-4 text-winshirt-purple" />
+          <AlertDescription>
+            Ce réglage s'appliquera à toutes les pages du site et remplacera les réglages individuels des pages.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-3 mb-4">

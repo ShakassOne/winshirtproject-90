@@ -23,6 +23,12 @@ export const getBackgroundSetting = (pageId: string): BackgroundSetting | undefi
   return allSettings[pageId];
 };
 
+// Vérifier si un réglage global est actif
+export const hasGlobalBackgroundSetting = (): boolean => {
+  const allSettings = getAllBackgroundSettings();
+  return !!allSettings['all'];
+};
+
 // Sauvegarder un paramètre de fond pour une page spécifique
 export const saveBackgroundSetting = (pageId: string, setting: BackgroundSetting): boolean => {
   try {
@@ -38,7 +44,12 @@ export const saveBackgroundSetting = (pageId: string, setting: BackgroundSetting
       detail: { pageId, setting }
     }));
     
-    toast.success('Fond d\'écran mis à jour');
+    // Message spécial pour le réglage global
+    if (pageId === 'all') {
+      toast.success('Fond d\'écran global appliqué à toutes les pages');
+    } else {
+      toast.success('Fond d\'écran mis à jour');
+    }
     return true;
   } catch (error) {
     console.error('Erreur lors de la sauvegarde du paramètre de fond:', error);
@@ -60,7 +71,12 @@ export const removeBackgroundSetting = (pageId: string): boolean => {
         detail: { pageId, removed: true }
       }));
       
-      toast.success('Fond d\'écran réinitialisé');
+      // Message spécial pour le réglage global
+      if (pageId === 'all') {
+        toast.success('Fond d\'écran global supprimé');
+      } else {
+        toast.success('Fond d\'écran réinitialisé');
+      }
       return true;
     }
     return false;

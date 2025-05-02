@@ -25,6 +25,9 @@ const DynamicBackground: React.FC = () => {
       return secondSegment ? `admin-${secondSegment}` : 'admin';
     }
     
+    // Map 'shop' to 'products' for background settings compatibility
+    if (firstSegment === 'shop') return 'products';
+    
     return firstSegment || 'home';
   };
   
@@ -34,15 +37,24 @@ const DynamicBackground: React.FC = () => {
     // Charger le paramètre de fond pour cette page
     setIsLoading(true);
     try {
-      const pageSetting = getBackgroundSetting(pageId);
-      setBackground(pageSetting);
+      // Vérifier d'abord s'il existe un réglage pour "all" (toutes les pages)
+      const globalSetting = getBackgroundSetting('all');
       
-      // Si aucun paramètre n'est défini pour cette page spécifique,
-      // essayer de charger un paramètre général pour le type de page
-      if (!pageSetting) {
-        const generalPageType = pageId.includes('admin-') ? 'admin' : pageId.split('-')[0];
-        const generalSetting = getBackgroundSetting(generalPageType);
-        setBackground(generalSetting);
+      if (globalSetting) {
+        // Si un réglage global existe, l'utiliser
+        setBackground(globalSetting);
+      } else {
+        // Sinon, chercher un réglage spécifique à cette page
+        const pageSetting = getBackgroundSetting(pageId);
+        setBackground(pageSetting);
+        
+        // Si aucun paramètre n'est défini pour cette page spécifique,
+        // essayer de charger un paramètre général pour le type de page
+        if (!pageSetting) {
+          const generalPageType = pageId.includes('admin-') ? 'admin' : pageId.split('-')[0];
+          const generalSetting = getBackgroundSetting(generalPageType);
+          setBackground(generalSetting);
+        }
       }
     } catch (error) {
       console.error("Error loading background setting:", error);
