@@ -25,7 +25,15 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
       };
     }
     
-    const users = userData?.users || [];
+    // Ensure users array exists and is valid
+    if (!userData?.users || !Array.isArray(userData.users)) {
+      return {
+        success: false,
+        message: `Aucun utilisateur trouvé`,
+      };
+    }
+    
+    const users = userData.users;
     const user = users.find(u => u.email === email);
     
     if (!user) {

@@ -43,7 +43,13 @@ export const grantAdminAccess = async (email: string): Promise<boolean> => {
     
     if (userError) throw userError;
     
-    const user = userData?.users?.find(u => u.email === email);
+    // Correction ici: assurer que userData.users est bien défini et utiliser une vérification de type appropriée
+    if (!userData?.users || !Array.isArray(userData.users)) {
+      toast.error(`Aucun utilisateur trouvé`);
+      return false;
+    }
+    
+    const user = userData.users.find(u => u.email === email);
     if (!user) {
       toast.error(`Utilisateur avec l'email ${email} non trouvé`);
       return false;
