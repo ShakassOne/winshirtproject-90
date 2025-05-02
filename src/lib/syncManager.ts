@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { snakeToCamel, camelToSnake as importedCamelToSnake } from '@/lib/utils';
@@ -17,7 +18,7 @@ export interface SyncStatus {
   tableName?: string;
   localCount?: number;
   remoteCount?: number;
-  operation?: 'push' | 'pull';
+  operation?: 'push' | 'pull' | 'sync';
   error?: string;
   httpCode?: number;
   timestamp?: number;
@@ -138,6 +139,32 @@ export const setSyncStatus = async (table: ValidTableName, status: SyncStatus): 
 };
 
 /**
+ * Ensure user is authenticated before any sync operation
+ * Following Step 2 of the plan
+ */
+const ensureAuthenticated = async () => {
+  const { data, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    throw new Error(`Erreur d'authentification: ${error.message}`);
+  }
+  
+  if (!data?.session) {
+    throw new Error("Utilisateur non authentifié. Veuillez vous reconnecter.");
+  }
+  
+  return data.session;
+};
+
+/**
+ * Compare items to determine which one is newer based on updated_at
+ */
+const isNewer = (a: any, b: any) => {
+  if (!a?.updated_at || !b?.updated_at) return true;
+  return new Date(a.updated_at).getTime() > new Date(b.updated_at).getTime();
+};
+
+/**
  * Test connection to Supabase
  */
 export const testSupabaseConnection = async (): Promise<boolean> => {
@@ -205,119 +232,292 @@ export const getDataCounts = async (): Promise<Record<string, { local: number, r
   return results;
 };
 
-/**
- * Check if user is authenticated with Supabase
- */
-const isAuthenticated = async (): Promise<boolean> => {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session !== null;
+// Helper functions for data retrieval and conversion
+const getLocalItems = (tableName: ValidTableName): any[] => {
+  const localData = localStorage.getItem(tableName);
+  return localData ? JSON.parse(localData) : [];
 };
 
-/**
- * Attempt to sign in with admin credentials if available
- */
-const signInWithAdmin = async (): Promise<boolean> => {
-  try {
-    console.log("Checking authentication status...");
-    
-    // Check if we already have an active session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      console.log("User already authenticated:", session.user?.email);
-      return true;
-    }
-    
-    // First try to sign in with a stored admin user
-    const adminCredentialsStr = localStorage.getItem('winshirt_admin');
-    if (adminCredentialsStr) {
-      try {
-        const adminCredentials = JSON.parse(adminCredentialsStr);
-        if (adminCredentials?.email && adminCredentials?.password) {
-          console.log(`Attempting to sign in with stored admin credentials: ${adminCredentials.email}`);
-          
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: adminCredentials.email,
-            password: adminCredentials.password
-          });
-          
-          if (!error && data.user) {
-            console.log("Successfully signed in with stored admin credentials");
-            return true;
-          } else {
-            console.error("Stored admin credentials failed:", error?.message);
-            toast.error(`Erreur d'authentification: ${error?.message}`, { 
-              position: "top-right",
-              duration: 5000
-            });
-            // Don't remove credentials here, they might be valid but the server is down
-          }
+const saveItemsToLocal = async (tableName: ValidTableName, items: any[]): Promise<void> => {
+  // Convert data from snake_case to camelCase for local storage
+  const localData = items.map(item => {
+    // Special handling for specific tables
+    if (tableName === 'clients') {
+      // Convert Supabase client format to local app format
+      const camelItem = snakeToCamel(item);
+      
+      // Type assertion for better type safety
+      const clientItem = camelItem as unknown as ClientItem;
+      
+      // Extract address fields if they exist
+      if (clientItem.address && typeof clientItem.address === 'object') {
+        // Type assertion for nested address object
+        const addressObj = clientItem.address as { 
+          city?: string; 
+          postal_code?: string; 
+          postalCode?: string;
+          country?: string; 
+          address?: string;
+        };
+        
+        // Extract address fields to top-level properties
+        clientItem.city = addressObj.city || '';
+        clientItem.postalCode = addressObj.postal_code || addressObj.postalCode || '';
+        clientItem.country = addressObj.country || '';
+        
+        // Set address to just the street address string
+        if (addressObj.address && typeof addressObj.address === 'string') {
+          clientItem.address = addressObj.address;
+        } else {
+          clientItem.address = '';
         }
-      } catch (e) {
-        console.error("Error parsing stored admin credentials:", e);
-        localStorage.removeItem('winshirt_admin');
       }
+      
+      return clientItem;
+    }
+    else if (tableName === 'visuals') {
+      // Convert from Supabase format to local app format
+      const camelItem = snakeToCamel(item);
+      
+      // Type assertion for visual items
+      const visualItem = camelItem as unknown as VisualItem;
+      
+      // Handle image field conversion
+      if (visualItem.imageUrl && !visualItem.image) {
+        visualItem.image = visualItem.imageUrl;
+        delete visualItem.imageUrl;
+      }
+      
+      return visualItem;
     }
     
-    // Try to use session from auth state if available
-    const authState = localStorage.getItem('supabase.auth.token');
-    if (authState) {
-      console.log("Trying to use existing auth state");
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        console.log("Successfully authenticated with existing session");
-        return true;
+    return snakeToCamel(item);
+  });
+  
+  // Save to localStorage
+  localStorage.setItem(tableName, JSON.stringify(localData));
+  
+  // Dispatch event to notify components of the update
+  const event = new Event('storageUpdate');
+  window.dispatchEvent(event);
+};
+
+const pushItemsToSupabase = async (tableName: ValidTableName, items: any[]): Promise<void> => {
+  if (items.length === 0) return;
+  
+  // Convert data from camelCase to snake_case for Supabase
+  const supabaseData = items.map(item => {
+    // Safety check to ensure item is not null or undefined
+    if (!item) return item;
+    
+    // Special handling for clients table - structure the address field correctly
+    if (tableName === 'clients') {
+      const processedItem = { ...item } as ClientItem;
+      
+      // Ensure we have a valid address object
+      if (processedItem.address && typeof processedItem.address === 'object') {
+        // Address is already an object, no need to change the structure
+      } else if (processedItem.address && typeof processedItem.address === 'string') {
+        // If address is a string, convert it to an object
+        const addressStr = processedItem.address;
+        processedItem.address = {
+          address: addressStr,
+          city: processedItem.city || null,
+          postal_code: processedItem.postalCode || null,
+          country: processedItem.country || null
+        };
+        
+        // Remove separate fields that are now part of address
+        delete processedItem.city;
+        delete processedItem.postalCode;
+        delete processedItem.country;
+      } else if (!processedItem.address) {
+        // If no address, create an empty one with the fields from the client
+        processedItem.address = {
+          address: '',
+          city: processedItem.city || null,
+          postal_code: processedItem.postalCode || null,
+          country: processedItem.country || null
+        };
+        
+        // Remove separate fields that are now part of address
+        delete processedItem.city;
+        delete processedItem.postalCode;
+        delete processedItem.country;
       }
+      
+      // Fix: Use camelToSnakeObject instead of camelToSnake for objects
+      return camelToSnakeObject(processedItem);
+    }
+    // Special handling for visuals table
+    else if (tableName === 'visuals') {
+      const processedItem = { ...item } as VisualItem;
+      if (processedItem.image && typeof processedItem.image === 'string' && !processedItem.imageUrl) {
+        processedItem.image_url = processedItem.image;
+        delete processedItem.image;
+      } else if (processedItem.imageUrl && !processedItem.image) {
+        processedItem.image_url = processedItem.imageUrl;
+        delete processedItem.imageUrl;
+      }
+      // Fix: Use camelToSnakeObject instead of camelToSnake for objects
+      return camelToSnakeObject(processedItem);
     }
     
-    console.log("No valid credentials available. Authentication required.");
-    return false;
+    // Default case - just convert camelCase to snake_case
+    // Add a type check to ensure we only call camelToSnake on objects
+    return typeof item === 'object' ? camelToSnakeObject(item) : item;
+  }).filter(Boolean); // Filter out any null or undefined items
+  
+  // Upsert the data using the authenticated session
+  const { error } = await supabase
+    .from(tableName)
+    .upsert(supabaseData, { 
+      onConflict: 'id',
+      ignoreDuplicates: false
+    });
+    
+  if (error) throw error;
+};
+
+/**
+ * Synchronize a specific table bidirectionally
+ * Following Step 3 of the plan
+ */
+export const syncTable = async (tableName: ValidTableName): Promise<SyncStatus> => {
+  try {
+    console.log(`Starting bidirectional sync for ${tableName}...`);
+    
+    // Ensure authenticated before sync
+    await ensureAuthenticated();
+    
+    // 1. Retrieve local and remote data
+    const local = getLocalItems(tableName);
+    const { data: remote, error } = await supabase.from(tableName).select('*');
+    
+    if (error) {
+      throw error;
+    }
+    
+    if (!remote || !Array.isArray(remote)) {
+      throw new Error(`Invalid remote data for ${tableName}`);
+    }
+    
+    console.log(`Retrieved ${local.length} local items and ${remote.length} remote items for ${tableName}`);
+    
+    // 2. Compare versions and determine what to upload and download
+    const toUpload = local.filter(item => 
+      !remote.find(r => r.id === item.id) || 
+      isNewer(item, remote.find(r => r.id === item.id))
+    );
+    
+    const toDownload = remote.filter(r => 
+      !local.find(item => item.id === r.id) || 
+      isNewer(r, local.find(item => item.id === r.id))
+    );
+    
+    console.log(`${toUpload.length} items to upload and ${toDownload.length} items to download for ${tableName}`);
+    
+    // 3. Push and pull data
+    if (toUpload.length > 0) {
+      await pushItemsToSupabase(tableName, toUpload);
+    }
+    
+    if (toDownload.length > 0) {
+      await saveItemsToLocal(tableName, toDownload);
+    }
+    
+    const syncStatus: SyncStatus = {
+      success: true,
+      tableName,
+      operation: 'sync',
+      localCount: local.length + toDownload.length - (toUpload.length > 0 ? 0 : toUpload.length),
+      remoteCount: remote.length + toUpload.length - (toDownload.length > 0 ? 0 : toDownload.length),
+      timestamp: Date.now()
+    };
+    
+    // Update sync status in localStorage
+    await setSyncStatus(tableName, syncStatus);
+    
+    // Log the event
+    logSyncEvent(syncStatus);
+    
+    // Show success toast
+    toast.success(`Synchronisation bidirectionnelle ${tableName} terminée`, { position: "bottom-right" });
+    
+    return syncStatus;
   } catch (error) {
-    console.error("Error during authentication attempt:", error);
-    return false;
+    // Improved error handling with fixed e.replace issue
+    const errorMessage = typeof error === 'string' 
+      ? error 
+      : (error instanceof Error ? error.message : JSON.stringify(error));
+    
+    console.error(`Error syncing ${tableName}:`, errorMessage);
+    
+    const syncStatus: SyncStatus = {
+      success: false,
+      tableName,
+      operation: 'sync',
+      error: errorMessage,
+      timestamp: Date.now()
+    };
+    
+    // Update sync status in localStorage
+    await setSyncStatus(tableName, syncStatus);
+    
+    // Log the event
+    logSyncEvent(syncStatus);
+    
+    // Show error toast
+    toast.error(`Erreur de synchronisation ${tableName}: ${errorMessage}`, { position: "bottom-right" });
+    
+    return syncStatus;
   }
 };
 
 /**
- * Create a mock user session for anonymous operations if needed
- * Returns true if already authenticated or successfully authenticated
+ * Sync all tables data between local storage and Supabase using bidirectional sync
+ * Following Step 5 of the plan
  */
-const ensureAuthSession = async (): Promise<boolean> => {
-  // First check if we're already authenticated
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      console.log("Already authenticated as:", session.user.email);
-      return true;
+export const syncAllTables = async (): Promise<SyncStatus[]> => {
+  const tables = getAllValidTableNames();
+  const results: SyncStatus[] = [];
+  
+  for (const table of tables) {
+    try {
+      const result = await syncTable(table);
+      results.push(result);
+    } catch (error) {
+      // Improved error handling
+      const errorMessage = typeof error === 'string' 
+        ? error 
+        : (error instanceof Error ? error.message : JSON.stringify(error));
+      
+      const failedStatus: SyncStatus = {
+        success: false,
+        tableName: table,
+        operation: 'sync',
+        error: errorMessage,
+        timestamp: Date.now()
+      };
+      
+      logSyncEvent(failedStatus);
+      results.push(failedStatus);
     }
-  } catch (e) {
-    console.error("Error checking session:", e);
   }
   
-  // Only try once to sign in to avoid infinite loops
-  const authSuccess = await signInWithAdmin();
-  
-  if (!authSuccess) {
-    toast.error("Authentification requise. Veuillez vous connecter pour synchroniser les données.", { 
-      position: "top-right",
-      duration: 5000
-    });
-    
-    // Redirect to login or show login dialog
-    const event = new CustomEvent('needAuthentication', {
-      detail: { reason: 'sync' }
-    });
-    window.dispatchEvent(event);
-  }
-  
-  // Return authentication status
-  return authSuccess;
+  return results;
 };
+
+// Legacy functions maintained for backward compatibility
 
 /**
  * Push data from local storage to Supabase using upsert
  */
 export const pushDataToSupabase = async (tableName: ValidTableName): Promise<SyncStatus> => {
   try {
+    // First ensure user is authenticated
+    await ensureAuthenticated();
+    
     console.log(`Starting synchronization: pushing ${tableName} to Supabase...`);
     
     // Check connection first
@@ -395,121 +595,9 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       logSyncEvent(status);
       return status;
     }
-    
-    // Make sure we have an authenticated session - Force authentication check
-    console.log("Ensuring authenticated session before sync...");
-    const isAuthenticated = await ensureAuthSession();
-    
-    if (!isAuthenticated) {
-      const error = "Authentication required. Please log in to sync data.";
-      
-      const status: SyncStatus = {
-        success: false,
-        tableName,
-        localCount: parsedData.length,
-        remoteCount: 0, 
-        operation: 'push',
-        error,
-        timestamp: Date.now()
-      };
-      logSyncEvent(status);
-      return status;
-    }
-    
-    console.log(`Successfully authenticated, proceeding with ${tableName} sync...`);
-    
-    // Convert data from camelCase to snake_case for Supabase with special handling for specific tables
-    const supabaseData = parsedData.map((item: any) => {
-      // Safety check to ensure item is not null or undefined
-      if (!item) return item;
-      
-      // Special handling for clients table - structure the address field correctly
-      if (tableName === 'clients') {
-        const processedItem = { ...item } as ClientItem;
-        
-        // Ensure we have a valid address object
-        if (processedItem.address && typeof processedItem.address === 'object') {
-            // Address is already an object, no need to change the structure
-        } else if (processedItem.address && typeof processedItem.address === 'string') {
-          // If address is a string, convert it to an object
-          const addressStr = processedItem.address;
-          processedItem.address = {
-            address: addressStr,
-            city: processedItem.city || null,
-            postal_code: processedItem.postalCode || null,
-            country: processedItem.country || null
-          };
-          
-          // Remove separate fields that are now part of address
-          delete processedItem.city;
-          delete processedItem.postalCode;
-          delete processedItem.country;
-        } else if (!processedItem.address) {
-          // If no address, create an empty one with the fields from the client
-          processedItem.address = {
-            address: '',
-            city: processedItem.city || null,
-            postal_code: processedItem.postalCode || null,
-            country: processedItem.country || null
-          };
-          
-          // Remove separate fields that are now part of address
-          delete processedItem.city;
-          delete processedItem.postalCode;
-          delete processedItem.country;
-        }
-        
-        // Fix: Use camelToSnakeObject instead of camelToSnake for objects
-        return camelToSnakeObject(processedItem);
-      }
-      // Special handling for visuals table
-      else if (tableName === 'visuals') {
-        const processedItem = { ...item } as VisualItem;
-        if (processedItem.image && typeof processedItem.image === 'string' && !processedItem.imageUrl) {
-          processedItem.image_url = processedItem.image;
-          delete processedItem.image;
-        } else if (processedItem.imageUrl && !processedItem.image) {
-          processedItem.image_url = processedItem.imageUrl;
-          delete processedItem.imageUrl;
-        }
-        // Fix: Use camelToSnakeObject instead of camelToSnake for objects
-        return camelToSnakeObject(processedItem);
-      }
-      
-      // Default case - just convert camelCase to snake_case
-      // Add a type check to ensure we only call camelToSnake on objects
-      return typeof item === 'object' ? importedCamelToSnake(item) : item;
-    });
-    
-    console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
 
-    // Upsert the data using the authenticated session
-    const { error, status } = await supabase
-      .from(tableName)
-      .upsert(supabaseData, { 
-        onConflict: 'id',
-        ignoreDuplicates: false
-      });
-        
-    if (error) {
-      console.error(`Error syncing ${tableName} to Supabase:`, error);
-      console.error("HTTP Status:", status);
-      
-      toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
-      
-      const syncStatus: SyncStatus = {
-        success: false,
-        tableName,
-        localCount: parsedData.length,
-        remoteCount: 0,
-        operation: 'push',
-        error: error.message,
-        httpCode: status,
-        timestamp: Date.now()
-      };
-      logSyncEvent(syncStatus);
-      return syncStatus;
-    }
+    // Push data to Supabase
+    await pushItemsToSupabase(tableName, parsedData);
     
     // Get updated remote count in a separate query
     const { count: remoteCount } = await supabase
@@ -528,10 +616,15 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     };
     logSyncEvent(syncStatus);
     return syncStatus;
-  } catch (error: any) {
-    console.error(`Error during ${tableName} sync:`, error);
+  } catch (error) {
+    // Fixed error handling
+    const errorMessage = typeof error === 'string' 
+      ? error 
+      : (error instanceof Error ? error.message : JSON.stringify(error));
+      
+    console.error(`Error during ${tableName} sync:`, errorMessage);
     
-    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+    toast.error(`Sync error: ${errorMessage}`, { position: "bottom-right" });
     
     const syncStatus: SyncStatus = {
       success: false,
@@ -539,7 +632,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       localCount: 0,
       remoteCount: 0,
       operation: 'push',
-      error: error.message || 'Unknown error',
+      error: errorMessage,
       timestamp: Date.now()
     };
     logSyncEvent(syncStatus);
@@ -552,6 +645,9 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
  */
 export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<SyncStatus> => {
   try {
+    // First ensure user is authenticated
+    await ensureAuthenticated();
+    
     console.log(`Starting synchronization: pulling ${tableName} from Supabase...`);
     
     // Check connection first
@@ -571,29 +667,6 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       };
       logSyncEvent(syncStatus);
       return syncStatus;
-    }
-    
-    // Make sure we have an authenticated session for tables that need it
-    const needsAuth = ['clients', 'orders', 'order_items'].includes(tableName);
-    if (needsAuth) {
-      const isAuthenticated = await ensureAuthSession();
-      
-      if (!isAuthenticated) {
-        const error = "Authentication required. Please log in to sync data.";
-        // No toast needed here as ensureAuthSession already shows one
-        
-        const syncStatus: SyncStatus = {
-          success: false,
-          tableName,
-          localCount: 0,
-          remoteCount: 0,
-          operation: 'pull',
-          error,
-          timestamp: Date.now()
-        };
-        logSyncEvent(syncStatus);
-        return syncStatus;
-      }
     }
     
     // Get data from Supabase
@@ -637,84 +710,30 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       return syncStatus;
     }
     
-    // Convert data from snake_case to camelCase for local storage
-    const localData = data.map(item => {
-      // Special handling for specific tables
-      if (tableName === 'clients') {
-        // Convert Supabase client format to local app format
-        const camelItem = snakeToCamel(item);
-        
-        // Type assertion for better type safety
-        const clientItem = camelItem as unknown as ClientItem;
-        
-        // Extract address fields if they exist
-        if (clientItem.address && typeof clientItem.address === 'object') {
-          // Type assertion for nested address object
-          const addressObj = clientItem.address as { 
-            city?: string; 
-            postal_code?: string; 
-            postalCode?: string;
-            country?: string; 
-            address?: string;
-          };
-          
-          // Extract address fields to top-level properties
-          clientItem.city = addressObj.city || '';
-          clientItem.postalCode = addressObj.postal_code || addressObj.postalCode || '';
-          clientItem.country = addressObj.country || '';
-          
-          // Set address to just the street address string
-          if (addressObj.address && typeof addressObj.address === 'string') {
-            clientItem.address = addressObj.address;
-          } else {
-            clientItem.address = '';
-          }
-        }
-        
-        return clientItem;
-      }
-      else if (tableName === 'visuals') {
-        // Convert from Supabase format to local app format
-        const camelItem = snakeToCamel(item);
-        
-        // Type assertion for visual items
-        const visualItem = camelItem as unknown as VisualItem;
-        
-        // Handle image field conversion
-        if (visualItem.imageUrl && !visualItem.image) {
-          visualItem.image = visualItem.imageUrl;
-          delete visualItem.imageUrl;
-        }
-        
-        return visualItem;
-      }
-      
-      return snakeToCamel(item);
-    });
-    
     // Save to localStorage
-    localStorage.setItem(tableName, JSON.stringify(localData));
-    
-    // Dispatch event to notify components of the update
-    const event = new Event('storageUpdate');
-    window.dispatchEvent(event);
+    await saveItemsToLocal(tableName, data);
     
     toast.success(`Successfully pulled ${data.length} ${tableName} from Supabase`, { position: "top-right" });
     
     const syncStatus: SyncStatus = {
       success: true,
       tableName,
-      localCount: localData.length,
+      localCount: data.length,
       remoteCount: data.length,
       operation: 'pull',
       timestamp: Date.now()
     };
     logSyncEvent(syncStatus);
     return syncStatus;
-  } catch (error: any) {
-    console.error(`Error during ${tableName} sync:`, error);
+  } catch (error) {
+    // Fixed error handling
+    const errorMessage = typeof error === 'string' 
+      ? error 
+      : (error instanceof Error ? error.message : JSON.stringify(error));
+      
+    console.error(`Error during ${tableName} sync:`, errorMessage);
     
-    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "top-right" });
+    toast.error(`Sync error: ${errorMessage}`, { position: "top-right" });
     
     const syncStatus: SyncStatus = {
       success: false,
@@ -722,40 +741,12 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       localCount: 0,
       remoteCount: 0,
       operation: 'pull',
-      error: error.message || 'Unknown error',
+      error: errorMessage,
       timestamp: Date.now()
     };
     logSyncEvent(syncStatus);
     return syncStatus;
   }
-};
-
-/**
- * Sync all tables data between local storage and Supabase
- */
-export const syncAllTables = async (direction: 'push' | 'pull'): Promise<SyncStatus[]> => {
-  const tables: ValidTableName[] = [
-    'lotteries', 
-    'products', 
-    'visuals', 
-    'visual_categories',
-    'orders',
-    'order_items',
-    'clients',
-    'lottery_participants',
-    'lottery_winners'
-  ];
-  
-  const results: SyncStatus[] = [];
-  
-  for (const table of tables) {
-    const result = direction === 'push' 
-      ? await pushDataToSupabase(table)
-      : await pullDataFromSupabase(table);
-    results.push(result);
-  }
-  
-  return results;
 };
 
 /**
@@ -767,6 +758,19 @@ export const checkSupabaseConnectionWithDetails = async (): Promise<{
   status?: number;
 }> => {
   try {
+    // First check if user is authenticated
+    try {
+      await ensureAuthenticated();
+    } catch (error) {
+      // If not authenticated, return appropriate error
+      return {
+        connected: false,
+        error: typeof error === 'string' 
+          ? error 
+          : (error instanceof Error ? error.message : JSON.stringify(error))
+      };
+    }
+    
     const { data, error, status } = await supabase
       .from('lotteries')
       .select('count')
@@ -781,10 +785,12 @@ export const checkSupabaseConnectionWithDetails = async (): Promise<{
     }
     
     return { connected: true };
-  } catch (error: any) {
+  } catch (error) {
     return {
       connected: false,
-      error: error.message || 'Unknown error'
+      error: typeof error === 'string' 
+        ? error 
+        : (error instanceof Error ? error.message : JSON.stringify(error))
     };
   }
 };
@@ -835,3 +841,4 @@ function camelToSnake(obj: any): any {
     return result;
   }, {});
 }
+
