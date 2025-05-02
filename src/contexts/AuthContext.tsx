@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Retourner un nouvel objet utilisateur pour compatibilité
       const newUser: User = {
-        id: data.user?.id || 0,
+        id: typeof data.user?.id === 'string' ? parseInt(data.user.id, 10) || 0 : (data.user?.id as number) || 0,
         name: name,
         email: email,
         role: 'user',
@@ -259,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       
       return data.map(user => ({
-        id: user.id,
+        id: typeof user.id === 'string' ? parseInt(user.id, 10) || 0 : user.id,
         name: user.name || user.email.split('@')[0],
         email: user.email,
         role: user.role || 'user',
