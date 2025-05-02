@@ -75,7 +75,7 @@ export const useAuthProvider = () => {
   
   const login = (email: string, password: string) => {
     // Admin account hardcoded for demo
-    if (email === "admin@winshirt.com" && password === "admin123") {
+    if (email === "admin@winshirt.fr" && password === "admin123") {
       const adminUser: User = {
         id: 1,
         name: "Administrateur",
@@ -129,7 +129,7 @@ export const useAuthProvider = () => {
       return;
     }
     
-    toast.error("Identifiants invalides. Essayez admin@winshirt.com / admin123 pour un accès admin ou utilisez un email de client.");
+    toast.error("Identifiants invalides. Essayez admin@winshirt.fr / admin123 pour un accès admin ou utilisez un email de client.");
   };
   
   const register = async (name: string, email: string, password: string): Promise<User> => {
@@ -233,7 +233,7 @@ export const useAuthProvider = () => {
     const adminUser: User = {
       id: 1,
       name: "Administrateur",
-      email: "admin@winshirt.com",
+      email: "admin@winshirt.fr",
       role: 'admin',
       registrationDate: "2023-01-01T00:00:00.000Z",
     };
