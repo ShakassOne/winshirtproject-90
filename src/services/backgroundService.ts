@@ -90,11 +90,9 @@ export const removeBackgroundSetting = (pageId: string): boolean => {
 // Liste des fonds prédéfinis
 export const predefinedBackgrounds = {
   colors: [
-    { name: 'Deep Space', value: '#0f0f1a' },
-    { name: 'Midnight Blue', value: '#1a1a35' },
-    { name: 'Purple Haze', value: '#4a3b78' },
-    { name: 'Cosmic Purple', value: '#7e69AB' },
-    { name: 'Soft Purple', value: '#E5DEFF' },
+    { name: 'Deep Space Gradient', value: 'linear-gradient(to bottom, #0f0f1a, #2e2e5a)' },
+    { name: 'Purple Horizon', value: 'linear-gradient(135deg, #4a3b78 0%, #7e69AB 100%)' },
+    { name: 'Cosmic Blend', value: 'radial-gradient(circle, #7e69AB 0%, #1a1a35 100%)' },
     { name: 'Dark Charcoal', value: '#221F26' },
   ],
   images: [
