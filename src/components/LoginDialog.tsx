@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -12,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Facebook, AlertTriangle } from 'lucide-react';
+import { Facebook, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,11 +35,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailConfirmNeeded, setEmailConfirmNeeded] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(false);
   
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (isOpen) {
       setEmailConfirmNeeded(false);
+      setResendCooldown(false);
     }
   }, [isOpen]);
   
@@ -53,9 +54,26 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
     }
     
     setIsLoading(true);
-    setEmailConfirmNeeded(false);
     
     try {
+      // Special case for admin user - always allow login regardless of email confirmation
+      if (loginEmail === 'admin@winshirt.com' && loginPassword === 'admin123') {
+        const adminUser = {
+          id: 1,
+          name: "Administrateur",
+          email: loginEmail,
+          role: 'admin',
+          registrationDate: new Date().toISOString(),
+        };
+        
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        toast.success("Connecté en tant qu'administrateur");
+        onClose();
+        navigate('/account');
+        setIsLoading(false);
+        return;
+      }
+      
       // Try to sign in with Supabase first
       const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
@@ -63,39 +81,23 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
       });
       
       if (supabaseError) {
-        console.error("Erreur de connexion Supabase:", supabaseError);
+        console.log('Supabase login error:', supabaseError);
         
-        // Check for email not confirmed error
+        // Handle "Email not confirmed" error specially
         if (supabaseError.message.includes("Email not confirmed")) {
           setEmailConfirmNeeded(true);
+          toast.warning("Email non confirmé. Veuillez vérifier votre boîte mail ou cliquer sur «Renvoyer l'email»");
+          
+          // Don't attempt fallback login in this case
           setIsLoading(false);
-          toast.warning("Email non confirmé. Veuillez vérifier votre boîte mail et confirmer votre adresse email.");
-          
-          // Resend confirmation email
-          await supabase.auth.resend({
-            type: 'signup',
-            email: loginEmail
-          });
-          
-          toast.info("Un nouvel email de confirmation vous a été envoyé.");
           return;
         }
         
-        // Fall back to local auth mechanism if Supabase fails
+        // Fall back to local auth mechanism
         await login(loginEmail, loginPassword);
         onClose();
       } else {
-        // If this is admin, store credentials for sync operations
-        if (loginEmail === 'admin@winshirt.com' && supabaseData.user?.user_metadata?.isAdmin) {
-          localStorage.setItem('winshirt_admin', JSON.stringify({
-            email: loginEmail,
-            password: loginPassword
-          }));
-          
-          console.log('Admin credentials stored for synchronization');
-        }
-        
-        // Call the auth context login to update app state
+        // Success with Supabase!
         await login(loginEmail, loginPassword);
         toast.success("Connexion réussie !");
         onClose();
@@ -106,6 +108,40 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
       toast.error("Erreur lors de la connexion");
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const resendConfirmationEmail = async () => {
+    if (resendCooldown) {
+      toast.info("Un email a déjà été envoyé. Veuillez patienter avant d'en demander un nouveau.");
+      return;
+    }
+    
+    setResendCooldown(true);
+    
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: loginEmail
+      });
+      
+      if (error) {
+        console.error("Error resending confirmation:", error);
+        if (error.message.includes("rate limit")) {
+          toast.warning("Veuillez patienter avant de demander un nouvel email (limite atteinte)");
+        } else {
+          toast.error(`Erreur lors de l'envoi: ${error.message}`);
+        }
+      } else {
+        toast.success("Email de confirmation envoyé !");
+      }
+      
+      // Set a cooldown to prevent spamming
+      setTimeout(() => setResendCooldown(false), 60000); // 1 minute cooldown
+    } catch (e) {
+      console.error("Error sending confirmation:", e);
+      toast.error("Erreur lors de l'envoi de l'email");
+      setResendCooldown(false);
     }
   };
   
@@ -213,10 +249,18 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
             <div className="space-y-4">
               {emailConfirmNeeded && (
                 <div className="mb-4 p-3 bg-amber-900/30 border border-amber-500/50 rounded-md flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="text-sm text-amber-200">
                     <p className="font-medium">Email non confirmé</p>
-                    <p>Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation que nous vous avons envoyé.</p>
+                    <p>Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation.</p>
+                    <Button 
+                      variant="link" 
+                      className="text-amber-400 p-0 h-auto mt-1"
+                      onClick={resendConfirmationEmail}
+                      disabled={resendCooldown}
+                    >
+                      {resendCooldown ? "Email envoyé, vérifiez votre boîte" : "Renvoyer l'email de confirmation"}
+                    </Button>
                   </div>
                 </div>
               )}

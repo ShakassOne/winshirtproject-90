@@ -9,7 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import StarBackground from '@/components/StarBackground';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
-import { Facebook, Mail, AlertTriangle } from 'lucide-react';
+import { Facebook, Mail, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const LoginPage: React.FC = () => {
@@ -28,6 +28,7 @@ const LoginPage: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailConfirmNeeded, setEmailConfirmNeeded] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(false);
   
   // Register form
   const [registerName, setRegisterName] = useState('');
@@ -77,15 +78,7 @@ const LoginPage: React.FC = () => {
         if (userError.message.includes("Email not confirmed")) {
           setEmailConfirmNeeded(true);
           setIsLoading(false);
-          toast.warning("Email non confirmé. Veuillez vérifier votre boîte mail et confirmer votre adresse email.");
-          
-          // Resend confirmation email
-          await supabase.auth.resend({
-            type: 'signup',
-            email: loginEmail
-          });
-          
-          toast.info("Un nouvel email de confirmation vous a été envoyé.");
+          toast.warning("Email non confirmé. Veuillez vérifier votre boîte mail ou cliquer sur «Renvoyer l'email»");
           return;
         }
         
@@ -100,6 +93,40 @@ const LoginPage: React.FC = () => {
       toast.error("Erreur lors de la connexion");
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const resendConfirmationEmail = async () => {
+    if (resendCooldown) {
+      toast.info("Un email a déjà été envoyé. Veuillez patienter avant d'en demander un nouveau.");
+      return;
+    }
+    
+    setResendCooldown(true);
+    
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: loginEmail
+      });
+      
+      if (error) {
+        console.error("Error resending confirmation:", error);
+        if (error.message.includes("rate limit")) {
+          toast.warning("Veuillez patienter avant de demander un nouvel email (limite atteinte)");
+        } else {
+          toast.error(`Erreur lors de l'envoi: ${error.message}`);
+        }
+      } else {
+        toast.success("Email de confirmation envoyé !");
+      }
+      
+      // Set a cooldown to prevent spamming
+      setTimeout(() => setResendCooldown(false), 60000); // 1 minute cooldown
+    } catch (e) {
+      console.error("Error sending confirmation:", e);
+      toast.error("Erreur lors de l'envoi de l'email");
+      setResendCooldown(false);
     }
   };
   
@@ -168,10 +195,18 @@ const LoginPage: React.FC = () => {
                 <CardContent>
                   {emailConfirmNeeded && (
                     <div className="mb-4 p-3 bg-amber-900/30 border border-amber-500/50 rounded-md flex items-start gap-2">
-                      <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                      <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
                       <div className="text-sm text-amber-200">
                         <p className="font-medium">Email non confirmé</p>
-                        <p>Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation que nous vous avons envoyé.</p>
+                        <p>Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation.</p>
+                        <Button 
+                          variant="link" 
+                          className="text-amber-400 p-0 h-auto mt-1"
+                          onClick={resendConfirmationEmail}
+                          disabled={resendCooldown}
+                        >
+                          {resendCooldown ? "Email envoyé, vérifiez votre boîte" : "Renvoyer l'email de confirmation"}
+                        </Button>
                       </div>
                     </div>
                   )}
