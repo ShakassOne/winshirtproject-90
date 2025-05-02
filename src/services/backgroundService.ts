@@ -82,11 +82,8 @@ export const predefinedBackgrounds = {
     { name: 'Dark Charcoal', value: '#221F26' },
   ],
   images: [
-    { name: 'Galaxie', value: 'https://pixelprint.world/wp-content/uploads/2025/04/360_F_740283743_YbR4YLfwl5wS3laOBFIkJjLDLMvWu9nn.jpg' },
-    { name: 'Espace profond', value: '/backgrounds/deep-space.jpg' },
-    { name: 'Nébuleuse', value: '/backgrounds/nebula.jpg' },
-    { name: 'Aurore boréale', value: '/backgrounds/aurora.jpg' },
-    { name: 'Cosmos', value: '/backgrounds/cosmos.jpg' },
+    { name: 'green', value: 'https://pixelprint.world/wp-content/uploads/2025/04/360_F_740283743_YbR4YLfwl5wS3laOBFIkJjLDLMvWu9nn.jpg' },
+    { name: 'Black', value: 'https://pixelprint.world/wp-content/uploads/2025/04/desmumtz11-scaled.jpg' },
   ]
 };
 
