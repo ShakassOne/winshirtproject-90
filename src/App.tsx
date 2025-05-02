@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from "./components/theme-provider";
+import { ThemeProvider } from "./components/ThemeProvider";
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 // Import only existing pages and use proper import syntax
