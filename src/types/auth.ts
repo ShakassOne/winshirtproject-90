@@ -8,7 +8,8 @@ export interface User {
   provider?: 'email' | 'facebook' | 'google';
   profilePicture?: string;
   phoneNumber?: string;
-  phone?: string; // Adding this property to fix the error
+  phone?: string;
+  clientId?: number; // Add this field to fix the TypeScript error
   socialMediaDetails?: {
     providerId?: string;
     displayName?: string;
