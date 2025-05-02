@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { Client } from '@/types/client';
@@ -147,7 +146,7 @@ const AdminClientsPage: React.FC = () => {
       if (result.success) {
         toast.success(`${result.localCount} clients synchronisés avec Supabase`);
       } else {
-        toast.error(`Erreur lors de la synchronisation: ${result.error || 'Erreur inconnue'}`);
+        toast.error(`Erreur lors de la synchronisation: ${result.error || result.message || 'Erreur inconnue'}`);
       }
     } catch (error: any) {
       console.error("Erreur lors de la synchronisation:", error);

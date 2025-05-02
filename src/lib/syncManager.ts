@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
@@ -15,6 +14,7 @@ export interface SyncStatus {
   localCount?: number;
   remoteCount?: number;
   error?: string;
+  message?: string; // Add explicit message property
   timestamp?: number;
   lastSync?: number | null;
 }
@@ -84,7 +84,8 @@ export const pushDataToSupabase = async (tableName: ValidTableName) => {
         operation: 'push' as SyncOperation,
         localCount: 0,
         timestamp: Date.now(),
-        message: `Aucune donnée locale pour ${tableName}`
+        message: `Aucune donnée locale pour ${tableName}`,
+        error: undefined // Explicitly set error as undefined
       };
     }
     
@@ -351,7 +352,7 @@ export const setAutoSyncEnabled = (enabled: boolean): void => {
   localStorage.setItem('auto_sync_enabled', enabled ? 'true' : 'false');
 };
 
-// New function to get data counts for comparison
+// Fix the typings in getDataCounts function
 export const getDataCounts = async (): Promise<Record<string, { local: number, remote: number }>> => {
   const tables = getAllValidTableNames();
   const counts: Record<string, { local: number, remote: number }> = {};
@@ -461,7 +462,7 @@ export const setSyncStatus = async (table: ValidTableName, status: SyncStatus): 
   }
 };
 
-// Bidirectional sync for a table
+// Fix the typecasting in the syncTable function
 export const syncTable = async (tableName: ValidTableName): Promise<SyncStatus> => {
   try {
     // Try to ensure authentication
@@ -514,13 +515,18 @@ export const syncTable = async (tableName: ValidTableName): Promise<SyncStatus> 
     });
     
     // Items to download (remote items not in local or newer)
-    const toDownload = camelCaseRemoteData.filter(remoteItem => {
+    const toDownload = camelCaseRemoteData.filter((remoteItem: any) => {
       const localItem = localMap.get(remoteItem.id);
       if (!localItem) return true; // Item exists only remotely
       
       // Check if remote is newer based on updatedAt
-      const localDate = localItem.updatedAt ? new Date(localItem.updatedAt) : new Date(0);
-      const remoteDate = remoteItem.updatedAt ? new Date(remoteItem.updatedAt) : new Date(0);
+      // Fix the typecasting here
+      const localUpdatedAt = localItem.updatedAt || null;
+      const remoteUpdatedAt = remoteItem.updatedAt || null;
+      
+      const localDate = localUpdatedAt ? new Date(localUpdatedAt) : new Date(0);
+      const remoteDate = remoteUpdatedAt ? new Date(remoteUpdatedAt) : new Date(0);
+      
       return remoteDate > localDate;
     });
     

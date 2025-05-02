@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import StarBackground from '@/components/StarBackground';
@@ -191,7 +190,7 @@ const AdminOrdersPage: React.FC = () => {
       if (result.success) {
         toast.success(`${result.localCount} orders synchronized with Supabase`);
       } else {
-        toast.error(`Sync error: ${result.error || 'Unknown error'}`);
+        toast.error(`Sync error: ${result.error || result.message || 'Unknown error'}`);
       }
       
       // Sync order items

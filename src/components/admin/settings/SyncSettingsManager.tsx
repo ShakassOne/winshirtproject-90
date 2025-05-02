@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -228,7 +227,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
           ? `Successfully synced ${table} data with Supabase.`
           : `Failed to sync ${table} data with Supabase.`,
       })
-      showNotification('sync', table, result.success, result.error);
+      showNotification('sync', table, result.success, result.error || result.message);
     } catch (error) {
       console.error(`Sync ${table} failed:`, error);
       toast({
@@ -325,7 +324,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         try {
           const result = await pushDataToSupabase(table);
           setSyncStatuses(prev => ({ ...prev, [table]: result }));
-          showNotification('sync', table, result.success, result.error);
+          showNotification('sync', table, result.success, result.error || result.message);
         } catch (error) {
           console.error(`Sync ${table} failed:`, error);
           showNotification('sync', table, false, error instanceof Error ? error.message : 'Unknown error');
