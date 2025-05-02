@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 
@@ -14,7 +14,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   adminOnly = false 
 }) => {
   const { isAuthenticated, isAdmin, isLoading, user } = useAuth();
-  const navigate = useNavigate();
+  const location = useLocation();
   
   // Vérification stricte des droits d'administration
   useEffect(() => {
@@ -33,9 +33,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Redirection si non authentifié
   if (!isAuthenticated) {
-    console.log("Accès refusé: utilisateur non authentifié");
+    console.log("Accès refusé: utilisateur non authentifié", location.pathname);
     toast.error("Vous devez être connecté pour accéder à cette page");
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // Vérification stricte des droits d'administration

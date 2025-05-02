@@ -1,32 +1,41 @@
 
-import { OrderItem } from './order';
+import { CartItem } from './cart';
 
 export interface CheckoutFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+  paymentMethod: 'card' | 'paypal';
+  deliveryMethod: 'standard' | 'express';
+}
+
+export interface OrderSummary {
+  items: CartItem[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
   customerInfo: {
-    fullName: string;
+    name: string;
     email: string;
-    phone: string;
-    createAccount: boolean;
-    password?: string;
-  };
-  shippingAddress: {
     address: string;
     city: string;
     postalCode: string;
     country: string;
+    phone: string;
   };
-  paymentInfo: {
-    cardHolder: string;
-    savePaymentInfo: boolean;
-  };
-  shippingMethod: string;
-  orderNotes?: string;
+  deliveryMethod: string;
+  paymentMethod: string;
 }
 
 export interface StripeCheckoutSuccess {
   success: true;
-  url?: string;
   orderId?: number;
+  url?: string;
 }
 
 export interface StripeCheckoutError {
@@ -35,19 +44,3 @@ export interface StripeCheckoutError {
 }
 
 export type StripeCheckoutResult = StripeCheckoutSuccess | StripeCheckoutError;
-
-export interface OrderSummary {
-  items: OrderItem[];
-  subtotal: number;
-  shippingCost: number;
-  total: number;
-  totalItems: number;
-}
-
-export interface ShippingOption {
-  id: string;
-  name: string;
-  price: number;
-  estimatedDays: number;
-  default?: boolean;
-}

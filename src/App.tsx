@@ -28,6 +28,9 @@ import NotFoundPage from './pages/NotFoundPage';
 import PreviousWinnersPage from './pages/PreviousWinnersPage';
 import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import AccountPage from './pages/AccountPage';
+import LoginPage from './pages/LoginPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   // Add code to initialize the T-Shirt 3D product with print areas to localStorage if it doesn't exist
@@ -91,14 +94,85 @@ function App() {
         <Route path="lotteries/:lotteryId" element={<LotteryDetailPage />} />
         <Route path="cart" element={<CartPage />} />
         <Route path="checkout" element={<CheckoutPage />} />
-        <Route path="admin" element={<AdminPage />} />
-        <Route path="admin/lotteries" element={<AdminLotteriesPage />} />
-        <Route path="admin/products" element={<AdminProductsPage />} />
-        <Route path="admin/visuals" element={<AdminVisualsPage />} />
-        <Route path="admin/orders" element={<AdminOrdersPage />} />
-        <Route path="admin/clients" element={<AdminClientsPage />} />
-        <Route path="admin/settings" element={<AdminSettingsPage />} />
-        <Route path="admin/sync" element={<AdminSyncPage />} />
+        <Route path="login" element={<LoginPage />} />
+        
+        {/* Protected account page */}
+        <Route 
+          path="account" 
+          element={
+            <ProtectedRoute>
+              <AccountPage />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Protected admin routes */}
+        <Route 
+          path="admin" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="admin/lotteries" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminLotteriesPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="admin/products" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminProductsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="admin/visuals" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminVisualsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="admin/orders" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminOrdersPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="admin/clients" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminClientsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="admin/settings" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminSettingsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="admin/sync" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminSyncPage />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Public routes */}
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />

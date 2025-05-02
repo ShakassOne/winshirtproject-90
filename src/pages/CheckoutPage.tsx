@@ -1,725 +1,368 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
 import { CheckoutFormData, StripeCheckoutResult, StripeCheckoutError, OrderSummary } from '@/types/checkout';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Card } from '@/components/ui/card';
-import { ShoppingCart, CreditCard, Truck, User, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Order } from '@/types/order';
-import { EmailService } from '@/lib/emailService';
-
-// Schéma de validation du formulaire de checkout
-const checkoutSchema = z.object({
-  customerInfo: z.object({
-    fullName: z.string().min(2, { message: "Le nom complet est requis" }),
-    email: z.string().email({ message: "Email invalide" }),
-    phone: z.string().min(10, { message: "Numéro de téléphone invalide" }),
-    createAccount: z.boolean().default(false),
-    password: z.string().optional().refine(val => {
-      if (val === undefined) return true;
-      return val.length >= 6 || val.length === 0;
-    }, { message: "Le mot de passe doit contenir au moins 6 caractères" }),
-  }).refine(data => {
-    // Si createAccount est true, password est requis
-    if (data.createAccount && (!data.password || data.password.length === 0)) {
-      return false;
-    }
-    return true;
-  }, {
-    message: "Le mot de passe est requis pour créer un compte",
-    path: ["password"],
-  }),
-  shippingAddress: z.object({
-    address: z.string().min(5, { message: "Adresse requise" }),
-    city: z.string().min(2, { message: "Ville requise" }),
-    postalCode: z.string().min(5, { message: "Code postal requis" }),
-    country: z.string().min(2, { message: "Pays requis" }),
-  }),
-  paymentInfo: z.object({
-    cardHolder: z.string().min(2, { message: "Nom du titulaire de la carte requis" }),
-    savePaymentInfo: z.boolean().default(false),
-  }),
-  shippingMethod: z.string().min(1, { message: "Méthode de livraison requise" }),
-  orderNotes: z.string().optional(),
-});
 
 const CheckoutPage: React.FC = () => {
+  const { items, clearCart, calculateTotal } = useCart();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  const { user, isAuthenticated, register } = useAuth();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [cartItems, setCartItems] = useState<any[]>([]);
-  const [subtotal, setSubtotal] = useState(0);
-  const [shippingCost, setShippingCost] = useState(5.99);
-  const [total, setTotal] = useState(0);
-  // Recommander la création de compte si l'utilisateur n'est pas connecté
-  const [shouldCreateAccount, setShouldCreateAccount] = useState(false);
-
-  // Définir les options de livraison
-  const shippingOptions = [
-    { id: 'standard', name: 'Standard (3-5 jours)', price: 5.99, estimatedDays: 5, default: true },
-    { id: 'express', name: 'Express (1-2 jours)', price: 12.99, estimatedDays: 2 },
-    { id: 'priority', name: 'Prioritaire (24h)', price: 19.99, estimatedDays: 1 },
-  ];
-
-  // Initialiser le formulaire avec react-hook-form
-  const form = useForm<CheckoutFormData>({
-    resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      customerInfo: {
-        fullName: user?.name || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        createAccount: !isAuthenticated, // Suggérer la création de compte si non connecté
-      },
-      shippingAddress: {
-        address: '',
-        city: '',
-        postalCode: '',
-        country: 'France',
-      },
-      paymentInfo: {
-        cardHolder: user?.name || '',
-        savePaymentInfo: false,
-      },
-      shippingMethod: 'standard',
-      orderNotes: '',
-    }
+  
+  const [formData, setFormData] = useState<CheckoutFormData>({
+    firstName: user?.name?.split(' ')[0] || '',
+    lastName: user?.name?.split(' ')[1] || '',
+    email: user?.email || '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: 'France',
+    phone: user?.phoneNumber || user?.phone || '',
+    paymentMethod: 'card',
+    deliveryMethod: 'standard'
   });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState(5.99);
 
-  // Observer le changement sur createAccount pour rendre le champ password requis
-  const createAccount = form.watch('customerInfo.createAccount');
-  const selectedShippingMethod = form.watch('shippingMethod');
-
-  // Mettre à jour la suggestion de création de compte quand l'état d'authentification change
   useEffect(() => {
-    if (!isAuthenticated) {
-      setShouldCreateAccount(true);
-      form.setValue('customerInfo.createAccount', true);
+    // Redirect if cart is empty
+    if (!items || items.length === 0) {
+      toast.info("Votre panier est vide");
+      navigate('/cart');
     }
-  }, [isAuthenticated, form]);
+  }, [items, navigate]);
 
-  // Charger le panier lors de l'initialisation
-  useEffect(() => {
-    const loadCart = () => {
-      try {
-        const cartString = localStorage.getItem('cart');
-        if (cartString) {
-          const cart = JSON.parse(cartString);
-          setCartItems(cart);
-          
-          // Calculer le sous-total
-          const calculatedSubtotal = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-          setSubtotal(calculatedSubtotal);
-          
-          // Mettre à jour le total
-          const selectedOption = shippingOptions.find(option => option.id === selectedShippingMethod);
-          const shippingPrice = selectedOption?.price || shippingOptions[0].price;
-          setShippingCost(shippingPrice);
-          setTotal(calculatedSubtotal + shippingPrice);
-        } else {
-          // Rediriger si le panier est vide
-          navigate('/products');
-          toast.info('Votre panier est vide');
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement du panier:', error);
-      }
-    };
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-    loadCart();
-  }, [navigate, selectedShippingMethod]);
-
-  // Mettre à jour le coût d'expédition lorsque la méthode change
-  useEffect(() => {
-    const selectedOption = shippingOptions.find(option => option.id === selectedShippingMethod);
-    if (selectedOption) {
-      setShippingCost(selectedOption.price);
-      setTotal(subtotal + selectedOption.price);
-    }
-  }, [selectedShippingMethod, subtotal]);
-
-  // Fonction pour créer et sauvegarder une nouvelle commande
-  const saveOrder = async (formData: CheckoutFormData, currentUser: any | null): Promise<Order> => {
-    try {
-      // Récupérer les commandes existantes
-      const ordersStr = localStorage.getItem('orders');
-      let orders: Order[] = ordersStr ? JSON.parse(ordersStr) : [];
-      
-      // Générer un ID de commande unique
-      const newOrderId = orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1;
-      
-      // Configurer l'information de livraison
-      const selectedOption = shippingOptions.find(option => option.id === formData.shippingMethod);
-      
-      // Créer la nouvelle commande
-      const newOrder: Order = {
-        id: newOrderId,
-        clientName: formData.customerInfo.fullName,
-        clientEmail: formData.customerInfo.email,
-        userId: currentUser?.id,
-        total: total,
-        subtotal: subtotal,
-        status: 'pending',
-        orderDate: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        items: cartItems.map(item => ({
-          id: Math.floor(Math.random() * 10000),
-          productId: item.productId,
-          productName: item.name,
-          productImage: item.image,
-          price: item.price,
-          quantity: item.quantity,
-          size: item.size,
-          color: item.color,
-          customization: item.customization,
-          visualDesign: item.visualDesign,
-          lotteriesEntries: item.selectedLotteries,
-          created_at: new Date().toISOString()
-        })),
-        shipping: {
-          address: formData.shippingAddress.address,
-          city: formData.shippingAddress.city,
-          postalCode: formData.shippingAddress.postalCode,
-          country: formData.shippingAddress.country,
-          method: selectedOption?.name || 'Standard',
-          cost: shippingCost
-        },
-        payment: {
-          method: 'Carte de crédit',
-          status: 'pending',
-          date: new Date().toISOString(),
-          amount: total
-        },
-        delivery: {
-          status: 'preparing',
-          estimatedDeliveryDate: new Date(Date.now() + (selectedOption?.estimatedDays || 3) * 86400000).toISOString()
-        },
-        notes: formData.orderNotes
-      };
-      
-      // Ajouter la nouvelle commande à la liste
-      orders.push(newOrder);
-      
-      // Sauvegarder dans localStorage
-      localStorage.setItem('orders', JSON.stringify(orders));
-      
-      console.log(`Nouvelle commande créée avec l'ID: ${newOrderId}`);
-      
-      // Émettre un événement pour informer les autres composants
-      const event = new Event('storageUpdate');
-      window.dispatchEvent(event);
-      
-      // Notifier l'administrateur de la nouvelle commande
-      try {
-        await EmailService.notifyAdminNewOrder(newOrderId.toString(), total);
-        console.log("Notification admin envoyée pour la commande");
-      } catch (e) {
-        console.error("Erreur lors de l'envoi de la notification admin", e);
-      }
-      
-      return newOrder;
-    } catch (error) {
-      console.error("Erreur lors de la création de la commande:", error);
-      throw new Error("Erreur lors de la création de la commande");
+  const handleDeliveryMethodChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      deliveryMethod: value
+    }));
+    
+    // Update delivery fee based on selection
+    if (value === 'express') {
+      setDeliveryFee(9.99);
+    } else {
+      setDeliveryFee(5.99);
     }
   };
 
-  // Gérer la soumission du formulaire
-  const onSubmit: SubmitHandler<CheckoutFormData> = async (data) => {
-    if (cartItems.length === 0) {
-      toast.error('Votre panier est vide');
+  const handlePaymentMethodChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentMethod: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Form validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.address || !formData.city || !formData.postalCode) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
       return;
     }
-
-    setIsProcessing(true);
-    let createdUser = null;
-
+    
+    setIsSubmitting(true);
+    
     try {
-      // Sauvegarder la commande et récupérer son ID
-      const newOrder = await saveOrder(data, createdUser || user);
-      
-      // Si l'utilisateur va créer un compte, on stocke la commande en attente
-      // pour pouvoir l'inclure dans l'email de bienvenue
-      if (data.customerInfo.createAccount && !isAuthenticated && data.customerInfo.password) {
-        // Store the order data for the welcome email
-        localStorage.setItem('pending_order', JSON.stringify(newOrder));
-      }
+      console.log("Initializing checkout process with items:", items);
+      // Prepare order summary
+      const orderSummary: OrderSummary = {
+        items: items || [],
+        subtotal: calculateTotal(),
+        deliveryFee,
+        total: calculateTotal() + deliveryFee,
+        customerInfo: {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          address: formData.address,
+          city: formData.city,
+          postalCode: formData.postalCode,
+          country: formData.country,
+          phone: formData.phone
+        },
+        deliveryMethod: formData.deliveryMethod,
+        paymentMethod: formData.paymentMethod
+      };
 
-      // Si l'utilisateur veut créer un compte et n'est pas déjà connecté
-      if (data.customerInfo.createAccount && !isAuthenticated && data.customerInfo.password) {
-        try {
-          // Tentative de création de compte avant de finaliser la commande
-          createdUser = await register(data.customerInfo.fullName, data.customerInfo.email, data.customerInfo.password);
-          toast.success('Compte créé avec succès!');
-        } catch (error) {
-          console.error('Erreur lors de la création du compte:', error);
-          toast.error('Erreur lors de la création du compte. Vérifiez si cet email existe déjà ou réessayez plus tard.');
-          // Continue avec la commande malgré l'échec de création de compte
+      // Call Stripe checkout function
+      const result = await initiateStripeCheckout(items || []);
+      
+      console.log("Checkout result:", result);
+      
+      if (result && 'success' in result && result.success) {
+        // Success case
+        toast.success("Commande traitée avec succès!");
+        
+        // Clear cart
+        clearCart();
+        
+        // Redirect to confirmation page or handle success
+        if (result.url) {
+          // If we have a URL for external payment, redirect there
+          window.location.href = result.url;
+        } else {
+          // Otherwise navigate to success page
+          navigate('/confirmation', { state: { orderSummary } });
         }
       } else {
-        // Envoyer l'email de confirmation de commande
-        try {
-          await EmailService.sendOrderConfirmationEmail(
-            data.customerInfo.email,
-            data.customerInfo.fullName,
-            newOrder
-          );
-          console.log("Email de confirmation de commande envoyé avec succès");
-        } catch (error) {
-          console.error("Erreur lors de l'envoi de l'email de confirmation:", error);
-        }
-      }
-
-      // Préparer les éléments pour le checkout
-      const checkoutItems = cartItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        selectedLotteries: item.selectedLotteries,
-        size: item.size,
-        color: item.color,
-        visualDesign: item.visualDesign // Inclure les informations de design visuel
-      }));
-
-      // Appel à la fonction de paiement Stripe
-      const result = await initiateStripeCheckout(checkoutItems);
-      
-      if (!result.success) {
-        // Type assertion pour accéder à la propriété error
+        // Error case
         const errorResult = result as StripeCheckoutError;
         toast.error(`Erreur de paiement: ${errorResult.error}`);
-        setIsProcessing(false);
-        return;
       }
-
-      // Sauvegarder les informations de commande
-      localStorage.setItem('lastOrderDetails', JSON.stringify({
-        customerInfo: {
-          fullName: data.customerInfo.fullName,
-          email: data.customerInfo.email,
-          phone: data.customerInfo.phone
-        },
-        shippingAddress: data.shippingAddress,
-        shippingMethod: data.shippingMethod,
-        orderNotes: data.orderNotes,
-        orderItems: cartItems,
-        subtotal: subtotal,
-        shippingCost: shippingCost,
-        total: total,
-        orderId: newOrder.id
-      }));
-
-      // Redirection vers Stripe si URL est fournie
-      if (result.url) {
-        window.location.href = result.url;
-      } else {
-        // Sinon, rediriger vers la page de confirmation
-        navigate('/confirmation');
-        // Vider le panier après le paiement réussi
-        localStorage.setItem('cart', '[]');
-      }
-    } catch (err: any) {
-      console.error('Erreur lors du traitement du paiement:', err);
-      toast.error(`Une erreur s'est produite lors du traitement du paiement.`);
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error(`Une erreur est survenue lors du traitement de votre commande. ${error instanceof Error ? error.message : ''}`);
     } finally {
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="container mx-auto py-10 px-4 md:px-6">
-      <h1 className="text-3xl font-bold text-white mb-6 flex items-center">
-        <ShoppingCart className="mr-2" /> Finaliser votre commande
-      </h1>
-
-      {shouldCreateAccount && !isAuthenticated && (
-        <Alert variant="default" className="mb-6 bg-winshirt-purple/10 border-winshirt-purple">
-          <AlertCircle className="h-4 w-4 text-winshirt-purple-light" />
-          <AlertDescription className="text-white">
-            Créez un compte pour suivre facilement vos commandes et participer aux loteries
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Formulaire de checkout */}
+    <div className="container mx-auto py-12 px-4">
+      <h1 className="text-3xl font-bold text-white mb-8">Finaliser votre commande</h1>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* Informations client */}
-              <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <User className="mr-2" /> Informations personnelles
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="customerInfo.fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nom complet</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="customerInfo.email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="john.doe@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="customerInfo.phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Téléphone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="06 12 34 56 78" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {!isAuthenticated && (
-                    <div className="md:col-span-2">
-                      <FormField
-                        control={form.control}
-                        name="customerInfo.createAccount"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>Créer un compte</FormLabel>
-                              <FormDescription>
-                                Pour un suivi facile de vos commandes
-                              </FormDescription>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      {createAccount && (
-                        <FormField
-                          control={form.control}
-                          name="customerInfo.password"
-                          render={({ field }) => (
-                            <FormItem className="mt-4">
-                              <FormLabel>Mot de passe</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Minimum 6 caractères" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* Adresse de livraison */}
-              <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <Truck className="mr-2" /> Adresse de livraison
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <FormField
-                      control={form.control}
-                      name="shippingAddress.address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Adresse</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Rue de Paris" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="shippingAddress.city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ville</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Paris" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="shippingAddress.postalCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Code postal</FormLabel>
-                        <FormControl>
-                          <Input placeholder="75001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="shippingAddress.country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pays</FormLabel>
-                        <FormControl>
-                          <Input placeholder="France" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+          <div className="bg-winshirt-space/60 backdrop-blur-lg rounded-lg p-6 border border-winshirt-purple/30">
+            <h2 className="text-xl font-semibold text-white mb-4">Informations de livraison</h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">Prénom*</Label>
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    className="bg-winshirt-space/80 border-winshirt-purple/30"
+                    required
                   />
                 </div>
-              </Card>
-
-              {/* Méthode de livraison */}
-              <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <Truck className="mr-2" /> Méthode de livraison
-                </h2>
                 
-                <FormField
-                  control={form.control}
-                  name="shippingMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="space-y-3"
-                        >
-                          {shippingOptions.map((option) => (
-                            <FormItem
-                              key={option.id}
-                              className="flex items-center space-x-3 space-y-0 border border-winshirt-blue/20 p-4 rounded-lg"
-                            >
-                              <FormControl>
-                                <RadioGroupItem value={option.id} />
-                              </FormControl>
-                              <FormLabel className="font-normal cursor-pointer flex-1">
-                                <div className="flex justify-between items-center">
-                                  <span>{option.name}</span>
-                                  <span className="font-bold text-winshirt-purple-light">
-                                    {option.price.toFixed(2)} €
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-400">
-                                  Livraison estimée: {option.estimatedDays} jour{option.estimatedDays > 1 ? 's' : ''}
-                                </p>
-                              </FormLabel>
-                            </FormItem>
-                          ))}
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <div>
+                  <Label htmlFor="lastName">Nom*</Label>
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    className="bg-winshirt-space/80 border-winshirt-purple/30"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="email">Email*</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="bg-winshirt-space/80 border-winshirt-purple/30"
+                  required
                 />
-              </Card>
-
-              {/* Informations de paiement */}
-              <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <CreditCard className="mr-2" /> Informations de paiement
-                </h2>
-
-                <p className="text-sm text-gray-400 mb-4">
-                  Vous serez redirigé vers Stripe pour finaliser votre paiement en toute sécurité.
-                </p>
-
-                <FormField
-                  control={form.control}
-                  name="paymentInfo.cardHolder"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nom du titulaire de la carte</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              </div>
+              
+              <div>
+                <Label htmlFor="phone">Téléphone</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="bg-winshirt-space/80 border-winshirt-purple/30"
                 />
-
-                {isAuthenticated && (
-                  <div className="mt-4">
-                    <FormField
-                      control={form.control}
-                      name="paymentInfo.savePaymentInfo"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Sauvegarder mes informations de paiement</FormLabel>
-                            <FormDescription>
-                              Pour des achats plus rapides à l'avenir
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
+              </div>
+              
+              <div>
+                <Label htmlFor="address">Adresse*</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className="bg-winshirt-space/80 border-winshirt-purple/30"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="city">Ville*</Label>
+                  <Input
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    className="bg-winshirt-space/80 border-winshirt-purple/30"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="postalCode">Code postal*</Label>
+                  <Input
+                    id="postalCode"
+                    name="postalCode"
+                    value={formData.postalCode}
+                    onChange={handleInputChange}
+                    className="bg-winshirt-space/80 border-winshirt-purple/30"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="country">Pays*</Label>
+                <Input
+                  id="country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleInputChange}
+                  className="bg-winshirt-space/80 border-winshirt-purple/30"
+                  required
+                />
+              </div>
+              
+              <div className="pt-4 border-t border-winshirt-purple/30">
+                <h3 className="text-lg font-medium text-white mb-4">Méthode de livraison</h3>
+                <RadioGroup 
+                  value={formData.deliveryMethod} 
+                  onValueChange={handleDeliveryMethodChange}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center space-x-3 rounded-md border border-winshirt-purple/30 p-4">
+                    <RadioGroupItem value="standard" id="standard" />
+                    <Label htmlFor="standard" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Standard (3-5 jours ouvrés)</div>
+                      <div className="text-gray-400 text-sm">5.99€</div>
+                    </Label>
                   </div>
-                )}
-              </Card>
-
-              {/* Notes de commande */}
-              <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-                <h2 className="text-xl font-semibold text-white mb-4">Notes de commande</h2>
-
-                <FormField
-                  control={form.control}
-                  name="orderNotes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Instructions spéciales (optionnel)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Instructions de livraison, détails particuliers..."
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </Card>
-
-              {/* Bouton de soumission pour les petits écrans */}
-              <div className="lg:hidden">
+                  
+                  <div className="flex items-center space-x-3 rounded-md border border-winshirt-purple/30 p-4">
+                    <RadioGroupItem value="express" id="express" />
+                    <Label htmlFor="express" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Express (1-2 jours ouvrés)</div>
+                      <div className="text-gray-400 text-sm">9.99€</div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              <div className="pt-4 border-t border-winshirt-purple/30">
+                <h3 className="text-lg font-medium text-white mb-4">Méthode de paiement</h3>
+                <RadioGroup 
+                  value={formData.paymentMethod} 
+                  onValueChange={handlePaymentMethodChange}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center space-x-3 rounded-md border border-winshirt-purple/30 p-4">
+                    <RadioGroupItem value="card" id="card" />
+                    <Label htmlFor="card" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Carte bancaire</div>
+                      <div className="text-gray-400 text-sm">Visa, Mastercard</div>
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3 rounded-md border border-winshirt-purple/30 p-4">
+                    <RadioGroupItem value="paypal" id="paypal" />
+                    <Label htmlFor="paypal" className="flex-1 cursor-pointer">
+                      <div className="font-medium">PayPal</div>
+                      <div className="text-gray-400 text-sm">Paiement sécurisé via PayPal</div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              <div className="flex justify-between pt-6">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate('/cart')}
+                  className="border-winshirt-purple hover:bg-winshirt-purple/20"
+                >
+                  Retour au panier
+                </Button>
+                
                 <Button 
                   type="submit" 
-                  className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
-                  disabled={isProcessing}
+                  disabled={isSubmitting}
+                  className="bg-winshirt-blue hover:bg-winshirt-blue-dark min-w-[150px]"
                 >
-                  {isProcessing ? 'Traitement en cours...' : `Payer ${total.toFixed(2)} €`}
+                  {isSubmitting ? 'Traitement...' : 'Payer maintenant'}
                 </Button>
               </div>
             </form>
-          </Form>
+          </div>
         </div>
-
-        {/* Récapitulatif de la commande */}
-        <div className="lg:col-span-1">
-          <Card className="p-6 bg-winshirt-space border border-winshirt-purple/20 sticky top-24">
-            <h2 className="text-xl font-semibold text-white mb-4">Récapitulatif de la commande</h2>
-
-            <div className="space-y-4">
-              {cartItems.map((item, index) => (
-                <div key={index} className="flex items-start space-x-4 py-3">
-                  <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-700">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="h-full w-full object-cover object-center"
-                    />
+        
+        <div>
+          <div className="bg-winshirt-space/60 backdrop-blur-lg rounded-lg p-6 border border-winshirt-purple/30 sticky top-24">
+            <h2 className="text-xl font-semibold text-white mb-4">Récapitulatif de commande</h2>
+            
+            {items && items.length > 0 ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {items.map(item => (
+                    <div key={`${item.id}-${item.size || ''}-${item.color || ''}`} className="flex justify-between py-2">
+                      <div>
+                        <div className="text-white">{item.name}</div>
+                        <div className="text-gray-400 text-sm">
+                          {item.size && `Taille: ${item.size}`}
+                          {item.size && item.color && ' | '}
+                          {item.color && `Couleur: ${item.color}`}
+                        </div>
+                        <div className="text-gray-400 text-sm">Qté: {item.quantity}</div>
+                      </div>
+                      <div className="text-white">{(item.price * item.quantity).toFixed(2)}€</div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="pt-4 border-t border-winshirt-purple/30 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Sous-total</span>
+                    <span className="text-white">{calculateTotal().toFixed(2)}€</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{item.name}</p>
-                    <p className="text-xs text-gray-400">
-                      {item.size && `Taille: ${item.size}`}
-                      {item.color && item.size && ' | '}
-                      {item.color && `Couleur: ${item.color}`}
-                    </p>
-                    <p className="text-xs text-gray-400">Qté: {item.quantity}</p>
-                    {item.visualDesign && (
-                      <p className="text-xs text-winshirt-purple-light">Personnalisé</p>
-                    )}
-                    {item.selectedLotteries && item.selectedLotteries.length > 0 && (
-                      <p className="text-xs text-winshirt-purple-light">Loterie incluse</p>
-                    )}
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Livraison</span>
+                    <span className="text-white">{deliveryFee.toFixed(2)}€</span>
                   </div>
-                  <p className="text-sm font-medium text-white">
-                    {(item.price * item.quantity).toFixed(2)} €
-                  </p>
                 </div>
-              ))}
-
-              <Separator className="bg-winshirt-blue/20" />
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <p className="text-gray-400">Sous-total</p>
-                  <p className="text-white">{subtotal.toFixed(2)} €</p>
-                </div>
-                <div className="flex justify-between">
-                  <p className="text-gray-400">Livraison</p>
-                  <p className="text-white">{shippingCost.toFixed(2)} €</p>
-                </div>
-                <Separator className="bg-winshirt-blue/20" />
-                <div className="flex justify-between text-base font-semibold">
-                  <p className="text-white">Total</p>
-                  <p className="text-winshirt-purple-light">{total.toFixed(2)} €</p>
+                
+                <div className="pt-4 border-t border-winshirt-purple/30">
+                  <div className="flex justify-between text-lg font-medium">
+                    <span className="text-white">Total</span>
+                    <span className="text-winshirt-blue-light">{(calculateTotal() + deliveryFee).toFixed(2)}€</span>
+                  </div>
                 </div>
               </div>
-
-              {/* Bouton de paiement pour grands écrans */}
-              <div className="hidden lg:block mt-6">
-                <Button 
-                  type="submit"
-                  onClick={form.handleSubmit(onSubmit)}
-                  className="w-full bg-winshirt-purple hover:bg-winshirt-purple-dark"
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? 'Traitement en cours...' : `Payer ${total.toFixed(2)} €`}
-                </Button>
+            ) : (
+              <div className="py-8 text-center text-gray-400">
+                Votre panier est vide
               </div>
-            </div>
-          </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

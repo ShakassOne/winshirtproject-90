@@ -29,7 +29,7 @@ const AdminNavigationHandler: React.FC<AdminNavigationHandlerProps> = ({ childre
       if (!isAuthenticated) {
         // Si l'utilisateur n'est pas connecté, rediriger vers la page de connexion
         toast.error("Authentication requise pour accéder à l'administration");
-        navigate('/login', { replace: true });
+        navigate('/login', { state: { from: location.pathname } });
         setShouldShow(false);
         return;
       } else if (!isAdmin) {
