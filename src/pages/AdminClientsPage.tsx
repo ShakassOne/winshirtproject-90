@@ -146,7 +146,9 @@ const AdminClientsPage: React.FC = () => {
       if (result.success) {
         toast.success(`${result.localCount} clients synchronisés avec Supabase`);
       } else {
-        toast.error(`Erreur lors de la synchronisation: ${result.error || result.message || 'Erreur inconnue'}`);
+        // Use either error or message property, whichever is available
+        const errorMessage = result.error || result.message || 'Erreur inconnue';
+        toast.error(`Erreur lors de la synchronisation: ${errorMessage}`);
       }
     } catch (error: any) {
       console.error("Erreur lors de la synchronisation:", error);

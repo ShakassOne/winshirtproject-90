@@ -190,7 +190,9 @@ const AdminOrdersPage: React.FC = () => {
       if (result.success) {
         toast.success(`${result.localCount} orders synchronized with Supabase`);
       } else {
-        toast.error(`Sync error: ${result.error || result.message || 'Unknown error'}`);
+        // Use either error or message property, whichever is available
+        const errorMessage = result.error || result.message || 'Unknown error';
+        toast.error(`Sync error: ${errorMessage}`);
       }
       
       // Sync order items

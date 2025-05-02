@@ -14,7 +14,7 @@ export interface SyncStatus {
   localCount?: number;
   remoteCount?: number;
   error?: string;
-  message?: string; // Add explicit message property
+  message?: string; // Ensure message property is consistently defined
   timestamp?: number;
   lastSync?: number | null;
 }
@@ -67,6 +67,7 @@ export const syncToSupabase = async (tableName: string, data: any[]) => {
       tableName: tableName as ValidTableName,
       operation: 'push' as SyncOperation,
       error: error instanceof Error ? error.message : String(error),
+      message: error instanceof Error ? error.message : String(error), // Add message consistently
       timestamp: Date.now()
     };
   }
@@ -109,6 +110,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName) => {
       tableName,
       operation: 'push',
       error: errorMsg,
+      message: errorMsg, // Add message consistently
       timestamp: Date.now()
     });
     
@@ -117,6 +119,7 @@ export const pushDataToSupabase = async (tableName: ValidTableName) => {
       tableName,
       operation: 'push' as SyncOperation,
       error: errorMsg,
+      message: errorMsg, // Add message consistently
       timestamp: Date.now()
     };
   }
@@ -169,6 +172,7 @@ export const syncFromSupabase = async (tableName: string) => {
       tableName: tableName as ValidTableName,
       operation: 'pull' as SyncOperation,
       error: error instanceof Error ? error.message : String(error),
+      message: error instanceof Error ? error.message : String(error), // Add message consistently
       timestamp: Date.now()
     };
   }
@@ -196,6 +200,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName) => {
       tableName,
       operation: 'pull',
       error: errorMsg,
+      message: errorMsg, // Add message consistently
       timestamp: Date.now()
     });
     
@@ -204,6 +209,7 @@ export const pullDataFromSupabase = async (tableName: ValidTableName) => {
       tableName,
       operation: 'pull' as SyncOperation,
       error: errorMsg,
+      message: errorMsg, // Add message consistently
       timestamp: Date.now()
     };
   }
@@ -520,9 +526,9 @@ export const syncTable = async (tableName: ValidTableName): Promise<SyncStatus> 
       if (!localItem) return true; // Item exists only remotely
       
       // Check if remote is newer based on updatedAt
-      // Fix the typecasting here
-      const localUpdatedAt = localItem.updatedAt || null;
-      const remoteUpdatedAt = remoteItem.updatedAt || null;
+      // Fix the typecasting here by using definite type assertion
+      const localUpdatedAt = (localItem as any).updatedAt || null;
+      const remoteUpdatedAt = (remoteItem as any).updatedAt || null;
       
       const localDate = localUpdatedAt ? new Date(localUpdatedAt) : new Date(0);
       const remoteDate = remoteUpdatedAt ? new Date(remoteUpdatedAt) : new Date(0);
@@ -576,6 +582,7 @@ export const syncTable = async (tableName: ValidTableName): Promise<SyncStatus> 
         tableName,
         operation: 'sync',
         error: errorMessage,
+        message: errorMessage, // Add message consistently
         localCount: localData.length,
         remoteCount: remoteData.length,
         timestamp: Date.now()
@@ -611,6 +618,7 @@ export const syncTable = async (tableName: ValidTableName): Promise<SyncStatus> 
       tableName,
       operation: 'sync',
       error: errorMessage,
+      message: errorMessage, // Add message consistently
       timestamp: Date.now()
     };
     
@@ -636,6 +644,7 @@ export const syncAllTables = async (): Promise<SyncStatus[]> => {
         tableName: table,
         operation: 'sync',
         error: e instanceof Error ? e.message : String(e),
+        message: e instanceof Error ? e.message : String(e),
         timestamp: Date.now()
       });
     }
