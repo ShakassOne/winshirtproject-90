@@ -71,7 +71,7 @@ export const loginUser = async (email: string, password: string) => {
 // Logout a user
 export const logoutUser = async () => {
   try {
-    // Remove user from localStorage first
+    // Remove user from localStorage first for backward compatibility
     localStorage.removeItem('user');
     
     const { error } = await supabase.auth.signOut();

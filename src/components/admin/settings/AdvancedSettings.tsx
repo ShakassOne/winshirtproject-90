@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, RefreshCw, DatabaseZap } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { 
   clearLocalStorage, 
@@ -12,10 +12,12 @@ import {
   isDevModeEnabled 
 } from '@/lib/syncManager';
 import { checkSupabaseConnectionWithDetails } from '@/lib/syncManager';
+import { cleanupAllTestData } from '@/utils/cleanupUtils';
 
 const AdvancedSettings: React.FC = () => {
   const [isClearing, setIsClearing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isCleaningFakeData, setIsCleaningFakeData] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{
     connected: boolean;
     error?: string;
@@ -38,6 +40,19 @@ const AdvancedSettings: React.FC = () => {
       console.error(error);
     } finally {
       setIsClearing(false);
+    }
+  };
+
+  const handleCleanupFakeData = async () => {
+    try {
+      setIsCleaningFakeData(true);
+      cleanupAllTestData();
+      toast.success("Toutes les données factices ont été supprimées");
+    } catch (error) {
+      toast.error("Erreur lors de la suppression des données factices");
+      console.error(error);
+    } finally {
+      setIsCleaningFakeData(false);
     }
   };
 
@@ -87,6 +102,25 @@ const AdvancedSettings: React.FC = () => {
             >
               <Trash2 className="h-4 w-4" />
               {isClearing ? 'Effacement...' : 'Effacer'}
+            </Button>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">Données de démonstration</h3>
+              <p className="text-sm text-gray-400">
+                Supprimer toutes les données factices (clients, commandes, participants aux loteries)
+              </p>
+            </div>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleCleanupFakeData}
+              disabled={isCleaningFakeData}
+              className="flex gap-2 items-center"
+            >
+              <DatabaseZap className="h-4 w-4" />
+              {isCleaningFakeData ? 'Nettoyage...' : 'Nettoyer'}
             </Button>
           </div>
           

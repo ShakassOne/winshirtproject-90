@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -56,53 +57,33 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
     
     try {
-      // Special case for admin user - always allow login regardless of email confirmation
-      if (loginEmail === 'admin@winshirt.com' && loginPassword === 'admin123') {
-        const adminUser = {
-          id: 1,
-          name: "Administrateur",
-          email: loginEmail,
-          role: 'admin',
-          registrationDate: new Date().toISOString(),
-        };
-        
-        localStorage.setItem('user', JSON.stringify(adminUser));
-        toast.success("Connecté en tant qu'administrateur");
-        onClose();
-        navigate('/account');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Try to sign in with Supabase first
-      const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
+      // Direct Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password: loginPassword
       });
       
-      if (supabaseError) {
-        console.log('Supabase login error:', supabaseError);
+      if (error) {
+        console.error('Erreur de connexion Supabase:', error);
         
         // Handle "Email not confirmed" error specially
-        if (supabaseError.message.includes("Email not confirmed")) {
+        if (error.message.includes("Email not confirmed")) {
           setEmailConfirmNeeded(true);
           toast.warning("Email non confirmé. Veuillez vérifier votre boîte mail ou cliquer sur «Renvoyer l'email»");
-          
-          // Don't attempt fallback login in this case
           setIsLoading(false);
           return;
         }
         
-        // Fall back to local auth mechanism
-        await login(loginEmail, loginPassword);
-        onClose();
-      } else {
-        // Success with Supabase!
-        await login(loginEmail, loginPassword);
-        toast.success("Connexion réussie !");
-        onClose();
-        navigate('/account');
+        toast.error(`Erreur de connexion: ${error.message}`);
+        setIsLoading(false);
+        return;
       }
+      
+      // Success with Supabase!
+      await login(loginEmail, loginPassword);
+      toast.success("Connexion réussie !");
+      onClose();
+      navigate('/account');
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Erreur lors de la connexion");
@@ -161,8 +142,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
     
     try {
-      // Try to register with Supabase first
-      const { data: supabaseData, error: supabaseError } = await supabase.auth.signUp({
+      // Direct Supabase signup
+      const { data, error } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
         options: {
@@ -173,12 +154,18 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
         }
       });
       
-      if (supabaseData?.user) {
-        // Successful signup
+      if (error) {
+        console.error('Erreur d\'inscription Supabase:', error);
+        toast.error(`Erreur d'inscription: ${error.message}`);
+        setIsLoading(false);
+        return;
+      }
+      
+      if (data.user) {
         toast.success("Inscription réussie !");
         
         // If email confirmation is required
-        if (!supabaseData.session) {
+        if (!data.session) {
           toast.info("Veuillez vérifier votre email pour confirmer votre compte");
           onClose();
         } else {
@@ -187,23 +174,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
           onClose();
           navigate('/account');
         }
-        return;
-      }
-      
-      if (supabaseError) {
-        console.log('Supabase registration failed, falling back to local auth:', supabaseError.message);
-        
-        // Check for existing email error
-        if (supabaseError.message.includes('email already')) {
-          toast.error("Cette adresse email est déjà utilisée");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Fall back to local auth mechanism if Supabase fails
-        await register(registerName, registerEmail, registerPassword);
-        onClose();
-        navigate('/account');
       }
     } catch (error) {
       console.error("Register error:", error);
@@ -215,10 +185,25 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
 
   const handleSocialLogin = async (provider: 'facebook' | 'google') => {
     try {
-      await loginWithSocialMedia(provider);
-      onClose();
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/account'
+        }
+      });
+      
+      if (error) {
+        toast.error(`Erreur de connexion avec ${provider}: ${error.message}`);
+        return;
+      }
+      
+      // If signInWithOAuth worked, the page will be redirected
+      if (data?.url) {
+        window.location.href = data.url;
+      }
     } catch (error) {
       console.error(`${provider} login error:`, error);
+      toast.error(`Erreur lors de la connexion avec ${provider}`);
     }
   };
 
@@ -321,11 +306,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     className="bg-winshirt-space-light border-winshirt-purple/30"
                   />
-                </div>
-                <div className="text-sm text-amber-400 mt-2">
-                  <p>Pour tester en tant qu'admin:</p>
-                  <p>Email: admin@winshirt.com</p>
-                  <p>Mot de passe: admin123</p>
                 </div>
                 <Button 
                   type="submit" 
