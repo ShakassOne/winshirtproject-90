@@ -42,7 +42,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.error('Erreur lors de la récupération des données utilisateur:', error);
               // Créer un nouvel utilisateur dans notre table si non existant
               const newUser: User = {
-                id: parseInt(session.user.id, 10) || 0, // Convert string to number or use 0 as fallback
+                id: typeof session.user.id === 'string' ? 
+                     parseInt(session.user.id, 10) || 0 : 
+                     (session.user.id as number) || 0,
                 name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Utilisateur',
                 email: session.user.email!,
                 role: 'user',
@@ -67,7 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               // Utilisateur existant
               const userData: User = {
-                id: typeof data.id === 'string' ? parseInt(data.id, 10) || 0 : data.id,
+                id: typeof data.id === 'string' ? 
+                    parseInt(data.id, 10) || 0 : 
+                    Number(data.id) || 0,
                 name: data.name,
                 email: data.email,
                 role: data.role || 'user',
@@ -189,7 +193,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Retourner un nouvel objet utilisateur pour compatibilité
       const newUser: User = {
-        id: typeof data.user?.id === 'string' ? parseInt(data.user.id, 10) || 0 : (data.user?.id as number) || 0,
+        id: typeof data.user?.id === 'string' ? 
+            parseInt(data.user.id, 10) || 0 : 
+            Number(data.user?.id) || 0,
         name: name,
         email: email,
         role: 'user',
@@ -259,7 +265,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       
       return data.map(user => ({
-        id: typeof user.id === 'string' ? parseInt(user.id, 10) || 0 : user.id,
+        id: typeof user.id === 'string' ? 
+            parseInt(user.id, 10) || 0 : 
+            Number(user.id) || 0,
         name: user.name || user.email.split('@')[0],
         email: user.email,
         role: user.role || 'user',
