@@ -1,6 +1,6 @@
 
 import { getLotteries } from "./lotteryService";
-import { fetchProducts } from "./productService";
+import { fetchProducts } from "../api/productApi";
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 
