@@ -1,5 +1,4 @@
 
-// Import all necessary dependencies
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { ShoppingCart, CreditCard, Truck } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/lib/toast';
-import { useCart } from '@/contexts/CartContext'; // Use CartContext instead of useCart hook
+import { useCart } from '@/contexts/CartContext';
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +17,17 @@ const CartPage: React.FC = () => {
 
   useEffect(() => {
     console.log("CartPage rendered with items:", items);
+    
+    // Check if the cart is rendered with items and the UI doesn't show it
+    if (items.length > 0) {
+      const cartItemElements = document.querySelectorAll('.cart-item');
+      if (cartItemElements.length === 0) {
+        console.log("Cart items not rendered in UI, forcing update");
+        // Force a re-render
+        const forceEvent = new Event('cartUpdated');
+        window.dispatchEvent(forceEvent);
+      }
+    }
   }, [items]);
 
   const handleRemoveItem = (index: number) => {
@@ -51,7 +61,7 @@ const CartPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-white mb-4">Articles dans le panier</h2>
               
               {items.map((item, index) => (
-                <div key={index} className="flex items-start space-x-4 py-4 border-b border-winshirt-blue/10 last:border-0">
+                <div key={index} className="cart-item flex items-start space-x-4 py-4 border-b border-winshirt-blue/10 last:border-0">
                   <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-700">
                     <img
                       src={item.image || "https://placehold.co/100x100/png"}

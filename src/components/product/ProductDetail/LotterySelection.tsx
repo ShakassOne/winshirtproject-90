@@ -1,10 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
-import { Ticket } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
-import { ExtendedLottery, Lottery } from '@/types/lottery';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { getLotteries } from '@/services/lotteryService';
+import { Trophy } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LotterySelectionProps {
   tickets: number;
@@ -12,203 +12,138 @@ interface LotterySelectionProps {
   handleLotteryChange: (lotteryId: string, index: number) => void;
 }
 
+interface Lottery {
+  id: number;
+  title: string;
+  status: string;
+}
+
 const LotterySelection: React.FC<LotterySelectionProps> = ({
   tickets,
   selectedLotteries,
   handleLotteryChange
 }) => {
-  const [activeLotteries, setActiveLotteries] = useState<ExtendedLottery[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lotteries, setLotteries] = useState<Lottery[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load active lotteries from the centralized service
   useEffect(() => {
-    console.log("LotterySelection - Component mounted");
-    
-    const loadActiveLotteries = async () => {
-      setIsLoading(true);
+    const fetchLotteries = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        const allLotteries = await getLotteries(true); // Only get active lotteries
-        
-        console.log("LotterySelection - Active lotteries loaded:", allLotteries);
-        
-        // Convert Lottery[] to ExtendedLottery[]
-        const extendedLotteries: ExtendedLottery[] = allLotteries.map(lottery => ({
-          ...lottery,
-          // Add missing properties needed for ExtendedLottery
-          participants: lottery.participants ? 
-                      (Array.isArray(lottery.participants) ? lottery.participants : []) : 
-                      [],
-          currentParticipants: lottery.currentParticipants || 0,
-          targetParticipants: lottery.targetParticipants || 10,
-          winner: null
-        }));
-        
-        setActiveLotteries(extendedLotteries);
-        
-        // Check consistency of selected data
-        if (selectedLotteries.length > 0) {
-          console.log("LotterySelection - Verifying selected lotteries:", selectedLotteries);
-          const validLotteryIds = extendedLotteries.map(l => l.id.toString());
-          const invalidSelections = selectedLotteries.filter(id => id && !validLotteryIds.includes(id));
+        // Try to get lotteries from Supabase
+        const { data, error } = await supabase
+          .from('lotteries')
+          .select('*')
+          .eq('status', 'active');
           
-          if (invalidSelections.length > 0) {
-            console.warn("LotterySelection - Some selected lotteries are invalid:", invalidSelections);
-          }
+        if (error) {
+          throw error;
         }
         
-      } catch (error) {
-        console.error("LotterySelection - Error loading lotteries:", error);
-        setErrorMessage("Impossible de charger les loteries disponibles");
+        if (data && data.length > 0) {
+          console.log(`Found ${data.length} active lotteries in Supabase`);
+          setLotteries(data);
+        } else {
+          // Fall back to local storage if Supabase fails or returns no data
+          const localLotteries = localStorage.getItem('lotteries');
+          if (localLotteries) {
+            const parsedLotteries = JSON.parse(localLotteries);
+            const activeLotteries = parsedLotteries.filter((l: any) => l.status === 'active');
+            console.log(`Found ${activeLotteries.length} active lotteries in localStorage`);
+            setLotteries(activeLotteries);
+          } else {
+            setError('Aucune loterie active disponible. Veuillez contacter l\'administrateur.');
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching lotteries:", err);
+        
+        // Try fallback to localStorage if Supabase fails
+        try {
+          const localLotteries = localStorage.getItem('lotteries');
+          if (localLotteries) {
+            const parsedLotteries = JSON.parse(localLotteries);
+            const activeLotteries = parsedLotteries.filter((l: any) => l.status === 'active');
+            console.log(`Fallback: Found ${activeLotteries.length} active lotteries in localStorage`);
+            if (activeLotteries.length > 0) {
+              setLotteries(activeLotteries);
+              setError(null);
+            } else {
+              setError('Aucune loterie active disponible. Veuillez contacter l\'administrateur.');
+            }
+          } else {
+            setError('Aucune loterie active disponible. Veuillez contacter l\'administrateur.');
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback error:", fallbackErr);
+          setError('Aucune loterie active disponible. Veuillez contacter l\'administrateur.');
+        }
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     
-    loadActiveLotteries();
-  }, [selectedLotteries]);
-
-  // Set up interval to refresh lotteries periodically
-  useEffect(() => {
-    // Refresh lotteries every 30 seconds
-    const intervalId = setInterval(async () => {
-      try {
-        console.log("LotterySelection - Refreshing active lotteries");
-        const allLotteries = await getLotteries(true);
-        
-        // Convert Lottery[] to ExtendedLottery[]
-        const extendedLotteries: ExtendedLottery[] = allLotteries.map(lottery => ({
-          ...lottery,
-          participants: lottery.participants ? 
-                      (Array.isArray(lottery.participants) ? lottery.participants : []) : 
-                      [],
-          currentParticipants: lottery.currentParticipants || 0,
-          targetParticipants: lottery.targetParticipants || 10,
-          winner: null
-        }));
-        
-        setActiveLotteries(extendedLotteries);
-      } catch (error) {
-        console.error("LotterySelection - Error refreshing lotteries:", error);
-      }
-    }, 30000);
-    
-    return () => clearInterval(intervalId);
+    fetchLotteries();
   }, []);
 
-  if (!tickets || tickets <= 0) return null;
+  // Create array for multiple ticket selection
+  const ticketIndices = Array.from({ length: tickets }, (_, i) => i);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-4">
-        <Label className="text-theme-content flex items-center">
-          <Ticket className="h-4 w-4 mr-2" />
-          Chargement des loteries...
-        </Label>
-        <div className="winshirt-card p-4 flex items-center justify-center h-24 animate-pulse">
-          <p className="text-theme-content opacity-70">Chargement en cours...</p>
-        </div>
+      <div className="animate-pulse bg-winshirt-blue/10 p-4 rounded-md">
+        <div className="h-4 bg-winshirt-blue/20 rounded w-3/4 mb-2"></div>
+        <div className="h-10 bg-winshirt-blue/20 rounded"></div>
       </div>
     );
   }
 
-  if (errorMessage) {
+  if (error) {
     return (
-      <div className="space-y-4">
-        <Label className="text-theme-content flex items-center">
-          <Ticket className="h-4 w-4 mr-2" />
-          Erreur
-        </Label>
-        <div className="winshirt-card p-4 flex items-center justify-center border border-red-500/30">
-          <p className="text-red-400">{errorMessage}</p>
+      <Card className="p-4 bg-winshirt-space border border-winshirt-red/30">
+        <div className="text-winshirt-red text-center">
+          <p>{error}</p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      <Label className="text-theme-content flex items-center">
-        <Ticket className="h-4 w-4 mr-2" />
-        Choisissez {tickets > 1 ? 'vos loteries' : 'votre loterie'}
-      </Label>
-      
-      {Array.from({ length: tickets }).map((_, index) => (
-        <div key={index} className="winshirt-card p-4">
-          <Label className="text-lg mb-4 block text-theme-content">
-            Ticket {index + 1}
+      <div className="flex items-center space-x-2">
+        <Trophy className="h-5 w-5 text-winshirt-purple" />
+        <h3 className="text-lg font-medium">Participation à la loterie</h3>
+      </div>
+
+      {ticketIndices.map((index) => (
+        <div key={index} className="space-y-2">
+          <Label htmlFor={`lottery-${index}`}>
+            {tickets > 1 ? `Ticket ${index + 1}` : 'Choisissez une loterie'}
           </Label>
-          
-          {/* Dropdown with improved error state */}
-          <div className="relative">
-            <select
-              value={selectedLotteries[index] || ''}
-              onChange={(e) => handleLotteryChange(e.target.value, index)}
-              className={`w-full p-3 rounded-lg bg-card text-theme-content appearance-none cursor-pointer border border-input ${
-                activeLotteries.length === 0 ? 'border-red-500/50' : ''
-              }`}
-              disabled={activeLotteries.length === 0}
-            >
-              <option value="">Choisir une loterie</option>
-              {activeLotteries.map((lottery) => (
-                <option key={lottery.id} value={lottery.id}>
-                  {lottery.title} - {lottery.value}€
-                </option>
+          <Select
+            value={selectedLotteries[index] || ''}
+            onValueChange={(value) => handleLotteryChange(value, index)}
+          >
+            <SelectTrigger id={`lottery-${index}`} className="bg-winshirt-space/80 border-winshirt-purple/30">
+              <SelectValue placeholder="Sélectionnez une loterie" />
+            </SelectTrigger>
+            <SelectContent>
+              {lotteries.map((lottery) => (
+                <SelectItem key={lottery.id} value={lottery.id.toString()}>
+                  {lottery.title}
+                </SelectItem>
               ))}
-            </select>
-
-            {/* Show warning if there are no active lotteries */}
-            {activeLotteries.length === 0 && (
-              <div className="mt-2 p-3 bg-red-500/20 border border-red-500/30 rounded-md">
-                <p className="text-red-200 text-sm">
-                  Aucune loterie active disponible. Veuillez contacter l'administrateur.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Selected Lottery Preview */}
-          {selectedLotteries[index] && (
-            <div className="mt-4 winshirt-card p-4 backdrop-blur-lg border border-input">
-              {activeLotteries.map((lottery) => {
-                if (lottery.id.toString() === selectedLotteries[index]) {
-                  return (
-                    <div key={lottery.id} className="flex gap-4 items-start">
-                      <img 
-                        src={lottery.image || 'https://placehold.co/100x100'}
-                        alt={lottery.title}
-                        className="w-24 h-24 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-theme-content">
-                          {lottery.title}
-                        </h3>
-                        <p className="text-lg font-bold text-winshirt-purple-light">
-                          Valeur: {lottery.value}€
-                        </p>
-                        <div className="mt-2">
-                          <div className="text-sm text-muted-foreground">
-                            {lottery.currentParticipants} / {lottery.targetParticipants} participants
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2 mt-1">
-                            <div 
-                              className="bg-winshirt-purple h-2 rounded-full" 
-                              style={{ 
-                                width: `${(lottery.currentParticipants / lottery.targetParticipants) * 100}%` 
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })}
-            </div>
-          )}
+            </SelectContent>
+          </Select>
         </div>
       ))}
+      
+      <p className="text-sm text-gray-400">
+        En choisissant un produit, vous participez automatiquement à la loterie sélectionnée.
+      </p>
     </div>
   );
 };

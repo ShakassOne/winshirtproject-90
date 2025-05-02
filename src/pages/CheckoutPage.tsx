@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
 import { CheckoutFormData, OrderSummary } from '@/types/checkout';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { supabase } from '@/integrations/supabase/client';
 
 const CheckoutPage: React.FC = () => {
   const { items, clearCart, calculateTotal } = useCart();
@@ -23,7 +25,7 @@ const CheckoutPage: React.FC = () => {
     city: '',
     postalCode: '',
     country: 'France',
-    phone: user?.phoneNumber || user?.phone || '',
+    phone: user?.phoneNumber || '',
     paymentMethod: 'card',
     deliveryMethod: 'standard'
   });
@@ -41,6 +43,19 @@ const CheckoutPage: React.FC = () => {
       navigate('/cart');
     }
   }, [items, navigate]);
+  
+  // Update form when user changes
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.name?.split(' ')[0] || prev.firstName,
+        lastName: user.name?.split(' ')[1] || prev.lastName,
+        email: user.email || prev.email,
+        phone: user.phoneNumber || prev.phone
+      }));
+    }
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -112,6 +127,49 @@ const CheckoutPage: React.FC = () => {
 
       console.log("Order summary:", orderSummary);
 
+      // Check if the user is authenticated
+      if (!isAuthenticated) {
+        // Save client data to Supabase if not authenticated
+        try {
+          // First check if client already exists
+          const { data: existingClients } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('email', formData.email)
+            .maybeSingle();
+            
+          if (!existingClients) {
+            // Create new client
+            const { data: newClient, error } = await supabase
+              .from('clients')
+              .insert([
+                {
+                  name: `${formData.firstName} ${formData.lastName}`,
+                  email: formData.email,
+                  phone: formData.phone || null,
+                  address: formData.address,
+                  city: formData.city,
+                  postal_code: formData.postalCode,
+                  country: formData.country,
+                  registration_date: new Date().toISOString()
+                }
+              ])
+              .select()
+              .single();
+              
+            if (error) {
+              console.error("Error creating client:", error);
+            } else {
+              console.log("New client created:", newClient);
+            }
+          }
+        } catch (error) {
+          console.error("Error checking/creating client:", error);
+        }
+      }
+
+      console.log("Processing checkout for items:", items);
+      
       // Call Stripe checkout function
       const result = await initiateStripeCheckout(items);
       
@@ -321,37 +379,43 @@ const CheckoutPage: React.FC = () => {
             <h2 className="text-xl font-semibold text-white mb-4">Récapitulatif</h2>
             
             <div className="space-y-4">
-              {items && items.map((item, index) => (
-                <div key={index} className="flex justify-between py-2">
-                  <div>
-                    <div className="text-white">{item.name}</div>
-                    <div className="text-gray-400 text-sm">
-                      {item.size && `Taille: ${item.size}`}
-                      {item.size && item.color && ' | '}
-                      {item.color && `Couleur: ${item.color}`}
+              {items && items.length > 0 ? (
+                items.map((item, index) => (
+                  <div key={index} className="flex justify-between py-2">
+                    <div>
+                      <div className="text-white">{item.name}</div>
+                      <div className="text-gray-400 text-sm">
+                        {item.size && `Taille: ${item.size}`}
+                        {item.size && item.color && ' | '}
+                        {item.color && `Couleur: ${item.color}`}
+                      </div>
+                      <div className="text-gray-400 text-sm">Qté: {item.quantity}</div>
                     </div>
-                    <div className="text-gray-400 text-sm">Qté: {item.quantity}</div>
+                    <div className="text-white">{(item.price * item.quantity).toFixed(2)}€</div>
                   </div>
-                  <div className="text-white">{(item.price * item.quantity).toFixed(2)}€</div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center text-gray-400">Panier vide</div>
+              )}
               
-              <div className="pt-4 border-t border-winshirt-purple/30 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Sous-total</span>
-                  <span className="text-white">{calculateTotal().toFixed(2)}€</span>
+              {items && items.length > 0 && (
+                <div className="pt-4 border-t border-winshirt-purple/30 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Sous-total</span>
+                    <span className="text-white">{calculateTotal().toFixed(2)}€</span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Livraison</span>
+                    <span className="text-white">{deliveryFee.toFixed(2)}€</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-lg font-medium pt-2 border-t border-winshirt-purple/30">
+                    <span className="text-white">Total</span>
+                    <span className="text-winshirt-blue-light">{(calculateTotal() + deliveryFee).toFixed(2)}€</span>
+                  </div>
                 </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Livraison</span>
-                  <span className="text-white">{deliveryFee.toFixed(2)}€</span>
-                </div>
-                
-                <div className="flex justify-between text-lg font-medium pt-2 border-t border-winshirt-purple/30">
-                  <span className="text-white">Total</span>
-                  <span className="text-winshirt-blue-light">{(calculateTotal() + deliveryFee).toFixed(2)}€</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

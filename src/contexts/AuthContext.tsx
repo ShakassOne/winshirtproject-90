@@ -23,16 +23,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Initialiser l'authentification au chargement
+  // Initialize authentication on load
   useEffect(() => {
-    // Configurer d'abord l'écouteur d'événements d'authentification
+    // Set up the auth state change listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session && session.user) {
-          // Utilisateur connecté via Supabase Auth
+          // User logged in via Supabase Auth
           try {
-            // Check if the user is an admin - first try with user_metadata
-            const isUserAdmin = session.user.user_metadata?.isAdmin === true;
+            // Check if the user is an admin
+            const { data: userRoleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+              
+            const isUserAdmin = userRoleData?.role === 'admin' || 
+                               session.user.user_metadata?.isAdmin === true;
             
             // Format user data
             const userData: User = {
@@ -60,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsAdmin(false);
           }
         } else {
-          // Utilisateur déconnecté
+          // User logged out
           localStorage.removeItem('user');
           setUser(null);
           setIsAuthenticated(false);
@@ -70,10 +77,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
     
-    // Vérifier s'il y a une session existante
+    // THEN check for an existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // Pas de session, vérifier s'il y a un utilisateur dans localStorage (compatibilité)
+        // No session, check if there's a user in localStorage (backwards compatibility)
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           try {
@@ -82,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsAuthenticated(true);
             setIsAdmin(parsedUser?.role === 'admin' || parsedUser?.isAdmin === true);
           } catch (error) {
-            console.error("Erreur parsing stored user:", error);
+            console.error("Error parsing stored user:", error);
             localStorage.removeItem('user');
           }
         }
@@ -90,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
     
+    // Clean up subscription
     return () => {
       subscription.unsubscribe();
     };
@@ -97,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const login = async (email: string, password: string) => {
     try {
-      // Connexion standard via Supabase
+      // Standard login via Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -107,7 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      // Log success
       toast.success("Connexion réussie");
     } catch (error: any) {
       console.error('Error logging in:', error);
@@ -118,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const register = async (name: string, email: string, password: string): Promise<User> => {
     try {
-      // Inscription via Supabase Auth
+      // Sign up via Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -132,10 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
       
-      // Le reste sera géré par l'écouteur d'événements d'authentification
+      // The rest will be handled by the auth state change listener
       toast.success("Inscription réussie !");
       
-      // Retourner un nouvel objet utilisateur pour compatibilité
+      // Return a new user object for compatibility
       const newUser: User = {
         id: typeof data.user?.id === 'string' ? 
             parseInt(data.user.id.replace(/-/g, '').substring(0, 8), 16) || 0 : 0,
@@ -167,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // Si signInWithOAuth a fonctionné, la page sera redirigée
+      // If signInWithOAuth worked, the page will be redirected
       if (data?.url) {
         window.location.href = data.url;
       }
@@ -179,12 +186,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const logout = async () => {
     try {
-      // Déconnexion via Supabase Auth
+      // Sign out via Supabase Auth
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
       
-      // Nettoyer localStorage pour compatibilité
+      // Clean up localStorage for compatibility
       localStorage.removeItem('user');
       
       setUser(null);
@@ -200,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const getAllUsers = async (): Promise<User[]> => {
     try {
-      // Récupérer tous les utilisateurs depuis Supabase
+      // Get all users from Supabase
       const { data, error } = await supabase
         .from('users')
         .select('*');
@@ -218,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
     } catch (error) {
       console.error("Error getting users:", error);
-      return []; // Retourner un tableau vide en cas d'erreur
+      return []; // Return empty array on error
     }
   };
   

@@ -1,0 +1,114 @@
+
+import { supabase } from '@/integrations/supabase/client';
+
+export interface AdminSetupResult {
+  success: boolean;
+  message: string;
+  error?: string;
+}
+
+/**
+ * Sets up a user as an admin
+ * This function should be run once by the site owner to create the first admin
+ */
+export const setupAdminUser = async (email: string): Promise<AdminSetupResult> => {
+  try {
+    // First check if user exists in auth
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    
+    if (userError) {
+      console.error('Error finding user:', userError);
+      return {
+        success: false,
+        message: `Impossible de trouver un utilisateur avec l'email ${email}`,
+        error: userError.message
+      };
+    }
+    
+    if (!userData?.user) {
+      return {
+        success: false,
+        message: `Aucun utilisateur trouvé avec l'email ${email}`,
+      };
+    }
+    
+    // Check if user already has an admin role
+    const { data: existingRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select()
+      .eq('user_id', userData.user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+      
+    if (roleError) {
+      console.error('Error checking for existing role:', roleError);
+      return {
+        success: false,
+        message: `Erreur lors de la vérification des rôles`,
+        error: roleError.message
+      };
+    }
+    
+    if (existingRole) {
+      return {
+        success: true,
+        message: `${email} est déjà administrateur`
+      };
+    }
+    
+    // Insert admin role for user
+    const { error: insertError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userData.user.id,
+        role: 'admin'
+      });
+      
+    if (insertError) {
+      console.error('Error setting user as admin:', insertError);
+      return {
+        success: false,
+        message: `Erreur lors de l'attribution du rôle d'administrateur`,
+        error: insertError.message
+      };
+    }
+    
+    return {
+      success: true,
+      message: `${email} est maintenant administrateur`
+    };
+  } catch (error) {
+    console.error('Error in setupAdminUser:', error);
+    return {
+      success: false,
+      message: 'Une erreur est survenue lors de la configuration de l\'administrateur',
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+};
+
+/**
+ * Checks if the current user is an admin
+ */
+export const checkAdminStatus = async (): Promise<boolean> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return false;
+    }
+    
+    // Check for admin role in user_roles table
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+      
+    return !!roleData;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+};

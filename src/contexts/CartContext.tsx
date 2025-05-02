@@ -1,32 +1,63 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, CartContextType } from '@/types/cart';
 import { toast } from '@/lib/toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Load cart from localStorage on mount
   useEffect(() => {
-    const storedCart = localStorage.getItem('cart');
-    if (storedCart) {
+    const loadCart = () => {
       try {
-        setItems(JSON.parse(storedCart));
+        const storedCart = localStorage.getItem('cart');
+        if (storedCart) {
+          const parsedCart = JSON.parse(storedCart);
+          console.log("Loaded cart from localStorage:", parsedCart);
+          setItems(parsedCart);
+        }
       } catch (error) {
         console.error('Error parsing cart from localStorage:', error);
         // Reset cart if there's an error
         localStorage.removeItem('cart');
+      } finally {
+        setIsInitialized(true);
       }
-    }
+    };
+    
+    loadCart();
+    
+    // Listen for storage events to sync cart across tabs
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'cart') {
+        loadCart();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
   
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
-  }, [items]);
+    if (isInitialized) {
+      localStorage.setItem('cart', JSON.stringify(items));
+      console.log("Saved cart to localStorage:", items);
+      
+      // Dispatch cart update event
+      const event = new Event('cartUpdated');
+      window.dispatchEvent(event);
+    }
+  }, [items, isInitialized]);
   
   const addItem = (item: CartItem) => {
+    console.log("Adding item to cart:", item);
     setItems(currentItems => {
       // Check if the item already exists with the same size and color
       const existingItemIndex = currentItems.findIndex(
