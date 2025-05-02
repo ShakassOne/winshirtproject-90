@@ -58,6 +58,27 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
       };
     }
     
+    // Alternatively, check if user has isAdmin in metadata
+    if (userData.user_metadata?.isAdmin === true) {
+      // User already has admin metadata, let's ensure they have a role too
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userData.id,
+          role: 'admin'
+        });
+        
+      if (insertError) {
+        console.error('Error setting user as admin in roles table:', insertError);
+        // Not returning error as the user is already admin in metadata
+      }
+      
+      return {
+        success: true,
+        message: `${email} a déjà les droits administrateur dans ses métadonnées`
+      };
+    }
+    
     // Insert admin role for user
     const { error: insertError } = await supabase
       .from('user_roles')
@@ -73,6 +94,22 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
         message: `Erreur lors de l'attribution du rôle d'administrateur`,
         error: insertError.message
       };
+    }
+    
+    // Also update user metadata for backward compatibility
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      userData.id,
+      { 
+        user_metadata: { 
+          ...userData.user_metadata,
+          isAdmin: true 
+        } 
+      }
+    );
+    
+    if (updateError) {
+      console.error('Error updating user metadata:', updateError);
+      // Not returning as error since the role was already set
     }
     
     return {
@@ -98,6 +135,11 @@ export const checkAdminStatus = async (): Promise<boolean> => {
     
     if (!session) {
       return false;
+    }
+    
+    // First check user metadata for backward compatibility
+    if (session.user.user_metadata?.isAdmin === true) {
+      return true;
     }
     
     // Check for admin role in user_roles table
