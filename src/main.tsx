@@ -7,9 +7,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { initializeLotteryData } from './data/mockData';
 import { AuthProvider } from './contexts/AuthContext';
 import { checkSupabaseConnection } from './lib/supabase';
+import { preloadAllData } from './services/preloadService';
 
 // Initialize mock data
 initializeLotteryData();
+
+// Préchargement des données
+preloadAllData().catch(console.error);
 
 // Check Supabase connection and store status
 checkSupabaseConnection().then(connected => {
