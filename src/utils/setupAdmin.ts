@@ -13,19 +13,21 @@ export interface AdminSetupResult {
  */
 export const setupAdminUser = async (email: string): Promise<AdminSetupResult> => {
   try {
-    // First check if user exists in auth
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    // First get all users and filter by email
+    const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
     
     if (userError) {
-      console.error('Error finding user:', userError);
+      console.error('Error finding users:', userError);
       return {
         success: false,
-        message: `Impossible de trouver un utilisateur avec l'email ${email}`,
+        message: `Impossible de récupérer les utilisateurs`,
         error: userError.message
       };
     }
     
-    if (!userData?.user) {
+    const userData = users?.find(user => user.email === email);
+    
+    if (!userData) {
       return {
         success: false,
         message: `Aucun utilisateur trouvé avec l'email ${email}`,
@@ -36,7 +38,7 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
     const { data: existingRole, error: roleError } = await supabase
       .from('user_roles')
       .select()
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userData.id)
       .eq('role', 'admin')
       .maybeSingle();
       
@@ -60,7 +62,7 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
     const { error: insertError } = await supabase
       .from('user_roles')
       .insert({
-        user_id: userData.user.id,
+        user_id: userData.id,
         role: 'admin'
       });
       

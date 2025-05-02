@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
-import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeProvider } from './components/ThemeProvider';
 import { CartProvider } from '@/contexts/CartContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { preloadAllData } from '@/utils/dataLoader';
