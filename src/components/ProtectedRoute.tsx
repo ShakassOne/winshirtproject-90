@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 
@@ -13,15 +13,23 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   adminOnly = false 
 }) => {
-  const { isAuthenticated, isAdmin, user } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading, user } = useAuth();
+  const navigate = useNavigate();
   
   // Vérification stricte des droits d'administration
   useEffect(() => {
-    if (adminOnly && !isAdmin && isAuthenticated) {
+    if (!isLoading && adminOnly && !isAdmin && isAuthenticated) {
       // L'utilisateur est connecté mais n'est pas admin
       toast.error("Vous n'avez pas les droits d'administration nécessaires");
     }
-  }, [adminOnly, isAdmin, isAuthenticated]);
+  }, [adminOnly, isAdmin, isAuthenticated, isLoading]);
+
+  // Afficher un état de chargement pendant la vérification d'authentification
+  if (isLoading) {
+    return <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-winshirt-purple"></div>
+    </div>;
+  }
 
   // Redirection si non authentifié
   if (!isAuthenticated) {

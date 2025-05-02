@@ -9,7 +9,7 @@ export interface User {
   profilePicture?: string;
   phoneNumber?: string;
   phone?: string;
-  clientId?: number; // Add this field to fix the TypeScript error
+  clientId?: number;
   socialMediaDetails?: {
     providerId?: string;
     displayName?: string;
@@ -23,9 +23,10 @@ export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => void;
   loginWithSocialMedia: (provider: 'facebook' | 'google') => void;
   register: (name: string, email: string, password: string) => void;
   logout: () => void;
-  getAllUsers: () => User[];
+  getAllUsers: () => Promise<User[]>;
 }
