@@ -1,21 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, User, Menu, X, LogOut, Settings } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginButton from '@/components/LoginButton';
-import { useCart } from '@/contexts/CartContext'; // Ajout de l'import du contexte du panier
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
-  const { items } = useCart(); // Récupération des éléments du panier
-  
-  // Calcul du nombre d'articles dans le panier
-  const cartItemCount = items ? items.reduce((acc, item) => acc + item.quantity, 0) : 0;
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -85,24 +80,14 @@ const Navbar: React.FC = () => {
               >
                 Contact
               </Link>
-              {/* Afficher le lien Admin uniquement pour les administrateurs authentifiés */}
-              {isAuthenticated && isAdmin && (
-                <Link 
-                  to="/admin"
-                  className={`nav-link text-winshirt-purple-light font-semibold ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
-                >
-                  Admin
-                </Link>
-              )}
+              {/* Removed the admin link from here */}
             </nav>
             
             {/* User actions à droite sur desktop */}
             <div className="hidden md:flex w-1/4 justify-end items-center space-x-6">
               <Link to="/cart" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light">
                 <ShoppingCart className="h-5 w-5" />
-                {cartItemCount > 0 && (
-                  <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">{cartItemCount}</span>
-                )}
+                <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">0</span>
               </Link>
               
               {isAuthenticated ? (
@@ -167,25 +152,14 @@ const Navbar: React.FC = () => {
                   >
                     Contact
                   </Link>
-                  {/* Afficher le lien Admin uniquement pour les administrateurs authentifiés */}
-                  {isAuthenticated && isAdmin && (
-                    <Link 
-                      to="/admin" 
-                      className={`nav-link text-center text-winshirt-purple-light font-semibold ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Administration
-                    </Link>
-                  )}
+                  {/* Removed the admin link from mobile menu */}
                 </nav>
                 
                 <div className="flex flex-col space-y-4 items-center">
                   <Link to="/cart" className="flex items-center gap-2 text-white hover:text-winshirt-blue-light" onClick={() => setIsMenuOpen(false)}>
                     <ShoppingCart className="h-5 w-5" />
                     <span>Panier</span>
-                    {cartItemCount > 0 && (
-                      <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">{cartItemCount}</span>
-                    )}
+                    <span className="bg-winshirt-blue-light text-white text-xs px-2 py-1 rounded-full">0</span>
                   </Link>
                   
                   {isAuthenticated ? (

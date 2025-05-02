@@ -62,7 +62,7 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
         defaultVisualId: item.default_visual_id,
         defaultVisualSettings: item.default_visual_settings,
         visualCategoryId: item.visual_category_id,
-        printAreas: item.print_areas || [],
+        printAreas: item.print_areas || [], // Added to handle the new column
         brand: item.brand,
         fit: item.fit,
         gender: item.gender,
@@ -83,72 +83,6 @@ export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
     if (storedProducts) {
       try {
         return JSON.parse(storedProducts);
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  }
-};
-
-// Fonction pour récupérer les produits populaires/en vedette
-export const fetchFeaturedProducts = async (): Promise<ExtendedProduct[]> => {
-  try {
-    console.log("Fetching featured products from Supabase...");
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('popularity', { ascending: false })
-      .limit(4);
-    
-    if (error) throw error;
-    
-    // Convertir les données au format ExtendedProduct
-    const products: ExtendedProduct[] = data.map(item => {
-      return {
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        image: item.image,
-        secondaryImage: item.secondary_image,
-        sizes: item.sizes || [],
-        colors: item.colors || [],
-        type: item.type || 'standard',
-        productType: item.product_type,
-        sleeveType: item.sleeve_type,
-        linkedLotteries: item.linked_lotteries || [],
-        popularity: item.popularity,
-        tickets: item.tickets || 1,
-        weight: item.weight,
-        deliveryPrice: item.delivery_price,
-        allowCustomization: item.allow_customization === true,
-        defaultVisualId: item.default_visual_id,
-        defaultVisualSettings: item.default_visual_settings,
-        visualCategoryId: item.visual_category_id,
-        printAreas: item.print_areas || [],
-        brand: item.brand,
-        fit: item.fit,
-        gender: item.gender,
-        material: item.material,
-      };
-    });
-    
-    console.log(`Retrieved ${products.length} featured products from Supabase`);
-    return products;
-  } catch (error) {
-    console.error('Erreur lors de la récupération des produits en vedette:', error);
-    
-    // Fallback au localStorage en cas d'erreur
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      try {
-        const products = JSON.parse(storedProducts);
-        // Trier par popularité et limiter à 4
-        const featured = products
-          .sort((a: ExtendedProduct, b: ExtendedProduct) => (b.popularity || 0) - (a.popularity || 0))
-          .slice(0, 4);
-        return featured;
       } catch (e) {
         return [];
       }
@@ -387,11 +321,11 @@ export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedP
       defaultVisualId: data.default_visual_id,
       defaultVisualSettings: data.defaultVisualSettings,
       visualCategoryId: data.visual_category_id,
-      printAreas: data.print_areas || [],
+      printAreas: data.print_areas || [], // Added to handle the new column
       brand: data.brand,
-      fit: product.fit,
-      gender: product.gender,
-      material: product.material,
+      fit: data.fit,
+      gender: data.gender,
+      material: data.material,
     };
     
     // Mettre à jour le localStorage pour la cohérence
@@ -526,7 +460,7 @@ export const syncProductsToSupabase = async (): Promise<boolean> => {
       default_visual_id: product.defaultVisualId || null,
       default_visual_settings: product.defaultVisualSettings || null,
       visual_category_id: product.visualCategoryId || null,
-      print_areas: product.printAreas || [],
+      print_areas: product.printAreas || [], // Added to handle the new column
       brand: product.brand,
       fit: product.fit,
       gender: product.gender,

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,14 +73,14 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
   const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(15);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatuses, setSyncStatuses] = useState<Record<string, SyncStatus>>({
-    lotteries: { success: true, lastSync: null, message: '' },
-    lottery_participants: { success: true, lastSync: null, message: '' },
-    lottery_winners: { success: true, lastSync: null, message: '' },
-    products: { success: true, lastSync: null, message: '' },
-    visuals: { success: true, lastSync: null, message: '' },
-    orders: { success: true, lastSync: null, message: '' },
-    order_items: { success: true, lastSync: null, message: '' },
-    clients: { success: true, lastSync: null, message: '' },
+    lotteries: { success: true, lastSync: null },
+    lottery_participants: { success: true, lastSync: null },
+    lottery_winners: { success: true, lastSync: null },
+    products: { success: true, lastSync: null },
+    visuals: { success: true, lastSync: null },
+    orders: { success: true, lastSync: null },
+    order_items: { success: true, lastSync: null },
+    clients: { success: true, lastSync: null },
   });
   const [isLocalStorageEmpty, setIsLocalStorageEmpty] = useState(false);
   const [isClearingLocalStorage, setIsClearingLocalStorage] = useState(false);
@@ -227,9 +228,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
           ? `Successfully synced ${table} data with Supabase.`
           : `Failed to sync ${table} data with Supabase.`,
       })
-      // Use either error or message property, whichever is available
-      const errorMessage = result.error || result.message;
-      showNotification('sync', table, result.success, errorMessage);
+      showNotification('sync', table, result.success, result.error);
     } catch (error) {
       console.error(`Sync ${table} failed:`, error);
       toast({
@@ -255,8 +254,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
           ? `Successfully pulled ${table} data from Supabase.`
           : `Failed to pull ${table} data from Supabase.`,
       })
-      // Use either error or message property, whichever is available
-      showNotification('update', table, result.success, result.error || result.message);
+      showNotification('update', table, result.success, result.error);
     } catch (error) {
       console.error(`Pull ${table} failed:`, error);
       toast({
@@ -297,10 +295,10 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
   const handleResetSyncStatus = async (table: ValidTableName) => {
     setIsResettingSyncStatus(true);
     try {
-      await setSyncStatus(table, { lastSync: null, success: true, message: '' });
+      await setSyncStatus(table, { lastSync: null, success: true });
       setSyncStatuses(prev => ({
         ...prev,
-        [table]: { lastSync: null, success: true, message: '' },
+        [table]: { lastSync: null, success: true },
       }));
       toast({
         title: `Reset ${table} sync status`,
@@ -327,9 +325,7 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
         try {
           const result = await pushDataToSupabase(table);
           setSyncStatuses(prev => ({ ...prev, [table]: result }));
-          // Use either error or message property, whichever is available
-          const errorMessage = result.error || result.message;
-          showNotification('sync', table, result.success, errorMessage);
+          showNotification('sync', table, result.success, result.error);
         } catch (error) {
           console.error(`Sync ${table} failed:`, error);
           showNotification('sync', table, false, error instanceof Error ? error.message : 'Unknown error');
@@ -358,10 +354,10 @@ const SyncSettingsManager: React.FC<SyncSettingsManagerProps> = ({ onSettingsCha
     try {
       for (const table of getAllValidTableNames()) {
         try {
-          await setSyncStatus(table, { lastSync: null, success: true, message: '' });
+          await setSyncStatus(table, { lastSync: null, success: true });
           setSyncStatuses(prev => ({
             ...prev,
-            [table]: { lastSync: null, success: true, message: '' },
+            [table]: { lastSync: null, success: true },
           }));
         } catch (error) {
           console.error(`Failed to reset ${table} sync status:`, error);

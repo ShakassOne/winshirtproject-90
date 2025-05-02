@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import StarBackground from '@/components/StarBackground';
@@ -190,9 +191,7 @@ const AdminOrdersPage: React.FC = () => {
       if (result.success) {
         toast.success(`${result.localCount} orders synchronized with Supabase`);
       } else {
-        // Use either error or message property, whichever is available
-        const errorMessage = result.error || result.message || 'Unknown error';
-        toast.error(`Sync error: ${errorMessage}`);
+        toast.error(`Sync error: ${result.error || 'Unknown error'}`);
       }
       
       // Sync order items

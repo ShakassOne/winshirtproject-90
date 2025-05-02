@@ -1,405 +1,175 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { snakeToCamel, camelToSnake as importedCamelToSnake } from '@/lib/utils';
 
-// Define types needed for synchronization
-export type ValidTableName = 'lotteries' | 'products' | 'visuals' | 'visual_categories' | 
-  'orders' | 'order_items' | 'clients' | 'lottery_participants' | 'lottery_winners';
+/**
+ * Define valid table names for type safety
+ */
+export type ValidTableName = 'lotteries' | 'lottery_participants' | 'lottery_winners' | 
+                            'products' | 'visuals' | 'visual_categories' | 'orders' | 
+                            'order_items' | 'clients';
 
-export type SyncOperation = 'push' | 'pull' | 'sync';
-
+/**
+ * Interface for defining synchronization status
+ */
 export interface SyncStatus {
   success: boolean;
-  tableName?: ValidTableName;
-  operation?: SyncOperation;
+  tableName?: string;
   localCount?: number;
   remoteCount?: number;
+  operation?: 'push' | 'pull';
   error?: string;
-  message?: string; // Ensure message property is consistently defined
+  httpCode?: number;
   timestamp?: number;
   lastSync?: number | null;
 }
 
-// Function to sync data from local storage to Supabase
-export const syncToSupabase = async (tableName: string, data: any[]) => {
-  try {
-    await ensureAuthenticated();
+// Type definitions for special cases
+interface ClientItem {
+  address?: string | {
+    address?: string;
+    city?: string;
+    postal_code?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  [key: string]: any;
+}
 
-    // Convert camelCase keys to snake_case for Supabase
-    const snakeCaseData = data.map(item => {
-      const newItem: { [key: string]: any } = {};
-      for (const key in item) {
-        if (item.hasOwnProperty(key)) {
-          // Convert key to snake_case
-          const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-          newItem[snakeCaseKey] = item[key];
-        }
-      }
-      return newItem;
+interface VisualItem {
+  imageUrl?: string;
+  image?: string;
+  [key: string]: any;
+}
+
+// Track the history of synchronizations
+const syncHistory: SyncStatus[] = [];
+
+/**
+ * Log a synchronization event
+ */
+const logSyncEvent = (status: SyncStatus): void => {
+  syncHistory.push(status);
+  // Limit history to last 100 entries
+  if (syncHistory.length > 100) {
+    syncHistory.shift();
+  }
+};
+
+/**
+ * Get synchronization history
+ */
+export const getSyncHistory = (): SyncStatus[] => {
+  return [...syncHistory];
+};
+
+/**
+ * Clear synchronization history
+ */
+export const clearSyncHistory = (): void => {
+  syncHistory.length = 0;
+};
+
+/**
+ * Get all valid table names
+ */
+export const getAllValidTableNames = (): ValidTableName[] => {
+  return [
+    'lotteries', 
+    'products', 
+    'visuals', 
+    'visual_categories', 
+    'orders', 
+    'order_items', 
+    'clients', 
+    'lottery_participants', 
+    'lottery_winners'
+  ];
+};
+
+/**
+ * Clear local storage
+ */
+export const clearLocalStorage = async (): Promise<void> => {
+  try {
+    getAllValidTableNames().forEach(tableName => {
+      localStorage.removeItem(tableName);
     });
-
-    const { error } = await supabase
-      .from(tableName)
-      .upsert(snakeCaseData, { onConflict: 'id' });
-
-    if (error) {
-      console.error(`Error syncing ${tableName} to Supabase:`, error);
-      throw new Error(`Erreur lors de la synchronisation de ${tableName} vers Supabase: ${error.message}`);
-    }
-
-    console.log(`${tableName} synced to Supabase successfully`);
-    toast.success(`${tableName} synchronisé avec succès`);
-    
-    // Return success status
-    return {
-      success: true,
-      tableName: tableName as ValidTableName,
-      operation: 'push' as SyncOperation,
-      localCount: data.length,
-      timestamp: Date.now()
-    };
+    console.log("Local storage cleared");
+    return Promise.resolve();
   } catch (error) {
-    console.error(`Error during ${tableName} sync:`, error);
-    toast.error(`Erreur lors de la synchronisation de ${tableName}: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    
-    // Return error status
-    return {
-      success: false,
-      tableName: tableName as ValidTableName,
-      operation: 'push' as SyncOperation,
-      error: error instanceof Error ? error.message : String(error),
-      message: error instanceof Error ? error.message : String(error), // Add message consistently
-      timestamp: Date.now()
-    };
+    console.error("Error clearing local storage:", error);
+    return Promise.reject(error);
   }
 };
 
-// Alias for backward compatibility
-export const pushDataToSupabase = async (tableName: ValidTableName) => {
+/**
+ * Get sync status for a table
+ */
+export const getSyncStatus = async (table: ValidTableName): Promise<SyncStatus> => {
   try {
-    // Get data from local storage
-    const dataString = localStorage.getItem(tableName);
-    if (!dataString) {
-      return {
-        success: true,
-        tableName,
-        operation: 'push' as SyncOperation,
-        localCount: 0,
-        timestamp: Date.now(),
-        message: `Aucune donnée locale pour ${tableName}`,
-        error: undefined // Explicitly set error as undefined
-      };
+    const statusKey = `sync_status_${table}`;
+    const statusStr = localStorage.getItem(statusKey);
+    if (statusStr) {
+      return JSON.parse(statusStr);
     }
-    
-    const data = JSON.parse(dataString);
-    const result = await syncToSupabase(tableName, data);
-    
-    // Log the sync event
-    logSyncEvent({
-      ...result,
-      tableName
-    });
-    
-    return result;
+    return { success: true, lastSync: null };
   } catch (error) {
-    console.error(`Error during ${tableName} push:`, error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    
-    // Log the sync event
-    logSyncEvent({
-      success: false,
-      tableName,
-      operation: 'push',
-      error: errorMsg,
-      message: errorMsg, // Add message consistently
-      timestamp: Date.now()
-    });
-    
-    return {
-      success: false,
-      tableName,
-      operation: 'push' as SyncOperation,
-      error: errorMsg,
-      message: errorMsg, // Add message consistently
-      timestamp: Date.now()
-    };
+    console.error(`Error getting sync status for ${table}:`, error);
+    return { success: true, lastSync: null };
   }
 };
 
-// Function to fetch data from Supabase and store it in local storage
-export const syncFromSupabase = async (tableName: string) => {
+/**
+ * Set sync status for a table
+ */
+export const setSyncStatus = async (table: ValidTableName, status: SyncStatus): Promise<void> => {
   try {
-    await ensureAuthenticated();
-
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*');
-
-    if (error) {
-      console.error(`Error fetching ${tableName} from Supabase:`, error);
-      throw new Error(`Erreur lors de la récupération de ${tableName} depuis Supabase: ${error.message}`);
-    }
-
-    // Convert snake_case keys to camelCase for local storage
-    const camelCaseData = data ? data.map(item => {
-      const newItem: { [key: string]: any } = {};
-      for (const key in item) {
-        if (item.hasOwnProperty(key)) {
-          // Convert key to camelCase
-          const camelCaseKey = key.replace(/_([a-z])/g, g => g[1].toUpperCase());
-          newItem[camelCaseKey] = item[key];
-        }
-      }
-      return newItem;
-    }) : [];
-
-    localStorage.setItem(tableName, JSON.stringify(camelCaseData));
-    console.log(`${tableName} synced from Supabase successfully`);
-    toast.success(`${tableName} synchronisé depuis Supabase avec succès`);
-    
-    return {
-      success: true,
-      tableName: tableName as ValidTableName,
-      operation: 'pull' as SyncOperation,
-      remoteCount: data ? data.length : 0,
-      timestamp: Date.now()
-    };
+    const statusKey = `sync_status_${table}`;
+    localStorage.setItem(statusKey, JSON.stringify(status));
+    return Promise.resolve();
   } catch (error) {
-    console.error(`Error during ${tableName} sync:`, error);
-    toast.error(`Erreur lors de la synchronisation de ${tableName}: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    
-    return {
-      success: false,
-      tableName: tableName as ValidTableName,
-      operation: 'pull' as SyncOperation,
-      error: error instanceof Error ? error.message : String(error),
-      message: error instanceof Error ? error.message : String(error), // Add message consistently
-      timestamp: Date.now()
-    };
+    console.error(`Error setting sync status for ${table}:`, error);
+    return Promise.reject(error);
   }
 };
 
-// Alias for backward compatibility
-export const pullDataFromSupabase = async (tableName: ValidTableName) => {
+/**
+ * Test connection to Supabase
+ */
+export const testSupabaseConnection = async (): Promise<boolean> => {
   try {
-    const result = await syncFromSupabase(tableName);
-    
-    // Log the sync event
-    logSyncEvent({
-      ...result,
-      tableName
-    });
-    
-    return result;
-  } catch (error) {
-    console.error(`Error during ${tableName} pull:`, error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    
-    // Log the sync event
-    logSyncEvent({
-      success: false,
-      tableName,
-      operation: 'pull',
-      error: errorMsg,
-      message: errorMsg, // Add message consistently
-      timestamp: Date.now()
-    });
-    
-    return {
-      success: false,
-      tableName,
-      operation: 'pull' as SyncOperation,
-      error: errorMsg,
-      message: errorMsg, // Add message consistently
-      timestamp: Date.now()
-    };
-  }
-};
-
-// Function to clear local storage
-export const clearLocalStorage = async () => {
-  try {
-    localStorage.clear();
-    console.log('Local storage cleared successfully');
-    toast.success('Stockage local effacé avec succès');
-    return { success: true };
-  } catch (error) {
-    console.error('Error clearing local storage:', error);
-    toast.error('Erreur lors de l\'effacement du stockage local');
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
-  }
-};
-
-// Function to ensure the user is authenticated
-export const ensureAuthenticated = async () => {
-  // Si le mode développement est activé, on ignore l'authentification
-  if (isDevModeEnabled()) {
-    console.log("Mode développement activé - Authentification ignorée");
-    return true;
-  }
-
-  try {
-    const { data, error } = await supabase.auth.getSession();
-
-    if (error) {
-      console.error('Authentication error:', error.message);
-      throw new Error(`Erreur d'authentification: ${error.message}`);
-    }
-
-    if (!data.session) {
-      throw new Error('Utilisateur non authentifié. Veuillez vous reconnecter.');
-    }
-
-    return data.session;
-  } catch (e) {
-    const errorMessage = e instanceof Error ? e.message : String(e);
-    console.error('Authentication error:', errorMessage);
-    throw new Error(`Authentication error: ${errorMessage}`);
-  }
-};
-
-// Function to check Supabase connection
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  try {
-    await ensureAuthenticated();
-
-    // Test simple de connexion à Supabase en récupérant les paramètres de l'application
-    const { data, error } = await supabase
+    console.log("Testing Supabase connection...");
+    const { data, error, status } = await supabase
       .from('lotteries')
-      .select('id')
+      .select('count')
       .limit(1);
 
     if (error) {
-      console.error('Supabase connection error:', error);
+      console.error("Supabase connection test failed:", error);
+      console.error("HTTP Status:", status);
       return false;
     }
-
+    
+    console.log("Supabase connection successful!");
     return true;
   } catch (error) {
-    console.error('Error checking Supabase connection:', error);
+    console.error("Error testing Supabase connection:", error);
     return false;
   }
 };
 
-// Ajoutons la fonction pour vérifier le mode dev
-export const isDevModeEnabled = (): boolean => {
-  return localStorage.getItem('dev_mode_enabled') === 'true';
-};
-
-// Ajoutons la fonction pour activer/désactiver le mode dev
-export const toggleDevMode = (enabled: boolean): void => {
-  localStorage.setItem('dev_mode_enabled', enabled ? 'true' : 'false');
-  console.log(`Mode développement ${enabled ? 'activé' : 'désactivé'}`);
-  
-  // Déclencher un événement pour informer les autres composants
-  window.dispatchEvent(new Event('devModeToggled'));
-};
-
-// Ajoutons une fonction améliorée pour vérifier la connexion Supabase avec plus de détails
-export const checkSupabaseConnectionWithDetails = async () => {
-  try {
-    // On vérifie d'abord si nous sommes authentifiés, mais on capture l'erreur
-    // au lieu de la lancer pour obtenir plus d'informations
-    let authStatus;
-    try {
-      authStatus = await ensureAuthenticated();
-    } catch (authError) {
-      console.error('Authentication error:', authError);
-      return { 
-        connected: false, 
-        error: authError instanceof Error ? authError.message : 'Erreur d\'authentification',
-        authError: true
-      };
-    }
-    
-    // Test simple de connexion à Supabase en récupérant les paramètres de l'application
-    const { data, error, status } = await supabase
-      .from('lotteries')
-      .select('id')
-      .limit(1);
-
-    if (error) {
-      console.error('Supabase connection error:', error);
-      return { 
-        connected: false, 
-        error: error.message, 
-        code: error.code,
-        status: error.details?.includes('JWT') ? 401 : status 
-      };
-    }
-
-    return { connected: true };
-  } catch (e) {
-    console.error('Error checking Supabase connection:', e);
-    return { 
-      connected: false, 
-      error: e instanceof Error ? e.message : 'Erreur inconnue' 
-    };
-  }
-};
-
-// Function to get sync interval from local storage
-export const getSyncInterval = (): number => {
-  const interval = localStorage.getItem('sync_interval');
-  return interval ? parseInt(interval, 10) : 60; // Default to 60 seconds
-};
-
-// Function to set sync interval in local storage
-export const setSyncInterval = (interval: number): void => {
-  localStorage.setItem('sync_interval', interval.toString());
-};
-
-// Function to get auto sync status from local storage
-export const isAutoSyncEnabled = (): boolean => {
-  return localStorage.getItem('auto_sync_enabled') === 'true';
-};
-
-// Function to set auto sync status in local storage
-export const setAutoSyncEnabled = (enabled: boolean): void => {
-  localStorage.setItem('auto_sync_enabled', enabled ? 'true' : 'false');
-};
-
-// Fix the typings in getDataCounts function
+/**
+ * Get data counts for local and remote storage
+ */
 export const getDataCounts = async (): Promise<Record<string, { local: number, remote: number }>> => {
-  const tables = getAllValidTableNames();
-  const counts: Record<string, { local: number, remote: number }> = {};
-  
-  for (const table of tables) {
-    try {
-      // Get local count
-      const localData = localStorage.getItem(table);
-      const localCount = localData ? JSON.parse(localData).length : 0;
-      
-      // Get remote count if connected
-      let remoteCount = 0;
-      try {
-        if (isDevModeEnabled()) {
-          remoteCount = localCount; // Mock in dev mode
-        } else {
-          const { data, error } = await supabase.from(table).select('count');
-          if (!error && data && data.length > 0) {
-            remoteCount = data[0].count;
-          }
-        }
-      } catch (e) {
-        console.error(`Error getting remote count for ${table}:`, e);
-      }
-      
-      counts[table] = { local: localCount, remote: remoteCount };
-    } catch (e) {
-      console.error(`Error processing counts for ${table}:`, e);
-      counts[table] = { local: 0, remote: 0 };
-    }
-  }
-  
-  return counts;
-};
-
-// Function to get all valid table names
-export const getAllValidTableNames = (): ValidTableName[] => {
-  return [
-    'lotteries',
-    'products',
-    'visuals',
+  const tables: ValidTableName[] = [
+    'lotteries', 
+    'products', 
+    'visuals', 
     'visual_categories',
     'orders',
     'order_items',
@@ -407,248 +177,661 @@ export const getAllValidTableNames = (): ValidTableName[] => {
     'lottery_participants',
     'lottery_winners'
   ];
-};
+  
+  const results: Record<string, { local: number, remote: number }> = {};
 
-// Sync history storage in localStorage
-const SYNC_HISTORY_KEY = 'winshirt_sync_history';
-const MAX_SYNC_HISTORY_ITEMS = 100;
-
-// Log a sync event to history
-export const logSyncEvent = (event: SyncStatus): void => {
-  try {
-    const history = getSyncHistory();
-    history.unshift({...event, timestamp: Date.now()});
+  for (const table of tables) {
+    // Get local count
+    const localData = localStorage.getItem(table);
+    const localCount = localData ? JSON.parse(localData).length : 0;
     
-    // Limit history size
-    while (history.length > MAX_SYNC_HISTORY_ITEMS) {
-      history.pop();
-    }
-    
-    localStorage.setItem(SYNC_HISTORY_KEY, JSON.stringify(history));
-  } catch (e) {
-    console.error('Error logging sync event:', e);
-  }
-};
-
-// Get sync history
-export const getSyncHistory = (): SyncStatus[] => {
-  try {
-    const historyStr = localStorage.getItem(SYNC_HISTORY_KEY);
-    return historyStr ? JSON.parse(historyStr) : [];
-  } catch (e) {
-    console.error('Error getting sync history:', e);
-    return [];
-  }
-};
-
-// Clear sync history
-export const clearSyncHistory = (): void => {
-  localStorage.removeItem(SYNC_HISTORY_KEY);
-};
-
-// Get sync status for a table
-export const getSyncStatus = async (table: ValidTableName): Promise<SyncStatus | null> => {
-  try {
-    const key = `sync_status_${table}`;
-    const statusStr = localStorage.getItem(key);
-    return statusStr ? JSON.parse(statusStr) : null;
-  } catch (e) {
-    console.error(`Error getting sync status for ${table}:`, e);
-    return null;
-  }
-};
-
-// Set sync status for a table
-export const setSyncStatus = async (table: ValidTableName, status: SyncStatus): Promise<void> => {
-  try {
-    const key = `sync_status_${table}`;
-    localStorage.setItem(key, JSON.stringify({...status, timestamp: Date.now()}));
-  } catch (e) {
-    console.error(`Error setting sync status for ${table}:`, e);
-  }
-};
-
-// Fix the typecasting in the syncTable function
-export const syncTable = async (tableName: ValidTableName): Promise<SyncStatus> => {
-  try {
-    // Try to ensure authentication
+    // Get remote count
+    let remoteCount = 0;
     try {
-      await ensureAuthenticated();
-    } catch (authError) {
-      // If dev mode is enabled, we can continue despite auth errors
-      if (!isDevModeEnabled()) {
-        throw authError;
+      const { count, error } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true });
+      
+      if (!error && count !== null) {
+        remoteCount = count;
       }
+    } catch (e) {
+      console.error(`Error getting remote count for ${table}:`, e);
     }
     
-    // 1. Get local data
-    const localDataStr = localStorage.getItem(tableName);
-    const localData = localDataStr ? JSON.parse(localDataStr) : [];
+    results[table] = { local: localCount, remote: remoteCount };
+  }
+
+  return results;
+};
+
+/**
+ * Check if user is authenticated with Supabase
+ */
+const isAuthenticated = async (): Promise<boolean> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session !== null;
+};
+
+/**
+ * Attempt to sign in with admin credentials if available
+ */
+const signInWithAdmin = async (): Promise<boolean> => {
+  try {
+    console.log("Checking authentication status...");
     
-    // 2. Get remote data
-    const { data: remoteData, error } = await supabase.from(tableName).select('*');
-    
-    if (error) {
-      throw error;
+    // Check if we already have an active session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      console.log("User already authenticated:", session.user?.email);
+      return true;
     }
     
-    // 3. Merge data based on updated_at timestamp
-    // First convert all to consistent format (camelCase)
-    const camelCaseRemoteData = remoteData.map(item => {
-      const newItem: { [key: string]: any } = {};
-      for (const key in item) {
-        if (item.hasOwnProperty(key)) {
-          const camelCaseKey = key.replace(/_([a-z])/g, g => g[1].toUpperCase());
-          newItem[camelCaseKey] = item[key];
-        }
-      }
-      return newItem;
-    });
-    
-    // Create maps for faster lookups
-    const localMap = new Map(localData.map((item: any) => [item.id, item]));
-    const remoteMap = new Map(camelCaseRemoteData.map((item: any) => [item.id, item]));
-    
-    // Items to upload (local items not in remote or newer)
-    const toUpload = localData.filter((localItem: any) => {
-      const remoteItem = remoteMap.get(localItem.id);
-      if (!remoteItem) return true; // Item exists only locally
-      
-      // Check if local is newer based on updatedAt
-      const localDate = localItem.updatedAt ? new Date(localItem.updatedAt) : new Date(0);
-      const remoteDate = remoteItem.updatedAt ? new Date(remoteItem.updatedAt) : new Date(0);
-      return localDate > remoteDate;
-    });
-    
-    // Items to download (remote items not in local or newer)
-    const toDownload = camelCaseRemoteData.filter((remoteItem: any) => {
-      const localItem = localMap.get(remoteItem.id);
-      if (!localItem) return true; // Item exists only remotely
-      
-      // Check if remote is newer based on updatedAt
-      // Fix the typecasting here by using definite type assertion
-      const localUpdatedAt = (localItem as any).updatedAt || null;
-      const remoteUpdatedAt = (remoteItem as any).updatedAt || null;
-      
-      const localDate = localUpdatedAt ? new Date(localUpdatedAt) : new Date(0);
-      const remoteDate = remoteUpdatedAt ? new Date(remoteUpdatedAt) : new Date(0);
-      
-      return remoteDate > localDate;
-    });
-    
-    // 4. Apply updates both ways
-    let uploadError, downloadError;
-    
-    // Upload local changes to Supabase
-    if (toUpload.length > 0) {
+    // First try to sign in with a stored admin user
+    const adminCredentialsStr = localStorage.getItem('winshirt_admin');
+    if (adminCredentialsStr) {
       try {
-        await syncToSupabase(tableName, toUpload);
-      } catch (e) {
-        uploadError = e instanceof Error ? e.message : String(e);
-      }
-    }
-    
-    // Save remote changes to localStorage
-    if (toDownload.length > 0) {
-      try {
-        // Merge with existing local data
-        const mergedData = [...localData];
-        
-        // Replace or add downloaded items
-        toDownload.forEach(item => {
-          const index = mergedData.findIndex((localItem: any) => localItem.id === item.id);
-          if (index >= 0) {
-            mergedData[index] = item; // Replace
+        const adminCredentials = JSON.parse(adminCredentialsStr);
+        if (adminCredentials?.email && adminCredentials?.password) {
+          console.log(`Attempting to sign in with stored admin credentials: ${adminCredentials.email}`);
+          
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: adminCredentials.email,
+            password: adminCredentials.password
+          });
+          
+          if (!error && data.user) {
+            console.log("Successfully signed in with stored admin credentials");
+            return true;
           } else {
-            mergedData.push(item); // Add
+            console.error("Stored admin credentials failed:", error?.message);
+            toast.error(`Erreur d'authentification: ${error?.message}`, { 
+              position: "top-right",
+              duration: 5000
+            });
+            // Don't remove credentials here, they might be valid but the server is down
           }
-        });
-        
-        localStorage.setItem(tableName, JSON.stringify(mergedData));
+        }
       } catch (e) {
-        downloadError = e instanceof Error ? e.message : String(e);
+        console.error("Error parsing stored admin credentials:", e);
+        localStorage.removeItem('winshirt_admin');
       }
     }
     
-    // Check for any errors
-    if (uploadError || downloadError) {
-      const errorMessage = [
-        uploadError ? `Upload error: ${uploadError}` : '',
-        downloadError ? `Download error: ${downloadError}` : ''
-      ].filter(Boolean).join('; ');
+    // Try to use session from auth state if available
+    const authState = localStorage.getItem('supabase.auth.token');
+    if (authState) {
+      console.log("Trying to use existing auth state");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log("Successfully authenticated with existing session");
+        return true;
+      }
+    }
+    
+    console.log("No valid credentials available. Authentication required.");
+    return false;
+  } catch (error) {
+    console.error("Error during authentication attempt:", error);
+    return false;
+  }
+};
+
+/**
+ * Create a mock user session for anonymous operations if needed
+ * Returns true if already authenticated or successfully authenticated
+ */
+const ensureAuthSession = async (): Promise<boolean> => {
+  // First check if we're already authenticated
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      console.log("Already authenticated as:", session.user.email);
+      return true;
+    }
+  } catch (e) {
+    console.error("Error checking session:", e);
+  }
+  
+  // Only try once to sign in to avoid infinite loops
+  const authSuccess = await signInWithAdmin();
+  
+  if (!authSuccess) {
+    toast.error("Authentification requise. Veuillez vous connecter pour synchroniser les données.", { 
+      position: "top-right",
+      duration: 5000
+    });
+    
+    // Redirect to login or show login dialog
+    const event = new CustomEvent('needAuthentication', {
+      detail: { reason: 'sync' }
+    });
+    window.dispatchEvent(event);
+  }
+  
+  // Return authentication status
+  return authSuccess;
+};
+
+/**
+ * Push data from local storage to Supabase using upsert
+ */
+export const pushDataToSupabase = async (tableName: ValidTableName): Promise<SyncStatus> => {
+  try {
+    console.log(`Starting synchronization: pushing ${tableName} to Supabase...`);
+    
+    // Check connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      const error = "Unable to connect to Supabase";
+      toast.error(`Sync failed: ${error}`, { position: "bottom-right" });
       
       const status: SyncStatus = {
         success: false,
         tableName,
-        operation: 'sync',
-        error: errorMessage,
-        message: errorMessage, // Add message consistently
-        localCount: localData.length,
-        remoteCount: remoteData.length,
+        localCount: 0,
+        remoteCount: 0,
+        operation: 'push',
+        error,
         timestamp: Date.now()
       };
-      
       logSyncEvent(status);
       return status;
     }
     
-    // Success
-    const status: SyncStatus = {
+    // Get local data
+    const localData = localStorage.getItem(tableName);
+    if (!localData) {
+      const error = `No local ${tableName} data to sync`;
+      toast.warning(error, { position: "bottom-right" });
+      
+      const status: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: 0,
+        remoteCount: 0,
+        operation: 'push',
+        error,
+        timestamp: Date.now()
+      };
+      logSyncEvent(status);
+      return status;
+    }
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(localData);
+      
+      if (!Array.isArray(parsedData) || parsedData.length === 0) {
+        const error = `No ${tableName} data to sync`;
+        toast.warning(error, { position: "bottom-right" });
+        
+        const status: SyncStatus = {
+          success: false,
+          tableName,
+          localCount: 0,
+          remoteCount: 0,
+          operation: 'push',
+          error,
+          timestamp: Date.now()
+        };
+        logSyncEvent(status);
+        return status;
+      }
+    } catch (e) {
+      console.error(`Error parsing local ${tableName} data:`, e);
+      const error = `Error parsing local ${tableName} data`;
+      toast.error(error, { position: "bottom-right" });
+      
+      const status: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: 0,
+        remoteCount: 0,
+        operation: 'push',
+        error,
+        timestamp: Date.now()
+      };
+      logSyncEvent(status);
+      return status;
+    }
+    
+    // Make sure we have an authenticated session - Force authentication check
+    console.log("Ensuring authenticated session before sync...");
+    const isAuthenticated = await ensureAuthSession();
+    
+    if (!isAuthenticated) {
+      const error = "Authentication required. Please log in to sync data.";
+      
+      const status: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: parsedData.length,
+        remoteCount: 0, 
+        operation: 'push',
+        error,
+        timestamp: Date.now()
+      };
+      logSyncEvent(status);
+      return status;
+    }
+    
+    console.log(`Successfully authenticated, proceeding with ${tableName} sync...`);
+    
+    // Convert data from camelCase to snake_case for Supabase with special handling for specific tables
+    const supabaseData = parsedData.map((item: any) => {
+      // Safety check to ensure item is not null or undefined
+      if (!item) return item;
+      
+      // Special handling for clients table - structure the address field correctly
+      if (tableName === 'clients') {
+        const processedItem = { ...item } as ClientItem;
+        
+        // Ensure we have a valid address object
+        if (processedItem.address && typeof processedItem.address === 'object') {
+            // Address is already an object, no need to change the structure
+        } else if (processedItem.address && typeof processedItem.address === 'string') {
+          // If address is a string, convert it to an object
+          const addressStr = processedItem.address;
+          processedItem.address = {
+            address: addressStr,
+            city: processedItem.city || null,
+            postal_code: processedItem.postalCode || null,
+            country: processedItem.country || null
+          };
+          
+          // Remove separate fields that are now part of address
+          delete processedItem.city;
+          delete processedItem.postalCode;
+          delete processedItem.country;
+        } else if (!processedItem.address) {
+          // If no address, create an empty one with the fields from the client
+          processedItem.address = {
+            address: '',
+            city: processedItem.city || null,
+            postal_code: processedItem.postalCode || null,
+            country: processedItem.country || null
+          };
+          
+          // Remove separate fields that are now part of address
+          delete processedItem.city;
+          delete processedItem.postalCode;
+          delete processedItem.country;
+        }
+        
+        // Fix: Use camelToSnakeObject instead of camelToSnake for objects
+        return camelToSnakeObject(processedItem);
+      }
+      // Special handling for visuals table
+      else if (tableName === 'visuals') {
+        const processedItem = { ...item } as VisualItem;
+        if (processedItem.image && typeof processedItem.image === 'string' && !processedItem.imageUrl) {
+          processedItem.image_url = processedItem.image;
+          delete processedItem.image;
+        } else if (processedItem.imageUrl && !processedItem.image) {
+          processedItem.image_url = processedItem.imageUrl;
+          delete processedItem.imageUrl;
+        }
+        // Fix: Use camelToSnakeObject instead of camelToSnake for objects
+        return camelToSnakeObject(processedItem);
+      }
+      
+      // Default case - just convert camelCase to snake_case
+      // Add a type check to ensure we only call camelToSnake on objects
+      return typeof item === 'object' ? importedCamelToSnake(item) : item;
+    });
+    
+    console.log(`Prepared ${supabaseData.length} items for Supabase in table ${tableName}`);
+
+    // Upsert the data using the authenticated session
+    const { error, status } = await supabase
+      .from(tableName)
+      .upsert(supabaseData, { 
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
+        
+    if (error) {
+      console.error(`Error syncing ${tableName} to Supabase:`, error);
+      console.error("HTTP Status:", status);
+      
+      toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
+      
+      const syncStatus: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: parsedData.length,
+        remoteCount: 0,
+        operation: 'push',
+        error: error.message,
+        httpCode: status,
+        timestamp: Date.now()
+      };
+      logSyncEvent(syncStatus);
+      return syncStatus;
+    }
+    
+    // Get updated remote count in a separate query
+    const { count: remoteCount } = await supabase
+      .from(tableName)
+      .select('*', { count: 'exact', head: true });
+    
+    toast.success(`Successfully synced ${parsedData.length} ${tableName} to Supabase`, { position: "bottom-right" });
+    
+    const syncStatus: SyncStatus = {
       success: true,
       tableName,
-      operation: 'sync',
-      localCount: localData.length + toDownload.length - toUpload.length,
-      remoteCount: remoteData.length + toUpload.length - toDownload.length,
+      localCount: parsedData.length,
+      remoteCount: remoteCount || 0,
+      operation: 'push',
       timestamp: Date.now()
     };
+    logSyncEvent(syncStatus);
+    return syncStatus;
+  } catch (error: any) {
+    console.error(`Error during ${tableName} sync:`, error);
     
-    // Update table's sync status
-    setSyncStatus(tableName, status);
+    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "bottom-right" });
     
-    // Log event
-    logSyncEvent(status);
-    
-    return status;
-  } catch (e) {
-    console.error(`Error during bidirectional sync for ${tableName}:`, e);
-    const errorMessage = e instanceof Error ? e.message : String(e);
-    
-    const status: SyncStatus = {
+    const syncStatus: SyncStatus = {
       success: false,
       tableName,
-      operation: 'sync',
-      error: errorMessage,
-      message: errorMessage, // Add message consistently
+      localCount: 0,
+      remoteCount: 0,
+      operation: 'push',
+      error: error.message || 'Unknown error',
       timestamp: Date.now()
     };
-    
-    // Log event
-    logSyncEvent(status);
-    
-    return status;
+    logSyncEvent(syncStatus);
+    return syncStatus;
   }
 };
 
-// Sync all tables bidirectionally
-export const syncAllTables = async (): Promise<SyncStatus[]> => {
+/**
+ * Pull data from Supabase to local storage
+ */
+export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<SyncStatus> => {
+  try {
+    console.log(`Starting synchronization: pulling ${tableName} from Supabase...`);
+    
+    // Check connection first
+    const isConnected = await testSupabaseConnection();
+    if (!isConnected) {
+      const error = "Unable to connect to Supabase";
+      toast.error(`Sync failed: ${error}`, { position: "top-right" });
+      
+      const syncStatus: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: 0,
+        remoteCount: 0,
+        operation: 'pull',
+        error,
+        timestamp: Date.now()
+      };
+      logSyncEvent(syncStatus);
+      return syncStatus;
+    }
+    
+    // Make sure we have an authenticated session for tables that need it
+    const needsAuth = ['clients', 'orders', 'order_items'].includes(tableName);
+    if (needsAuth) {
+      const isAuthenticated = await ensureAuthSession();
+      
+      if (!isAuthenticated) {
+        const error = "Authentication required. Please log in to sync data.";
+        // No toast needed here as ensureAuthSession already shows one
+        
+        const syncStatus: SyncStatus = {
+          success: false,
+          tableName,
+          localCount: 0,
+          remoteCount: 0,
+          operation: 'pull',
+          error,
+          timestamp: Date.now()
+        };
+        logSyncEvent(syncStatus);
+        return syncStatus;
+      }
+    }
+    
+    // Get data from Supabase
+    const { data, error, status } = await supabase
+      .from(tableName)
+      .select('*');
+      
+    if (error) {
+      console.error(`Error fetching ${tableName} from Supabase:`, error);
+      console.error("HTTP Status:", status);
+      
+      toast.error(`Sync failed: ${error.message || 'Unknown error'}`, { position: "top-right" });
+      
+      const syncStatus: SyncStatus = {
+        success: false,
+        tableName,
+        localCount: 0,
+        remoteCount: 0,
+        operation: 'pull',
+        error: error.message,
+        httpCode: status,
+        timestamp: Date.now()
+      };
+      logSyncEvent(syncStatus);
+      return syncStatus;
+    }
+    
+    if (!data || data.length === 0) {
+      const warning = `No ${tableName} found in Supabase`;
+      toast.warning(warning, { position: "top-right" });
+      
+      const syncStatus: SyncStatus = {
+        success: true,
+        tableName,
+        localCount: 0,
+        remoteCount: 0,
+        operation: 'pull',
+        timestamp: Date.now()
+      };
+      logSyncEvent(syncStatus);
+      return syncStatus;
+    }
+    
+    // Convert data from snake_case to camelCase for local storage
+    const localData = data.map(item => {
+      // Special handling for specific tables
+      if (tableName === 'clients') {
+        // Convert Supabase client format to local app format
+        const camelItem = snakeToCamel(item);
+        
+        // Type assertion for better type safety
+        const clientItem = camelItem as unknown as ClientItem;
+        
+        // Extract address fields if they exist
+        if (clientItem.address && typeof clientItem.address === 'object') {
+          // Type assertion for nested address object
+          const addressObj = clientItem.address as { 
+            city?: string; 
+            postal_code?: string; 
+            postalCode?: string;
+            country?: string; 
+            address?: string;
+          };
+          
+          // Extract address fields to top-level properties
+          clientItem.city = addressObj.city || '';
+          clientItem.postalCode = addressObj.postal_code || addressObj.postalCode || '';
+          clientItem.country = addressObj.country || '';
+          
+          // Set address to just the street address string
+          if (addressObj.address && typeof addressObj.address === 'string') {
+            clientItem.address = addressObj.address;
+          } else {
+            clientItem.address = '';
+          }
+        }
+        
+        return clientItem;
+      }
+      else if (tableName === 'visuals') {
+        // Convert from Supabase format to local app format
+        const camelItem = snakeToCamel(item);
+        
+        // Type assertion for visual items
+        const visualItem = camelItem as unknown as VisualItem;
+        
+        // Handle image field conversion
+        if (visualItem.imageUrl && !visualItem.image) {
+          visualItem.image = visualItem.imageUrl;
+          delete visualItem.imageUrl;
+        }
+        
+        return visualItem;
+      }
+      
+      return snakeToCamel(item);
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(tableName, JSON.stringify(localData));
+    
+    // Dispatch event to notify components of the update
+    const event = new Event('storageUpdate');
+    window.dispatchEvent(event);
+    
+    toast.success(`Successfully pulled ${data.length} ${tableName} from Supabase`, { position: "top-right" });
+    
+    const syncStatus: SyncStatus = {
+      success: true,
+      tableName,
+      localCount: localData.length,
+      remoteCount: data.length,
+      operation: 'pull',
+      timestamp: Date.now()
+    };
+    logSyncEvent(syncStatus);
+    return syncStatus;
+  } catch (error: any) {
+    console.error(`Error during ${tableName} sync:`, error);
+    
+    toast.error(`Sync error: ${error.message || 'Unknown error'}`, { position: "top-right" });
+    
+    const syncStatus: SyncStatus = {
+      success: false,
+      tableName,
+      localCount: 0,
+      remoteCount: 0,
+      operation: 'pull',
+      error: error.message || 'Unknown error',
+      timestamp: Date.now()
+    };
+    logSyncEvent(syncStatus);
+    return syncStatus;
+  }
+};
+
+/**
+ * Sync all tables data between local storage and Supabase
+ */
+export const syncAllTables = async (direction: 'push' | 'pull'): Promise<SyncStatus[]> => {
+  const tables: ValidTableName[] = [
+    'lotteries', 
+    'products', 
+    'visuals', 
+    'visual_categories',
+    'orders',
+    'order_items',
+    'clients',
+    'lottery_participants',
+    'lottery_winners'
+  ];
+  
   const results: SyncStatus[] = [];
   
-  for (const table of getAllValidTableNames()) {
-    try {
-      const result = await syncTable(table);
-      results.push(result);
-    } catch (e) {
-      console.error(`Error syncing ${table}:`, e);
-      results.push({
-        success: false,
-        tableName: table,
-        operation: 'sync',
-        error: e instanceof Error ? e.message : String(e),
-        message: e instanceof Error ? e.message : String(e),
-        timestamp: Date.now()
-      });
-    }
+  for (const table of tables) {
+    const result = direction === 'push' 
+      ? await pushDataToSupabase(table)
+      : await pullDataFromSupabase(table);
+    results.push(result);
   }
   
   return results;
 };
+
+/**
+ * Wrapper for checking Supabase connection with better error handling
+ */
+export const checkSupabaseConnectionWithDetails = async (): Promise<{
+  connected: boolean;
+  error?: string;
+  status?: number;
+}> => {
+  try {
+    const { data, error, status } = await supabase
+      .from('lotteries')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      return {
+        connected: false,
+        error: error.message,
+        status
+      };
+    }
+    
+    return { connected: true };
+  } catch (error: any) {
+    return {
+      connected: false,
+      error: error.message || 'Unknown error'
+    };
+  }
+};
+
+/**
+ * Helper function for object conversion: Converts an object with camelCase keys to snake_case keys
+ * @param obj The object with camelCase keys
+ * @returns The object with snake_case keys
+ */
+function camelToSnakeObject<T extends object>(obj: T): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => camelToSnakeObject(item));
+  }
+  
+  return Object.keys(obj).reduce((result, key) => {
+    // Safe type check for key
+    if (typeof key !== 'string') {
+      result[key] = obj[key as keyof T];
+      return result;
+    }
+    
+    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    const value = obj[key as keyof T];
+    result[snakeKey] = typeof value === 'object' && value !== null ? camelToSnakeObject(value) : value;
+    return result;
+  }, {} as any);
+}
+
+/**
+ * Fixed version of camelToSnake that checks for type safety
+ */
+function camelToSnake(obj: any): any {
+  // If not an object or null/undefined, return as is
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return obj;
+  }
+  
+  return Object.keys(obj).reduce((result: any, key: string) => {
+    // Create safe snake-cased key only if the key is a string
+    const snakeKey = typeof key === 'string' ? key.replace(/([A-Z])/g, (k) => `_${k.toLowerCase()}`) : key;
+    
+    // Copy the value without transformation
+    result[snakeKey] = obj[key];
+    return result;
+  }, {});
+}

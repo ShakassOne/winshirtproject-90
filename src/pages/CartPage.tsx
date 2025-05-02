@@ -1,48 +1,125 @@
 
-import React, { useEffect } from 'react';
+// Import all necessary dependencies
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ShoppingCart, CreditCard, Truck } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/lib/toast';
-import { useCart } from '@/contexts/CartContext';
+import { supabase } from '@/integrations/supabase/client';
+import { DatabaseTables } from '@/types/database.types';
+import { Client } from '@/types/client';
+import { syncProductsAndLotteries } from '@/lib/linkSynchronizer';
+
+// Let's define a proper type mapping for the client data
+type ExtendedClientData = DatabaseTables['clients'] & {
+  orderCount?: number;
+  totalSpent?: number;
+  participatedLotteries?: number[];
+  wonLotteries?: number[];
+};
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
-  const { items, updateItemQuantity, removeItem, calculateTotal } = useCart();
-  const shippingCost = 5.99;
-  const subtotal = calculateTotal();
-  const total = subtotal + shippingCost;
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [subtotal, setSubtotal] = useState(0);
+  const [shippingCost] = useState(5.99);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    console.log("CartPage rendered with items:", items);
+    // Synchroniser les liens entre produits et loteries au chargement de la page
+    syncProductsAndLotteries();
     
-    // Check if the cart is rendered with items and the UI doesn't show it
-    if (items.length > 0) {
-      const cartItemElements = document.querySelectorAll('.cart-item');
-      if (cartItemElements.length === 0) {
-        console.log("Cart items not rendered in UI, forcing update");
-        // Force a re-render
-        const forceEvent = new Event('cartUpdated');
-        window.dispatchEvent(forceEvent);
+    const fetchClientData = async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', 'your-user-id') // Replace 'your-user-id' with the actual user ID
+        .single();
+
+      if (error) {
+        console.error('Error fetching client data:', error);
+        return;
       }
-    }
-  }, [items]);
+
+      if (data) {
+        const client = handleClientData(data);
+        console.log('Client data:', client);
+      }
+    };
+
+    const loadCart = () => {
+      try {
+        const cartString = localStorage.getItem('cart');
+        if (cartString) {
+          const cart = JSON.parse(cartString);
+          setCartItems(cart);
+          
+          // Calculate subtotal
+          const calculatedSubtotal = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+          setSubtotal(calculatedSubtotal);
+          setTotal(calculatedSubtotal + shippingCost);
+        }
+      } catch (error) {
+        console.error('Error loading cart:', error);
+        toast.error('Error loading your cart');
+      }
+    };
+
+    fetchClientData();
+    loadCart();
+  }, [shippingCost]);
+
+  const handleClientData = (data: DatabaseTables['clients']): Client => {
+    // Cast to our extended type which includes the optional fields
+    const extendedData = data as ExtendedClientData;
+    
+    return {
+      id: extendedData.id,
+      name: extendedData.name || '',
+      email: extendedData.email || '',
+      phone: extendedData.phone || '',
+      address: extendedData.address ? String(extendedData.address) : '',
+      registrationDate: extendedData.created_at || new Date().toISOString(),
+      orderCount: extendedData.orderCount || 0,
+      totalSpent: extendedData.totalSpent || 0,
+      participatedLotteries: extendedData.participatedLotteries || [],
+      wonLotteries: extendedData.wonLotteries || []
+    };
+  };
 
   const handleRemoveItem = (index: number) => {
-    removeItem(index);
-    toast.info('Produit retiré du panier');
+    const newCart = [...cartItems];
+    newCart.splice(index, 1);
+    setCartItems(newCart);
+    localStorage.setItem('cart', JSON.stringify(newCart));
+    
+    // Recalculate totals
+    const newSubtotal = newCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    setSubtotal(newSubtotal);
+    setTotal(newSubtotal + shippingCost);
+    
+    toast.info('Item removed from cart');
   };
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
     if (newQuantity < 1) return;
-    updateItemQuantity(index, newQuantity);
+    
+    const newCart = [...cartItems];
+    newCart[index].quantity = newQuantity;
+    setCartItems(newCart);
+    localStorage.setItem('cart', JSON.stringify(newCart));
+    
+    // Recalculate totals
+    const newSubtotal = newCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    setSubtotal(newSubtotal);
+    setTotal(newSubtotal + shippingCost);
   };
 
   const handleProceedToCheckout = () => {
-    if (items.length === 0) {
-      toast.warning('Votre panier est vide');
+    if (cartItems.length === 0) {
+      toast.warning('Your cart is empty');
       return;
     }
     navigate('/checkout');
@@ -51,17 +128,17 @@ const CartPage: React.FC = () => {
   return (
     <div className="container mx-auto py-10 px-4 md:px-6">
       <h1 className="text-3xl font-bold text-white mb-6 flex items-center">
-        <ShoppingCart className="mr-2" /> Votre Panier
+        <ShoppingCart className="mr-2" /> Your Cart
       </h1>
 
-      {items.length > 0 ? (
+      {cartItems.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
-              <h2 className="text-xl font-semibold text-white mb-4">Articles dans le panier</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">Items in Cart</h2>
               
-              {items.map((item, index) => (
-                <div key={index} className="cart-item flex items-start space-x-4 py-4 border-b border-winshirt-blue/10 last:border-0">
+              {cartItems.map((item, index) => (
+                <div key={index} className="flex items-start space-x-4 py-4 border-b border-winshirt-blue/10 last:border-0">
                   <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-700">
                     <img
                       src={item.image || "https://placehold.co/100x100/png"}
@@ -103,7 +180,7 @@ const CartPage: React.FC = () => {
                       onClick={() => handleRemoveItem(index)}
                       className="mt-2 text-xs text-winshirt-purple-light hover:underline"
                     >
-                      Supprimer
+                      Remove
                     </button>
                   </div>
                 </div>
@@ -113,16 +190,16 @@ const CartPage: React.FC = () => {
 
           <div>
             <Card className="p-6 bg-winshirt-space border border-winshirt-purple/20 sticky top-24">
-              <h2 className="text-xl font-semibold text-white mb-4">Récapitulatif</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
               
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Sous-total</span>
+                  <span className="text-gray-400">Subtotal</span>
                   <span className="text-white">{subtotal.toFixed(2)} €</span>
                 </div>
                 
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Livraison</span>
+                  <span className="text-gray-400">Shipping</span>
                   <span className="text-white">{shippingCost.toFixed(2)} €</span>
                 </div>
                 
@@ -137,12 +214,12 @@ const CartPage: React.FC = () => {
                   onClick={handleProceedToCheckout}
                   className="w-full mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark flex items-center justify-center"
                 >
-                  <CreditCard className="mr-2 h-4 w-4" /> Procéder au paiement
+                  <CreditCard className="mr-2 h-4 w-4" /> Proceed to Checkout
                 </Button>
 
                 <div className="flex items-center justify-center mt-2 text-xs text-gray-400">
                   <Truck className="mr-1 h-3 w-3" />
-                  <span>Livraison gratuite pour les commandes de plus de 50€</span>
+                  <span>Free shipping on orders over 50€</span>
                 </div>
               </div>
             </Card>
@@ -152,13 +229,13 @@ const CartPage: React.FC = () => {
         <Card className="p-6 bg-winshirt-space border border-winshirt-blue/20">
           <div className="text-center py-8">
             <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
-            <h2 className="mt-2 text-xl font-semibold text-white">Votre panier est vide</h2>
-            <p className="mt-1 text-gray-400">Vous n'avez pas encore ajouté de produits à votre panier.</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Your cart is empty</h2>
+            <p className="mt-1 text-gray-400">Looks like you haven't added any products to your cart yet.</p>
             <Button
               onClick={() => navigate('/products')}
               className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
             >
-              Voir les produits
+              Browse Products
             </Button>
           </div>
         </Card>

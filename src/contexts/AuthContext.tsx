@@ -1,246 +1,18 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@/types/auth';
+import React, { createContext, useContext } from 'react';
+import { useAuthProvider } from '@/hooks/useAuthProvider';
 import { AuthContextType } from '@/types/auth';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/lib/toast';
+import { simulateSendEmail } from '@/utils/authUtils';
 
 // Create context with undefined as initial value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Utility function to send simulated emails (used by Stripe)
-export const simulateSendEmail = (email: string, subject: string, body: string): boolean => {
-  console.log(`Simulated email to ${email}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`Body: ${body}`);
-  
-  return true;
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Initialize authentication on load
-  useEffect(() => {
-    // Set up the auth state change listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session && session.user) {
-          // User logged in via Supabase Auth
-          try {
-            // Check if the user is an admin
-            const { data: userRoleData } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-              
-            const isUserAdmin = userRoleData?.role === 'admin' || 
-                               session.user.user_metadata?.isAdmin === true;
-            
-            // Format user data
-            const userData: User = {
-              id: typeof session.user.id === 'string' ? 
-                  parseInt(session.user.id.replace(/-/g, '').substring(0, 8), 16) || 0 : 0,
-              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Utilisateur',
-              email: session.user.email!,
-              role: isUserAdmin ? 'admin' : 'user',
-              registrationDate: session.user.created_at
-            };
-            
-            // Store user in localStorage for backward compatibility
-            localStorage.setItem('user', JSON.stringify(userData));
-            
-            setUser(userData);
-            setIsAuthenticated(true);
-            setIsAdmin(isUserAdmin);
-            
-            // Log for debugging
-            console.log("Utilisateur authentifié:", userData, "Admin:", isUserAdmin);
-          } catch (error) {
-            console.error('Erreur d\'authentification:', error);
-            setUser(null);
-            setIsAuthenticated(false);
-            setIsAdmin(false);
-          }
-        } else {
-          // User logged out
-          localStorage.removeItem('user');
-          setUser(null);
-          setIsAuthenticated(false);
-          setIsAdmin(false);
-        }
-        setIsLoading(false);
-      }
-    );
-    
-    // THEN check for an existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        // No session, check if there's a user in localStorage (backwards compatibility)
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            setIsAuthenticated(true);
-            setIsAdmin(parsedUser?.role === 'admin' || parsedUser?.isAdmin === true);
-          } catch (error) {
-            console.error("Error parsing stored user:", error);
-            localStorage.removeItem('user');
-          }
-        }
-        setIsLoading(false);
-      }
-    });
-    
-    // Clean up subscription
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-  
-  const login = async (email: string, password: string) => {
-    try {
-      // Standard login via Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success("Connexion réussie");
-    } catch (error: any) {
-      console.error('Error logging in:', error);
-      toast.error(`Erreur lors de la connexion: ${error.message}`);
-      throw error;
-    }
-  };
-  
-  const register = async (name: string, email: string, password: string): Promise<User> => {
-    try {
-      // Sign up via Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            name: name
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      // The rest will be handled by the auth state change listener
-      toast.success("Inscription réussie !");
-      
-      // Return a new user object for compatibility
-      const newUser: User = {
-        id: typeof data.user?.id === 'string' ? 
-            parseInt(data.user.id.replace(/-/g, '').substring(0, 8), 16) || 0 : 0,
-        name: name,
-        email: email,
-        role: 'user',
-        registrationDate: new Date().toISOString(),
-      };
-      
-      return newUser;
-    } catch (error: any) {
-      console.error("Error during registration:", error);
-      toast.error(`Erreur lors de l'inscription: ${error.message}`);
-      throw error;
-    }
-  };
-  
-  const loginWithSocialMedia = async (provider: 'facebook' | 'google') => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      
-      if (error) {
-        toast.error(`Erreur de connexion avec ${provider}: ${error.message}`);
-        return;
-      }
-      
-      // If signInWithOAuth worked, the page will be redirected
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error: any) {
-      console.error(`${provider} login error:`, error);
-      toast.error(`Erreur lors de la connexion avec ${provider}`);
-    }
-  };
-  
-  const logout = async () => {
-    try {
-      // Sign out via Supabase Auth
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) throw error;
-      
-      // Clean up localStorage for compatibility
-      localStorage.removeItem('user');
-      
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-      
-      toast.success("Déconnexion réussie");
-    } catch (error: any) {
-      console.error("Error during logout:", error);
-      toast.error(`Erreur lors de la déconnexion: ${error.message}`);
-    }
-  };
-  
-  const getAllUsers = async (): Promise<User[]> => {
-    try {
-      // Get all users from Supabase
-      const { data, error } = await supabase
-        .from('users')
-        .select('*');
-        
-      if (error) throw error;
-      
-      return data.map(user => ({
-        id: typeof user.id === 'string' ? 
-            parseInt(user.id.replace(/-/g, '').substring(0, 8), 16) || 0 : 
-            Number(user.id) || 0,
-        name: user.name || user.email.split('@')[0],
-        email: user.email,
-        role: user.role || 'user',
-        registrationDate: user.created_at,
-      }));
-    } catch (error) {
-      console.error("Error getting users:", error);
-      return []; // Return empty array on error
-    }
-  };
+  // Use our custom hook to get all the auth functionality
+  const auth = useAuthProvider();
   
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isAdmin,
-      login,
-      register,
-      loginWithSocialMedia,
-      logout,
-      getAllUsers,
-      isLoading
-    }}>
+    <AuthContext.Provider value={auth}>
       {children}
     </AuthContext.Provider>
   );
@@ -253,3 +25,6 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// Re-export this function for compatibility
+export { simulateSendEmail };

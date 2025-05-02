@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, Check, Database, RefreshCw, Server, Shield } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
@@ -15,8 +16,7 @@ import {
   syncAllTables,
   getSyncHistory,
   clearSyncHistory,
-  type SyncStatus,
-  syncTable
+  type SyncStatus
 } from '@/lib/syncManager';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -58,8 +58,7 @@ const AdminSyncPage: React.FC = () => {
     'lottery_participants',
     'lottery_winners'
   ];
-  const [isBidirectionalSyncing, setIsBidirectionalSyncing] = useState(false);
-  
+
   // Check Supabase connection on load
   useEffect(() => {
     checkConnection();
@@ -136,16 +135,7 @@ const AdminSyncPage: React.FC = () => {
     setIsSyncing(newSyncingState);
     
     try {
-      // ... keep existing code
-      if (direction === 'push') {
-        for (const table of allTables) {
-          await pushDataToSupabase(table);
-        }
-      } else {
-        for (const table of allTables) {
-          await pullDataFromSupabase(table);
-        }
-      }
+      await syncAllTables(direction);
       // Refresh counts after sync
       await loadDataCounts();
       updateSyncHistory();
@@ -171,58 +161,70 @@ const AdminSyncPage: React.FC = () => {
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (l) => l.toUpperCase());
   };
-  
-  // New bidirectional sync function
-  const handleBidirectionalSync = async (tableName: ValidTableName) => {
-    setIsSyncing(prev => ({ ...prev, [tableName]: true }));
-    try {
-      await syncTable(tableName);
-      // Refresh counts after sync
-      await loadDataCounts();
-      updateSyncHistory();
-    } catch (error) {
-      console.error(`Error during bidirectional sync for ${tableName}:`, 
-        typeof error === 'string' 
-          ? error 
-          : (error instanceof Error ? error.message : JSON.stringify(error))
-      );
-    } finally {
-      setIsSyncing(prev => ({ ...prev, [tableName]: false }));
-    }
+
+  // Create a sync tab for each table
+  const renderTableTab = (tableName: ValidTableName) => {
+    return (
+      <TabsContent value={tableName} key={tableName}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Synchronisation de {formatTableName(tableName)}</CardTitle>
+            <CardDescription>
+              Gestion des données de {formatTableName(tableName).toLowerCase()} entre le stockage local et Supabase
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">LocalStorage:</span>
+                  {isLoadingCounts ? (
+                    <Skeleton className="h-6 w-16" />
+                  ) : (
+                    <span>{dataCounts?.[tableName]?.local || 0} éléments</span>
+                  )}
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Supabase:</span>
+                  {isLoadingCounts ? (
+                    <Skeleton className="h-6 w-16" />
+                  ) : (
+                    <span>{dataCounts?.[tableName]?.remote || 0} éléments</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => handlePushData(tableName)}
+                  disabled={!isConnected || isSyncing[tableName]}
+                >
+                  {isSyncing[tableName] ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowUpFromLine className="h-4 w-4 mr-2" />
+                  )}
+                  Envoyer
+                </Button>
+                <Button 
+                  variant="secondary"
+                  onClick={() => handlePullData(tableName)}
+                  disabled={!isConnected || isSyncing[tableName]}
+                >
+                  {isSyncing[tableName] ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowDownToLine className="h-4 w-4 mr-2" />
+                  )}
+                  Récupérer
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    );
   };
-  
-  // Bidirectional sync all function
-  const handleBidirectionalSyncAll = async () => {
-    // Mark all tables as syncing
-    const newSyncingState: Record<string, boolean> = {};
-    allTables.forEach(table => {
-      newSyncingState[table] = true;
-    });
-    setIsSyncing(newSyncingState);
-    setIsBidirectionalSyncing(true);
-    
-    try {
-      await syncAllTables();
-      // Refresh counts after sync
-      await loadDataCounts();
-      updateSyncHistory();
-    } catch (error) {
-      console.error(`Error during bidirectional sync for all tables:`, 
-        typeof error === 'string' 
-          ? error 
-          : (error instanceof Error ? error.message : JSON.stringify(error))
-      );
-    } finally {
-      // Mark all tables as not syncing
-      const completedState: Record<string, boolean> = {};
-      allTables.forEach(table => {
-        completedState[table] = false;
-      });
-      setIsSyncing(completedState);
-      setIsBidirectionalSyncing(false);
-    }
-  };
-  
+
   // Additional effect to check if admin setup is needed
   useEffect(() => {
     const checkAdminSetupNeeded = async () => {
@@ -263,130 +265,6 @@ const AdminSyncPage: React.FC = () => {
       checkAdminSetupNeeded();
     }
   }, [isAdmin]);
-
-  // Create a sync tab for each table
-  const renderTableTab = (tableName: ValidTableName) => {
-    return (
-      <TabsContent value={tableName} key={tableName}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Synchronisation de {formatTableName(tableName)}</CardTitle>
-            <CardDescription>
-              Gestion des données de {formatTableName(tableName).toLowerCase()} entre le stockage local et Supabase
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">LocalStorage:</span>
-                  {isLoadingCounts ? (
-                    <Skeleton className="h-6 w-16" />
-                  ) : (
-                    <span>{dataCounts?.[tableName]?.local || 0} éléments</span>
-                  )}
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Supabase:</span>
-                  {isLoadingCounts ? (
-                    <Skeleton className="h-6 w-16" />
-                  ) : (
-                    <span>{dataCounts?.[tableName]?.remote || 0} éléments</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={() => handlePushData(tableName)}
-                    disabled={!isConnected || isSyncing[tableName]}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {isSyncing[tableName] ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <ArrowUpFromLine className="h-4 w-4 mr-2" />
-                    )}
-                    Envoyer
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePullData(tableName)}
-                    disabled={!isConnected || isSyncing[tableName]}
-                  >
-                    {isSyncing[tableName] ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <ArrowDownToLine className="h-4 w-4 mr-2" />
-                    )}
-                    Récupérer
-                  </Button>
-                </div>
-                <Button 
-                  onClick={() => handleBidirectionalSync(tableName)}
-                  disabled={!isConnected || isSyncing[tableName]}
-                  className="bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
-                  size="sm"
-                >
-                  {isSyncing[tableName] ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Synchronisation bidirectionnelle...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Synchroniser (Bidirectionnelle)
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-            
-            {/* Sync history for this table */}
-            <div className="mt-4 border-t pt-4">
-              <h4 className="text-sm font-medium mb-2">Historique de synchronisation:</h4>
-              <div className="max-h-48 overflow-y-auto">
-                {syncHistory
-                  .filter(item => item.tableName === tableName)
-                  .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-                  .slice(0, 5)
-                  .map((item, index) => (
-                    <div key={index} className={`text-xs p-2 rounded mb-1 ${
-                      item.success 
-                        ? "bg-green-500/10 border border-green-500/20" 
-                        : "bg-red-500/10 border border-red-500/20"
-                    }`}>
-                      <div className="flex justify-between">
-                        <span>
-                          {item.operation === 'push' ? '↑ Envoi' : 
-                           item.operation === 'pull' ? '↓ Réception' : 
-                           '↕ Bidirectionnel'}
-                        </span>
-                        <span>
-                          {item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : 'N/A'}
-                        </span>
-                      </div>
-                      {item.localCount !== undefined && item.remoteCount !== undefined && (
-                        <div>
-                          {item.localCount} éléments locaux, {item.remoteCount} éléments distants
-                        </div>
-                      )}
-                      {item.error && <div className="text-red-500">{item.error}</div>}
-                    </div>
-                  ))}
-                {syncHistory.filter(item => item.tableName === tableName).length === 0 && (
-                  <div className="text-xs text-gray-500">Aucun historique pour cette table</div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    );
-  };
 
   return (
     <>
@@ -546,23 +424,6 @@ const AdminSyncPage: React.FC = () => {
                   <ArrowDownToLine className="h-4 w-4 mr-2" />
                   Tout récupérer de Supabase
                 </Button>
-                <Button 
-                  className="w-full bg-winshirt-purple/10 text-winshirt-purple-light hover:bg-winshirt-purple/20"
-                  onClick={handleBidirectionalSyncAll}
-                  disabled={!isConnected || isBidirectionalSyncing || Object.values(isSyncing).some(v => v)}
-                >
-                  {isBidirectionalSyncing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Synchronisation en cours...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Synchronisation bidirectionnelle
-                    </>
-                  )}
-                </Button>
               </CardFooter>
             </Card>
           </div>
@@ -620,11 +481,11 @@ const AdminSyncPage: React.FC = () => {
                         </TableHeader>
                         <TableBody>
                           {syncHistory
-                            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                            .sort((a, b) => b.timestamp - a.timestamp)
                             .map((item, index) => (
                               <TableRow key={index}>
                                 <TableCell className="whitespace-nowrap">
-                                  {formatDistanceToNow(new Date(item.timestamp || Date.now()), { 
+                                  {formatDistanceToNow(new Date(item.timestamp), { 
                                     addSuffix: true,
                                     locale: fr
                                   })}
@@ -635,19 +496,14 @@ const AdminSyncPage: React.FC = () => {
                                       <ArrowUpFromLine className="h-3 w-3 mr-1" />
                                       Envoi
                                     </span>
-                                  ) : item.operation === 'pull' ? (
+                                  ) : (
                                     <span className="flex items-center">
                                       <ArrowDownToLine className="h-3 w-3 mr-1" />
                                       Récupération
                                     </span>
-                                  ) : (
-                                    <span className="flex items-center">
-                                      <RefreshCw className="h-3 w-3 mr-1" />
-                                      Bidirectionnel
-                                    </span>
                                   )}
                                 </TableCell>
-                                <TableCell>{formatTableName(item.tableName || '')}</TableCell>
+                                <TableCell>{formatTableName(item.tableName)}</TableCell>
                                 <TableCell>
                                   {item.success ? (
                                     <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">
@@ -663,10 +519,8 @@ const AdminSyncPage: React.FC = () => {
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap">
                                   {item.operation === 'push' ? 
-                                    `${item.localCount || 0} → ${item.remoteCount || 0}` :
-                                    item.operation === 'pull' ?
-                                    `${item.remoteCount || 0} → ${item.localCount || 0}` :
-                                    `${item.localCount || 0} ⇄ ${item.remoteCount || 0}`
+                                    `${item.localCount} → ${item.remoteCount}` :
+                                    `${item.remoteCount} → ${item.localCount}`
                                   }
                                 </TableCell>
                                 <TableCell className="max-w-[200px] truncate">

@@ -1,295 +1,364 @@
-import { useState, useEffect, useCallback } from 'react';
-import { User } from '@/types/auth';
+
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
-import { Client } from '@/types/client';
 import { EmailService } from '@/lib/emailService';
-import { Order } from '@/types/order';
+import { supabase } from '@/lib/supabase';  // Now correctly imported from our utility file
+import { User } from '@/types/auth';
+import { 
+  convertSupabaseUser, 
+  generateSimulatedSocialUser, 
+  loadUsersFromStorage, 
+  saveUsersToStorage, 
+  initializeUsers 
+} from '@/utils/authUtils';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  // Initialize auth on component mount
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    // Load user from localStorage on startup and check Supabase
+    const storedUser = localStorage.getItem('winshirt_user');
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-        setIsAdmin(parsedUser?.role === 'admin' || parsedUser?.isAdmin === true);
+        setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error("Error parsing stored user:", error);
-        // Clear invalid user data
-        localStorage.removeItem('user');
+        console.error("Erreur lors du chargement de l'utilisateur:", error);
       }
-    }
-
-    // Check if we need to auto-create accounts from client data
-    tryCreateUserAccountsFromClients();
-  }, []);
-
-  // Function to try and create user accounts from existing clients
-  const tryCreateUserAccountsFromClients = () => {
-    try {
-      // Get all clients from localStorage
-      const clientsStr = localStorage.getItem('clients');
-      if (clientsStr) {
-        const clients: Client[] = JSON.parse(clientsStr);
-        
-        if (clients.length > 0) {
-          console.log(`Found ${clients.length} clients that could be converted to user accounts`);
-          
-          // For each client, create a user object if it doesn't exist
-          clients.forEach(client => {
-            if (client.email) {
-              // Create a simple user account for this client
-              // Real apps would use proper auth, but this is for demo/dev purposes
-              const clientUser: User = {
-                id: Math.floor(Math.random() * 1000) + 2,
-                name: client.name || client.email.split('@')[0],
-                email: client.email,
-                role: 'user',
-                registrationDate: client.registrationDate || new Date().toISOString(),
-                clientId: client.id // Link to the actual client record
-              };
-              
-              // Store in localStorage with email as key for demo purposes
-              localStorage.setItem(`user_${client.email}`, JSON.stringify(clientUser));
-              console.log(`Created user account for client: ${client.name || client.email}`);
-            }
-          });
-          
-          // Let the user know accounts were created
-          toast.success("Des comptes utilisateur ont été créés à partir des données clients", {
-            position: "bottom-right",
-            duration: 5000
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error creating user accounts from clients:", error);
-    }
-  };
-  
-  const login = (email: string, password: string) => {
-    // Admin account hardcoded for demo
-    if (email === "admin@winshirt.fr" && password === "Chacha2@25!!") {
-      const adminUser: User = {
-        id: 1,
-        name: "Administrateur",
-        email: email,
-        role: 'admin',
-        registrationDate: new Date().toISOString(),
-      };
-      
-      setUser(adminUser);
-      setIsAuthenticated(true);
-      setIsAdmin(true);
-      localStorage.setItem('user', JSON.stringify(adminUser));
-      
-      toast.success("Connecté en tant qu'administrateur");
-      return;
     }
     
-    // Check if this is a client user
-    const clientUserStr = localStorage.getItem(`user_${email}`);
-    if (clientUserStr && password.length >= 1) { // Simple password check for demo
-      try {
-        const clientUser = JSON.parse(clientUserStr);
-        setUser(clientUser);
-        setIsAuthenticated(true);
-        setIsAdmin(false);
-        localStorage.setItem('user', JSON.stringify(clientUser));
-        
-        toast.success("Connexion réussie en tant que client");
+    // Check Supabase session state
+    const checkSupabaseSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Erreur lors de la récupération de la session Supabase:", error);
         return;
-      } catch (error) {
-        console.error("Error parsing client user:", error);
       }
-    }
+      
+      if (data.session && data.session.user) {
+        const newUser = convertSupabaseUser(data.session.user);
+        setUser(newUser);
+        localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+      }
+    };
     
-    // Demo user account for other cases
-    if (email && password.length >= 6) {
-      const demoUser: User = {
-        id: Math.floor(Math.random() * 1000) + 2,
-        name: email.split('@')[0],
-        email: email,
-        role: 'user',
-        registrationDate: new Date().toISOString(),
-      };
-      
-      setUser(demoUser);
-      setIsAuthenticated(true);
-      setIsAdmin(false);
-      localStorage.setItem('user', JSON.stringify(demoUser));
-      
-      toast.success("Connexion réussie");
-      return;
-    }
+    // Check Supabase session
+    checkSupabaseSession();
     
-    toast.error("Identifiants invalides. Essayez admin@winshirt.fr / admin123 pour un accès admin ou utilisez un email de client.");
-  };
-  
-  const register = async (name: string, email: string, password: string): Promise<User> => {
-    if (name && email && password.length >= 6) {
-      const newUser: User = {
-        id: Math.floor(Math.random() * 1000) + 2,
-        name: name,
-        email: email,
-        role: 'user',
-        registrationDate: new Date().toISOString(),
-      };
-      
-      setUser(newUser);
-      setIsAuthenticated(true);
-      setIsAdmin(false);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      
-      // Also store this user as a client for demo purposes
-      const clientsStr = localStorage.getItem('clients');
-      let clients: Client[] = clientsStr ? JSON.parse(clientsStr) : [];
-      
-      const newClient: Client = {
-        id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
-        name: name,
-        email: email,
-        phone: '',
-        registrationDate: new Date().toISOString(),
-        orderCount: 0,
-        totalSpent: 0
-      };
-      
-      clients.push(newClient);
-      localStorage.setItem('clients', JSON.stringify(clients));
-      
-      // Store the user keyed by email for login purposes
-      localStorage.setItem(`user_${email}`, JSON.stringify(newUser));
-      
-      // Check if there's a pending order for this registration
-      const pendingOrderStr = localStorage.getItem('pending_order');
-      let order: Order | undefined = undefined;
-      
-      if (pendingOrderStr) {
-        try {
-          order = JSON.parse(pendingOrderStr);
-          // Clear the pending order after using it
-          localStorage.removeItem('pending_order');
-        } catch (e) {
-          console.error("Error parsing pending order:", e);
+    // Initialize users if this entry doesn't exist
+    initializeUsers();
+    
+    // Subscribe to Supabase auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const newUser = convertSupabaseUser(session.user);
+          setUser(newUser);
+          localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+          toast.success("Connexion réussie!");
+        }
+        
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          localStorage.removeItem('winshirt_user');
+          toast.info("Vous avez été déconnecté");
         }
       }
-      
-      // Send welcome email with order details if available
-      try {
-        await EmailService.sendAccountCreationEmail(email, name, order);
-        console.log("Welcome email sent successfully", order ? "with order details" : "without order");
-      } catch (error) {
-        console.error("Error sending welcome email:", error);
-      }
-      
-      toast.success("Inscription réussie");
-      return newUser;
-    }
+    );
     
-    toast.error("Informations d'inscription invalides. Le mot de passe doit contenir au moins 6 caractères.");
-    throw new Error("Invalid registration information");
-  };
-  
-  const loginWithSocialMedia = (provider: 'facebook' | 'google') => {
-    const socialUser: User = {
-      id: Math.floor(Math.random() * 1000) + 100,
-      name: `Utilisateur ${provider.charAt(0).toUpperCase() + provider.slice(1)}`,
-      email: `user_${Math.floor(Math.random() * 1000)}@${provider}.com`,
-      role: 'user',
-      provider: provider,
-      registrationDate: new Date().toISOString(),
-      socialMediaDetails: {
-        providerId: `${provider}_${Math.random().toString(36).substring(2, 15)}`,
-        displayName: `Utilisateur ${provider.charAt(0).toUpperCase() + provider.slice(1)}`,
-      }
+    // Clean up subscription
+    return () => {
+      subscription.unsubscribe();
     };
-    
-    setUser(socialUser);
-    setIsAuthenticated(true);
-    setIsAdmin(false);
-    localStorage.setItem('user', JSON.stringify(socialUser));
-    
-    toast.success(`Connexion via ${provider.charAt(0).toUpperCase() + provider.slice(1)} réussie`);
+  }, []);
+
+  const getAllUsers = (): User[] => {
+    return loadUsersFromStorage();
   };
-  
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    setIsAdmin(false);
-    localStorage.removeItem('user');
-    
-    toast.success("Déconnexion réussie");
-  };
-  
-  const getAllUsers = useCallback((): User[] => {
-    // For demo purposes only - would fetch from an API in a real app
-    const adminUser: User = {
-      id: 1,
-      name: "Administrateur",
-      email: "admin@winshirt.fr",
-      role: 'admin',
-      registrationDate: "2023-01-01T00:00:00.000Z",
-    };
-    
-    // Get client users too
-    const clientUsers: User[] = [];
+
+  const login = async (email: string, password: string) => {
     try {
-      const clientsStr = localStorage.getItem('clients');
-      if (clientsStr) {
-        const clients: Client[] = JSON.parse(clientsStr);
-        clients.forEach(client => {
-          if (client.email) {
-            clientUsers.push({
-              id: client.id + 1000, // Avoid ID collisions
-              name: client.name || client.email.split('@')[0],
-              email: client.email,
-              role: 'user',
-              registrationDate: client.registrationDate,
-              clientId: client.id
-            });
-          }
-        });
+      // Try login with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        // If Supabase fails, try simulation mode
+        console.error("Erreur de connexion Supabase:", error);
+        
+        // Simulation for admin@winshirt.com
+        if (email === 'admin@winshirt.com' && password === 'admin123') {
+          const adminUser: User = {
+            id: 1,
+            name: 'Admin',
+            email: 'admin@winshirt.com',
+            role: 'admin',
+            registrationDate: new Date().toISOString(),
+            provider: 'email'
+          };
+          setUser(adminUser);
+          localStorage.setItem('winshirt_user', JSON.stringify(adminUser));
+          toast.success("Connexion réussie en tant qu'administrateur! (Mode simulation)");
+          return;
+        }
+        
+        // Get registered users in simulation mode
+        const users = loadUsersFromStorage();
+        const foundUser = users.find(u => u.email === email);
+            
+        if (foundUser) {
+          setUser(foundUser);
+          localStorage.setItem('winshirt_user', JSON.stringify(foundUser));
+          toast.success("Connexion réussie! (Mode simulation)");
+          return;
+        }
+        
+        toast.error("Email ou mot de passe incorrect");
+        return;
+      }
+      
+      // Successful Supabase login
+      toast.success("Connexion réussie!");
+    } catch (error) {
+      console.error("Erreur lors de la connexion:", error);
+      toast.error("Une erreur est survenue lors de la connexion");
+    }
+  };
+
+  const loginWithSocialMedia = async (provider: 'facebook' | 'google') => {
+    try {
+      toast.info(`Connexion avec ${provider} en cours...`);
+
+      // Tentative de connexion avec simulation immédiate pour éviter l'attente
+      // si Supabase n'est pas configuré
+      const providerName = provider === 'facebook' ? 'Facebook' : 'Google';
+      
+      // Essai de connexion avec Supabase avec un timeout court
+      const loginPromise = supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/account'
+        }
+      });
+      
+      // Définir un timeout pour abandonner après 2 secondes
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Délai d'attente dépassé")), 2000);
+      });
+      
+      // Race entre la connexion et le timeout
+      const { data, error } = await Promise.race([
+        loginPromise,
+        timeoutPromise.then(() => ({ data: null, error: new Error("Délai d'attente dépassé") }))
+      ]) as any;
+      
+      if (error) {
+        console.error(`Erreur de connexion ${provider}:`, error);
+        
+        // Mode simulation en cas d'erreur Supabase
+        // Génération de données utilisateur simulées
+        const randomId = Math.floor(Math.random() * 10000);
+        const userData = generateSimulatedSocialUser(provider, randomId);
+        
+        // Vérification si l'utilisateur existe déjà
+        const users = loadUsersFromStorage();
+        
+        // Vérification par email ou ID de fournisseur
+        const existingUserByEmail = users.find(u => u.email === userData.email);
+        const existingUserByProviderId = users.find(
+          u => u.socialMediaDetails?.providerId === userData.socialMediaDetails?.providerId
+        );
+        
+        const existingUser = existingUserByEmail || existingUserByProviderId;
+        
+        if (existingUser) {
+          // L'utilisateur existe déjà, connectez-le
+          // Mise à jour des informations si nécessaire
+          const updatedUser = {
+            ...existingUser,
+            ...userData,
+            id: existingUser.id // Conserver l'ID original
+          };
+          
+          // Mise à jour de l'utilisateur dans la liste
+          const updatedUsers = users.map(u => 
+            u.id === updatedUser.id ? updatedUser : u
+          );
+          
+          saveUsersToStorage(updatedUsers);
+          
+          setUser(updatedUser as User);
+          localStorage.setItem('winshirt_user', JSON.stringify(updatedUser));
+          toast.success(`Connexion réussie avec ${providerName}! (Mode simulation)`);
+          navigate('/account');
+          return;
+        }
+        
+        // Création d'un nouvel utilisateur
+        const newUser: User = {
+          id: users.length + 2, // +2 car l'id 1 est réservé à l'admin
+          ...userData as User,
+          role: 'user',
+          registrationDate: new Date().toISOString(),
+          provider: provider
+        };
+        
+        users.push(newUser);
+        saveUsersToStorage(users);
+        
+        // Connexion de l'utilisateur
+        setUser(newUser);
+        localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+        
+        // Envoi d'un email de confirmation
+        EmailService.sendAccountCreationEmail(newUser.email, newUser.name);
+        
+        toast.success(`Inscription réussie avec ${providerName}! (Mode simulation)`);
+        navigate('/account');
+        return;
+      }
+      
+      // Redirection Supabase gérée automatiquement
+      if (data?.url) {
+        toast.info(`Redirection vers ${provider} pour authentification...`);
       }
     } catch (error) {
-      console.error("Error getting client users:", error);
+      console.error(`Erreur lors de la connexion avec ${provider}:`, error);
+      
+      // Basculer automatiquement en mode simulation
+      const providerName = provider === 'facebook' ? 'Facebook' : 'Google';
+      const randomId = Math.floor(Math.random() * 10000);
+      const userData = generateSimulatedSocialUser(provider, randomId);
+      
+      // Créer un nouvel utilisateur simulé
+      const users = loadUsersFromStorage();
+      const newUser: User = {
+        id: users.length + 2,
+        ...userData as User,
+        role: 'user',
+        registrationDate: new Date().toISOString(),
+        provider: provider
+      };
+      
+      users.push(newUser);
+      saveUsersToStorage(users);
+      
+      // Connecter l'utilisateur
+      setUser(newUser);
+      localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+      
+      toast.success(`Connexion avec ${providerName} simulée avec succès!`);
+      navigate('/account');
     }
-    
-    const demoUsers: User[] = [
-      adminUser,
-      {
-        id: 2,
-        name: "Jean Dupont",
-        email: "jean@example.com",
-        role: 'user',
-        registrationDate: "2023-01-15T00:00:00.000Z",
-      },
-      {
-        id: 3,
-        name: "Marie Martin",
-        email: "marie@example.com",
-        role: 'user',
-        registrationDate: "2023-02-10T00:00:00.000Z",
-      },
-      ...clientUsers
-    ];
-    
-    return demoUsers;
-  }, []);
-  
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    try {
+      // Try signup with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
+      
+      if (error) {
+        console.error("Erreur d'inscription Supabase:", error);
+        
+        // Fall back to simulation if Supabase error
+        // Check if user already exists
+        const users = loadUsersFromStorage();
+        
+        if (users.some(u => u.email === email)) {
+          toast.error("Un compte existe déjà avec cet email");
+          return;
+        }
+        
+        // Create new user
+        const newUser: User = {
+          id: users.length + 2, // +2 as id 1 is reserved for admin
+          name,
+          email,
+          role: 'user',
+          registrationDate: new Date().toISOString(),
+          provider: 'email'
+        };
+        
+        users.push(newUser);
+        saveUsersToStorage(users);
+        
+        // Automatically log in the user
+        setUser(newUser);
+        localStorage.setItem('winshirt_user', JSON.stringify(newUser));
+        
+        // Send confirmation email
+        EmailService.sendAccountCreationEmail(newUser.email, newUser.name);
+        
+        toast.success("Inscription réussie! (Mode simulation)");
+        navigate('/account');
+        return;
+      }
+      
+      // Successful Supabase signup, but may require email confirmation
+      if (data.user) {
+        if (data.user.identities && data.user.identities.length === 0) {
+          toast.error("Un compte existe déjà avec cet email");
+          return;
+        }
+        
+        toast.success("Inscription réussie!");
+        
+        // If signup doesn't require confirmation, user is already logged in
+        if (data.session) {
+          navigate('/account');
+        } else {
+          toast.info("Veuillez vérifier votre email pour confirmer votre compte");
+          navigate('/login');
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'inscription:", error);
+      toast.error("Une erreur est survenue lors de l'inscription");
+    }
+  };
+
+  const logout = async () => {
+    try {
+      // Supabase logout
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Erreur lors de la déconnexion Supabase:", error);
+        // Continue with local logout even in case of Supabase error
+      }
+      
+      // Local logout
+      setUser(null);
+      localStorage.removeItem('winshirt_user');
+      toast.info("Vous avez été déconnecté");
+      navigate('/');
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      // Force local logout in case of error
+      setUser(null);
+      localStorage.removeItem('winshirt_user');
+      navigate('/');
+    }
+  };
+
   return {
     user,
-    isAuthenticated,
-    isAdmin,
+    isAuthenticated: !!user,
+    isAdmin: user?.role === 'admin',
     login,
-    register,
     loginWithSocialMedia,
+    register,
     logout,
     getAllUsers
   };
