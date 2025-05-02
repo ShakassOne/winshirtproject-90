@@ -14,7 +14,7 @@ export interface AdminSetupResult {
 export const setupAdminUser = async (email: string): Promise<AdminSetupResult> => {
   try {
     // First get all users and filter by email
-    const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
     
     if (userError) {
       console.error('Error finding users:', userError);
@@ -25,9 +25,10 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
       };
     }
     
-    const userData = users?.find(user => user.email === email);
+    const users = userData?.users || [];
+    const user = users.find(u => u.email === email);
     
-    if (!userData) {
+    if (!user) {
       return {
         success: false,
         message: `Aucun utilisateur trouvé avec l'email ${email}`,
@@ -38,7 +39,7 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
     const { data: existingRole, error: roleError } = await supabase
       .from('user_roles')
       .select()
-      .eq('user_id', userData.id)
+      .eq('user_id', user.id)
       .eq('role', 'admin')
       .maybeSingle();
       
@@ -59,12 +60,12 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
     }
     
     // Alternatively, check if user has isAdmin in metadata
-    if (userData.user_metadata?.isAdmin === true) {
+    if (user.user_metadata?.isAdmin === true) {
       // User already has admin metadata, let's ensure they have a role too
       const { error: insertError } = await supabase
         .from('user_roles')
         .insert({
-          user_id: userData.id,
+          user_id: user.id,
           role: 'admin'
         });
         
@@ -83,7 +84,7 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
     const { error: insertError } = await supabase
       .from('user_roles')
       .insert({
-        user_id: userData.id,
+        user_id: user.id,
         role: 'admin'
       });
       
@@ -98,10 +99,10 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
     
     // Also update user metadata for backward compatibility
     const { error: updateError } = await supabase.auth.admin.updateUserById(
-      userData.id,
+      user.id,
       { 
         user_metadata: { 
-          ...userData.user_metadata,
+          ...user.user_metadata,
           isAdmin: true 
         } 
       }

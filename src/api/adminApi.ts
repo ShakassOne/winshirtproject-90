@@ -39,11 +39,11 @@ export const checkAdminPermission = async (): Promise<boolean> => {
 export const grantAdminAccess = async (email: string): Promise<boolean> => {
   try {
     // Rechercher l'utilisateur
-    const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
     
     if (userError) throw userError;
     
-    const user = users.find(u => u.email === email);
+    const user = userData?.users?.find(u => u.email === email);
     if (!user) {
       toast.error(`Utilisateur avec l'email ${email} non trouvé`);
       return false;
