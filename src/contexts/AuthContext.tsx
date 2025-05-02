@@ -31,60 +31,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session && session.user) {
           // Utilisateur connecté via Supabase Auth
           try {
-            // Récupérer les informations utilisateur depuis notre table users
-            const { data, error } = await supabase
-              .from('users')
-              .select('*')
-              .eq('email', session.user.email)
-              .single();
-              
-            if (error) {
-              console.error('Erreur lors de la récupération des données utilisateur:', error);
-              // Créer un nouvel utilisateur dans notre table si non existant
-              const newUser: User = {
-                id: typeof session.user.id === 'string' ? 
-                     parseInt(session.user.id, 10) || 0 : 
-                     (session.user.id as number) || 0,
-                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Utilisateur',
-                email: session.user.email!,
-                role: 'user',
-                registrationDate: new Date().toISOString()
-              };
-              
-              // Insérer le nouvel utilisateur
-              const { error: insertError } = await supabase
-                .from('users')
-                .insert(newUser);
-                
-              if (insertError) {
-                console.error('Erreur lors de la création de l\'utilisateur:', insertError);
-                setUser(null);
-                setIsAuthenticated(false);
-                setIsAdmin(false);
-              } else {
-                setUser(newUser);
-                setIsAuthenticated(true);
-                setIsAdmin(newUser.role === 'admin');
-              }
-            } else {
-              // Utilisateur existant
-              const userData: User = {
-                id: typeof data.id === 'string' ? 
-                    parseInt(data.id, 10) || 0 : 
-                    Number(data.id) || 0,
-                name: data.name,
-                email: data.email,
-                role: data.role || 'user',
-                registrationDate: data.created_at
-              };
-              
-              setUser(userData);
-              setIsAuthenticated(true);
-              setIsAdmin(data.role === 'admin');
-              
-              // Log pour débogage
-              console.log("Utilisateur authentifié:", userData);
-            }
+            // Check if the user is an admin - first try with user_metadata
+            const isUserAdmin = session.user.user_metadata?.isAdmin === true;
+            
+            // Format user data
+            const userData: User = {
+              id: typeof session.user.id === 'string' ? 
+                  parseInt(session.user.id.replace(/-/g, '').substring(0, 8), 16) || 0 : 0,
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Utilisateur',
+              email: session.user.email!,
+              role: isUserAdmin ? 'admin' : 'user',
+              registrationDate: session.user.created_at
+            };
+            
+            // Store user in localStorage for backward compatibility
+            localStorage.setItem('user', JSON.stringify(userData));
+            
+            setUser(userData);
+            setIsAuthenticated(true);
+            setIsAdmin(isUserAdmin);
+            
+            // Log for debugging
+            console.log("Utilisateur authentifié:", userData, "Admin:", isUserAdmin);
           } catch (error) {
             console.error('Erreur d\'authentification:', error);
             setUser(null);
@@ -93,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           // Utilisateur déconnecté
+          localStorage.removeItem('user');
           setUser(null);
           setIsAuthenticated(false);
           setIsAdmin(false);
@@ -109,10 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
-            // Convert id to number if it's a string
-            if (typeof parsedUser.id === 'string') {
-              parsedUser.id = parseInt(parsedUser.id, 10) || 0;
-            }
             setUser(parsedUser);
             setIsAuthenticated(true);
             setIsAdmin(parsedUser?.role === 'admin' || parsedUser?.isAdmin === true);
@@ -132,44 +97,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const login = async (email: string, password: string) => {
     try {
-      // Admin account hardcoded for compatibility
-      if (email === "admin@winshirt.fr" && password === "Chacha2@25!!") {
-        // Tenter de se connecter avec Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (error) {
-          // Si échec avec Supabase, utiliser notre méthode de compatibilité
-          const adminUser: User = {
-            id: 1,
-            name: "Administrateur",
-            email: email,
-            role: 'admin',
-            registrationDate: new Date().toISOString(),
-          };
-          
-          setUser(adminUser);
-          setIsAuthenticated(true);
-          setIsAdmin(true);
-          localStorage.setItem('user', JSON.stringify(adminUser));
-          
-          toast.success("Connecté en tant qu'administrateur");
-          return;
-        }
-      } else {
-        // Connexion standard via Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (error) throw error;
+      // Connexion standard via Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        throw error;
       }
+      
+      // Log success
+      toast.success("Connexion réussie");
     } catch (error: any) {
       console.error('Error logging in:', error);
       toast.error(`Erreur lors de la connexion: ${error.message}`);
+      throw error;
     }
   };
   
@@ -181,7 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         options: {
           data: {
-            full_name: name
+            full_name: name,
+            name: name
           }
         }
       });
@@ -194,8 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Retourner un nouvel objet utilisateur pour compatibilité
       const newUser: User = {
         id: typeof data.user?.id === 'string' ? 
-            parseInt(data.user.id, 10) || 0 : 
-            Number(data.user?.id) || 0,
+            parseInt(data.user.id.replace(/-/g, '').substring(0, 8), 16) || 0 : 0,
         name: name,
         email: email,
         role: 'user',
@@ -266,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return data.map(user => ({
         id: typeof user.id === 'string' ? 
-            parseInt(user.id, 10) || 0 : 
+            parseInt(user.id.replace(/-/g, '').substring(0, 8), 16) || 0 : 
             Number(user.id) || 0,
         name: user.name || user.email.split('@')[0],
         email: user.email,

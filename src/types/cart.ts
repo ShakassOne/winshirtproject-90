@@ -13,7 +13,6 @@ export interface CartItem {
   productId?: number;
   lotteryId?: number;
   lotteryName?: string;
-  // Add the linkedLotteries property that is used in confirmation.tsx
   linkedLotteries?: number[];
 }
 

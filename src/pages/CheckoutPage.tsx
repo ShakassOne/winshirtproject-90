@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/lib/toast';
 import { initiateStripeCheckout } from '@/lib/stripe';
-import { CheckoutFormData, StripeCheckoutResult, StripeCheckoutError, OrderSummary } from '@/types/checkout';
+import { CheckoutFormData, OrderSummary } from '@/types/checkout';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const CheckoutPage: React.FC = () => {
@@ -33,6 +32,9 @@ const CheckoutPage: React.FC = () => {
   const [deliveryFee, setDeliveryFee] = useState(5.99);
 
   useEffect(() => {
+    // Debug logging to help troubleshoot
+    console.log("CheckoutPage rendered with items:", items);
+    
     // Redirect if cart is empty
     if (!items || items.length === 0) {
       toast.info("Votre panier est vide");
@@ -48,10 +50,10 @@ const CheckoutPage: React.FC = () => {
     }));
   };
 
-  const handleDeliveryMethodChange = (value: string) => {
+  const handleDeliveryMethodChange = (value: "standard" | "express") => {
     setFormData(prev => ({
       ...prev,
-      deliveryMethod: value as 'standard' | 'express'
+      deliveryMethod: value
     }));
     
     // Update delivery fee based on selection
@@ -62,15 +64,17 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  const handlePaymentMethodChange = (value: string) => {
+  const handlePaymentMethodChange = (value: "card" | "paypal") => {
     setFormData(prev => ({
       ...prev,
-      paymentMethod: value as 'card' | 'paypal'
+      paymentMethod: value
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Form submitted with data:", formData);
+    console.log("Cart items:", items);
     
     // Form validation
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.address || !formData.city || !formData.postalCode) {
@@ -78,13 +82,18 @@ const CheckoutPage: React.FC = () => {
       return;
     }
     
+    if (!items || items.length === 0) {
+      toast.error("Votre panier est vide");
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      console.log("Initializing checkout process with items:", items);
+      console.log("Initializing checkout process");
       // Prepare order summary
       const orderSummary: OrderSummary = {
-        items: items || [],
+        items: items,
         subtotal: calculateTotal(),
         deliveryFee,
         total: calculateTotal() + deliveryFee,
@@ -101,8 +110,10 @@ const CheckoutPage: React.FC = () => {
         paymentMethod: formData.paymentMethod
       };
 
+      console.log("Order summary:", orderSummary);
+
       // Call Stripe checkout function
-      const result = await initiateStripeCheckout(items || []);
+      const result = await initiateStripeCheckout(items);
       
       console.log("Checkout result:", result);
       
@@ -114,7 +125,7 @@ const CheckoutPage: React.FC = () => {
         clearCart();
         
         // Redirect to confirmation page or handle success
-        if (result.url) {
+        if (result.url && result.url !== '/confirmation') {
           // If we have a URL for external payment, redirect there
           window.location.href = result.url;
         } else {
@@ -123,8 +134,8 @@ const CheckoutPage: React.FC = () => {
         }
       } else {
         // Error case
-        const errorResult = result as StripeCheckoutError;
-        toast.error(`Erreur de paiement: ${errorResult.error}`);
+        const errorMessage = result && 'error' in result ? result.error : 'Erreur inconnue';
+        toast.error(`Erreur de paiement: ${errorMessage}`);
       }
     } catch (error) {
       console.error("Checkout error:", error);
@@ -248,7 +259,7 @@ const CheckoutPage: React.FC = () => {
                 <h3 className="text-lg font-medium text-white mb-4">Méthode de livraison</h3>
                 <RadioGroup 
                   value={formData.deliveryMethod} 
-                  onValueChange={handleDeliveryMethodChange}
+                  onValueChange={(value) => handleDeliveryMethodChange(value as "standard" | "express")}
                   className="space-y-3"
                 >
                   <div className="flex items-center space-x-3 rounded-md border border-winshirt-purple/30 p-4">
@@ -270,17 +281,17 @@ const CheckoutPage: React.FC = () => {
               </div>
               
               <div className="pt-4 border-t border-winshirt-purple/30">
-                <h3 className="text-lg font-medium text-white mb-4">Méthode de paiement</h3>
+                <h3 className="text-lg font-medium text-white mb-4">Mode de paiement</h3>
                 <RadioGroup 
                   value={formData.paymentMethod} 
-                  onValueChange={handlePaymentMethodChange}
+                  onValueChange={(value) => handlePaymentMethodChange(value as "card" | "paypal")}
                   className="space-y-3"
                 >
                   <div className="flex items-center space-x-3 rounded-md border border-winshirt-purple/30 p-4">
                     <RadioGroupItem value="card" id="card" />
                     <Label htmlFor="card" className="flex-1 cursor-pointer">
                       <div className="font-medium">Carte bancaire</div>
-                      <div className="text-gray-400 text-sm">Visa, Mastercard</div>
+                      <div className="text-gray-400 text-sm">Visa, Mastercard, etc.</div>
                     </Label>
                   </div>
                   
@@ -288,81 +299,60 @@ const CheckoutPage: React.FC = () => {
                     <RadioGroupItem value="paypal" id="paypal" />
                     <Label htmlFor="paypal" className="flex-1 cursor-pointer">
                       <div className="font-medium">PayPal</div>
-                      <div className="text-gray-400 text-sm">Paiement sécurisé via PayPal</div>
+                      <div className="text-gray-400 text-sm">Payer avec votre compte PayPal</div>
                     </Label>
                   </div>
                 </RadioGroup>
               </div>
               
-              <div className="flex justify-between pt-6">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => navigate('/cart')}
-                  className="border-winshirt-purple hover:bg-winshirt-purple/20"
-                >
-                  Retour au panier
-                </Button>
-                
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="bg-winshirt-blue hover:bg-winshirt-blue-dark min-w-[150px]"
-                >
-                  {isSubmitting ? 'Traitement...' : 'Payer maintenant'}
-                </Button>
-              </div>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
+              >
+                {isSubmitting ? 'Traitement en cours...' : 'Valider la commande'}
+              </Button>
             </form>
           </div>
         </div>
         
         <div>
           <div className="bg-winshirt-space/60 backdrop-blur-lg rounded-lg p-6 border border-winshirt-purple/30 sticky top-24">
-            <h2 className="text-xl font-semibold text-white mb-4">Récapitulatif de commande</h2>
+            <h2 className="text-xl font-semibold text-white mb-4">Récapitulatif</h2>
             
-            {items && items.length > 0 ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  {items.map(item => (
-                    <div key={`${item.id}-${item.size || ''}-${item.color || ''}`} className="flex justify-between py-2">
-                      <div>
-                        <div className="text-white">{item.name}</div>
-                        <div className="text-gray-400 text-sm">
-                          {item.size && `Taille: ${item.size}`}
-                          {item.size && item.color && ' | '}
-                          {item.color && `Couleur: ${item.color}`}
-                        </div>
-                        <div className="text-gray-400 text-sm">Qté: {item.quantity}</div>
-                      </div>
-                      <div className="text-white">{(item.price * item.quantity).toFixed(2)}€</div>
+            <div className="space-y-4">
+              {items && items.map((item, index) => (
+                <div key={index} className="flex justify-between py-2">
+                  <div>
+                    <div className="text-white">{item.name}</div>
+                    <div className="text-gray-400 text-sm">
+                      {item.size && `Taille: ${item.size}`}
+                      {item.size && item.color && ' | '}
+                      {item.color && `Couleur: ${item.color}`}
                     </div>
-                  ))}
+                    <div className="text-gray-400 text-sm">Qté: {item.quantity}</div>
+                  </div>
+                  <div className="text-white">{(item.price * item.quantity).toFixed(2)}€</div>
+                </div>
+              ))}
+              
+              <div className="pt-4 border-t border-winshirt-purple/30 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Sous-total</span>
+                  <span className="text-white">{calculateTotal().toFixed(2)}€</span>
                 </div>
                 
-                <div className="pt-4 border-t border-winshirt-purple/30 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Sous-total</span>
-                    <span className="text-white">{calculateTotal().toFixed(2)}€</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Livraison</span>
-                    <span className="text-white">{deliveryFee.toFixed(2)}€</span>
-                  </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Livraison</span>
+                  <span className="text-white">{deliveryFee.toFixed(2)}€</span>
                 </div>
                 
-                <div className="pt-4 border-t border-winshirt-purple/30">
-                  <div className="flex justify-between text-lg font-medium">
-                    <span className="text-white">Total</span>
-                    <span className="text-winshirt-blue-light">{(calculateTotal() + deliveryFee).toFixed(2)}€</span>
-                  </div>
+                <div className="flex justify-between text-lg font-medium pt-2 border-t border-winshirt-purple/30">
+                  <span className="text-white">Total</span>
+                  <span className="text-winshirt-blue-light">{(calculateTotal() + deliveryFee).toFixed(2)}€</span>
                 </div>
               </div>
-            ) : (
-              <div className="py-8 text-center text-gray-400">
-                Votre panier est vide
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

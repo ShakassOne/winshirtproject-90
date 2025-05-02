@@ -97,12 +97,6 @@ const LoginPage: React.FC = () => {
               {isLoading ? 'Connexion en cours...' : 'Se connecter'}
             </Button>
           </div>
-          
-          <div className="text-center text-sm">
-            <p className="text-gray-300">
-              Administrateur de démo: admin@winshirt.fr / Chacha2@25!!
-            </p>
-          </div>
         </form>
       </div>
     </div>

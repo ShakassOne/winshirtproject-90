@@ -3,31 +3,19 @@ import { useEffect, useState } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '@/hooks/useCart';
+import { useCart } from '@/contexts/CartContext'; // Use CartContext instead of useCart hook
 import { Badge } from '@/components/ui/badge';
 
 export default function CartButton() {
   const navigate = useNavigate();
-  const { getItemCount } = useCart();
+  const { items } = useCart(); // Use CartContext directly to get items
   const [itemCount, setItemCount] = useState(0);
 
-  // Effect to update the cart count when it changes
+  // Effect to update the cart count when items change
   useEffect(() => {
-    const updateCount = () => {
-      const count = getItemCount();
-      setItemCount(count);
-    };
-
-    // Initial update
-    updateCount();
-
-    // Update when cart changes
-    window.addEventListener('cartUpdated', updateCount);
-    
-    return () => {
-      window.removeEventListener('cartUpdated', updateCount);
-    };
-  }, [getItemCount]);
+    const count = items.reduce((total, item) => total + item.quantity, 0);
+    setItemCount(count);
+  }, [items]); // Depend directly on items from context
 
   return (
     <Button 
