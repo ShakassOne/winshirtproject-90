@@ -8,6 +8,15 @@ import { toast } from '@/lib/toast';
 // Create context with undefined as initial value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Utility function to send simulated emails (used by Stripe)
+export const simulateSendEmail = (email: string, subject: string, body: string): boolean => {
+  console.log(`Simulated email to ${email}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Body: ${body}`);
+  
+  return true;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -33,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.error('Erreur lors de la récupération des données utilisateur:', error);
               // Créer un nouvel utilisateur dans notre table si non existant
               const newUser: User = {
-                id: session.user.id,
+                id: parseInt(session.user.id, 10) || 0, // Convert string to number or use 0 as fallback
                 name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Utilisateur',
                 email: session.user.email!,
                 role: 'user',
@@ -58,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               // Utilisateur existant
               const userData: User = {
-                id: data.id,
+                id: typeof data.id === 'string' ? parseInt(data.id, 10) || 0 : data.id,
                 name: data.name,
                 email: data.email,
                 role: data.role || 'user',
@@ -96,6 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
+            // Convert id to number if it's a string
+            if (typeof parsedUser.id === 'string') {
+              parsedUser.id = parseInt(parsedUser.id, 10) || 0;
+            }
             setUser(parsedUser);
             setIsAuthenticated(true);
             setIsAdmin(parsedUser?.role === 'admin' || parsedUser?.isAdmin === true);
