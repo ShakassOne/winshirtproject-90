@@ -17,3 +17,8 @@ port = 54323
 
 [functions.send-email]
 verify_jwt = true
+
+[auth]
+# Redirect URLs from Authentication
+redirect_urls = ["http://*.supabase.co/*", "http://localhost:3000/*", "https://*.webflow.io/*", "https://*.lovable.app/*"]
+site_url = "https://uwgclposhhdovfjnazlp.lovable.app"

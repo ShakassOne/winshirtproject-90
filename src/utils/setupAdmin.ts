@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { createAdminUser } from '@/integrations/supabase/client';
 
 // Define the type for user objects returned from Supabase
 interface SupabaseUser {
@@ -21,119 +22,9 @@ export interface AdminSetupResult {
  */
 export const setupAdminUser = async (email: string): Promise<AdminSetupResult> => {
   try {
-    // First get all users and filter by email
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-    
-    if (userError) {
-      console.error('Error finding users:', userError);
-      return {
-        success: false,
-        message: `Impossible de récupérer les utilisateurs`,
-        error: userError.message
-      };
-    }
-    
-    // Ensure users array exists and is valid
-    if (!userData?.users || !Array.isArray(userData.users)) {
-      return {
-        success: false,
-        message: `Aucun utilisateur trouvé`,
-      };
-    }
-    
-    // Explicitement typer les utilisateurs pour que TypeScript comprenne la structure
-    const users = userData.users as SupabaseUser[];
-    const user = users.find(u => u.email === email);
-    
-    if (!user) {
-      return {
-        success: false,
-        message: `Aucun utilisateur trouvé avec l'email ${email}`,
-      };
-    }
-    
-    // Check if user already has an admin role
-    const { data: existingRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select()
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-      
-    if (roleError) {
-      console.error('Error checking for existing role:', roleError);
-      return {
-        success: false,
-        message: `Erreur lors de la vérification des rôles`,
-        error: roleError.message
-      };
-    }
-    
-    if (existingRole) {
-      return {
-        success: true,
-        message: `${email} est déjà administrateur`
-      };
-    }
-    
-    // Alternatively, check if user has isAdmin in metadata
-    if (user.user_metadata?.isAdmin === true) {
-      // User already has admin metadata, let's ensure they have a role too
-      const { error: insertError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: user.id,
-          role: 'admin'
-        });
-        
-      if (insertError) {
-        console.error('Error setting user as admin in roles table:', insertError);
-        // Not returning error as the user is already admin in metadata
-      }
-      
-      return {
-        success: true,
-        message: `${email} a déjà les droits administrateur dans ses métadonnées`
-      };
-    }
-    
-    // Insert admin role for user
-    const { error: insertError } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: user.id,
-        role: 'admin'
-      });
-      
-    if (insertError) {
-      console.error('Error setting user as admin:', insertError);
-      return {
-        success: false,
-        message: `Erreur lors de l'attribution du rôle d'administrateur`,
-        error: insertError.message
-      };
-    }
-    
-    // Also update user metadata for backward compatibility
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      user.id,
-      { 
-        user_metadata: { 
-          ...user.user_metadata,
-          isAdmin: true 
-        } 
-      }
-    );
-    
-    if (updateError) {
-      console.error('Error updating user metadata:', updateError);
-      // Not returning as error since the role was already set
-    }
-    
-    return {
-      success: true,
-      message: `${email} est maintenant administrateur`
-    };
+    // Use the createAdminUser function to create or update the admin user
+    const result = await createAdminUser(email);
+    return result;
   } catch (error) {
     console.error('Error in setupAdminUser:', error);
     return {
