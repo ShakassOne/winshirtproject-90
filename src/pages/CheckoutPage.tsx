@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -50,7 +51,7 @@ const CheckoutPage: React.FC = () => {
   const handleDeliveryMethodChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
-      deliveryMethod: value
+      deliveryMethod: value as 'standard' | 'express'
     }));
     
     // Update delivery fee based on selection
@@ -64,7 +65,7 @@ const CheckoutPage: React.FC = () => {
   const handlePaymentMethodChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
-      paymentMethod: value
+      paymentMethod: value as 'card' | 'paypal'
     }));
   };
 

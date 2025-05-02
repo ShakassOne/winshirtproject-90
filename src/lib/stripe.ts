@@ -3,6 +3,7 @@ import { toast } from './toast';
 import { simulateSendEmail } from '@/contexts/AuthContext';
 import { StripeCheckoutResult, StripeCheckoutSuccess, StripeCheckoutError } from '@/types/checkout';
 import { ExtendedLottery } from '@/types/lottery';
+import { CartItem } from '@/types/cart';
 
 // Function to handle successful Stripe checkout
 export const handleSuccessfulCheckout = async (result: StripeCheckoutResult, lottery: ExtendedLottery) => {
@@ -35,7 +36,7 @@ export const handleSuccessfulCheckout = async (result: StripeCheckoutResult, lot
 };
 
 // Implementation of the initiateStripeCheckout function that is imported in CheckoutPage.tsx
-export const initiateStripeCheckout = async (items: any[]): Promise<StripeCheckoutResult> => {
+export const initiateStripeCheckout = async (items: CartItem[]): Promise<StripeCheckoutResult> => {
   try {
     // Simulate a successful checkout for now
     // In a real implementation, this would make an API call to your Stripe backend
