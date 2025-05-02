@@ -1,6 +1,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Define the type for user objects returned from Supabase
+interface SupabaseUser {
+  id: string;
+  email?: string;
+  user_metadata: Record<string, any>;
+  [key: string]: any; // Allow for other properties
+}
+
 export interface AdminSetupResult {
   success: boolean;
   message: string;
@@ -33,7 +41,8 @@ export const setupAdminUser = async (email: string): Promise<AdminSetupResult> =
       };
     }
     
-    const users = userData.users;
+    // Explicitement typer les utilisateurs pour que TypeScript comprenne la structure
+    const users = userData.users as SupabaseUser[];
     const user = users.find(u => u.email === email);
     
     if (!user) {

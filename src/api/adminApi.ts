@@ -2,6 +2,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
+// Define the type for user objects returned from Supabase
+interface SupabaseUser {
+  id: string;
+  email?: string;
+  user_metadata: Record<string, any>;
+  [key: string]: any; // Allow for other properties
+}
+
 /**
  * Vérifier si l'utilisateur actuel a les droits d'administration
  */
@@ -49,7 +57,10 @@ export const grantAdminAccess = async (email: string): Promise<boolean> => {
       return false;
     }
     
-    const user = userData.users.find(u => u.email === email);
+    // Explicitement typer les utilisateurs pour que TypeScript comprenne la structure
+    const users = userData.users as SupabaseUser[];
+    const user = users.find(u => u.email === email);
+    
     if (!user) {
       toast.error(`Utilisateur avec l'email ${email} non trouvé`);
       return false;
