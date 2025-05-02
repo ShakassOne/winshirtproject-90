@@ -1,3 +1,4 @@
+
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -11,6 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * @returns The camelCase string
  */
 export const snakeToCamel = (str: string): string => {
+  if (typeof str !== 'string') return str;
   return str.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 };
 
@@ -42,6 +44,7 @@ export function snakeToCamelObject<T extends object>(obj: T): any {
  * @returns The snake_case string
  */
 export const camelToSnake = (str: string): string => {
+  if (typeof str !== 'string') return str;
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 };
 
