@@ -40,6 +40,22 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [startSize, setStartSize] = useState({ width: 0, height: 0 });
   const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Detect mobile devices
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = window.innerWidth;
+      setIsMobile(width <= 768); // Consider devices with width <= 768px as mobile
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
   
   // Handler pour le changement de position (recto/verso)
   const handlePositionChange = (newPosition: string) => {
@@ -89,7 +105,8 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
   };
   
   const activePrintArea = getActivePrintArea();
-  
+
+  // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (readOnly || !visual) return;
 
@@ -246,6 +263,166 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
       height: visualSettings.size.height
     });
   };
+
+  // Touch event handlers - new for mobile support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (readOnly || !visual) return;
+    
+    e.preventDefault(); // Prevent scrolling while manipulating the visual
+    
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setStartPos({
+      x: touch.clientX,
+      y: touch.clientY
+    });
+  };
+  
+  const handleTouchMove = (e: TouchEvent) => {
+    if (readOnly || !containerRect) return;
+    
+    const touch = e.touches[0];
+    
+    if (isDragging && visualRef.current) {
+      const dx = touch.clientX - startPos.x;
+      const dy = touch.clientY - startPos.y;
+      
+      let newX = visualSettings.position.x + dx;
+      let newY = visualSettings.position.y + dy;
+      
+      // Si nous avons une zone d'impression active, contraindre le mouvement à cette zone
+      if (activePrintArea) {
+        const { bounds } = activePrintArea;
+        
+        // Contraindre le visuel à l'intérieur de la zone d'impression
+        newX = Math.max(bounds.x, Math.min(newX, bounds.x + bounds.width - visualSettings.size.width));
+        newY = Math.max(bounds.y, Math.min(newY, bounds.y + bounds.height - visualSettings.size.height));
+      } else {
+        // Contraindre le visuel à l'intérieur du conteneur
+        newX = Math.max(0, Math.min(newX, containerRect.width - visualSettings.size.width));
+        newY = Math.max(0, Math.min(newY, containerRect.height - visualSettings.size.height));
+      }
+      
+      onUpdateSettings({
+        ...visualSettings,
+        position: { x: newX, y: newY }
+      });
+      
+      // Mettre à jour la position de départ pour le prochain mouvement
+      setStartPos({
+        x: touch.clientX,
+        y: touch.clientY
+      });
+    }
+    
+    if (isResizing && resizeDirection && containerRect) {
+      const dx = touch.clientX - startPos.x;
+      const dy = touch.clientY - startPos.y;
+      
+      let newWidth = startSize.width;
+      let newHeight = startSize.height;
+      let newX = visualSettings.position.x;
+      let newY = visualSettings.position.y;
+      
+      // Ajuster la taille basée sur la direction du redimensionnement
+      if (resizeDirection.includes('e')) {
+        newWidth = Math.max(50, startSize.width + dx);
+        
+        if (activePrintArea) {
+          const maxWidth = activePrintArea.bounds.x + activePrintArea.bounds.width - visualSettings.position.x;
+          newWidth = Math.min(newWidth, maxWidth);
+        } else {
+          newWidth = Math.min(newWidth, containerRect.width - visualSettings.position.x);
+        }
+      }
+      
+      if (resizeDirection.includes('w')) {
+        const newWidthW = Math.max(50, startSize.width - dx);
+        newX = visualSettings.position.x + (startSize.width - newWidthW);
+        
+        if (activePrintArea) {
+          if (newX < activePrintArea.bounds.x) {
+            const adjustedWidth = visualSettings.position.x + startSize.width - activePrintArea.bounds.x;
+            newWidth = Math.max(50, adjustedWidth);
+            newX = activePrintArea.bounds.x;
+          } else {
+            newWidth = newWidthW;
+          }
+        } else {
+          if (newX < 0) {
+            newWidth = Math.max(50, visualSettings.position.x + startSize.width);
+            newX = 0;
+          } else {
+            newWidth = newWidthW;
+          }
+        }
+      }
+      
+      if (resizeDirection.includes('s')) {
+        newHeight = Math.max(50, startSize.height + dy);
+        
+        if (activePrintArea) {
+          const maxHeight = activePrintArea.bounds.y + activePrintArea.bounds.height - visualSettings.position.y;
+          newHeight = Math.min(newHeight, maxHeight);
+        } else {
+          newHeight = Math.min(newHeight, containerRect.height - visualSettings.position.y);
+        }
+      }
+      
+      if (resizeDirection.includes('n')) {
+        const newHeightN = Math.max(50, startSize.height - dy);
+        newY = visualSettings.position.y + (startSize.height - newHeightN);
+        
+        if (activePrintArea) {
+          if (newY < activePrintArea.bounds.y) {
+            const adjustedHeight = visualSettings.position.y + startSize.height - activePrintArea.bounds.y;
+            newHeight = Math.max(50, adjustedHeight);
+            newY = activePrintArea.bounds.y;
+          } else {
+            newHeight = newHeightN;
+          }
+        } else {
+          if (newY < 0) {
+            newHeight = Math.max(50, visualSettings.position.y + startSize.height);
+            newY = 0;
+          } else {
+            newHeight = newHeightN;
+          }
+        }
+      }
+      
+      onUpdateSettings({
+        ...visualSettings,
+        position: { x: newX, y: newY },
+        size: { width: newWidth, height: newHeight }
+      });
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setIsResizing(false);
+    setResizeDirection(null);
+  };
+  
+  const handleResizeTouchStart = (e: React.TouchEvent, direction: string) => {
+    if (readOnly) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeDirection(direction);
+    
+    const touch = e.touches[0];
+    setStartPos({
+      x: touch.clientX,
+      y: touch.clientY
+    });
+    setStartSize({
+      width: visualSettings.size.width,
+      height: visualSettings.size.height
+    });
+  };
   
   const handleOpacityChange = (value: number[]) => {
     onUpdateSettings({
@@ -259,9 +436,14 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
     if (!readOnly) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+      
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
   }, [isDragging, isResizing, startPos, startSize, resizeDirection, readOnly, containerRect, visualSettings]);
@@ -344,6 +526,7 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
                 zIndex: 10
               }}
               onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
             >
               <img 
                 src={visual.image} 
@@ -353,23 +536,55 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
               
               {!readOnly && (
                 <>
-                  {/* Poignées de redimensionnement */}
-                  <div className="absolute top-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-nw-resize z-20" 
-                      onMouseDown={(e) => handleResizeStart(e, 'nw')} />
-                  <div className="absolute top-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-ne-resize z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'ne')} />
-                  <div className="absolute bottom-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-sw-resize z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'sw')} />
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-se-resize z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'se')} />
-                  <div className="absolute top-1/2 left-0 w-3 h-3 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'w')} />
-                  <div className="absolute top-1/2 right-0 w-3 h-3 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'e')} />
-                  <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 's')} />
-                  <div className="absolute top-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'n')} />
+                  {/* Poignées de redimensionnement - plus grandes sur mobile */}
+                  <div 
+                    className="absolute top-0 left-0 bg-winshirt-blue-light cursor-nw-resize z-20" 
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'nw')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'nw')}
+                  />
+                  <div 
+                    className="absolute top-0 right-0 bg-winshirt-blue-light cursor-ne-resize z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'ne')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'ne')}
+                  />
+                  <div 
+                    className="absolute bottom-0 left-0 bg-winshirt-blue-light cursor-sw-resize z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'sw')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'sw')}
+                  />
+                  <div 
+                    className="absolute bottom-0 right-0 bg-winshirt-blue-light cursor-se-resize z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'se')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'se')}
+                  />
+                  <div 
+                    className="absolute top-1/2 left-0 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'w')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'w')}
+                  />
+                  <div 
+                    className="absolute top-1/2 right-0 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'e')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'e')}
+                  />
+                  <div 
+                    className="absolute bottom-0 left-1/2 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 's')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 's')}
+                  />
+                  <div 
+                    className="absolute top-0 left-1/2 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'n')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'n')}
+                  />
                 </>
               )}
             </div>
@@ -428,6 +643,7 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
                 zIndex: 10
               }}
               onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
             >
               <img 
                 src={visual.image} 
@@ -437,23 +653,55 @@ const VisualPositioner: React.FC<VisualPositionerProps> = ({
               
               {!readOnly && (
                 <>
-                  {/* Poignées de redimensionnement */}
-                  <div className="absolute top-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-nw-resize z-20" 
-                      onMouseDown={(e) => handleResizeStart(e, 'nw')} />
-                  <div className="absolute top-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-ne-resize z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'ne')} />
-                  <div className="absolute bottom-0 left-0 w-3 h-3 bg-winshirt-blue-light cursor-sw-resize z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'sw')} />
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-winshirt-blue-light cursor-se-resize z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'se')} />
-                  <div className="absolute top-1/2 left-0 w-3 h-3 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'w')} />
-                  <div className="absolute top-1/2 right-0 w-3 h-3 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'e')} />
-                  <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 's')} />
-                  <div className="absolute top-0 left-1/2 w-3 h-3 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
-                      onMouseDown={(e) => handleResizeStart(e, 'n')} />
+                  {/* Poignées de redimensionnement - plus grandes sur mobile */}
+                  <div 
+                    className="absolute top-0 left-0 bg-winshirt-blue-light cursor-nw-resize z-20" 
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'nw')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'nw')}
+                  />
+                  <div 
+                    className="absolute top-0 right-0 bg-winshirt-blue-light cursor-ne-resize z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'ne')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'ne')}
+                  />
+                  <div 
+                    className="absolute bottom-0 left-0 bg-winshirt-blue-light cursor-sw-resize z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'sw')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'sw')}
+                  />
+                  <div 
+                    className="absolute bottom-0 right-0 bg-winshirt-blue-light cursor-se-resize z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'se')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'se')}
+                  />
+                  <div 
+                    className="absolute top-1/2 left-0 bg-winshirt-blue-light cursor-w-resize -translate-y-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'w')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'w')}
+                  />
+                  <div 
+                    className="absolute top-1/2 right-0 bg-winshirt-blue-light cursor-e-resize -translate-y-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'e')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'e')}
+                  />
+                  <div 
+                    className="absolute bottom-0 left-1/2 bg-winshirt-blue-light cursor-s-resize -translate-x-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 's')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 's')}
+                  />
+                  <div 
+                    className="absolute top-0 left-1/2 bg-winshirt-blue-light cursor-n-resize -translate-x-1/2 z-20"
+                    style={{ width: isMobile ? '16px' : '8px', height: isMobile ? '16px' : '8px' }}
+                    onMouseDown={(e) => handleResizeStart(e, 'n')}
+                    onTouchStart={(e) => handleResizeTouchStart(e, 'n')}
+                  />
                 </>
               )}
             </div>

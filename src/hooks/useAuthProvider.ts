@@ -89,12 +89,12 @@ export const useAuthProvider = () => {
         // If Supabase fails, try simulation mode
         console.error("Erreur de connexion Supabase:", error);
         
-        // Simulation for admin@winshirt.com
-        if (email === 'admin@winshirt.com' && password === 'admin123') {
+        // Simulation for admin@winshirt.fr
+        if (email === 'admin@winshirt.fr' && password === 'admin123') {
           const adminUser: User = {
             id: 1,
             name: 'Admin',
-            email: 'admin@winshirt.com',
+            email: 'admin@winshirt.fr',
             role: 'admin',
             registrationDate: new Date().toISOString(),
             provider: 'email'

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,7 +47,7 @@ const LoginPage: React.FC = () => {
     
     try {
       // Admin bypass - allow admin to login without email confirmation
-      if (loginEmail === 'admin@winshirt.com' && loginPassword === 'admin123') {
+      if (loginEmail === 'admin@winshirt.fr' && loginPassword === 'admin123') {
         const adminUser = {
           id: 1,
           name: "Administrateur",
@@ -241,7 +240,7 @@ const LoginPage: React.FC = () => {
                       </div>
                       <div className="text-sm text-amber-400 mt-2">
                         <p>Pour tester en tant qu'admin:</p>
-                        <p>Email: admin@winshirt.com</p>
+                        <p>Email: admin@winshirt.fr</p>
                         <p>Mot de passe: admin123</p>
                       </div>
                       <Button 

@@ -18,7 +18,7 @@ export const createAdminUserInSupabase = async () => {
     // Manually filter users to find admin
     // Add proper type checking to fix the TS error
     const adminUser = existingUsers?.users?.find((user: any) => 
-      user.email === 'admin@winshirt.com'
+      user.email === 'admin@winshirt.fr'
     );
     
     if (adminUser) {
@@ -26,9 +26,9 @@ export const createAdminUserInSupabase = async () => {
       return { success: true, message: "Admin user already exists" };
     }
     
-    // Create the admin user
+    // Create the admin user with updated email
     const { data, error } = await supabase.auth.admin.createUser({
-      email: 'admin@winshirt.com',
+      email: 'admin@winshirt.fr',
       password: 'admin123',
       email_confirm: true, // Skip email verification
       user_metadata: {
@@ -58,7 +58,7 @@ export const createAdminUserInSupabase = async () => {
 export const createAdminUserWithSignup = async () => {
   try {
     const { data, error } = await supabase.auth.signUp({
-      email: 'admin@winshirt.com',
+      email: 'admin@winshirt.fr',
       password: 'admin123',
       options: {
         data: {

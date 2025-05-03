@@ -1,178 +1,93 @@
 
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+// This is an edge function to send emails via SMTP configuration
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { corsHeaders } from "../_shared/cors.ts"
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import * as smtpClient from 'https://deno.land/x/smtp@v0.7.0/mod.ts';
 
-// Configuration email SMTP
-const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME") || "";
-const SMTP_PORT = parseInt(Deno.env.get("SMTP_PORT") || "465"); // 465 pour IONOS avec SSL/TLS
-const SMTP_USERNAME = Deno.env.get("SMTP_USERNAME") || "";
-const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD") || "";
-const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "admin@winshirt.fr";
-
-// Simple email validation function
-function isValidEmail(email: string): boolean {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email.toLowerCase());
-}
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 serve(async (req) => {
-  // Gestion des requêtes CORS
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Vérifier que la méthode est POST
-    if (req.method !== "POST") {
+    const emailConfig = {
+      hostname: Deno.env.get('SMTP_HOSTNAME') || 'smtp.ionos.fr',
+      port: parseInt(Deno.env.get('SMTP_PORT') || '465'),
+      username: Deno.env.get('SMTP_USERNAME') || '',
+      password: Deno.env.get('SMTP_PASSWORD') || '',
+    };
+
+    const { to, subject, html, text, type = 'html' } = await req.json();
+    const from = Deno.env.get('FROM_EMAIL') || 'no-reply@winshirt.fr';
+
+    if (!to || !subject || !(html || text)) {
       return new Response(
-        JSON.stringify({ error: "Method not allowed" }),
-        { 
-          status: 405, 
-          headers: { 
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          } 
+        JSON.stringify({ error: 'Missing required fields: to, subject, and html or text' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
 
-    // Vérifier la configuration SMTP
-    if (!SMTP_HOSTNAME || !SMTP_USERNAME || !SMTP_PASSWORD) {
-      console.error("SMTP configuration is missing");
-      return new Response(
-        JSON.stringify({ error: "Email service not configured properly. Please set up SMTP credentials." }),
-        { 
-          status: 500, 
-          headers: { 
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          } 
-        }
-      );
-    }
+    console.log(`Tentative d'envoi d'email à ${to} via ${emailConfig.hostname}:${emailConfig.port}`);
 
-    // Récupérer les données de la requête
-    const requestData = await req.json();
-    const { to, subject, body, html } = requestData;
+    const client = new smtpClient.SmtpClient();
+    await client.connectTLS({
+      hostname: emailConfig.hostname,
+      port: emailConfig.port,
+      username: emailConfig.username,
+      password: emailConfig.password,
+    });
 
-    // Vérifier que les champs requis sont présents
-    if (!to || !subject || (!body && !html)) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: to, subject, body" }),
-        { 
-          status: 400, 
-          headers: { 
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          } 
-        }
-      );
-    }
-
-    // Valider l'email du destinataire
-    if (!isValidEmail(to)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid email address" }),
-        { 
-          status: 400, 
-          headers: { 
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          } 
-        }
-      );
-    }
-
-    console.log(`Tentative d'envoi d'email à ${to} via ${SMTP_HOSTNAME}:${SMTP_PORT}`);
+    const contentType = type.toLowerCase() === 'html' ? 'html' : 'text';
+    const content = contentType === 'html' ? html : text;
     
-    try {
-      // Configurer le client SMTP avec denomailer
-      const client = new SMTPClient({
-        connection: {
-          hostname: SMTP_HOSTNAME,
-          port: SMTP_PORT,
-          tls: true,
-          auth: {
-            username: SMTP_USERNAME,
-            password: SMTP_PASSWORD,
-          },
-        },
-        debug: true, // Add debug mode for more detailed logs
-      });
+    console.log(`Sending email with content type: ${contentType.toUpperCase()}`);
+    console.log(`${contentType.toUpperCase()} content length: ${content.length}`);
 
-      // Préparer l'email - Important: ne pas définir content et html en même temps
-      const emailContent = html || body;
-      const isHtml = Boolean(html);
-      
-      // Log content type before sending
-      console.log(`Sending email with content type: ${isHtml ? 'HTML' : 'TEXT'}`);
-      if (isHtml) {
-        console.log(`HTML content length: ${emailContent.length}`);
+    // Création d'un mail complexe avec à la fois text et html si les deux sont fournis
+    const email = {
+      from: from,
+      to: to,
+      subject: subject,
+      content: content,
+      html: html || undefined,
+      text: text || (html ? 'Votre client de messagerie ne supporte pas HTML' : undefined),
+    };
+
+    await client.send(email);
+    await client.close();
+
+    console.log(`Email envoyé avec succès à ${to}`);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: `Email envoyé avec succès à ${to}` 
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-      
-      // Création de l'objet email en fonction du type de contenu
-      const emailData: any = {
-        from: FROM_EMAIL,
-        to: to,
-        subject: subject,
-      };
-      
-      // Ajouter le bon type de contenu
-      if (isHtml) {
-        emailData.html = emailContent;
-      } else {
-        emailData.content = emailContent;
-      }
-      
-      await client.send(emailData);
-      await client.close();
-      
-      console.log(`Email envoyé avec succès à ${to}`);
-      
-      // Répondre avec succès
-      return new Response(
-        JSON.stringify({ success: true, message: "Email sent successfully" }),
-        { 
-          status: 200, 
-          headers: { 
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          } 
-        }
-      );
-    } catch (emailError: any) {
-      console.error("Error sending email via SMTP:", emailError);
-      return new Response(
-        JSON.stringify({ error: "Failed to send email via SMTP", details: emailError.message }),
-        { 
-          status: 500, 
-          headers: { 
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          } 
-        }
-      );
-    }
-  } catch (error: any) {
-    // Gérer les erreurs
-    console.error("Error in send-email function:", error);
+    );
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de l\'email:', error);
     
     return new Response(
       JSON.stringify({ 
-        error: "Failed to process email request", 
-        details: error.message 
+        error: `Erreur lors de l\'envoi de l\'email: ${error.message || error}` 
       }),
-      { 
-        status: 500, 
-        headers: { 
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }

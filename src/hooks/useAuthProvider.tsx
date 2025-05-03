@@ -75,7 +75,7 @@ export const useAuthProvider = () => {
   
   const login = (email: string, password: string) => {
     // Admin account hardcoded for demo
-    if (email === "admin@winshirt.com" && password === "admin123") {
+    if (email === "admin@winshirt.fr" && password === "admin123") {
       const adminUser: User = {
         id: 1,
         name: "Administrateur",
