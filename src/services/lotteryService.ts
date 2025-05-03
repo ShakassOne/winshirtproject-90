@@ -146,6 +146,7 @@ export const useLotteries = () => {
           setLotteries([]);
         }
       }
+      return true; // Return true to indicate success
     } catch (err) {
       console.error("Error fetching lotteries:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -161,13 +162,14 @@ export const useLotteries = () => {
       } else {
         setLotteries([]);
       }
+      return false; // Return false to indicate failure
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshLotteries = async () => {
-    return fetchLotteries();
+  const refreshLotteries = async (): Promise<boolean> => {
+    return await fetchLotteries();
   };
 
   useEffect(() => {

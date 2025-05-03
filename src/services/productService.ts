@@ -141,6 +141,7 @@ export const useProducts = () => {
           setProducts([]);
         }
       }
+      return true; // Return true to indicate success
     } catch (err) {
       console.error("Error fetching products:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -156,13 +157,14 @@ export const useProducts = () => {
       } else {
         setProducts([]);
       }
+      return false; // Return false to indicate failure
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshProducts = async () => {
-    return fetchProducts();
+  const refreshProducts = async (): Promise<boolean> => {
+    return await fetchProducts();
   };
 
   useEffect(() => {
