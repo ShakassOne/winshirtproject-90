@@ -66,7 +66,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   addPrintArea = () => {},
   updatePrintArea = () => {},
   removePrintArea = () => {},
-  hideTabList = false // Par défaut on affiche les onglets
+  hideTabList = false
 }) => {
   const [newSize, setNewSize] = useState('');
   const [newColor, setNewColor] = useState('');
@@ -182,7 +182,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         />
 
-        {/* Personnalisation - Déplacé depuis l'onglet Options */}
+        {/* Personnalisation */}
         <FormField
           control={form.control}
           name="allowCustomization"

@@ -16,6 +16,7 @@ interface AdvancedFiltersFormProps {
 const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
   const [newSize, setNewSize] = useState('');
   const [newColor, setNewColor] = useState('');
+  const [newColorName, setNewColorName] = useState('');
   const [colorPickerValue, setColorPickerValue] = useState('#000000');
   
   const addSize = (size: string) => {
@@ -33,20 +34,33 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
     form.setValue("sizes", currentSizes.filter(s => s !== size));
   };
   
-  const addColor = (color: string) => {
+  const addColor = (color: string, name?: string) => {
     if (!color.trim()) return;
     
+    // Utiliser le nom personnalisé s'il existe, sinon utiliser la valeur hexadécimale
+    const colorLabel = name && name.trim() ? name.trim() : color.trim();
+    
     const currentColors = form.getValues().colors || [];
-    if (!currentColors.includes(color.trim())) {
-      form.setValue("colors", [...currentColors, color.trim()]);
+    if (!currentColors.includes(colorLabel)) {
+      form.setValue("colors", [...currentColors, colorLabel]);
     }
+    
+    // Réinitialiser les champs
     setNewColor('');
+    setNewColorName('');
     setColorPickerValue('#000000');
   };
   
   const removeColor = (color: string) => {
     const currentColors = form.getValues().colors || [];
     form.setValue("colors", currentColors.filter(c => c !== color));
+  };
+  
+  // Gérer le changement de couleur via le sélecteur de couleur
+  const handleColorPickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const colorValue = e.target.value;
+    setColorPickerValue(colorValue);
+    setNewColor(colorValue);
   };
   
   return (
@@ -93,7 +107,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
         </div>
       </div>
       
-      {/* Couleurs */}
+      {/* Couleurs améliorées */}
       <div className="space-y-3">
         <FormLabel>Couleurs disponibles</FormLabel>
         <div className="flex flex-wrap gap-2 mb-3">
@@ -103,8 +117,8 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
               variant="outline"
               className="flex items-center gap-1 px-3 py-1.5"
               style={{
-                backgroundColor: color,
-                color: isLightColor(color) ? 'black' : 'white',
+                backgroundColor: color.startsWith('#') ? color : 'rgb(30, 30, 30)', // Si c'est un nom, utiliser un fond sombre
+                color: color.startsWith('#') ? (isLightColor(color) ? 'black' : 'white') : 'white',
               }}
             >
               {color}
@@ -118,35 +132,48 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
             </Badge>
           ))}
         </div>
-        <div className="flex gap-2 items-center">
-          <div className="flex-1">
-            <Input
-              value={newColor}
-              onChange={(e) => setNewColor(e.target.value)}
-              placeholder="Nouvelle couleur (#hex ou nom)"
-              className="bg-winshirt-space-light border-winshirt-purple/30"
-            />
-          </div>
-          <div>
+        
+        {/* Sélection de couleur améliorée avec nom personnalisé */}
+        <div className="grid grid-cols-1 gap-2">
+          <div className="flex gap-2 items-center">
             <Input
               type="color"
               value={colorPickerValue}
-              onChange={(e) => {
-                setColorPickerValue(e.target.value);
-                setNewColor(e.target.value);
-              }}
+              onChange={handleColorPickerChange}
               className="w-12 h-12 p-1 cursor-pointer"
             />
+            <div className="flex-1">
+              <Input
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                placeholder="Code couleur (#hex)"
+                className="bg-winshirt-space-light border-winshirt-purple/30"
+              />
+            </div>
           </div>
-          <Button
-            type="button"
-            onClick={() => addColor(newColor)}
-            className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
-            disabled={!newColor.trim()}
-          >
-            <Plus size={16} className="mr-1" />
-            Ajouter
-          </Button>
+          
+          <div className="flex gap-2 items-center">
+            <Input
+              value={newColorName}
+              onChange={(e) => setNewColorName(e.target.value)}
+              placeholder="Nom de la couleur (ex: Rouge vif, Bleu marine)"
+              className="bg-winshirt-space-light border-winshirt-purple/30"
+            />
+            
+            <Button
+              type="button"
+              onClick={() => addColor(newColor, newColorName)}
+              className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+              disabled={!newColor.trim()}
+            >
+              <Plus size={16} className="mr-1" />
+              Ajouter
+            </Button>
+          </div>
+          
+          <p className="text-xs text-gray-400 mt-1">
+            Sélectionnez une couleur avec le sélecteur, puis ajoutez un nom personnalisé si souhaité
+          </p>
         </div>
       </div>
       

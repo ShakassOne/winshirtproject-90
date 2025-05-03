@@ -349,6 +349,8 @@
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
+    background-color: #222222; /* Arrière-plan noir pour la pastille de taille */
+    color: white; /* Texte blanc */
   }
   
   .color-circle {

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from '@/lib/toast';
 import { showNotification } from '@/lib/notifications';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { createProduct, updateProduct, deleteProduct } from '@/api/productApi';
 
 export const useProductForm = (products: ExtendedProduct[], refreshProducts: () => Promise<boolean>) => {
   const [isCreating, setIsCreating] = useState(false);
@@ -24,7 +25,7 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
       sizes: [],
       colors: [],
       type: 'shirt',
-      featured: false, // This exists in ExtendedProduct now
+      featured: false,
       allowCustomization: true,
       tickets: 0,
       weight: 0,
@@ -42,6 +43,7 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
         form.reset({
           ...product,
           featured: product.featured || false, // Set default if missing
+          allowCustomization: product.allowCustomization !== undefined ? product.allowCustomization : true, // Assurer que allowCustomization est défini
         });
         
         // Initialize print areas
@@ -101,28 +103,37 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
       // Add linked lotteries to the data
       data.linkedLotteries = selectedLotteries.map(id => parseInt(id));
       
+      console.log("Données soumises:", data); // Debug
+      
       if (isCreating) {
         // Create new product
-        data.id = Date.now(); // Temporary ID for local storage
+        const newProduct = await createProduct(data);
         
-        // Create product and update state
-        await createProduct(data);
-        await refreshProducts();
-        
-        // Show success notification
-        showNotification('create', 'product', true);
-        toast.success(`Produit "${data.name}" créé avec succès`);
+        if (newProduct) {
+          // Show success notification
+          showNotification('create', 'product', true);
+          toast.success(`Produit "${data.name}" créé avec succès`);
+          
+          // Refresh products list
+          await refreshProducts();
+        } else {
+          throw new Error("Impossible de créer le produit");
+        }
       } else if (selectedProductId) {
         // Update existing product
         data.id = selectedProductId;
-        await updateProduct(selectedProductId, data);
+        const updatedProduct = await updateProduct(data);
         
-        // Update products state
-        await refreshProducts();
-        
-        // Show success notification
-        showNotification('update', 'product', true);
-        toast.success(`Produit "${data.name}" mis à jour avec succès`);
+        if (updatedProduct) {
+          // Show success notification
+          showNotification('update', 'product', true);
+          toast.success(`Produit "${data.name}" mis à jour avec succès`);
+          
+          // Refresh products list
+          await refreshProducts();
+        } else {
+          throw new Error("Impossible de mettre à jour le produit");
+        }
       }
       
       // Reset form state
@@ -141,20 +152,24 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
       try {
         // Delete product
-        await deleteProduct(productId);
+        const success = await deleteProduct(productId);
         
-        // Update products state through refreshing
-        await refreshProducts();
-        
-        // Reset selection if the deleted product was selected
-        if (selectedProductId === productId) {
-          setSelectedProductId(null);
-          setIsCreating(false);
+        if (success) {
+          // Update products state through refreshing
+          await refreshProducts();
+          
+          // Reset selection if the deleted product was selected
+          if (selectedProductId === productId) {
+            setSelectedProductId(null);
+            setIsCreating(false);
+          }
+          
+          // Show success notification
+          showNotification('delete', 'product', true);
+          toast.success('Produit supprimé avec succès');
+        } else {
+          throw new Error("Impossible de supprimer le produit");
         }
-        
-        // Show success notification
-        showNotification('delete', 'product', true);
-        toast.success('Produit supprimé avec succès');
       } catch (error) {
         console.error('Error deleting product:', error);
         showNotification('delete', 'product', false, error instanceof Error ? error.message : 'Unknown error');
@@ -303,21 +318,4 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
   };
 };
 
-// Helper function implementations for the operations used in this hook
-async function createProduct(data: ExtendedProduct) {
-  // Implementation that matches what's expected in the service
-  console.log("Creating product:", data);
-  return data;
-}
-
-async function updateProduct(productId: number, data: ExtendedProduct) {
-  // Implementation that matches what's expected in the service
-  console.log("Updating product:", productId, data);
-  return data;
-}
-
-async function deleteProduct(productId: number) {
-  // Implementation that matches what's expected in the service
-  console.log("Deleting product:", productId);
-  return true;
-}
+// Supprimer les fonctions helper qui ne sont plus utilisées car nous importons directement depuis productApi.ts
