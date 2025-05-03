@@ -26,10 +26,10 @@ const ProductsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState('latest');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
-  // Chargement des produits
+  // Load products
   useEffect(() => {
     const loadProducts = () => {
-      // Essayer d'abord de charger depuis localStorage
+      // Try to load from localStorage first
       const savedProducts = localStorage.getItem('products');
       
       if (savedProducts) {
@@ -40,18 +40,18 @@ const ProductsPage: React.FC = () => {
             return;
           }
         } catch (error) {
-          console.error("Erreur lors du chargement des produits:", error);
+          console.error("Error loading products:", error);
         }
       }
       
-      // Fallback aux données mock
+      // Fallback to mock data
       setProducts(mockProducts as ExtendedProduct[]);
     };
     
     loadProducts();
   }, []);
   
-  // Extraire les filtres disponibles
+  // Extract available filters
   const availableFilters = {
     productTypes: [...new Set(products.map(p => p.productType).filter(Boolean))],
     sleeveTypes: [...new Set(products.map(p => p.sleeveType).filter(Boolean))],
@@ -65,56 +65,56 @@ const ProductsPage: React.FC = () => {
     colors: [...new Set(products.flatMap(p => p.colors || []))],
   };
   
-  // Filtrer et trier les produits
+  // Filter and sort products
   const filteredAndSortedProducts = products
     .filter(product => {
-      // Filtrage par recherche
+      // Search filtering
       const matchesSearch = 
         !searchTerm || 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Filtrage par type de produit
+      // Product type filtering
       const matchesProductType = 
         selectedProductType === 'all' || 
         (product.productType && product.productType === selectedProductType);
       
-      // Filtrage par type de manches
+      // Sleeve type filtering
       const matchesSleeveType = 
         selectedSleeveType === 'all' || 
         (product.sleeveType && product.sleeveType === selectedSleeveType);
       
-      // Filtrage par genre
+      // Gender filtering
       const matchesGender = 
         selectedGender === 'all' || 
         (product.gender && product.gender === selectedGender);
       
-      // Filtrage par matière
+      // Material filtering
       const matchesMaterial = 
         selectedMaterial === 'all' || 
         (product.material && product.material.toLowerCase().includes(selectedMaterial.toLowerCase()));
       
-      // Filtrage par coupe
+      // Fit filtering
       const matchesFit = 
         selectedFit === 'all' || 
         (product.fit && product.fit === selectedFit);
       
-      // Filtrage par marque
+      // Brand filtering
       const matchesBrand = 
         selectedBrand === 'all' || 
         (product.brand && product.brand === selectedBrand);
       
-      // Filtrage par tailles
+      // Size filtering
       const matchesSizes = 
         selectedSizes.length === 0 || 
         (product.sizes && selectedSizes.some(size => product.sizes!.includes(size)));
       
-      // Filtrage par couleurs
+      // Color filtering
       const matchesColors = 
         selectedColors.length === 0 || 
         (product.colors && selectedColors.some(color => product.colors!.includes(color)));
       
-      // Filtrage par prix
+      // Price filtering
       const matchesPrice =
         product.price >= priceRange[0] && product.price <= priceRange[1];
       
@@ -130,7 +130,7 @@ const ProductsPage: React.FC = () => {
         matchesPrice;
     })
     .sort((a, b) => {
-      // Tri des produits
+      // Product sorting
       switch (sortBy) {
         case 'price-asc':
           return a.price - b.price;
@@ -146,7 +146,7 @@ const ProductsPage: React.FC = () => {
       }
     });
   
-  // Réinitialiser tous les filtres
+  // Reset all filters
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedType('all');
@@ -162,7 +162,7 @@ const ProductsPage: React.FC = () => {
     setSortBy('latest');
   };
   
-  // Toggle pour les filtres avancés
+  // Toggle for advanced filters
   const toggleAdvancedFilters = () => {
     setShowAdvancedFilters(!showAdvancedFilters);
   };
@@ -185,7 +185,7 @@ const ProductsPage: React.FC = () => {
             </Button>
           </div>
           
-          {/* Nouvelle barre de filtres horizontale */}
+          {/* Horizontal filters bar */}
           <FiltersBar 
             selectedColors={selectedColors}
             setSelectedColors={setSelectedColors}
@@ -198,84 +198,80 @@ const ProductsPage: React.FC = () => {
             onReset={resetFilters}
           />
           
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Filtres avancés à gauche sur grands écrans */}
-            {showAdvancedFilters && (
-              <div className="w-full lg:w-1/4 xl:w-1/5">
-                <div className="winshirt-card p-6 sticky top-32">
-                  <div className="mb-6">
-                    <h2 className="text-xl font-semibold mb-4">Filtres avancés</h2>
-                    <div className="relative mb-4">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                      <Input
-                        placeholder="Rechercher un produit..."
-                        className="pl-10 bg-winshirt-space-light border-winshirt-purple/30"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <AdvancedFilters 
-                    availableFilters={availableFilters}
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    selectedType={selectedType}
-                    setSelectedType={setSelectedType}
-                    selectedProductType={selectedProductType}
-                    setSelectedProductType={setSelectedProductType}
-                    selectedSleeveType={selectedSleeveType}
-                    setSelectedSleeveType={setSelectedSleeveType}
-                    selectedGender={selectedGender}
-                    setSelectedGender={setSelectedGender}
-                    selectedMaterial={selectedMaterial}
-                    setSelectedMaterial={setSelectedMaterial}
-                    selectedFit={selectedFit}
-                    setSelectedFit={setSelectedFit}
-                    selectedBrand={selectedBrand}
-                    setSelectedBrand={setSelectedBrand}
-                    selectedSizes={selectedSizes}
-                    setSelectedSizes={setSelectedSizes}
-                    selectedColors={selectedColors}
-                    setSelectedColors={setSelectedColors}
+          {/* Advanced filters shown below when toggled */}
+          {showAdvancedFilters && (
+            <div className="winshirt-card p-6 mb-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-4">Filtres avancés</h2>
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Input
+                    placeholder="Rechercher un produit..."
+                    className="pl-10 bg-winshirt-space-light border-winshirt-purple/30"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
-                  
-                  <div className="mt-6">
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"
-                      onClick={resetFilters}
-                    >
-                      Réinitialiser les filtres
-                    </Button>
-                  </div>
                 </div>
               </div>
-            )}
-            
-            {/* Liste des produits */}
-            <div className={`w-full ${showAdvancedFilters ? 'lg:w-3/4 xl:w-4/5' : 'w-full'}`}>
-              {filteredAndSortedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredAndSortedProducts.map(product => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-              ) : (
-                <div className="winshirt-card p-8 text-center">
-                  <h2 className="text-xl text-white mb-2">Aucun produit trouvé</h2>
-                  <p className="text-gray-400">
-                    Essayez de modifier vos critères de recherche ou de réinitialiser les filtres.
-                  </p>
-                  <Button 
-                    className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
-                    onClick={resetFilters}
-                  >
-                    Réinitialiser les filtres
-                  </Button>
-                </div>
-              )}
+              
+              <AdvancedFilters 
+                availableFilters={availableFilters}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                selectedType={selectedType}
+                setSelectedType={setSelectedType}
+                selectedProductType={selectedProductType}
+                setSelectedProductType={setSelectedProductType}
+                selectedSleeveType={selectedSleeveType}
+                setSelectedSleeveType={setSelectedSleeveType}
+                selectedGender={selectedGender}
+                setSelectedGender={setSelectedGender}
+                selectedMaterial={selectedMaterial}
+                setSelectedMaterial={setSelectedMaterial}
+                selectedFit={selectedFit}
+                setSelectedFit={setSelectedFit}
+                selectedBrand={selectedBrand}
+                setSelectedBrand={setSelectedBrand}
+                selectedSizes={selectedSizes}
+                setSelectedSizes={setSelectedSizes}
+                selectedColors={selectedColors}
+                setSelectedColors={setSelectedColors}
+              />
+              
+              <div className="mt-6">
+                <Button 
+                  variant="outline" 
+                  className="w-full border-winshirt-purple text-winshirt-purple hover:bg-winshirt-purple/10"
+                  onClick={resetFilters}
+                >
+                  Réinitialiser les filtres
+                </Button>
+              </div>
             </div>
+          )}
+          
+          {/* Product list */}
+          <div className="w-full">
+            {filteredAndSortedProducts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredAndSortedProducts.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="winshirt-card p-8 text-center">
+                <h2 className="text-xl text-white mb-2">Aucun produit trouvé</h2>
+                <p className="text-gray-400">
+                  Essayez de modifier vos critères de recherche ou de réinitialiser les filtres.
+                </p>
+                <Button 
+                  className="mt-4 bg-winshirt-purple hover:bg-winshirt-purple-dark"
+                  onClick={resetFilters}
+                >
+                  Réinitialiser les filtres
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </section>

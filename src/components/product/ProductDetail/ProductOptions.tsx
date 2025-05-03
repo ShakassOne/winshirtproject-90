@@ -30,9 +30,9 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
                 onClick={() => setSelectedSize(size)}
                 className={`size-circle ${selectedSize === size ? 'selected' : ''}`}
                 style={{
-                  backgroundColor: '#222222', // Fond noir pour toutes les pastilles
+                  backgroundColor: '#222222', // Dark background for better contrast with white text
                   border: selectedSize === size ? '2px solid #9b87f5' : '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white' // Texte blanc
+                  color: 'white' // White text for contrast
                 }}
               >
                 {size}
@@ -51,7 +51,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
                 onClick={() => setSelectedColor(color)}
                 className={`color-circle ${selectedColor === color ? 'selected' : ''}`}
                 style={{
-                  backgroundColor: 'rgba(34, 34, 34, 0.9)', // Fond noir pour les cercles extérieurs
+                  backgroundColor: 'rgba(34, 34, 34, 0.9)', // Dark background for outer circle
                   border: selectedColor === color ? '2px solid #9b87f5' : '1px solid rgba(255, 255, 255, 0.3)'
                 }}
               >

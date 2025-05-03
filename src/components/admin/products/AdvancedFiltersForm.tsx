@@ -37,15 +37,15 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
   const addColor = (color: string, name?: string) => {
     if (!color.trim()) return;
     
-    // Utiliser le nom personnalisé s'il existe, sinon utiliser la valeur hexadécimale
-    const colorLabel = name && name.trim() ? name.trim() : color.trim();
+    // Use custom name if provided, otherwise use the hex value
+    const colorToAdd = name && name.trim() ? name.trim() : color.trim();
     
     const currentColors = form.getValues().colors || [];
-    if (!currentColors.includes(colorLabel)) {
-      form.setValue("colors", [...currentColors, colorLabel]);
+    if (!currentColors.includes(colorToAdd)) {
+      form.setValue("colors", [...currentColors, colorToAdd]);
     }
     
-    // Réinitialiser les champs
+    // Reset the fields
     setNewColor('');
     setNewColorName('');
     setColorPickerValue('#000000');
@@ -56,7 +56,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
     form.setValue("colors", currentColors.filter(c => c !== color));
   };
   
-  // Gérer le changement de couleur via le sélecteur de couleur
+  // Handle color picker change
   const handleColorPickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const colorValue = e.target.value;
     setColorPickerValue(colorValue);
@@ -67,7 +67,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
     <div className="space-y-6">
       <h3 className="text-xl font-medium text-white">Filtres avancés</h3>
       
-      {/* Tailles */}
+      {/* Sizes */}
       <div className="space-y-3">
         <FormLabel>Tailles disponibles</FormLabel>
         <div className="flex flex-wrap gap-2 mb-3">
@@ -107,7 +107,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
         </div>
       </div>
       
-      {/* Couleurs améliorées */}
+      {/* Enhanced color selector */}
       <div className="space-y-3">
         <FormLabel>Couleurs disponibles</FormLabel>
         <div className="flex flex-wrap gap-2 mb-3">
@@ -117,7 +117,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
               variant="outline"
               className="flex items-center gap-1 px-3 py-1.5"
               style={{
-                backgroundColor: color.startsWith('#') ? color : 'rgb(30, 30, 30)', // Si c'est un nom, utiliser un fond sombre
+                backgroundColor: color.startsWith('#') ? color : 'rgb(30, 30, 30)', // Use hex color or dark background for named colors
                 color: color.startsWith('#') ? (isLightColor(color) ? 'black' : 'white') : 'white',
               }}
             >
@@ -133,37 +133,37 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
           ))}
         </div>
         
-        {/* Sélection de couleur améliorée avec nom personnalisé */}
-        <div className="grid grid-cols-1 gap-2">
+        {/* Improved color selection with color picker */}
+        <div className="grid grid-cols-1 gap-4">
           <div className="flex gap-2 items-center">
             <Input
               type="color"
               value={colorPickerValue}
               onChange={handleColorPickerChange}
-              className="w-12 h-12 p-1 cursor-pointer"
+              className="w-12 h-10 p-1 cursor-pointer"
             />
             <div className="flex-1">
               <Input
                 value={newColor}
                 onChange={(e) => setNewColor(e.target.value)}
-                placeholder="Code couleur (#hex)"
+                placeholder="Code couleur (ex: #FF0000)"
                 className="bg-winshirt-space-light border-winshirt-purple/30"
               />
             </div>
           </div>
           
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2">
             <Input
               value={newColorName}
               onChange={(e) => setNewColorName(e.target.value)}
-              placeholder="Nom de la couleur (ex: Rouge vif, Bleu marine)"
+              placeholder="Nom de la couleur (ex: Rouge vif)"
               className="bg-winshirt-space-light border-winshirt-purple/30"
             />
             
             <Button
               type="button"
               onClick={() => addColor(newColor, newColorName)}
-              className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+              className="bg-winshirt-purple hover:bg-winshirt-purple-dark whitespace-nowrap"
               disabled={!newColor.trim()}
             >
               <Plus size={16} className="mr-1" />
@@ -171,13 +171,13 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
             </Button>
           </div>
           
-          <p className="text-xs text-gray-400 mt-1">
-            Sélectionnez une couleur avec le sélecteur, puis ajoutez un nom personnalisé si souhaité
+          <p className="text-xs text-gray-400">
+            Choisissez une couleur avec le sélecteur et donnez-lui un nom pour une meilleure identification
           </p>
         </div>
       </div>
       
-      {/* Genre */}
+      {/* Gender */}
       <FormField
         control={form.control}
         name="gender"
@@ -205,7 +205,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
         )}
       />
       
-      {/* Matière */}
+      {/* Material */}
       <FormField
         control={form.control}
         name="material"
@@ -226,7 +226,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
         )}
       />
       
-      {/* Coupe */}
+      {/* Fit */}
       <FormField
         control={form.control}
         name="fit"
@@ -253,7 +253,7 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
         )}
       />
       
-      {/* Marque */}
+      {/* Brand */}
       <FormField
         control={form.control}
         name="brand"
@@ -267,6 +267,25 @@ const AdvancedFiltersForm: React.FC<AdvancedFiltersFormProps> = ({ form }) => {
                 {...field}
               />
             </FormControl>
+          </FormItem>
+        )}
+      />
+      
+      {/* Allow Customization Toggle */}
+      <FormField
+        control={form.control}
+        name="allowCustomization"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+            <FormControl>
+              <input
+                type="checkbox"
+                checked={field.value}
+                onChange={field.onChange}
+                className="h-5 w-5 rounded border-gray-300 bg-winshirt-space-light text-winshirt-purple focus:ring-winshirt-purple"
+              />
+            </FormControl>
+            <FormLabel className="font-normal cursor-pointer">Produit personnalisable</FormLabel>
           </FormItem>
         )}
       />

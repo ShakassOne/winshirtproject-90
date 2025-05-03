@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { useForm } from 'react-hook-form';
@@ -40,10 +41,11 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
     if (selectedProductId) {
       const product = products.find(p => p.id === selectedProductId);
       if (product) {
+        // Ensure we're working with a fresh copy of the product
         form.reset({
           ...product,
-          featured: product.featured || false, // Set default if missing
-          allowCustomization: product.allowCustomization !== undefined ? product.allowCustomization : true, // Assurer que allowCustomization est défini
+          featured: product.featured || false, 
+          allowCustomization: product.allowCustomization !== undefined ? product.allowCustomization : true,
         });
         
         // Initialize print areas
@@ -103,10 +105,29 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
       // Add linked lotteries to the data
       data.linkedLotteries = selectedLotteries.map(id => parseInt(id));
       
-      console.log("Données soumises:", data); // Debug
+      console.log("Submitting product data:", data); // Debug log
       
       if (isCreating) {
-        // Create new product
+        // Generate a new ID for the product
+        const newId = Math.max(0, ...products.map(p => p.id || 0)) + 1;
+        data.id = newId;
+        
+        // For local storage saving when Supabase is not configured
+        if (!isSupabaseConfigured()) {
+          const updatedProducts = [...products, data];
+          localStorage.setItem('products', JSON.stringify(updatedProducts));
+          
+          // Show success notification
+          showNotification('create', 'product', true);
+          toast.success(`Produit "${data.name}" créé avec succès`);
+          
+          // Refresh products list
+          await refreshProducts();
+          handleCancel(); // Reset form state
+          return;
+        }
+        
+        // Create new product using API
         const newProduct = await createProduct(data);
         
         if (newProduct) {
@@ -116,12 +137,32 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
           
           // Refresh products list
           await refreshProducts();
+          handleCancel(); // Reset form state
         } else {
           throw new Error("Impossible de créer le produit");
         }
       } else if (selectedProductId) {
-        // Update existing product
+        // Ensure ID is set
         data.id = selectedProductId;
+        
+        // For local storage saving when Supabase is not configured
+        if (!isSupabaseConfigured()) {
+          const updatedProducts = products.map(p => 
+            p.id === selectedProductId ? data : p
+          );
+          localStorage.setItem('products', JSON.stringify(updatedProducts));
+          
+          // Show success notification
+          showNotification('update', 'product', true);
+          toast.success(`Produit "${data.name}" mis à jour avec succès`);
+          
+          // Refresh products list
+          await refreshProducts();
+          handleCancel(); // Reset form state
+          return;
+        }
+        
+        // Update existing product using API
         const updatedProduct = await updateProduct(data);
         
         if (updatedProduct) {
@@ -131,13 +172,11 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
           
           // Refresh products list
           await refreshProducts();
+          handleCancel(); // Reset form state
         } else {
           throw new Error("Impossible de mettre à jour le produit");
         }
       }
-      
-      // Reset form state
-      handleCancel();
     } catch (error) {
       console.error('Error submitting product form:', error);
       showNotification(isCreating ? 'create' : 'update', 'product', false, error instanceof Error ? error.message : 'Unknown error');
@@ -151,7 +190,27 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
   const handleDeleteProduct = async (productId: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
       try {
-        // Delete product
+        // For local storage saving when Supabase is not configured
+        if (!isSupabaseConfigured()) {
+          const updatedProducts = products.filter(p => p.id !== productId);
+          localStorage.setItem('products', JSON.stringify(updatedProducts));
+          
+          // Reset selection if the deleted product was selected
+          if (selectedProductId === productId) {
+            setSelectedProductId(null);
+            setIsCreating(false);
+          }
+          
+          // Show success notification
+          showNotification('delete', 'product', true);
+          toast.success('Produit supprimé avec succès');
+          
+          // Refresh products list
+          await refreshProducts();
+          return;
+        }
+        
+        // Delete product using API
         const success = await deleteProduct(productId);
         
         if (success) {
@@ -317,5 +376,3 @@ export const useProductForm = (products: ExtendedProduct[], refreshProducts: () 
     deselectAllLotteries
   };
 };
-
-// Supprimer les fonctions helper qui ne sont plus utilisées car nous importons directement depuis productApi.ts

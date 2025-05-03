@@ -3,7 +3,7 @@ import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Eye } from 'lucide-react';
+import { ShoppingCart, Eye, Pencil } from 'lucide-react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 
@@ -82,6 +82,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {product.price > 50 && (
             <div className="absolute top-2 right-2 z-10">
               <Badge className="bg-winshirt-pink text-black">-50€</Badge>
+            </div>
+          )}
+          
+          {/* Badge de personnalisation si applicable */}
+          {product.allowCustomization && (
+            <div className="absolute top-2 left-2 z-10">
+              <Badge className="bg-winshirt-purple text-white flex items-center gap-1">
+                <Pencil size={12} />
+                Personnalisable
+              </Badge>
             </div>
           )}
 
