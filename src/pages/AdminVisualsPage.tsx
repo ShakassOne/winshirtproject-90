@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
@@ -34,6 +35,8 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+
+const DEFAULT_IMAGE = 'https://placehold.co/600x400?text=Image+Manquante';
 
 const AdminVisualsPage = () => {
   // States
@@ -83,7 +86,12 @@ const AdminVisualsPage = () => {
     if (savedVisuals) {
       try {
         const parsedVisuals = JSON.parse(savedVisuals);
-        setVisuals(parsedVisuals);
+        // Ensure all visuals have valid images
+        const validatedVisuals = parsedVisuals.map((visual: Visual) => ({
+          ...visual,
+          image: visual.image || visual.imageUrl || DEFAULT_IMAGE
+        }));
+        setVisuals(validatedVisuals);
       } catch (error) {
         console.error("Error parsing visuals:", error);
         setVisuals(mockVisuals);
@@ -99,7 +107,13 @@ const AdminVisualsPage = () => {
   }, [categories]);
   
   useEffect(() => {
-    localStorage.setItem('visuals', JSON.stringify(visuals));
+    // Ensure all visuals have valid images before saving
+    const validVisuals = visuals.map(visual => ({
+      ...visual,
+      image: visual.image || visual.imageUrl || DEFAULT_IMAGE
+    }));
+    
+    localStorage.setItem('visuals', JSON.stringify(validVisuals));
   }, [visuals]);
   
   // Category handlers
@@ -166,7 +180,7 @@ const AdminVisualsPage = () => {
     setVisualForm({
       name: '',
       description: '',
-      image: '',
+      image: DEFAULT_IMAGE, // Toujours définir une image par défaut
       categoryId: categoryId || null
     });
     setVisualDialogOpen(true);
@@ -177,7 +191,7 @@ const AdminVisualsPage = () => {
       id: visual.id,
       name: visual.name,
       description: visual.description || '',
-      image: visual.image,
+      image: visual.image || visual.imageUrl || DEFAULT_IMAGE,
       categoryId: visual.categoryId
     });
     setVisualDialogOpen(true);
@@ -191,7 +205,7 @@ const AdminVisualsPage = () => {
     
     // S'assurer qu'il y a toujours une image valide
     if (!visualForm.image) {
-      visualForm.image = 'https://placehold.co/600x400?text=Image+Manquante';
+      visualForm.image = DEFAULT_IMAGE;
     }
     
     if (!visualForm.categoryId) {
@@ -209,6 +223,7 @@ const AdminVisualsPage = () => {
           ? { 
               ...vis, 
               ...visualForm, 
+              image: visualForm.image || DEFAULT_IMAGE, // S'assurer qu'il y a une image
               categoryName
             } as Visual
           : vis
@@ -221,7 +236,8 @@ const AdminVisualsPage = () => {
         id: newId,
         name: visualForm.name,
         description: visualForm.description,
-        image: visualForm.image,  // Image garantie avec valeur par défaut
+        image: visualForm.image || DEFAULT_IMAGE,  // Image garantie avec valeur par défaut
+        imageUrl: visualForm.image || DEFAULT_IMAGE, // Aussi stocker dans imageUrl
         categoryId: visualForm.categoryId as number,
         categoryName,
         createdAt: new Date().toISOString()
@@ -381,9 +397,14 @@ const AdminVisualsPage = () => {
                   .map(visual => (
                     <Card key={visual.id} className="bg-winshirt-space/40 border-winshirt-purple/30 hover:shadow-lg hover:shadow-winshirt-purple/10 transition-shadow">
                       <img 
-                        src={visual.image} 
+                        src={visual.image || visual.imageUrl || DEFAULT_IMAGE} 
                         alt={visual.name} 
                         className="w-full h-48 object-contain p-4 bg-gray-800"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = DEFAULT_IMAGE;
+                        }}
                       />
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
@@ -515,14 +536,25 @@ const AdminVisualsPage = () => {
               <Label htmlFor="visual-image">URL de l'image</Label>
               <Input 
                 id="visual-image" 
-                value={visualForm.image} 
-                onChange={(e) => setVisualForm({...visualForm, image: e.target.value})}
+                value={visualForm.image === DEFAULT_IMAGE ? '' : (visualForm.image || '')} 
+                onChange={(e) => setVisualForm({...visualForm, image: e.target.value || DEFAULT_IMAGE})}
+                placeholder="URL de l'image (laissez vide pour l'image par défaut)"
                 className="bg-winshirt-space-light border-winshirt-purple/30"
               />
               {visualForm.image && (
                 <div className="mt-2 p-2 border border-winshirt-purple/20 rounded">
                   <p className="text-xs mb-1 text-gray-400">Aperçu :</p>
-                  <img src={visualForm.image} alt="Aperçu" className="h-32 object-contain" />
+                  <img 
+                    src={visualForm.image} 
+                    alt="Aperçu" 
+                    className="h-32 object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = DEFAULT_IMAGE;
+                      setVisualForm({...visualForm, image: DEFAULT_IMAGE});
+                    }}
+                  />
                 </div>
               )}
             </div>

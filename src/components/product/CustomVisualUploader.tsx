@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, X, FileType2, Image } from 'lucide-react';
@@ -22,6 +23,7 @@ const CustomVisualUploader: React.FC<CustomVisualUploaderProps> = ({
 }) => {
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const DEFAULT_IMAGE = 'https://placehold.co/600x400?text=Image+Manquante';
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -82,24 +84,18 @@ const CustomVisualUploader: React.FC<CustomVisualUploaderProps> = ({
   };
 
   const handleRemoveFile = () => {
-    // Plutôt que de supprimer complètement, utiliser une image par défaut
-    if (onVisualRemove) {
-      // Créer un fichier fictif pour l'image par défaut
-      const defaultImageUrl = 'https://placehold.co/600x400?text=Image+Manquante';
-      
-      // Créer un blob à partir de l'URL d'image par défaut
-      fetch(defaultImageUrl)
-        .then(response => response.blob())
-        .then(blob => {
-          const file = new File([blob], "default-image.png", { type: "image/png" });
-          onVisualUpload(file, defaultImageUrl);
-        })
-        .catch(() => {
-          // En cas d'erreur, informer l'utilisateur mais ne pas laisser l'image vide
-          toast.warning("Image par défaut utilisée");
-          onVisualRemove();
-        });
-    }
+    // Utiliser une image par défaut au lieu de supprimer complètement
+    fetch(DEFAULT_IMAGE)
+      .then(response => response.blob())
+      .then(blob => {
+        const file = new File([blob], "default-image.png", { type: "image/png" });
+        onVisualUpload(file, DEFAULT_IMAGE);
+        toast.info("Image par défaut utilisée");
+      })
+      .catch(() => {
+        toast.warning("Impossible de charger l'image par défaut");
+        onVisualRemove();
+      });
   };
 
   // Extension du fichier

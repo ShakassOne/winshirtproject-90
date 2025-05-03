@@ -3,6 +3,7 @@ export interface Visual {
   id: number;
   name: string;
   image: string;
+  imageUrl?: string; // Ajout de cette propriété pour compatibilité
   categoryId?: number;
   categoryName?: string;
   tags?: string[];

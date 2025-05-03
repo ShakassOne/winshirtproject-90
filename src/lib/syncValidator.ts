@@ -73,7 +73,7 @@ export const validateVisuals = (visuals: Visual[]) => {
     }
     
     // Image validation - Critical because of not-null constraint
-    // We check both 'image' and 'image_url' fields to handle different formats
+    // We check both 'image' and 'imageUrl' fields to handle different formats
     if (!visual.image && !visual.imageUrl) {
       invalidVisuals.push({id: visual.id, reason: 'Missing image URL'});
     }

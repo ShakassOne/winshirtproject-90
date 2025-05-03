@@ -63,7 +63,8 @@ export const fetchVisuals = async (): Promise<Visual[]> => {
       id: visual.id,
       name: visual.name,
       description: visual.description || '',
-      image: visual.image_url, // Map 'image_url' to 'image'
+      image: visual.image_url || visual.image, // Map 'image_url' to 'image'
+      imageUrl: visual.image_url, // Store original value in imageUrl
       categoryId: visual.category_id,
       categoryName: visual.category_name || '',
       createdAt: visual.created_at,
@@ -85,6 +86,11 @@ export const fetchVisuals = async (): Promise<Visual[]> => {
 // Création d'un visuel
 export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual | null> => {
   try {
+    // Ensure visual has a valid image
+    if (!visual.image) {
+      visual.image = 'https://placehold.co/600x400?text=Image+Manquante';
+    }
+    
     // Validate visual data before proceeding
     const validationError = validateVisualData(visual);
     if (validationError) {
@@ -123,6 +129,7 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
       name: data.name,
       description: data.description || '',
       image: data.image_url, // Map back to 'image'
+      imageUrl: data.image_url, // Also store in imageUrl
       categoryId: data.category_id,
       categoryName: data.category_name || '',
       createdAt: data.created_at,
@@ -143,6 +150,11 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
 // Mise à jour
 export const updateVisual = async (id: number, visual: Partial<Visual>): Promise<Visual | null> => {
   try {
+    // Ensure visual has a valid image if being updated
+    if (visual.image === null || visual.image === undefined) {
+      visual.image = 'https://placehold.co/600x400?text=Image+Manquante';
+    }
+  
     // Validate visual data before proceeding
     const validationError = validateVisualData(visual);
     if (validationError) {
@@ -178,6 +190,7 @@ export const updateVisual = async (id: number, visual: Partial<Visual>): Promise
       name: data.name,
       description: data.description || '',
       image: data.image_url, // Convert back to image
+      imageUrl: data.image_url, // Also store in imageUrl
       categoryId: data.category_id,
       categoryName: data.category_name || '',
       createdAt: data.created_at,
@@ -250,19 +263,18 @@ export const syncVisualsToSupabase = async (): Promise<boolean> => {
     }
 
     // Préparer les données pour Supabase avec image par défaut si nécessaire
+    const DEFAULT_IMAGE = 'https://placehold.co/600x400?text=Image+Manquante';
+    
     const supabaseData = visuals
       .filter(visual => visual && typeof visual === 'object')  // Filtrer les entrées nulles ou non-objets
       .map(visual => {
         // Vérifier si le visuel a une image valide
-        let image_url = null;
+        let image_url = DEFAULT_IMAGE; // Valeur par défaut
         
         if (visual.image && typeof visual.image === 'string') {
           image_url = visual.image;
         } else if (visual.imageUrl && typeof visual.imageUrl === 'string') {
           image_url = visual.imageUrl;
-        } else {
-          // Image par défaut si aucune image n'est spécifiée
-          image_url = 'https://placehold.co/600x400?text=Image+Manquante';
         }
         
         // Création d'un nouvel objet avec les propriétés nécessaires
