@@ -508,6 +508,5 @@ select::-ms-input-placeholder {
   color: white;
 }
 .dark bg-white {
-    --tw-bg-opacity: 1;
     background-color: black;
 }
