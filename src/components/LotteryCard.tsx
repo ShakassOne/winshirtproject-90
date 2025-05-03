@@ -64,9 +64,9 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
     }
   };
   
-  // Make sure we're using the current participants count, either from currentParticipants or the legacy field
-  const currentParticipants = lottery.currentParticipants || lottery.current_participants || 0;
-  const targetParticipants = lottery.targetParticipants || lottery.target_participants || 10;
+  // Make sure we're using the correct camelCase properties for participants count
+  const currentParticipants = lottery.currentParticipants || 0;
+  const targetParticipants = lottery.targetParticipants || 10;
   
   const progressPercent = Math.min((currentParticipants / targetParticipants) * 100, 100);
   

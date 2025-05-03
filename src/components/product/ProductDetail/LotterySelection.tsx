@@ -2,8 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Ticket } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import { ExtendedLottery, Lottery } from '@/types/lottery';
-import { Card } from '@/components/ui/card';
+import { ExtendedLottery } from '@/types/lottery';
 import { getLotteries } from '@/services/lotteryService';
 
 interface LotterySelectionProps {
@@ -33,15 +32,14 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
         
         console.log("LotterySelection - Active lotteries loaded:", allLotteries);
         
-        // Convert Lottery[] to ExtendedLottery[]
+        // Ensure we have properly formatted lottery objects with camelCase properties
         const extendedLotteries: ExtendedLottery[] = allLotteries.map(lottery => ({
           ...lottery,
-          // Add missing properties needed for ExtendedLottery and ensure current values are used
           participants: lottery.participants ? 
-                      (Array.isArray(lottery.participants) ? lottery.participants : []) : 
-                      [],
-          currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
-          targetParticipants: lottery.targetParticipants || lottery.target_participants || 10,
+                     (Array.isArray(lottery.participants) ? lottery.participants : []) : 
+                     [],
+          currentParticipants: lottery.currentParticipants || 0,
+          targetParticipants: lottery.targetParticipants || 10,
           winner: null
         }));
         
@@ -77,14 +75,14 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
         console.log("LotterySelection - Refreshing active lotteries");
         const allLotteries = await getLotteries(true);
         
-        // Convert Lottery[] to ExtendedLottery[]
+        // Ensure we have properly formatted lottery objects with camelCase properties
         const extendedLotteries: ExtendedLottery[] = allLotteries.map(lottery => ({
           ...lottery,
           participants: lottery.participants ? 
-                      (Array.isArray(lottery.participants) ? lottery.participants : []) : 
-                      [],
-          currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
-          targetParticipants: lottery.targetParticipants || lottery.target_participants || 10,
+                     (Array.isArray(lottery.participants) ? lottery.participants : []) : 
+                     [],
+          currentParticipants: lottery.currentParticipants || 0,
+          targetParticipants: lottery.targetParticipants || 10,
           winner: null
         }));
         

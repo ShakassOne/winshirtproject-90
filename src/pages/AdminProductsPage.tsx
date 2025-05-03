@@ -1,43 +1,50 @@
+
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
-import { ExtendedProduct, PrintArea } from '@/types/product';
-import { ExtendedLottery } from '@/types/lottery';
-import { VisualCategory } from '@/types/visual';
-import { useProductForm } from '@/hooks/useProductForm';
-import ProductList from '@/components/admin/products/ProductList';
-import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
-import AdminNavigation from '@/components/admin/AdminNavigation';
+import { ExtendedProduct } from '@/types/product';
 import { Button } from "@/components/ui/button";
 import { Download, Upload, RefreshCw } from "lucide-react";
 import { toast } from '@/lib/toast';
 import { syncProductsToSupabase, useProducts } from '@/services/productService';
-import { useLotteries } from '@/services/lotteryService';
+import { getLotteries } from '@/services/lotteryService';
+import ProductList from '@/components/admin/products/ProductList';
+import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
+import AdminNavigation from '@/components/admin/AdminNavigation';
+import { useProductForm } from '@/hooks/useProductForm';
 
 const AdminProductsPage: React.FC = () => {
-  // Utiliser le hook useProducts
+  // Use the hooks for products
   const { products, loading: productsLoading, error: productsError, refreshProducts } = useProducts();
-  const { lotteries, loading: lotteriesLoading } = useLotteries();
   
-  const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
+  const [lotteries, setLotteries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [visualCategories, setVisualCategories] = useState([]);
   const [syncingProducts, setSyncingProducts] = useState(false);
   
-  // Load visual categories on mount
+  // Load lotteries and visual categories on mount
   useEffect(() => {
-    const loadVisualCategories = () => {
-      const storedCategories = localStorage.getItem('visualCategories');
-      if (storedCategories) {
-        try {
+    const loadData = async () => {
+      try {
+        // Load lotteries using getLotteries instead of useLotteries
+        const lotteriesData = await getLotteries();
+        setLotteries(lotteriesData);
+        
+        // Load visual categories
+        const storedCategories = localStorage.getItem('visualCategories');
+        if (storedCategories) {
           const parsedCategories = JSON.parse(storedCategories);
           if (Array.isArray(parsedCategories)) {
             setVisualCategories(parsedCategories);
           }
-        } catch (error) {
-          console.error("Erreur lors du chargement des catégories de visuels:", error);
         }
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      } finally {
+        setLoading(false);
       }
     };
     
-    loadVisualCategories();
+    loadData();
   }, []);
   
   // Gérer la synchronisation manuelle des produits avec Supabase
@@ -145,7 +152,7 @@ const AdminProductsPage: React.FC = () => {
   };
   
   // Fixed to correctly create a PrintArea object and match the expected type
-  const handleAddPrintArea = (printArea: Omit<PrintArea, 'id'>) => {
+  const handleAddPrintArea = (printArea: Omit<any, 'id'>) => {
     addPrintArea(printArea);
   };
   

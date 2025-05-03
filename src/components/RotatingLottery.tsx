@@ -60,66 +60,72 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
         }}
       >
         <CarouselContent className="-ml-2 md:-ml-4">
-          {lotteries.map((lottery, index) => (
-            <CarouselItem key={lottery.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 carousel-slide">
-              <Link to={`/lotteries/${lottery.id}`} className="block">
-                <div className={`h-full rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 carousel-card ${index === activeIndex ? 'active' : ''}`}>
-                  <div className="relative aspect-[3/4] overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70 z-10"></div>
-                    <img 
-                      src={lottery.image} 
-                      alt={lottery.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 right-4 bg-winshirt-blue-dark/80 white-text px-4 py-1.5 rounded-full text-base font-medium z-20">
-                      {lottery.value.toFixed(2)} €
-                    </div>
-                    
-                    {/* Lottery details overlay */}
-                    <div className="absolute bottom-0 left-0 w-full p-5 white-text z-20">
-                      <h3 className="text-xl font-semibold">{lottery.title}</h3>
-                      <p className="text-base text-gray-200 mt-2 line-clamp-2">{lottery.description}</p>
+          {lotteries.map((lottery, index) => {
+            // Ensure we use the camelCase properties consistently
+            const currentParticipants = lottery.currentParticipants || 0;
+            const targetParticipants = lottery.targetParticipants || 10;
+            
+            return (
+              <CarouselItem key={lottery.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 carousel-slide">
+                <Link to={`/lotteries/${lottery.id}`} className="block">
+                  <div className={`h-full rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 carousel-card ${index === activeIndex ? 'active' : ''}`}>
+                    <div className="relative aspect-[3/4] overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70 z-10"></div>
+                      <img 
+                        src={lottery.image} 
+                        alt={lottery.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-4 right-4 bg-winshirt-blue-dark/80 white-text px-4 py-1.5 rounded-full text-base font-medium z-20">
+                        {lottery.value.toFixed(2)} €
+                      </div>
                       
-                      {/* Progress section */}
-                      <div className="mt-4 space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-winshirt-blue-light flex items-center gap-1.5 font-medium">
-                            <Users size={16} />
-                            {lottery.currentParticipants} participants
+                      {/* Lottery details overlay */}
+                      <div className="absolute bottom-0 left-0 w-full p-5 white-text z-20">
+                        <h3 className="text-xl font-semibold">{lottery.title}</h3>
+                        <p className="text-base text-gray-200 mt-2 line-clamp-2">{lottery.description}</p>
+                        
+                        {/* Progress section */}
+                        <div className="mt-4 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-winshirt-blue-light flex items-center gap-1.5 font-medium">
+                              <Users size={16} />
+                              {currentParticipants} participants
+                            </span>
+                            <span className="text-gray-400">
+                              Objectif: {targetParticipants}
+                            </span>
+                          </div>
+                          <Progress 
+                            value={getProgressPercent(currentParticipants, targetParticipants)} 
+                            className="h-2.5 bg-winshirt-space-light"
+                          />
+                        </div>
+                        
+                        {/* Date section */}
+                        <div className="mt-4 flex items-center gap-2 text-winshirt-purple-light text-base">
+                          <Calendar size={18} />
+                          <span>Tirage le {formatDate(lottery.endDate)}</span>
+                        </div>
+                        
+                        <div className="mt-3 flex justify-between items-center">
+                          <span className="text-sm bg-winshirt-purple/50 rounded-full px-4 py-1.5 font-medium">
+                            Détails
                           </span>
-                          <span className="text-gray-400">
-                            Objectif: {lottery.targetParticipants}
+                          
+                          {/* Tickets indicator */}
+                          <span className="flex items-center gap-1.5 text-winshirt-blue-light">
+                            <Ticket size={16} />
+                            <span className="text-xs">Jusqu'à 5 tickets disponibles</span>
                           </span>
                         </div>
-                        <Progress 
-                          value={getProgressPercent(lottery.currentParticipants, lottery.targetParticipants)} 
-                          className="h-2.5 bg-winshirt-space-light"
-                        />
-                      </div>
-                      
-                      {/* Date section */}
-                      <div className="mt-4 flex items-center gap-2 text-winshirt-purple-light text-base">
-                        <Calendar size={18} />
-                        <span>Tirage le {formatDate(lottery.endDate)}</span>
-                      </div>
-                      
-                      <div className="mt-3 flex justify-between items-center">
-                        <span className="text-sm bg-winshirt-purple/50 rounded-full px-4 py-1.5 font-medium">
-                          Détails
-                        </span>
-                        
-                        {/* Tickets indicator */}
-                        <span className="flex items-center gap-1.5 text-winshirt-blue-light">
-                          <Ticket size={16} />
-                          <span className="text-xs">Jusqu'à 5 tickets disponibles</span>
-                        </span>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            </CarouselItem>
-          ))}
+                </Link>
+              </CarouselItem>
+            );
+          })}
         </CarouselContent>
         <CarouselPrevious className="left-1 lg:-left-12 h-12 w-12" />
         <CarouselNext className="right-1 lg:-right-12 h-12 w-12" />

@@ -1,7 +1,7 @@
-
 import { supabase } from '@/lib/supabase'; // Using the correct path to the Supabase client
 import { ExtendedLottery } from '@/types/lottery';
 import { toast } from '@/lib/toast';
+import { useState, useEffect } from 'react';
 
 // Helper function to convert snake_case to camelCase in lottery objects
 const convertSupabaseResponse = (data: any): ExtendedLottery => {
@@ -24,6 +24,34 @@ const convertSupabaseResponse = (data: any): ExtendedLottery => {
   };
 };
 
+// Create the useLotteries hook that was missing
+export const useLotteries = (activeOnly = false) => {
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchLotteries = async () => {
+      setLoading(true);
+      try {
+        const fetchedLotteries = await getLotteries(activeOnly);
+        setLotteries(fetchedLotteries);
+        setError(null);
+      } catch (err) {
+        console.error("Error in useLotteries hook:", err);
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLotteries();
+  }, [activeOnly]);
+
+  return { lotteries, loading, error, refreshLotteries: () => getLotteries(activeOnly).then(setLotteries) };
+};
+
+// Keep existing getLotteries function
 export const getLotteries = async (activeOnly = false) => {
   try {
     console.log("Getting lotteries from Supabase, activeOnly:", activeOnly);
