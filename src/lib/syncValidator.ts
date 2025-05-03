@@ -19,6 +19,9 @@ export const validateProducts = (products: ExtendedProduct[]) => {
     if (product.price === undefined || product.price === null) {
       invalidProducts.push({id: product.id, reason: 'Missing price'});
     }
+    if (!product.image) {
+      invalidProducts.push({id: product.id, reason: 'Missing image URL'});
+    }
   });
   
   return {
@@ -51,6 +54,31 @@ export const validateLotteries = (lotteries: ExtendedLottery[]) => {
   return {
     isValid: invalidLotteries.length === 0,
     invalidItems: invalidLotteries
+  };
+};
+
+/**
+ * Validates visuals data before syncing with Supabase
+ * @param visuals Array of visuals to validate
+ * @returns Object containing validation status and any invalid items
+ */
+export const validateVisuals = (visuals: any[]) => {
+  const invalidVisuals: {id: number, reason: string}[] = [];
+  
+  visuals.forEach(visual => {
+    // Check required fields
+    if (!visual.name) {
+      invalidVisuals.push({id: visual.id, reason: 'Missing name'});
+    }
+    // Image validation - Critical because of not-null constraint
+    if (!visual.image && !visual.image_url) {
+      invalidVisuals.push({id: visual.id, reason: 'Missing image URL'});
+    }
+  });
+  
+  return {
+    isValid: invalidVisuals.length === 0,
+    invalidItems: invalidVisuals
   };
 };
 

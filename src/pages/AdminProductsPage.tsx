@@ -44,23 +44,6 @@ const AdminProductsPage: React.FC = () => {
   const handleSyncProducts = async () => {
     setSyncingProducts(true);
     try {
-      // Importer le validateur
-      const { validateProducts, showValidationErrors } = await import('@/lib/syncValidator');
-      
-      // Récupérer les produits actuels
-      const storedProducts = localStorage.getItem('products');
-      if (storedProducts) {
-        const parsedProducts = JSON.parse(storedProducts);
-        
-        // Valider les produits avant synchronisation
-        const validationResult = validateProducts(parsedProducts);
-        if (!showValidationErrors(validationResult, 'Produit')) {
-          toast.warning("Veuillez corriger les erreurs avant de synchroniser", { position: "bottom-right" });
-          return;
-        }
-      }
-      
-      // Changed to properly check boolean return value
       const success = await syncProductsToSupabase();
       if (success) {
         await refreshProducts();

@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase'; // Using the correct path to the Supa
 import { useState, useEffect } from 'react';
 import { ExtendedLottery } from '@/types/lottery';
 import { supabaseToAppLottery, appToSupabaseLottery } from '@/lib/dataConverters';
+import { showValidationErrors, validateLotteries } from '@/lib/syncValidator';
+import { toast } from '@/lib/toast';
 
 export const getLotteries = async (activeOnly = false) => {
   try {
@@ -89,7 +91,14 @@ export const syncLotteriesToSupabase = async () => {
       return false;
     }
     
-    const localLotteries = JSON.parse(storedLotteries);
+    const localLotteries: ExtendedLottery[] = JSON.parse(storedLotteries);
+    
+    // Validate lotteries before sync
+    const validationResult = validateLotteries(localLotteries);
+    if (!showValidationErrors(validationResult, 'Loterie')) {
+      toast.warning("Veuillez corriger les erreurs avant de synchroniser", { position: "bottom-right" });
+      return false;
+    }
     
     // Transform data to match Supabase schema using converter
     const supabaseReadyLotteries = localLotteries.map((lottery: ExtendedLottery) => 
@@ -98,20 +107,28 @@ export const syncLotteriesToSupabase = async () => {
     
     console.log('Preparing to sync lotteries with transformed data:', supabaseReadyLotteries);
     
-    const { data, error } = await supabase
-      .from('lotteries')
-      .upsert(supabaseReadyLotteries, { 
-        onConflict: 'id',
-        ignoreDuplicates: false
-      });
+    // Synchronize one lottery at a time to avoid batch errors
+    for (const lottery of supabaseReadyLotteries) {
+      const { error } = await supabase
+        .from('lotteries')
+        .upsert(lottery, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
+      
+      if (error) {
+        console.error(`Error syncing lottery ID ${lottery.id}:`, error);
+        toast.error(`Erreur lors de la synchronisation de la loterie ID ${lottery.id}: ${error.message}`, { position: "bottom-right" });
+        // Continue with next lottery
+      }
+    }
 
-    if (error) throw error;
-
-    console.log('Lotteries synced to Supabase:', data);
+    toast.success(`Loteries synchronisées avec succès`, { position: "bottom-right" });
     return true;
   } catch (error) {
     console.error('Error syncing lotteries:', error);
-    throw error;
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return false;
   }
 };
 

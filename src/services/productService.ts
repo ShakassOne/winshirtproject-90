@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 import { supabaseToAppProduct, appToSupabaseProduct } from '@/lib/dataConverters';
+import { showValidationErrors, validateProducts } from '@/lib/syncValidator';
 
 export const createProduct = async (productData: any) => {
   try {
@@ -70,7 +71,14 @@ export const syncProductsToSupabase = async () => {
       return false;
     }
     
-    const localProducts = JSON.parse(storedProducts);
+    const localProducts: ExtendedProduct[] = JSON.parse(storedProducts);
+    
+    // Validate products before sync
+    const validationResult = validateProducts(localProducts);
+    if (!showValidationErrors(validationResult, 'Produit')) {
+      toast.warning("Veuillez corriger les erreurs avant de synchroniser", { position: "bottom-right" });
+      return false;
+    }
     
     // Transform data to match Supabase schema using converter
     const supabaseReadyProducts = localProducts.map((product: ExtendedProduct) => 
@@ -79,20 +87,28 @@ export const syncProductsToSupabase = async () => {
     
     console.log('Preparing to sync products with transformed data:', supabaseReadyProducts);
 
-    const { data, error } = await supabase
-      .from('products')
-      .upsert(supabaseReadyProducts, { 
-        onConflict: 'id',
-        ignoreDuplicates: false 
-      });
+    // Use one product at a time to avoid batch errors
+    for (const product of supabaseReadyProducts) {
+      const { error } = await supabase
+        .from('products')
+        .upsert(product, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
 
-    if (error) throw error;
+      if (error) {
+        console.error(`Error syncing product ID ${product.id}:`, error);
+        toast.error(`Erreur lors de la synchronisation du produit ID ${product.id}: ${error.message}`, { position: "bottom-right" });
+        // Continue with next product
+      }
+    }
 
-    console.log('Products synced to Supabase:', data);
+    toast.success(`Produits synchronisés avec succès`, { position: "bottom-right" });
     return true;
   } catch (error) {
     console.error('Error syncing products:', error);
-    throw error;
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    return false;
   }
 };
 
