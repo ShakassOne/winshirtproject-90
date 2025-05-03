@@ -507,3 +507,7 @@ select::-ms-input-placeholder {
 .flex items-center mt-2 {
   color: white;
 }
+.dark bg-white {
+    --tw-bg-opacity: 1;
+    background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+}
