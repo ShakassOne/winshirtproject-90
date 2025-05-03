@@ -18,40 +18,24 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
     const card = cardRef.current;
     if (!card) return;
     
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left; // x position within the element
-      const y = e.clientY - rect.top; // y position within the element
-      
-      // Calculate rotation based on mouse position
-      // The closer to the edge, the more tilt
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      
-      // Calculate the tilt values (maximum 10 degrees)
-      const tiltX = ((y - centerY) / centerY) * 8; // tilt around X-axis (for vertical mouse movement)
-      const tiltY = ((centerX - x) / centerX) * 8; // tilt around Y-axis (for horizontal mouse movement)
-      
-      // Apply the transform
-      card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.05, 1.05, 1.05)`;
-      
-      // Update the highlight position
-      const glareX = (x / rect.width) * 100;
-      const glareY = (y / rect.height) * 100;
-      card.style.setProperty('--glare-position', `${glareX}% ${glareY}%`);
-    };
-    
-    const handleMouseLeave = () => {
-      // Reset the transform when mouse leaves
-      card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-    };
-    
-    card.addEventListener('mousemove', handleMouseMove);
-    card.addEventListener('mouseleave', handleMouseLeave);
+    // Initialize VanillaTilt on the card
+    if (typeof window !== 'undefined' && 'VanillaTilt' in window) {
+      // @ts-ignore - VanillaTilt is loaded from CDN
+      window.VanillaTilt.init(card, {
+        max: 8,
+        speed: 400,
+        glare: true,
+        "max-glare": 0.3,
+        perspective: 1000,
+        scale: 1.05
+      });
+    }
     
     return () => {
-      card.removeEventListener('mousemove', handleMouseMove);
-      card.removeEventListener('mouseleave', handleMouseLeave);
+      // Cleanup VanillaTilt instance when component unmounts
+      if (card && (card as any).vanillaTilt) {
+        (card as any).vanillaTilt.destroy();
+      }
     };
   }, []);
 
@@ -88,7 +72,7 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
   
   return (
     <Link to={`/lottery/${lottery.id}`} className="block">
-      <Card ref={cardRef} className="enhanced-glass-card relative z-10 overflow-hidden transition-all duration-300">
+      <Card ref={cardRef} className="product-card enhanced-glass-card relative z-10 overflow-hidden transition-all duration-300">
         <div className="relative">
           <img 
             src={lottery.image} 
@@ -152,7 +136,6 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
             </p>
           )}
         </CardFooter>
-        <div className="card-glare absolute inset-0 pointer-events-none"></div>
       </Card>
     </Link>
   );

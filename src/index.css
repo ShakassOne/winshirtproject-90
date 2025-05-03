@@ -153,6 +153,46 @@
 }
 
 @layer components {
+  /* Product card with enhanced glassmorphism and 3D tilt */
+  .product-card {
+    @apply relative overflow-hidden transition-all duration-300;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+    will-change: transform;
+  }
+  
+  .product-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom right,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05)
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .product-card img {
+    @apply w-full object-cover rounded-t-lg transition-transform duration-300;
+  }
+  
+  .product-card:hover {
+    box-shadow: 16px 16px 30px rgba(0, 0, 0, 0.35);
+  }
+  
+  /* JS Tilt creates this element for the glare effect */
+  .js-tilt-glare {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
   /* Enhanced glassmorphism with 3D tilt effect */
   .enhanced-glass-card {
     @apply border rounded-xl overflow-hidden transition-all duration-500 relative cursor-pointer;
@@ -467,4 +507,3 @@ select::-ms-input-placeholder {
 .flex items-center mt-2 {
   color: white;
 }
-

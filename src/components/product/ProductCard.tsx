@@ -18,38 +18,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const card = cardRef.current;
     if (!card) return;
     
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      // Calculate rotation based on mouse position
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      
-      const tiltX = ((y - centerY) / centerY) * 8;
-      const tiltY = ((centerX - x) / centerX) * 8;
-      
-      // Apply the transform
-      card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.05, 1.05, 1.05)`;
-      
-      // Update the highlight position
-      const glareX = (x / rect.width) * 100;
-      const glareY = (y / rect.height) * 100;
-      card.style.setProperty('--glare-position', `${glareX}% ${glareY}%`);
-    };
-    
-    const handleMouseLeave = () => {
-      // Reset the transform when mouse leaves
-      card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-    };
-    
-    card.addEventListener('mousemove', handleMouseMove);
-    card.addEventListener('mouseleave', handleMouseLeave);
+    // Initialize VanillaTilt on the card
+    if (typeof window !== 'undefined' && 'VanillaTilt' in window) {
+      // @ts-ignore - VanillaTilt is loaded from CDN
+      window.VanillaTilt.init(card, {
+        max: 10,
+        speed: 400,
+        glare: true,
+        "max-glare": 0.3,
+        perspective: 1000,
+        scale: 1.05
+      });
+    }
     
     return () => {
-      card.removeEventListener('mousemove', handleMouseMove);
-      card.removeEventListener('mouseleave', handleMouseLeave);
+      // Cleanup VanillaTilt instance when component unmounts
+      if (card && (card as any).vanillaTilt) {
+        (card as any).vanillaTilt.destroy();
+      }
     };
   }, []);
 
@@ -90,7 +76,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <Link to={`/products/${product.id}`} className="group block">
-      <div ref={cardRef} className="enhanced-glass-card relative h-full flex flex-col shadow-sm hover:shadow-md">
+      <div ref={cardRef} className="product-card enhanced-glass-card relative h-full flex flex-col shadow-sm hover:shadow-md">
         <div className="relative overflow-hidden">
           {/* Badge de promotion si applicable */}
           {product.price > 50 && (
@@ -147,7 +133,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {renderColorOptions()}
           </div>
         </div>
-        <div className="card-glare absolute inset-0 pointer-events-none"></div>
       </div>
     </Link>
   );
