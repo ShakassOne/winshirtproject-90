@@ -153,6 +153,51 @@
 }
 
 @layer components {
+  /* Nouvel effet glassmorphism avec animation au survol */
+  .nft-glass-card {
+    @apply border border-white/20 rounded-xl overflow-hidden transition-all duration-500 relative;
+    background: linear-gradient(0deg, rgba(26, 31, 44, 0.8) 0%, rgba(41, 18, 77, 0.5) 100%);
+    box-shadow: 0 7px 20px 5px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+  
+  .nft-glass-card::before {
+    position: absolute;
+    content: "";
+    box-shadow: 0 0 100px 40px rgba(255, 255, 255, 0.05);
+    top: -10%;
+    left: -100%;
+    transform: rotate(-45deg);
+    height: 60rem;
+    transition: 0.7s all;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .nft-glass-card:hover {
+    @apply border-white/40;
+    box-shadow: 0 7px 50px 10px rgba(0, 0, 0, 0.6);
+    transform: scale(1.015);
+    filter: brightness(1.2);
+  }
+  
+  .nft-glass-card:hover::before {
+    filter: brightness(0.5);
+    top: -100%;
+    left: 200%;
+  }
+  
+  .nft-glass-card img {
+    @apply transition-all duration-500;
+    z-index: 2;
+    position: relative;
+  }
+  
+  .nft-glass-card:hover img {
+    filter: brightness(1.1);
+  }
+
   .nav-link {
     @apply hover:text-winshirt-blue-light transition-colors text-lg relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-winshirt-blue-light after:transition-all after:duration-300 hover:after:w-full;
   }

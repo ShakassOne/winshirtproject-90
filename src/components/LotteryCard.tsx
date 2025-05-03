@@ -45,7 +45,7 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
   
   return (
     <Link to={`/lottery/${lottery.id}`} className="block">
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow bg-winshirt-space border-winshirt-space-light hover:border-winshirt-blue-light/50">
+      <Card className="nft-glass-card hover:shadow-lg transition-shadow">
         <div className="relative">
           <img 
             src={lottery.image} 
@@ -65,10 +65,10 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
         </div>
         
         <CardContent className="pt-4">
-          <h3 className="text-xl font-semibold text-white mb-2">{lottery.title}</h3>
-          <p className="text-gray-400 mb-3 line-clamp-2">{lottery.description}</p>
+          <h3 className="text-xl font-semibold text-white mb-2 relative z-10">{lottery.title}</h3>
+          <p className="text-gray-400 mb-3 line-clamp-2 relative z-10">{lottery.description}</p>
           
-          <div className="flex justify-between text-sm text-gray-300 mb-2">
+          <div className="flex justify-between text-sm text-gray-300 mb-2 relative z-10">
             <span className="flex items-center gap-1">
               <Gift size={16} className="text-winshirt-purple-light" />
               {lottery.value.toFixed(2)} €
@@ -81,7 +81,7 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
             </span>
           </div>
           
-          <div className="mb-1 flex justify-between text-sm">
+          <div className="mb-1 flex justify-between text-sm relative z-10">
             <span className="text-white flex items-center gap-1">
               <Users size={16} />
               {lottery.currentParticipants} / {lottery.targetParticipants}
@@ -91,10 +91,10 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
             </span>
           </div>
           
-          <Progress value={progressPercent} className="h-2 bg-winshirt-space-light" />
+          <Progress value={progressPercent} className="h-2 bg-winshirt-space-light relative z-10" />
         </CardContent>
         
-        <CardFooter className="pt-0 pb-4">
+        <CardFooter className="pt-0 pb-4 relative z-10">
           {isCompleted && lottery.winner ? (
             <p className="text-green-400 text-sm">
               Gagnant: {lottery.winner.name}
