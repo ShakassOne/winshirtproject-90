@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -39,11 +38,7 @@ const ConfirmationPage = () => {
               const orderFromStorage = orders.find((o: Order) => o.id === details.orderId);
               
               if (orderFromStorage) {
-                await EmailService.sendOrderConfirmationEmail(
-                  details.customerInfo.email,
-                  details.customerInfo.fullName,
-                  orderFromStorage
-                );
+                await EmailService.sendOrderConfirmationEmail(orderFromStorage);
                 console.log("Confirmation email sent from confirmation page");
                 setEmailSent(true);
               }

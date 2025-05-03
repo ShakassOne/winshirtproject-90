@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 
 const NotificationEmailsManager: React.FC = () => {
-  const [emails, setEmails] = useState<string[]>(['admin@winshirt.com']);
+  const [emails, setEmails] = useState<string[]>(['admin@winshirt.fr']);
   const [newEmail, setNewEmail] = useState<string>('');
   const [isTestDialogOpen, setIsTestDialogOpen] = useState<boolean>(false);
   const [testEmailSubject, setTestEmailSubject] = useState<string>('Test de notification Winshirt');
@@ -87,7 +87,7 @@ const NotificationEmailsManager: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Utilisation du EmailService pour envoyer le mail
+      // Utilisation du EmailService avec la nouvelle signature
       const success = await EmailService.sendTestEmail(emails, testEmailSubject, testEmailContent);
       
       if (success) {

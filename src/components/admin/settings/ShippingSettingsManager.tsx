@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -102,22 +101,22 @@ const ShippingSettingsManager: React.FC = () => {
     
     setLoading(true);
     
-    // Utiliser EmailService pour envoyer l'email de test
+    // Utiliser EmailService avec la nouvelle signature
     const formData = form.getValues();
-    const success = EmailService.sendTestEmail(
+    EmailService.sendTestEmail(
       notificationEmails,
       "Test de notification de livraison",
       `Ceci est un email de test des paramètres de livraison.\n\nParamètres actuels:\nLivraison gratuite à partir de: ${formData.freeShippingThreshold}€\nTemps de préparation: ${formData.defaultHandlingTime} jour(s)\nLivraison internationale: ${formData.internationalShipping ? 'Activée' : 'Désactivée'}`
-    );
-    
-    setTimeout(() => {
-      if (success) {
-        toast.success(`Email de test envoyé à ${notificationEmails.length} destinataire(s)`);
-      } else {
-        toast.error("Erreur lors de l'envoi de l'email de test");
-      }
-      setLoading(false);
-    }, 1500);
+    ).then(success => {
+      setTimeout(() => {
+        if (success) {
+          toast.success(`Email de test envoyé à ${notificationEmails.length} destinataire(s)`);
+        } else {
+          toast.error("Erreur lors de l'envoi de l'email de test");
+        }
+        setLoading(false);
+      }, 1500);
+    });
   };
   
   return (

@@ -45,7 +45,7 @@ const TestEmailButton: React.FC<TestEmailButtonProps> = ({
     setIsLoading(true);
     
     try {
-      // Utiliser EmailService pour envoyer l'email de test
+      // Utiliser EmailService avec la nouvelle signature
       const success = await EmailService.sendTestEmail(
         emails,
         "✉️ Test de fonctionnalité d'emails",

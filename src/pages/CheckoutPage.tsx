@@ -273,11 +273,7 @@ const CheckoutPage: React.FC = () => {
       } else {
         // Envoyer l'email de confirmation de commande
         try {
-          await EmailService.sendOrderConfirmationEmail(
-            data.customerInfo.email,
-            data.customerInfo.fullName,
-            newOrder
-          );
+          await EmailService.sendOrderConfirmationEmail(newOrder);
           console.log("Email de confirmation de commande envoyé avec succès");
         } catch (error) {
           console.error("Erreur lors de l'envoi de l'email de confirmation:", error);

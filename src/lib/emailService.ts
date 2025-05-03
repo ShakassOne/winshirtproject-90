@@ -32,6 +32,34 @@ export class EmailService {
     }
   }
 
+  // Surcharge pour permettre l'envoi à plusieurs destinataires ou à un seul
+  public static async sendTestEmail(to: string | string[], subject?: string, content?: string) {
+    try {
+      // Valeurs par défaut
+      const emailSubject = subject || 'Test de WinShirt';
+      const htmlContent = content || `
+        <h1>Test d'envoi d'email</h1>
+        <p>Ceci est un test d'envoi d'email depuis WinShirt.</p>
+        <p>Si vous recevez ce message, la configuration d'email fonctionne correctement.</p>
+      `;
+
+      // Si to est un tableau, envoyer à chaque destinataire
+      if (Array.isArray(to)) {
+        for (const recipient of to) {
+          await this.sendEmail(recipient, emailSubject, htmlContent);
+        }
+      } else {
+        // Sinon, envoyer à un seul destinataire
+        await this.sendEmail(to, emailSubject, htmlContent);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      return false;
+    }
+  }
+
   // Template HTML pour les emails
   private static getEmailTemplate(options: EmailTemplateOptions, templateType: 'welcome' | 'order' | 'admin') {
     const baseTemplate = `
@@ -218,7 +246,7 @@ export class EmailService {
 
   // Email de confirmation de commande au client
   public static async sendOrderConfirmationEmail(order: Order) {
-    if (!order.client_email) {
+    if (!order.clientEmail) {
       console.error('Cannot send order confirmation: No client email provided');
       return;
     }
@@ -226,7 +254,7 @@ export class EmailService {
     const subject = 'Confirmation de votre commande WinShirt';
     const htmlContent = this.getEmailTemplate(
       {
-        userName: order.client_name || 'Client',
+        userName: order.clientName || 'Client',
         orderNumber: `#${order.id}`,
         orderDetails: order,
         products: order.items || [],
@@ -237,7 +265,7 @@ export class EmailService {
     );
 
     try {
-      await this.sendEmail(order.client_email, subject, htmlContent);
+      await this.sendEmail(order.clientEmail, subject, htmlContent);
     } catch (error) {
       console.error('Error sending order confirmation email:', error);
       // Faire une silencieuse, ne pas bloquer le flux pour un email
@@ -253,7 +281,7 @@ export class EmailService {
     const subject = 'Nouvelle commande sur WinShirt';
     const htmlContent = this.getEmailTemplate(
       {
-        userName: order.client_name || 'Client inconnu',
+        userName: order.clientName || 'Client inconnu',
         orderNumber: `#${order.id}`,
         totalAmount: order.total || 0,
         link: `https://winshirt.com/admin/commandes/${order.id}`
@@ -269,15 +297,21 @@ export class EmailService {
     }
   }
 
-  // Méthode générique pour envoyer un email de test
-  public static async sendTestEmail(to: string) {
-    const subject = 'Test de WinShirt';
+  // Méthode pour notifier l'admin d'une nouvelle commande (ajoutée pour CheckoutPage)
+  public static async notifyAdminNewOrder(orderId: string, totalAmount: number) {
+    const adminEmail = 'admin@winshirt.fr';
+    const subject = 'Nouvelle commande sur WinShirt';
     const htmlContent = `
-      <h1>Test d'envoi d'email</h1>
-      <p>Ceci est un test d'envoi d'email depuis WinShirt.</p>
-      <p>Si vous recevez ce message, la configuration d'email fonctionne correctement.</p>
+      <h1>Nouvelle commande reçue !</h1>
+      <p>Une nouvelle commande (#${orderId}) vient d'être passée pour un montant de ${totalAmount.toFixed(2)} €.</p>
+      <p>Connectez-vous au panneau d'administration pour plus de détails.</p>
     `;
 
-    return await this.sendEmail(to, subject, htmlContent);
+    try {
+      return await this.sendEmail(adminEmail, subject, htmlContent);
+    } catch (error) {
+      console.error('Error sending admin notification email:', error);
+      return false;
+    }
   }
 }
