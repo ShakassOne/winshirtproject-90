@@ -24,8 +24,16 @@ export default function CartButton() {
     // Update when cart changes
     window.addEventListener('cartUpdated', updateCount);
     
+    // Also update when storage changes (useful for cross-tab sync)
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'cart') {
+        updateCount();
+      }
+    });
+    
     return () => {
       window.removeEventListener('cartUpdated', updateCount);
+      window.removeEventListener('storage', updateCount);
     };
   }, [getItemCount]);
 

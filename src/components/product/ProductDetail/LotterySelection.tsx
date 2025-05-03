@@ -28,6 +28,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     const loadActiveLotteries = async () => {
       setIsLoading(true);
       try {
+        // Make direct call to the Supabase client to get fresh data
         const allLotteries = await getLotteries(true); // Only get active lotteries
         
         console.log("LotterySelection - Active lotteries loaded:", allLotteries);
@@ -35,12 +36,12 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
         // Convert Lottery[] to ExtendedLottery[]
         const extendedLotteries: ExtendedLottery[] = allLotteries.map(lottery => ({
           ...lottery,
-          // Add missing properties needed for ExtendedLottery
+          // Add missing properties needed for ExtendedLottery and ensure current values are used
           participants: lottery.participants ? 
                       (Array.isArray(lottery.participants) ? lottery.participants : []) : 
                       [],
-          currentParticipants: lottery.currentParticipants || 0,
-          targetParticipants: lottery.targetParticipants || 10,
+          currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
+          targetParticipants: lottery.targetParticipants || lottery.target_participants || 10,
           winner: null
         }));
         
@@ -82,8 +83,8 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
           participants: lottery.participants ? 
                       (Array.isArray(lottery.participants) ? lottery.participants : []) : 
                       [],
-          currentParticipants: lottery.currentParticipants || 0,
-          targetParticipants: lottery.targetParticipants || 10,
+          currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
+          targetParticipants: lottery.targetParticipants || lottery.target_participants || 10,
           winner: null
         }));
         
@@ -194,7 +195,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
                             <div 
                               className="bg-winshirt-purple h-2 rounded-full" 
                               style={{ 
-                                width: `${(lottery.currentParticipants / lottery.targetParticipants) * 100}%` 
+                                width: `${Math.min((lottery.currentParticipants / lottery.targetParticipants) * 100, 100)}%` 
                               }}
                             />
                           </div>

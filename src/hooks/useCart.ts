@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { ExtendedProduct } from '@/types/product';
 
@@ -32,7 +33,18 @@ const useCart = () => {
   const [cart, setCart] = useState<CartItem[]>(getCart());
 
   useEffect(() => {
-    setCart(getCart());
+    const handleStorageChange = () => {
+      setCart(getCart());
+    };
+    
+    // Listen for storage changes (for cross-tab sync)
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('cartUpdated', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('cartUpdated', handleStorageChange);
+    };
   }, [getCart]);
 
   const getItemCount = useCallback(() => {
@@ -113,6 +125,9 @@ const useCart = () => {
       // Dispatch cart update event
       const event = new Event('cartUpdated');
       window.dispatchEvent(event);
+      
+      // Update the local state
+      setCart(existingCart);
       
       // Return the updated cart
       return existingCart;

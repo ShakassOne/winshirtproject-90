@@ -1,201 +1,216 @@
 
 import { supabase } from '@/lib/supabase'; // Using the correct path to the Supabase client
-import { useState, useEffect } from 'react';
 import { ExtendedLottery } from '@/types/lottery';
-import { supabaseToAppLottery, appToSupabaseLottery } from '@/lib/dataConverters';
-import { showValidationErrors, validateLotteries } from '@/lib/syncValidator';
 import { toast } from '@/lib/toast';
+
+// Helper function to convert snake_case to camelCase in lottery objects
+const convertSupabaseResponse = (data: any): ExtendedLottery => {
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description || '',
+    value: data.value,
+    status: data.status,
+    featured: data.featured || false,
+    image: data.image || '',
+    // Support both naming conventions
+    targetParticipants: data.target_participants || data.targetParticipants || 10,
+    currentParticipants: data.current_participants || data.currentParticipants || 0,
+    drawDate: data.draw_date || data.drawDate,
+    endDate: data.end_date || data.endDate,
+    linkedProducts: data.linked_products || data.linkedProducts || [],
+    participants: [],
+    winner: null
+  };
+};
 
 export const getLotteries = async (activeOnly = false) => {
   try {
-    const { data, error } = await supabase
-      .from('lotteries')
-      .select('*');
-
-    if (error) throw error;
-
-    // Filtrer par statut si nécessaire
+    console.log("Getting lotteries from Supabase, activeOnly:", activeOnly);
+    let query = supabase.from('lotteries').select('*');
+    
+    // Filter by status if needed
     if (activeOnly) {
-      return data.filter((lottery: any) => lottery.status === 'active');
+      query = query.eq('status', 'active');
     }
 
-    return data;
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching lotteries from Supabase:", error);
+      throw error;
+    }
+
+    // Transform data to ensure consistent camelCase properties
+    const lotteries = data.map(convertSupabaseResponse);
+    
+    console.log(`Retrieved ${lotteries.length} lotteries from Supabase`);
+    
+    return lotteries;
   } catch (error) {
-    console.error('Error fetching lotteries:', error);
-    throw error;
+    console.error('Error fetching lotteries from Supabase, trying localStorage:', error);
+    
+    // Fallback to localStorage
+    const storedLotteries = localStorage.getItem('lotteries');
+    if (storedLotteries) {
+      let lotteries = JSON.parse(storedLotteries);
+      
+      // Filter if necessary
+      if (activeOnly) {
+        lotteries = lotteries.filter((lottery: any) => lottery.status === 'active');
+      }
+      
+      // Ensure consistent structure
+      lotteries = lotteries.map((lottery: any) => ({
+        ...lottery,
+        currentParticipants: lottery.currentParticipants || lottery.current_participants || 0,
+        targetParticipants: lottery.targetParticipants || lottery.target_participants || 10
+      }));
+      
+      console.log(`Using ${lotteries.length} lotteries from localStorage`);
+      return lotteries;
+    }
+    
+    // Nothing found, throw error
+    throw new Error('Failed to load lotteries');
   }
 };
 
 export const createLottery = async (lotteryData: any) => {
   try {
-    // Convertir au format Supabase
-    const supabaseLottery = appToSupabaseLottery(lotteryData);
+    // Convert to Supabase format (camelCase to snake_case)
+    const supabaseLottery = {
+      title: lotteryData.title,
+      description: lotteryData.description || '',
+      value: lotteryData.value,
+      status: lotteryData.status || 'active',
+      featured: lotteryData.featured || false,
+      image: lotteryData.image || '',
+      target_participants: lotteryData.targetParticipants || 10,
+      current_participants: lotteryData.currentParticipants || 0,
+      draw_date: lotteryData.drawDate || null,
+      end_date: lotteryData.endDate || null,
+      linked_products: lotteryData.linkedProducts || []
+    };
     
     const { data, error } = await supabase
       .from('lotteries')
-      .insert([supabaseLottery]);
+      .insert([supabaseLottery])
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating lottery in Supabase:', error);
+      throw error;
+    }
 
-    console.log('Lottery created:', data);
-    return data;
+    // Convert response back to camelCase for the app
+    const newLottery = convertSupabaseResponse(data);
+    
+    // Also update localStorage for offline access
+    try {
+      const storedLotteries = localStorage.getItem('lotteries');
+      const lotteries = storedLotteries ? JSON.parse(storedLotteries) : [];
+      lotteries.push(newLottery);
+      localStorage.setItem('lotteries', JSON.stringify(lotteries));
+    } catch (e) {
+      console.error('Error updating localStorage with new lottery:', e);
+    }
+    
+    toast.success(`Loterie "${newLottery.title}" créée avec succès`);
+    return newLottery;
   } catch (error) {
     console.error('Error creating lottery:', error);
+    toast.error(`Erreur lors de la création: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     throw error;
   }
 };
 
 export const updateLottery = async (lotteryId: number, lotteryData: any) => {
   try {
-    // Convertir au format Supabase
-    const supabaseLottery = appToSupabaseLottery(lotteryData);
+    // Convert to Supabase format (camelCase to snake_case)
+    const supabaseLottery: any = {};
+    
+    if (lotteryData.title !== undefined) supabaseLottery.title = lotteryData.title;
+    if (lotteryData.description !== undefined) supabaseLottery.description = lotteryData.description;
+    if (lotteryData.value !== undefined) supabaseLottery.value = lotteryData.value;
+    if (lotteryData.status !== undefined) supabaseLottery.status = lotteryData.status;
+    if (lotteryData.featured !== undefined) supabaseLottery.featured = lotteryData.featured;
+    if (lotteryData.image !== undefined) supabaseLottery.image = lotteryData.image;
+    if (lotteryData.targetParticipants !== undefined) supabaseLottery.target_participants = lotteryData.targetParticipants;
+    if (lotteryData.currentParticipants !== undefined) supabaseLottery.current_participants = lotteryData.currentParticipants;
+    if (lotteryData.drawDate !== undefined) supabaseLottery.draw_date = lotteryData.drawDate;
+    if (lotteryData.endDate !== undefined) supabaseLottery.end_date = lotteryData.endDate;
+    if (lotteryData.linkedProducts !== undefined) supabaseLottery.linked_products = lotteryData.linkedProducts;
     
     const { data, error } = await supabase
       .from('lotteries')
       .update(supabaseLottery)
-      .eq('id', lotteryId);
+      .eq('id', lotteryId)
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error(`Error updating lottery ${lotteryId} in Supabase:`, error);
+      throw error;
+    }
 
-    console.log('Lottery updated:', data);
-    return data;
+    // Convert response back to camelCase
+    const updatedLottery = convertSupabaseResponse(data);
+    
+    // Also update localStorage for offline access
+    try {
+      const storedLotteries = localStorage.getItem('lotteries');
+      if (storedLotteries) {
+        let lotteries = JSON.parse(storedLotteries);
+        const index = lotteries.findIndex((l: any) => l.id === lotteryId);
+        if (index >= 0) {
+          lotteries[index] = updatedLottery;
+          localStorage.setItem('lotteries', JSON.stringify(lotteries));
+        }
+      }
+    } catch (e) {
+      console.error('Error updating lottery in localStorage:', e);
+    }
+    
+    toast.success(`Loterie "${updatedLottery.title}" mise à jour avec succès`);
+    return updatedLottery;
   } catch (error) {
-    console.error('Error updating lottery:', error);
+    console.error(`Error updating lottery ${lotteryId}:`, error);
+    toast.error(`Erreur lors de la mise à jour: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     throw error;
   }
 };
 
 export const deleteLottery = async (lotteryId: number) => {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('lotteries')
       .delete()
       .eq('id', lotteryId);
 
-    if (error) throw error;
-
-    console.log('Lottery deleted:', data);
-    return data;
-  } catch (error) {
-    console.error('Error deleting lottery:', error);
-    throw error;
-  }
-};
-
-export const syncLotteriesToSupabase = async () => {
-  try {
-    // Fetch lotteries from localStorage
-    const storedLotteries = localStorage.getItem('lotteries');
-    if (!storedLotteries) {
-      console.error('No local lotteries found to sync');
-      return false;
-    }
-    
-    const localLotteries: ExtendedLottery[] = JSON.parse(storedLotteries);
-    
-    // Validate lotteries before sync
-    const validationResult = validateLotteries(localLotteries);
-    if (!showValidationErrors(validationResult, 'Loterie')) {
-      toast.warning("Veuillez corriger les erreurs avant de synchroniser", { position: "bottom-right" });
-      return false;
-    }
-    
-    // Transform data to match Supabase schema using converter
-    const supabaseReadyLotteries = localLotteries.map((lottery: ExtendedLottery) => 
-      appToSupabaseLottery(lottery)
-    );
-    
-    console.log('Preparing to sync lotteries with transformed data:', supabaseReadyLotteries);
-    
-    // Synchronize one lottery at a time to avoid batch errors
-    for (const lottery of supabaseReadyLotteries) {
-      const { error } = await supabase
-        .from('lotteries')
-        .upsert(lottery, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
-      
-      if (error) {
-        console.error(`Error syncing lottery ID ${lottery.id}:`, error);
-        toast.error(`Erreur lors de la synchronisation de la loterie ID ${lottery.id}: ${error.message}`, { position: "bottom-right" });
-        // Continue with next lottery
-      }
+    if (error) {
+      console.error(`Error deleting lottery ${lotteryId} in Supabase:`, error);
+      throw error;
     }
 
-    toast.success(`Loteries synchronisées avec succès`, { position: "bottom-right" });
-    return true;
-  } catch (error) {
-    console.error('Error syncing lotteries:', error);
-    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
-    return false;
-  }
-};
-
-// Create the useLotteries hook
-export const useLotteries = () => {
-  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchLotteries = async () => {
-    setLoading(true);
+    // Also remove from localStorage
     try {
-      const { data, error } = await supabase
-        .from('lotteries')
-        .select('*');
-      
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        // Transform data to match ExtendedLottery type using converter
-        const formattedLotteries = data.map(lottery => 
-          supabaseToAppLottery(lottery)
-        ) as ExtendedLottery[];
-        
-        setLotteries(formattedLotteries);
-        
-        // Store in localStorage as fallback
-        localStorage.setItem('lotteries', JSON.stringify(formattedLotteries));
-      } else {
-        // Fallback to localStorage
-        const storedLotteries = localStorage.getItem('lotteries');
-        if (storedLotteries) {
-          setLotteries(JSON.parse(storedLotteries));
-        } else {
-          // If no data in localStorage, use empty array
-          setLotteries([]);
-        }
-      }
-      return true; // Return true to indicate success
-    } catch (err) {
-      console.error("Error fetching lotteries:", err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      
-      // Fallback to localStorage on error
       const storedLotteries = localStorage.getItem('lotteries');
       if (storedLotteries) {
-        try {
-          setLotteries(JSON.parse(storedLotteries));
-        } catch (e) {
-          setLotteries([]);
-        }
-      } else {
-        setLotteries([]);
+        let lotteries = JSON.parse(storedLotteries);
+        lotteries = lotteries.filter((l: any) => l.id !== lotteryId);
+        localStorage.setItem('lotteries', JSON.stringify(lotteries));
       }
-      return false; // Return false to indicate failure
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      console.error('Error removing lottery from localStorage:', e);
     }
-  };
-
-  const refreshLotteries = async (): Promise<boolean> => {
-    return await fetchLotteries();
-  };
-
-  useEffect(() => {
-    fetchLotteries();
-  }, []);
-
-  return { lotteries, loading, error, refreshLotteries };
+    
+    toast.success("Loterie supprimée avec succès");
+    return true;
+  } catch (error) {
+    console.error(`Error deleting lottery ${lotteryId}:`, error);
+    toast.error(`Erreur lors de la suppression: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    throw error;
+  }
 };

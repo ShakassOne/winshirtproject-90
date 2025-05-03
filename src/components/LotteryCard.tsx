@@ -64,10 +64,14 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
     }
   };
   
-  const progressPercent = Math.min((lottery.currentParticipants / lottery.targetParticipants) * 100, 100);
+  // Make sure we're using the current participants count, either from currentParticipants or the legacy field
+  const currentParticipants = lottery.currentParticipants || lottery.current_participants || 0;
+  const targetParticipants = lottery.targetParticipants || lottery.target_participants || 10;
+  
+  const progressPercent = Math.min((currentParticipants / targetParticipants) * 100, 100);
   
   const isCompleted = lottery.status === 'completed';
-  const isReady = lottery.currentParticipants >= lottery.targetParticipants || 
+  const isReady = currentParticipants >= targetParticipants || 
                  (lottery.endDate && new Date(lottery.endDate) <= new Date());
   
   return (
@@ -111,7 +115,7 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
           <div className="mb-1 flex justify-between text-sm relative z-10">
             <span className="text-white flex items-center gap-1">
               <Users size={16} />
-              {lottery.currentParticipants} / {lottery.targetParticipants}
+              {currentParticipants} / {targetParticipants}
             </span>
             <span className="text-gray-400">
               {progressPercent.toFixed(0)}%

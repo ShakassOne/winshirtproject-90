@@ -30,7 +30,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
                 onClick={() => setSelectedSize(size)}
                 className={`size-circle ${selectedSize === size ? 'selected' : ''}`}
                 style={{
-                  backgroundColor: '#222222', // Dark background for better contrast with white text
+                  backgroundColor: '#000000', // Black background for better contrast with white text
                   border: selectedSize === size ? '2px solid #9b87f5' : '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white' // White text for contrast
                 }}
