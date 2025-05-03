@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseClient'; // Assure-toi que supabaseClient est correctement configuré
+
+import { supabase } from '@/lib/supabase'; // Using the correct path to the Supabase client
 
 export const createProduct = async (productData: any) => {
   try {
