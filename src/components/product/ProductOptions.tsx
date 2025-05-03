@@ -51,7 +51,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
                 onClick={() => setSelectedColor(color)}
                 className={`color-circle ${selectedColor === color ? 'selected' : ''}`}
                 style={{
-                  backgroundColor: '#000000', // Changed to black for better contrast
+                  backgroundColor: '#000000', // Black background for better contrast
                   border: selectedColor === color ? '2px solid #9b87f5' : '1px solid rgba(255, 255, 255, 0.3)'
                 }}
               >

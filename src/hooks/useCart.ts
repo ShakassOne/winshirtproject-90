@@ -67,10 +67,10 @@ const useCart = () => {
         product.linkedLotteries.forEach((lotteryId: number) => {
           const lotteryIndex = lotteries.findIndex((lottery: any) => lottery.id === lotteryId);
           if (lotteryIndex >= 0) {
-            // Increment participants count
+            // Increment participants count for both camelCase and snake_case properties
+            // This ensures all components can properly display the updated count
             lotteries[lotteryIndex].currentParticipants = 
               (lotteries[lotteryIndex].currentParticipants || 0) + 1;
-            // For backward compatibility
             lotteries[lotteryIndex].current_participants = 
               (lotteries[lotteryIndex].current_participants || 0) + 1;
             
