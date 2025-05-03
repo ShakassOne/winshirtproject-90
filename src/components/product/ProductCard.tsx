@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,47 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Calculate rotation based on mouse position
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      const tiltX = ((y - centerY) / centerY) * 8;
+      const tiltY = ((centerX - x) / centerX) * 8;
+      
+      // Apply the transform
+      card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.05, 1.05, 1.05)`;
+      
+      // Update the highlight position
+      const glareX = (x / rect.width) * 100;
+      const glareY = (y / rect.height) * 100;
+      card.style.setProperty('--glare-position', `${glareX}% ${glareY}%`);
+    };
+    
+    const handleMouseLeave = () => {
+      // Reset the transform when mouse leaves
+      card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+    };
+    
+    card.addEventListener('mousemove', handleMouseMove);
+    card.addEventListener('mouseleave', handleMouseLeave);
+    
+    return () => {
+      card.removeEventListener('mousemove', handleMouseMove);
+      card.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []);
+
   // Ajouter au panier sans ouvrir la page détaillée
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -49,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <Link to={`/products/${product.id}`} className="group block">
-      <div className="bg-white dark:bg-winshirt-space rounded-lg overflow-hidden h-full flex flex-col shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div ref={cardRef} className="enhanced-glass-card relative h-full flex flex-col shadow-sm hover:shadow-md">
         <div className="relative overflow-hidden">
           {/* Badge de promotion si applicable */}
           {product.price > 50 && (
@@ -62,7 +103,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <img 
             src={product.image || 'https://placehold.co/600x400/png'} 
             alt={product.name} 
-            className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-64 object-cover transition-transform duration-300"
           />
 
           {/* Overlay avec boutons d'action */}
@@ -106,6 +147,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {renderColorOptions()}
           </div>
         </div>
+        <div className="card-glare absolute inset-0 pointer-events-none"></div>
       </div>
     </Link>
   );

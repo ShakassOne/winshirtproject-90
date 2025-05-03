@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -28,6 +28,45 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [selectedLottery, setSelectedLottery] = useState<number | null>(null);
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [linkedLottery, setLinkedLottery] = useState<ExtendedLottery | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Calculate rotation based on mouse position
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      const tiltX = ((y - centerY) / centerY) * 8;
+      const tiltY = ((centerX - x) / centerX) * 8;
+      
+      // Apply the transform
+      card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.05, 1.05, 1.05)`;
+      
+      // Update the highlight position
+      const glareX = (x / rect.width) * 100;
+      const glareY = (y / rect.height) * 100;
+      card.style.setProperty('--glare-position', `${glareX}% ${glareY}%`);
+    };
+    
+    const handleMouseLeave = () => {
+      card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+    };
+    
+    card.addEventListener('mousemove', handleMouseMove);
+    card.addEventListener('mouseleave', handleMouseLeave);
+    
+    return () => {
+      card.removeEventListener('mousemove', handleMouseMove);
+      card.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []);
 
   // Vérifier que le produit existe avant de l'afficher
   if (!product) {
@@ -116,7 +155,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <>
-      <Card className="winshirt-card winshirt-card-hover h-full flex flex-col">
+      <Card ref={cardRef} className="enhanced-glass-card winshirt-card-hover h-full flex flex-col relative">
         <Link to={`/products/${product.id}`} className="relative cursor-pointer block">
           <img 
             src={product.image || 'https://placehold.co/600x400/png'} 
@@ -157,6 +196,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             Ajouter
           </Button>
         </CardFooter>
+        <div className="card-glare absolute inset-0 pointer-events-none"></div>
       </Card>
 
       {/* Dialog pour les options du produit */}
