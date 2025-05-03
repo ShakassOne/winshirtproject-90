@@ -3,12 +3,16 @@ import { supabase } from '@/lib/supabase'; // Using the correct path to the Supa
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
+import { supabaseToAppProduct, appToSupabaseProduct } from '@/lib/dataConverters';
 
 export const createProduct = async (productData: any) => {
   try {
+    // Convertir au format Supabase
+    const supabaseProduct = appToSupabaseProduct(productData);
+    
     const { data, error } = await supabase
-      .from('products') // Remplace 'products' par le nom de ta table
-      .insert([productData]);
+      .from('products')
+      .insert([supabaseProduct]);
 
     if (error) throw error;
 
@@ -22,9 +26,12 @@ export const createProduct = async (productData: any) => {
 
 export const updateProduct = async (productId: number, productData: any) => {
   try {
+    // Convertir au format Supabase
+    const supabaseProduct = appToSupabaseProduct(productData);
+    
     const { data, error } = await supabase
       .from('products')
-      .update(productData)
+      .update(supabaseProduct)
       .eq('id', productId);
 
     if (error) throw error;
@@ -56,7 +63,7 @@ export const deleteProduct = async (productId: number) => {
 
 export const syncProductsToSupabase = async () => {
   try {
-    // Fetch products from localStorage instead of undefined function
+    // Fetch products from localStorage
     const storedProducts = localStorage.getItem('products');
     if (!storedProducts) {
       console.error('No local products found to sync');
@@ -65,10 +72,18 @@ export const syncProductsToSupabase = async () => {
     
     const localProducts = JSON.parse(storedProducts);
     
+    // Transform data to match Supabase schema using converter
+    const supabaseReadyProducts = localProducts.map((product: ExtendedProduct) => 
+      appToSupabaseProduct(product)
+    );
+    
+    console.log('Preparing to sync products with transformed data:', supabaseReadyProducts);
+
     const { data, error } = await supabase
       .from('products')
-      .upsert(localProducts, { 
-        onConflict: 'id' // Fix: use string instead of array
+      .upsert(supabaseReadyProducts, { 
+        onConflict: 'id',
+        ignoreDuplicates: false 
       });
 
     if (error) throw error;
@@ -81,7 +96,7 @@ export const syncProductsToSupabase = async () => {
   }
 };
 
-// Create the useProducts hook that was missing
+// Create the useProducts hook
 export const useProducts = () => {
   const [products, setProducts] = useState<ExtendedProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,34 +113,10 @@ export const useProducts = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Transform data to match ExtendedProduct type if needed
-        const formattedProducts = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || '',
-          price: item.price,
-          image: item.image || '',
-          secondaryImage: item.secondary_image || '',
-          sizes: item.sizes || [],
-          colors: item.colors || [],
-          type: item.type || 'standard',
-          productType: item.product_type || '',
-          sleeveType: item.sleeve_type || '',
-          linkedLotteries: item.linked_lotteries || [],
-          popularity: item.popularity || 0,
-          tickets: item.tickets || 1,
-          weight: item.weight,
-          deliveryPrice: item.delivery_price,
-          allowCustomization: !!item.allow_customization,
-          defaultVisualId: item.default_visual_id,
-          defaultVisualSettings: item.default_visual_settings,
-          visualCategoryId: item.visual_category_id,
-          printAreas: item.print_areas || [],
-          brand: item.brand,
-          fit: item.fit,
-          gender: item.gender,
-          material: item.material,
-        })) as ExtendedProduct[];
+        // Transform data to match ExtendedProduct type using converter
+        const formattedProducts = data.map(item => 
+          supabaseToAppProduct(item)
+        ) as ExtendedProduct[];
         
         setProducts(formattedProducts);
         

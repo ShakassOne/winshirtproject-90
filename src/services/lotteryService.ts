@@ -2,11 +2,12 @@
 import { supabase } from '@/lib/supabase'; // Using the correct path to the Supabase client
 import { useState, useEffect } from 'react';
 import { ExtendedLottery } from '@/types/lottery';
+import { supabaseToAppLottery, appToSupabaseLottery } from '@/lib/dataConverters';
 
 export const getLotteries = async (activeOnly = false) => {
   try {
     const { data, error } = await supabase
-      .from('lotteries') // Remplace 'lotteries' par le nom de ta table
+      .from('lotteries')
       .select('*');
 
     if (error) throw error;
@@ -25,9 +26,12 @@ export const getLotteries = async (activeOnly = false) => {
 
 export const createLottery = async (lotteryData: any) => {
   try {
+    // Convertir au format Supabase
+    const supabaseLottery = appToSupabaseLottery(lotteryData);
+    
     const { data, error } = await supabase
       .from('lotteries')
-      .insert([lotteryData]);
+      .insert([supabaseLottery]);
 
     if (error) throw error;
 
@@ -41,9 +45,12 @@ export const createLottery = async (lotteryData: any) => {
 
 export const updateLottery = async (lotteryId: number, lotteryData: any) => {
   try {
+    // Convertir au format Supabase
+    const supabaseLottery = appToSupabaseLottery(lotteryData);
+    
     const { data, error } = await supabase
       .from('lotteries')
-      .update(lotteryData)
+      .update(supabaseLottery)
       .eq('id', lotteryId);
 
     if (error) throw error;
@@ -75,7 +82,7 @@ export const deleteLottery = async (lotteryId: number) => {
 
 export const syncLotteriesToSupabase = async () => {
   try {
-    // Fetch lotteries from localStorage instead of undefined function
+    // Fetch lotteries from localStorage
     const storedLotteries = localStorage.getItem('lotteries');
     if (!storedLotteries) {
       console.error('No local lotteries found to sync');
@@ -84,10 +91,18 @@ export const syncLotteriesToSupabase = async () => {
     
     const localLotteries = JSON.parse(storedLotteries);
     
+    // Transform data to match Supabase schema using converter
+    const supabaseReadyLotteries = localLotteries.map((lottery: ExtendedLottery) => 
+      appToSupabaseLottery(lottery)
+    );
+    
+    console.log('Preparing to sync lotteries with transformed data:', supabaseReadyLotteries);
+    
     const { data, error } = await supabase
       .from('lotteries')
-      .upsert(localLotteries, { 
-        onConflict: 'id' // Fix: use string instead of array
+      .upsert(supabaseReadyLotteries, { 
+        onConflict: 'id',
+        ignoreDuplicates: false
       });
 
     if (error) throw error;
@@ -100,7 +115,7 @@ export const syncLotteriesToSupabase = async () => {
   }
 };
 
-// Create the useLotteries hook that was missing
+// Create the useLotteries hook
 export const useLotteries = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,21 +131,10 @@ export const useLotteries = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Transform data to match ExtendedLottery type
-        const formattedLotteries = data.map(lottery => ({
-          id: lottery.id,
-          title: lottery.title,
-          description: lottery.description || '',
-          image: lottery.image || '',
-          value: lottery.value,
-          status: lottery.status,
-          featured: lottery.featured || false,
-          targetParticipants: lottery.target_participants,
-          currentParticipants: lottery.current_participants || 0,
-          drawDate: lottery.draw_date,
-          endDate: lottery.end_date,
-          linkedProducts: lottery.linked_products || [],
-        })) as ExtendedLottery[];
+        // Transform data to match ExtendedLottery type using converter
+        const formattedLotteries = data.map(lottery => 
+          supabaseToAppLottery(lottery)
+        ) as ExtendedLottery[];
         
         setLotteries(formattedLotteries);
         
