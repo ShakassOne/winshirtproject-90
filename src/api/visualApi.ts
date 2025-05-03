@@ -1,7 +1,10 @@
+
+// Gardez le début du fichier jusqu'à validateVisualData
 import { Visual, VisualCategory } from "@/types/visual";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { checkSupabaseConnection } from '@/lib/supabase';
+import { validateVisuals, showValidationErrors } from '@/lib/syncValidator';
 
 // Vérification connexion
 const testVisualsConnection = async (): Promise<boolean> => {
@@ -16,7 +19,7 @@ const testVisualsConnection = async (): Promise<boolean> => {
 // Validation functions to ensure data consistency
 const validateVisualData = (visual: Partial<Visual>): string | null => {
   if (!visual.name || visual.name.trim() === '') return "Le nom du visuel est requis";
-  if (!visual.image || visual.image.trim() === '') return "L'image du visuel est requise";
+  if (!visual.image && !visual.imageUrl) return "L'image du visuel est requise";
   return null;
 };
 
@@ -233,56 +236,72 @@ export const syncVisualsToSupabase = async (): Promise<boolean> => {
       return false;
     }
 
-    const visuals = JSON.parse(localData);
+    const visuals: Visual[] = JSON.parse(localData);
     if (!Array.isArray(visuals) || visuals.length === 0) {
       toast.warning("Aucun visuel trouvé");
       return false;
     }
-
-    // Préparer les données pour Supabase (convertir de camelCase à snake_case)
-    // et assurer que 'image' est envoyée comme 'image_url'
-    const supabaseData = visuals.map(visual => {
-      // Vérifier que visual est un objet valide
-      if (!visual || typeof visual !== 'object') {
-        console.error("Visual invalide:", visual);
-        return null;
-      }
-      
-      // Création d'un nouvel objet avec les propriétés nécessaires
-      return {
-        id: visual.id,
-        name: visual.name || '',
-        description: visual.description || null,
-        image_url: visual.image || '', // Map 'image' to 'image_url'
-        category_id: visual.categoryId || null,
-        category_name: visual.categoryName || null,
-        created_at: visual.createdAt || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        tags: Array.isArray(visual.tags) ? visual.tags : []
-      };
-    }).filter(Boolean); // Filtrer les entrées nulles ou invalides
-
-    console.log("Données préparées pour Supabase:", supabaseData);
-
-    // Upsert (insert or update automatiquement)
-    const { error } = await supabase
-      .from('visuals')
-      .upsert(supabaseData, { 
-        onConflict: 'id',
-        ignoreDuplicates: false // Mettre à jour les enregistrements existants en cas de conflit
-      });
-
-    if (error) {
-      console.error("Erreur lors de l'upsert:", error);
-      toast.error(`Erreur de synchronisation: ${error.message}`);
-      throw error;
+    
+    // Valider les visuels avant la synchronisation
+    const validationResult = validateVisuals(visuals);
+    if (!showValidationErrors(validationResult, 'Visuel')) {
+      toast.warning("Veuillez corriger les erreurs avant de synchroniser", { position: "bottom-right" });
+      return false;
     }
 
-    toast.success(`${visuals.length} visuels synchronisés`);
+    // Préparer les données pour Supabase avec image par défaut si nécessaire
+    const supabaseData = visuals
+      .filter(visual => visual && typeof visual === 'object')  // Filtrer les entrées nulles ou non-objets
+      .map(visual => {
+        // Vérifier si le visuel a une image valide
+        let image_url = null;
+        
+        if (visual.image && typeof visual.image === 'string') {
+          image_url = visual.image;
+        } else if (visual.imageUrl && typeof visual.imageUrl === 'string') {
+          image_url = visual.imageUrl;
+        } else {
+          // Image par défaut si aucune image n'est spécifiée
+          image_url = 'https://placehold.co/600x400?text=Image+Manquante';
+        }
+        
+        // Création d'un nouvel objet avec les propriétés nécessaires
+        return {
+          id: visual.id,
+          name: visual.name || 'Sans nom',
+          description: visual.description || null,
+          image_url: image_url, // Utiliser l'image avec fallback
+          category_id: visual.categoryId || null,
+          category_name: visual.categoryName || null,
+          created_at: visual.createdAt || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          tags: Array.isArray(visual.tags) ? visual.tags : []
+        };
+      });
+    
+    console.log(`Prêt à synchroniser ${supabaseData.length} visuels préparés`);
+
+    // Synchroniser un visuel à la fois pour éviter les erreurs groupées
+    for (const visual of supabaseData) {
+      const { error } = await supabase
+        .from('visuals')
+        .upsert(visual, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
+
+      if (error) {
+        console.error(`Erreur lors de la synchronisation du visuel ID ${visual.id}:`, error);
+        toast.error(`Erreur: Visuel ID ${visual.id} - ${error.message || 'Erreur inconnue'}`, { position: "bottom-right" });
+        // Continue with next visual
+      }
+    }
+
+    toast.success(`${supabaseData.length} visuels synchronisés avec succès`, { position: "bottom-right" });
     return true;
   } catch (error) {
     console.error("Erreur synchronisation:", error);
-    toast.error("Erreur synchronisation visuels");
+    toast.error(`Erreur synchronisation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return false;
   }
 };

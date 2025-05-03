@@ -1,6 +1,7 @@
 
 import { ExtendedProduct } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
+import { Visual } from '@/types/visual';
 import { toast } from '@/lib/toast';
 
 /**
@@ -62,7 +63,7 @@ export const validateLotteries = (lotteries: ExtendedLottery[]) => {
  * @param visuals Array of visuals to validate
  * @returns Object containing validation status and any invalid items
  */
-export const validateVisuals = (visuals: any[]) => {
+export const validateVisuals = (visuals: Visual[]) => {
   const invalidVisuals: {id: number, reason: string}[] = [];
   
   visuals.forEach(visual => {
@@ -70,8 +71,10 @@ export const validateVisuals = (visuals: any[]) => {
     if (!visual.name) {
       invalidVisuals.push({id: visual.id, reason: 'Missing name'});
     }
+    
     // Image validation - Critical because of not-null constraint
-    if (!visual.image && !visual.image_url) {
+    // We check both 'image' and 'image_url' fields to handle different formats
+    if (!visual.image && !visual.imageUrl) {
       invalidVisuals.push({id: visual.id, reason: 'Missing image URL'});
     }
   });

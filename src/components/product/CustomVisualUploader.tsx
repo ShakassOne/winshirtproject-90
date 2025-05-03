@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, X, FileType2, Image } from 'lucide-react';
@@ -83,7 +82,24 @@ const CustomVisualUploader: React.FC<CustomVisualUploaderProps> = ({
   };
 
   const handleRemoveFile = () => {
-    onVisualRemove();
+    // Plutôt que de supprimer complètement, utiliser une image par défaut
+    if (onVisualRemove) {
+      // Créer un fichier fictif pour l'image par défaut
+      const defaultImageUrl = 'https://placehold.co/600x400?text=Image+Manquante';
+      
+      // Créer un blob à partir de l'URL d'image par défaut
+      fetch(defaultImageUrl)
+        .then(response => response.blob())
+        .then(blob => {
+          const file = new File([blob], "default-image.png", { type: "image/png" });
+          onVisualUpload(file, defaultImageUrl);
+        })
+        .catch(() => {
+          // En cas d'erreur, informer l'utilisateur mais ne pas laisser l'image vide
+          toast.warning("Image par défaut utilisée");
+          onVisualRemove();
+        });
+    }
   };
 
   // Extension du fichier

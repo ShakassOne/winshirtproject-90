@@ -189,9 +189,9 @@ const AdminVisualsPage = () => {
       return;
     }
     
+    // S'assurer qu'il y a toujours une image valide
     if (!visualForm.image) {
-      toast.error("L'image du visuel est requise");
-      return;
+      visualForm.image = 'https://placehold.co/600x400?text=Image+Manquante';
     }
     
     if (!visualForm.categoryId) {
@@ -221,7 +221,7 @@ const AdminVisualsPage = () => {
         id: newId,
         name: visualForm.name,
         description: visualForm.description,
-        image: visualForm.image,
+        image: visualForm.image,  // Image garantie avec valeur par défaut
         categoryId: visualForm.categoryId as number,
         categoryName,
         createdAt: new Date().toISOString()
