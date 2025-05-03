@@ -196,11 +196,7 @@
   /* Enhanced glassmorphism with 3D tilt effect */
   .enhanced-glass-card {
     @apply border rounded-xl overflow-hidden transition-all duration-500 relative cursor-pointer;
-    background: linear-gradient(
-      to bottom right,
-      rgba(255, 255, 255, 0.6),
-      rgba(233, 233, 233, 0.1)
-    );
+    background:  linear-gradient(to bottom right, #23c8d626, #44c91a1a);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid rgba(255, 255, 255, 0.6);
