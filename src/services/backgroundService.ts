@@ -90,8 +90,6 @@ export const removeBackgroundSetting = (pageId: string): boolean => {
 // Liste des fonds prédéfinis
 export const predefinedBackgrounds = {
   colors: [
-    { name: 'Deep Space Gradient', value: 'linear-gradient(to bottom, #0f0f1a, #2e2e5a)' },
-    { name: 'Purple Horizon', value: 'linear-gradient(135deg, #4a3b78 0%, #7e69AB 100%)' },
     { name: 'Dark Charcoal', value: '#221F26' },
     { name: 'Gris Slider', value: '#1A1F2D' },
     
@@ -99,6 +97,8 @@ export const predefinedBackgrounds = {
   images: [
     { name: 'green', value: 'https://pixelprint.world/wp-content/uploads/2025/04/360_F_740283743_YbR4YLfwl5wS3laOBFIkJjLDLMvWu9nn.jpg' },
     { name: 'Black', value: 'https://pixelprint.world/wp-content/uploads/2025/04/desmumtz11-scaled.jpg' },
+    { name: 'WinShirt', value: 'https://pixelprint.world/wp-content/uploads/2025/05/BackgroundWinShirt.jpg' },
+    
   ]
 };
 
