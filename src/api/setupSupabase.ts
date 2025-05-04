@@ -23,9 +23,10 @@ export const initializeSupabase = async (): Promise<boolean> => {
     } else {
       // Check if admin user exists
       // Fix the type issue by checking if userData and userData.users exist before accessing
+      // Then use type assertion to tell TypeScript that users have an email property
       const adminExists = userData?.users && 
         Array.isArray(userData.users) && 
-        userData.users.some(user => user.email === adminEmail);
+        userData.users.some(user => (user as { email?: string }).email === adminEmail);
       
       if (!adminExists) {
         console.log("L'utilisateur admin n'existe pas, tentative de création...");
