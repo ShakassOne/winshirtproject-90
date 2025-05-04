@@ -35,6 +35,14 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
     });
   };
 
+  // Helper function to ensure we only render strings, not objects
+  const ensureString = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
   return (
     <Card className="winshirt-card p-6">
       <div className="flex justify-between items-center mb-6">
@@ -65,7 +73,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                 <User size={18} className="text-gray-400 mt-1" />
                 <div>
                   <p className="text-gray-400 text-sm">Nom</p>
-                  <p className="text-white text-lg font-medium">{client.name}</p>
+                  <p className="text-white text-lg font-medium">{ensureString(client.name)}</p>
                 </div>
               </div>
               
@@ -73,7 +81,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                 <Mail size={18} className="text-gray-400 mt-1" />
                 <div>
                   <p className="text-gray-400 text-sm">Email</p>
-                  <p className="text-white text-lg">{client.email}</p>
+                  <p className="text-white text-lg">{ensureString(client.email)}</p>
                 </div>
               </div>
               
@@ -82,7 +90,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                   <Phone size={18} className="text-gray-400 mt-1" />
                   <div>
                     <p className="text-gray-400 text-sm">Téléphone</p>
-                    <p className="text-white text-lg">{client.phone}</p>
+                    <p className="text-white text-lg">{ensureString(client.phone)}</p>
                   </div>
                 </div>
               )}
@@ -102,7 +110,10 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                     <MapPin size={18} className="text-gray-400 mt-1" />
                     <div>
                       <p className="text-gray-400 text-sm">Adresse</p>
-                      <p className="text-white text-lg">{client.address}</p>
+                      <p className="text-white text-lg">{typeof client.address === 'object' ? 
+                        (client.address && typeof client.address === 'object' ? ensureString(client.address.address) : '') : 
+                        ensureString(client.address)}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -112,10 +123,10 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                     <MapPin size={18} className="text-gray-400 opacity-0" />
                     <div>
                       <p className="text-white text-lg">
-                        {client.postalCode && `${client.postalCode} `}
-                        {client.city && `${client.city}`}
+                        {client.postalCode && `${ensureString(client.postalCode)} `}
+                        {client.city && `${ensureString(client.city)}`}
                         {client.city && client.country && ', '}
-                        {client.country && `${client.country}`}
+                        {client.country && `${ensureString(client.country)}`}
                       </p>
                     </div>
                   </div>
