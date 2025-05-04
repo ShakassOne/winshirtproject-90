@@ -142,14 +142,15 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       default_visual_settings: product.defaultVisualSettings,
       visual_category_id: product.visualCategoryId,
       print_areas: product.printAreas || [],
-      brand: product.brand, // Ajout du champ brand
-      fit: product.fit, // Ajout du champ fit
-      gender: product.gender, // Ajout du champ gender
-      material: product.material // Ajout du champ material
+      brand: product.brand,
+      fit: product.fit,
+      gender: product.gender,
+      material: product.material
     };
     
     console.log('Données envoyées à Supabase:', supabaseData); // Debug
     
+    // IMPORTANT: Ne pas inclure l'ID lors de la création, laisser Supabase le générer
     const { data, error } = await supabase
       .from('products')
       .insert(supabaseData)
@@ -185,11 +186,11 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       tickets: data.tickets || 1,
       weight: data.weight,
       deliveryPrice: data.delivery_price,
-      allowCustomization: data.allow_customization === true, // Conversion explicite en booléen
+      allowCustomization: data.allow_customization === true,
       defaultVisualId: data.default_visual_id,
       defaultVisualSettings: data.default_visual_settings,
       visualCategoryId: data.visual_category_id,
-      printAreas: data.print_areas || [], // Added to handle the new column
+      printAreas: data.print_areas || [],
       brand: data.brand,
       fit: data.fit,
       gender: data.gender,

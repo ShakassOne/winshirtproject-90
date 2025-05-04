@@ -4,6 +4,8 @@ import { toast } from '@/lib/toast';
 import { Client } from '@/types/client';
 import { EmailService } from '@/lib/emailService';
 import { Order } from '@/types/order';
+import { supabase } from '@/integrations/supabase/client';
+import { isUserAdmin } from '@/api/authApi';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -12,21 +14,46 @@ export const useAuthProvider = () => {
   
   // Initialize auth on component mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+    const checkAuthStatus = async () => {
+      // Check Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // User is authenticated with Supabase
+        const adminStatus = await isUserAdmin();
+        
+        const authUser: User = {
+          id: parseInt(session.user.id, 36) % 10000, // Convert UUID to numeric ID
+          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          role: adminStatus ? 'admin' : 'user',
+          registrationDate: session.user.created_at,
+        };
+        
+        setUser(authUser);
         setIsAuthenticated(true);
-        setIsAdmin(parsedUser?.role === 'admin' || parsedUser?.isAdmin === true);
-      } catch (error) {
-        console.error("Error parsing stored user:", error);
-        // Clear invalid user data
-        localStorage.removeItem('user');
+        setIsAdmin(adminStatus);
+        localStorage.setItem('user', JSON.stringify(authUser));
+        return;
       }
-    }
-
-    // Check if we need to auto-create accounts from client data
+      
+      // Fallback to localStorage check
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+          setIsAdmin(parsedUser?.role === 'admin' || parsedUser?.isAdmin === true);
+        } catch (error) {
+          console.error("Error parsing stored user:", error);
+          localStorage.removeItem('user');
+        }
+      }
+    };
+    
+    checkAuthStatus();
+    // Try to create user accounts from client data
     tryCreateUserAccountsFromClients();
   }, []);
 
@@ -73,63 +100,97 @@ export const useAuthProvider = () => {
     }
   };
   
-  const login = (email: string, password: string) => {
-    // Admin account hardcoded for demo
-    if (email === "admin@winshirt.fr" && password === "admin123") {
-      const adminUser: User = {
-        id: 1,
-        name: "Administrateur",
-        email: email,
-        role: 'admin',
-        registrationDate: new Date().toISOString(),
-      };
+  const login = async (email: string, password: string) => {
+    try {
+      // Try login with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      setUser(adminUser);
-      setIsAuthenticated(true);
-      setIsAdmin(true);
-      localStorage.setItem('user', JSON.stringify(adminUser));
-      
-      toast.success("Connecté en tant qu'administrateur");
-      return;
-    }
-    
-    // Check if this is a client user
-    const clientUserStr = localStorage.getItem(`user_${email}`);
-    if (clientUserStr && password.length >= 1) { // Simple password check for demo
-      try {
-        const clientUser = JSON.parse(clientUserStr);
-        setUser(clientUser);
-        setIsAuthenticated(true);
-        setIsAdmin(false);
-        localStorage.setItem('user', JSON.stringify(clientUser));
+      if (error) {
+        console.error("Erreur de connexion Supabase:", error);
         
-        toast.success("Connexion réussie en tant que client");
+        // Admin account hardcoded for demo and fallback
+        if (email === "alan@shakass.com" && password === "admin123") {
+          const adminUser: User = {
+            id: 1,
+            name: "Administrateur",
+            email: email,
+            role: 'admin',
+            registrationDate: new Date().toISOString(),
+          };
+          
+          setUser(adminUser);
+          setIsAuthenticated(true);
+          setIsAdmin(true);
+          localStorage.setItem('user', JSON.stringify(adminUser));
+          
+          toast.success("Connecté en tant qu'administrateur");
+          return;
+        }
+        
+        // Check if this is a client user
+        const clientUserStr = localStorage.getItem(`user_${email}`);
+        if (clientUserStr && password.length >= 1) { // Simple password check for demo
+          try {
+            const clientUser = JSON.parse(clientUserStr);
+            setUser(clientUser);
+            setIsAuthenticated(true);
+            setIsAdmin(false);
+            localStorage.setItem('user', JSON.stringify(clientUser));
+            
+            toast.success("Connexion réussie en tant que client");
+            return;
+          } catch (error) {
+            console.error("Error parsing client user:", error);
+          }
+        }
+        
+        // Demo user account for other cases
+        if (email && password.length >= 6) {
+          const demoUser: User = {
+            id: Math.floor(Math.random() * 1000) + 2,
+            name: email.split('@')[0],
+            email: email,
+            role: 'user',
+            registrationDate: new Date().toISOString(),
+          };
+          
+          setUser(demoUser);
+          setIsAuthenticated(true);
+          setIsAdmin(false);
+          localStorage.setItem('user', JSON.stringify(demoUser));
+          
+          toast.success("Connexion réussie");
+          return;
+        }
+        
+        toast.error("Identifiants invalides. Essayez admin@winshirt.com / admin123 pour un accès admin ou utilisez un email de client.");
         return;
-      } catch (error) {
-        console.error("Error parsing client user:", error);
       }
-    }
-    
-    // Demo user account for other cases
-    if (email && password.length >= 6) {
-      const demoUser: User = {
-        id: Math.floor(Math.random() * 1000) + 2,
-        name: email.split('@')[0],
-        email: email,
-        role: 'user',
-        registrationDate: new Date().toISOString(),
+      
+      // Successful login with Supabase
+      const adminStatus = await isUserAdmin();
+      
+      const authUser: User = {
+        id: parseInt(data.user.id, 36) % 10000, // Convert UUID to numeric ID
+        name: data.user.user_metadata.full_name || data.user.email?.split('@')[0] || 'User',
+        email: data.user.email || '',
+        role: adminStatus ? 'admin' : 'user',
+        registrationDate: data.user.created_at,
       };
       
-      setUser(demoUser);
+      setUser(authUser);
       setIsAuthenticated(true);
-      setIsAdmin(false);
-      localStorage.setItem('user', JSON.stringify(demoUser));
+      setIsAdmin(adminStatus);
+      localStorage.setItem('user', JSON.stringify(authUser));
       
-      toast.success("Connexion réussie");
-      return;
+      toast.success("Connexion réussie!");
+    } catch (error) {
+      console.error("Erreur lors de la connexion:", error);
+      toast.error("Une erreur est survenue lors de la connexion");
     }
-    
-    toast.error("Identifiants invalides. Essayez admin@winshirt.com / admin123 pour un accès admin ou utilisez un email de client.");
   };
   
   const register = async (name: string, email: string, password: string): Promise<User> => {
@@ -228,12 +289,13 @@ export const useAuthProvider = () => {
     toast.success("Déconnexion réussie");
   };
   
+  // Here we ensure getAllUsers returns the admin user too
   const getAllUsers = useCallback((): User[] => {
     // For demo purposes only - would fetch from an API in a real app
     const adminUser: User = {
       id: 1,
       name: "Administrateur",
-      email: "admin@winshirt.com",
+      email: "alan@shakass.com", // Updated admin email
       role: 'admin',
       registrationDate: "2023-01-01T00:00:00.000Z",
     };

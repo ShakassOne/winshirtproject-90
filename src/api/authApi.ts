@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
@@ -107,7 +106,31 @@ export const isUserAdmin = async () => {
     
     if (error) throw error;
     
-    return data?.user?.user_metadata?.isAdmin === true;
+    // Check if user has isAdmin in metadata
+    if (data?.user?.user_metadata?.isAdmin === true) {
+      return true;
+    }
+    
+    // Check if user's email is the admin email
+    if (data?.user?.email === 'alan@shakass.com') {
+      // Update the user metadata to set them as admin
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { 
+          isAdmin: true,
+          full_name: data.user.user_metadata.full_name || 'Admin'
+        }
+      });
+      
+      if (updateError) {
+        console.error('Error setting user as admin:', updateError);
+        return false;
+      }
+      
+      console.log('User was set as admin successfully');
+      return true;
+    }
+    
+    return false;
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;

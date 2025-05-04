@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -280,7 +279,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
                 </div>
                 <div className="text-sm text-amber-400 mt-2">
                   <p>Pour tester en tant qu'admin:</p>
-                  <p>Email: admin@winshirt.com</p>
+                  <p>Email: alan@shakass.com</p>
                   <p>Mot de passe: admin123</p>
                 </div>
                 <Button 

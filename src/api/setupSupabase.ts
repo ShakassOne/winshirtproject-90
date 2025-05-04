@@ -13,6 +13,24 @@ export const initializeSupabase = async (): Promise<boolean> => {
       return false;
     }
 
+    // Vérifier et créer l'utilisateur admin si nécessaire
+    const adminEmail = 'alan@shakass.com';
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    
+    if (userError) {
+      console.error("Erreur lors de la vérification des utilisateurs:", userError);
+      // Continue with other initialization steps
+    } else {
+      // Check if admin user exists
+      const adminExists = userData?.users?.some(user => user.email === adminEmail);
+      
+      if (!adminExists) {
+        console.log("L'utilisateur admin n'existe pas, tentative de création...");
+        // Note: Admin user creation typically requires server-side API access
+        // For security reasons, this is usually done via a secure backend API or dashboard
+      }
+    }
+
     // Créer la fonction increment_lottery_participants si elle n'existe pas déjà
     const { error: fnError } = await supabase.rpc('create_increment_function');
     if (fnError) {
