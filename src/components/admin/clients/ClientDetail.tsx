@@ -113,8 +113,9 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                     <div>
                       <p className="text-white text-lg">
                         {client.postalCode && `${client.postalCode} `}
-                        {client.city && `${client.city}, `}
-                        {client.country}
+                        {client.city && `${client.city}`}
+                        {client.city && client.country && ', '}
+                        {client.country && `${client.country}`}
                       </p>
                     </div>
                   </div>
