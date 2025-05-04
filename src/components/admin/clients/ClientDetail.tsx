@@ -162,7 +162,9 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                 <CreditCard size={18} className="text-gray-400 mt-1" />
                 <div>
                   <p className="text-gray-400 text-sm">Montant total dépensé</p>
-                  <p className="text-white text-lg font-medium">{client.totalSpent.toFixed(2)} €</p>
+                  <p className="text-white text-lg font-medium">
+                    {client.totalSpent !== undefined ? `${client.totalSpent.toFixed(2)} €` : '0.00 €'}
+                  </p>
                 </div>
               </div>
             </div>
