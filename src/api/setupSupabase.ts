@@ -22,7 +22,10 @@ export const initializeSupabase = async (): Promise<boolean> => {
       // Continue with other initialization steps
     } else {
       // Check if admin user exists
-      const adminExists = userData?.users?.some(user => user.email === adminEmail);
+      // Fix the type issue by checking if userData and userData.users exist before accessing
+      const adminExists = userData?.users && 
+        Array.isArray(userData.users) && 
+        userData.users.some(user => user.email === adminEmail);
       
       if (!adminExists) {
         console.log("L'utilisateur admin n'existe pas, tentative de création...");
