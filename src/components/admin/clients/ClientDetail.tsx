@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -41,6 +40,21 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
     if (typeof value === 'string') return value;
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
+  };
+
+  // Helper function to extract address from potentially complex address object
+  const extractAddressString = (addressData: any): string => {
+    if (addressData === null || addressData === undefined) return '';
+    if (typeof addressData === 'string') return addressData;
+    if (typeof addressData === 'object') {
+      // Handle case where address is an object with an 'address' property
+      if (addressData.address && typeof addressData.address === 'string') {
+        return addressData.address;
+      }
+      // Otherwise convert the whole object to a string
+      return JSON.stringify(addressData);
+    }
+    return String(addressData);
   };
 
   return (
@@ -110,10 +124,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, onClose }) => {
                     <MapPin size={18} className="text-gray-400 mt-1" />
                     <div>
                       <p className="text-gray-400 text-sm">Adresse</p>
-                      <p className="text-white text-lg">{typeof client.address === 'object' ? 
-                        (client.address && typeof client.address === 'object' ? ensureString(client.address.address) : '') : 
-                        ensureString(client.address)}
-                      </p>
+                      <p className="text-white text-lg">{extractAddressString(client.address)}</p>
                     </div>
                   </div>
                 )}
