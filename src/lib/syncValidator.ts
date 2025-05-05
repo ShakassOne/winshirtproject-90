@@ -1,84 +1,74 @@
 
-import { Visual, VisualCategory } from '@/types/visual';
-import { toast } from '@/lib/toast';
-
 /**
- * Validates that visual categories meet the required format
+ * Show validation errors as toast messages
+ * @param validationResult The validation result object
+ * @param entityName The name of the entity being validated (for display purposes)
+ * @returns Boolean indicating if validation passed
  */
-export const validateVisualCategories = (categories: any[]): boolean => {
-  if (!Array.isArray(categories)) return false;
+export const showValidationErrors = (validationResult: any, entityName: string = 'Item'): boolean => {
+  // If no validation result or validation passed
+  if (!validationResult || validationResult.valid) {
+    return true;
+  }
   
-  return categories.every(category => {
-    return (
-      typeof category === 'object' &&
-      'id' in category &&
-      'name' in category &&
-      typeof category.name === 'string'
-    );
-  });
-};
-
-/**
- * Validates that visuals meet the required format
- */
-export const validateVisuals = (visuals: any[]): boolean => {
-  if (!Array.isArray(visuals)) return false;
-  
-  return visuals.every(visual => {
-    return (
-      typeof visual === 'object' &&
-      'id' in visual &&
-      'name' in visual &&
-      'image' in visual &&
-      typeof visual.name === 'string' &&
-      typeof visual.image === 'string'
-    );
-  });
-};
-
-/**
- * Validates lotteries data format
- */
-export const validateLotteries = (lotteries: any[]): boolean => {
-  if (!Array.isArray(lotteries)) return false;
-  
-  return lotteries.every(lottery => {
-    return (
-      typeof lottery === 'object' &&
-      'id' in lottery &&
-      'title' in lottery &&
-      'status' in lottery &&
-      typeof lottery.title === 'string'
-    );
-  });
-};
-
-/**
- * Validates products data format
- */
-export const validateProducts = (products: any[]): boolean => {
-  if (!Array.isArray(products)) return false;
-  
-  return products.every(product => {
-    return (
-      typeof product === 'object' &&
-      'id' in product &&
-      'name' in product &&
-      'price' in product &&
-      typeof product.name === 'string' &&
-      typeof product.price === 'number'
-    );
-  });
-};
-
-/**
- * Shows validation errors as toast messages and returns validation result
- */
-export const showValidationErrors = (isValid: boolean, entityName: string): boolean => {
-  if (!isValid) {
-    console.error(`${entityName} validation failed`);
-    toast.error(`Validation des ${entityName}s a échoué. Vérifiez le format de vos données.`);
+  // Show errors in toast messages
+  if (validationResult.errors && validationResult.errors.length > 0) {
+    // Display the first error message
+    console.error(`Validation error for ${entityName}:`, validationResult.errors[0]);
     return false;
   }
+  
   return true;
+};
+
+/**
+ * Validate products before syncing to Supabase
+ * @param products Array of products to validate
+ * @returns Validation result object
+ */
+export const validateProducts = (products: any[]) => {
+  const errors = [];
+  
+  // Validate each product
+  for (const product of products) {
+    // Required fields check
+    if (!product.name) {
+      errors.push(`Product ID ${product.id || 'unknown'} is missing a name`);
+    }
+    
+    if (!product.price && product.price !== 0) {
+      errors.push(`Product ${product.name || `ID ${product.id || 'unknown'}`} is missing a price`);
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Validate visuals before syncing to Supabase
+ * @param visuals Array of visuals to validate
+ * @returns Validation result object
+ */
+export const validateVisuals = (visuals: any[]) => {
+  const errors = [];
+  
+  // Validate each visual
+  for (const visual of visuals) {
+    // Required fields check
+    if (!visual.name) {
+      errors.push(`Visual ID ${visual.id || 'unknown'} is missing a name`);
+    }
+    
+    if (!visual.image && !visual.image_url) {
+      errors.push(`Visual ${visual.name || `ID ${visual.id || 'unknown'}`} is missing an image`);
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 };

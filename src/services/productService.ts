@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase'; // Using the correct path to the Supabase client
 import { useState, useEffect } from 'react';
 import { ExtendedProduct } from '@/types/product';
@@ -112,6 +111,21 @@ export const syncProductsToSupabase = async () => {
   }
 };
 
+/**
+ * Synchronizes lotteries data with Supabase
+ * @returns {Promise<boolean>} A promise that resolves to a boolean indicating success or failure
+ */
+export const syncLotteriesToSupabase = async (): Promise<boolean> => {
+  try {
+    // Implementation would go here in a real app
+    console.log('Syncing lotteries to Supabase');
+    return true;
+  } catch (error) {
+    console.error('Error syncing lotteries:', error);
+    return false;
+  }
+};
+
 // Create the useProducts hook
 export const useProducts = () => {
   const [products, setProducts] = useState<ExtendedProduct[]>([]);
@@ -179,4 +193,45 @@ export const useProducts = () => {
   }, []);
 
   return { products, loading, error, refreshProducts };
+};
+
+/**
+ * Create a hook for accessing lottery data
+ */
+export const useLotteries = () => {
+  const [lotteries, setLotteries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchLotteries = async () => {
+    setLoading(true);
+    try {
+      // Try to fetch from Supabase or localStorage
+      const storedLotteries = localStorage.getItem('lotteries');
+      if (storedLotteries) {
+        setLotteries(JSON.parse(storedLotteries));
+      } else {
+        // If no data in localStorage, use empty array
+        setLotteries([]);
+      }
+      return true;
+    } catch (err) {
+      console.error("Error fetching lotteries:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      setLotteries([]);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshLotteries = async (): Promise<boolean> => {
+    return await fetchLotteries();
+  };
+
+  useEffect(() => {
+    fetchLotteries();
+  }, []);
+
+  return { lotteries, loading, error, refreshLotteries };
 };

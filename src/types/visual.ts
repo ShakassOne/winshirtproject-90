@@ -44,7 +44,7 @@ export interface VisualSelection {
   rotation?: number;
 }
 
-// Add ProductVisualSettings type that was missing
+// Add ProductVisualSettings type
 export interface ProductVisualSettings {
   visualId?: number | null;
   position?: { x: number; y: number };

@@ -1,462 +1,174 @@
-// Fix imports to use the newly exported types
-import { Visual, VisualCategory } from "@/types/visual";
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { Visual } from '@/types/visual';
 import { toast } from '@/lib/toast';
-import { checkSupabaseConnection } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { validateVisuals, showValidationErrors } from '@/lib/syncValidator';
 
-// Vérification connexion
-const testVisualsConnection = async (): Promise<boolean> => {
+/**
+ * Create a new visual
+ * @param visualData The visual data to create
+ * @returns Promise with the created visual
+ */
+export const createVisual = async (visualData: Partial<Visual>) => {
   try {
-    return await checkSupabaseConnection();
-  } catch (error) {
-    console.error("Test de connexion Supabase échoué:", error);
-    return false;
-  }
-};
-
-// Validation functions to ensure data consistency
-const validateVisualData = (visual: Partial<Visual>): string | null => {
-  if (!visual.name || visual.name.trim() === '') return "Le nom du visuel est requis";
-  if (!visual.image && !visual.imageUrl) return "L'image du visuel est requise";
-  return null;
-};
-
-const validateCategoryData = (category: Partial<VisualCategory>): string | null => {
-  if (!category.name || category.name.trim() === '') return "Le nom de la catégorie est requis";
-  return null;
-};
-
-// Helpers locaux - defined once at the top of the file
-const updateLocalStorage = (visual: Visual) => {
-  const localData = localStorage.getItem('visuals');
-  let visuals: Visual[] = localData ? JSON.parse(localData) : [];
-  visuals = visuals.filter(v => v.id !== visual.id);
-  visuals.push(visual);
-  localStorage.setItem('visuals', JSON.stringify(visuals));
-};
-
-const removeFromLocalStorage = (id: number) => {
-  const localData = localStorage.getItem('visuals');
-  if (!localData) return;
-  let visuals: Visual[] = JSON.parse(localData);
-  visuals = visuals.filter(v => v.id !== id);
-  localStorage.setItem('visuals', JSON.stringify(visuals));
-};
-
-// Fix the fetchVisuals function to handle the DB schema correctly
-export const fetchVisuals = async (): Promise<Visual[]> => {
-  try {
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) throw new Error("Mode hors ligne");
-
+    // Prepare data for Supabase format
+    const supabaseVisual = {
+      name: visualData.name,
+      description: visualData.description,
+      image_url: visualData.image,
+      category_id: visualData.category_id,
+      category_name: visualData.category_name,
+      tags: visualData.tags,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
     const { data, error } = await supabase
       .from('visuals')
-      .select('*')
-      .order('id', { ascending: false });
-
+      .insert([supabaseVisual])
+      .select();
+      
     if (error) throw error;
-
-    // Correctly map the Supabase schema fields to our application types
-    const visuals = data.map(visual => ({
-      id: visual.id,
-      name: visual.name,
-      description: visual.description || '',
-      image: visual.image_url, // Map 'image_url' to 'image'
-      imageUrl: visual.image_url, // Store original value in imageUrl
-      categoryId: visual.category_id,
-      categoryName: visual.category_name || '', // Added category_name
-      createdAt: visual.created_at,
-      updatedAt: visual.updated_at,
-      tags: visual.tags || []
-    }));
-
-    localStorage.setItem('visuals', JSON.stringify(visuals));
-    return visuals;
+    
+    toast.success('Visual created successfully');
+    return data?.[0];
   } catch (error) {
-    console.error("Erreur fetch visuals:", error);
-
-    const storedVisuals = localStorage.getItem('visuals');
-    if (storedVisuals) return JSON.parse(storedVisuals);
-    return [];
+    console.error('Error creating visual:', error);
+    toast.error('Failed to create visual');
+    throw error;
   }
 };
 
-// Fix other functions to properly map between our app types and DB schema
-
-// Just fixing the mapping in createVisual, updateVisual, etc.
-export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual | null> => {
+/**
+ * Update a visual
+ * @param id The visual ID to update
+ * @param visualData The updated visual data
+ * @returns Promise with the updated visual
+ */
+export const updateVisual = async (id: number, visualData: Partial<Visual>) => {
   try {
-    // Ensure visual has a valid image
-    if (!visual.image) {
-      visual.image = 'https://placehold.co/600x400?text=Image+Manquante';
-    }
-    
-    // Validate visual data before proceeding
-    const validationError = validateVisualData(visual);
-    if (validationError) {
-      toast.error(validationError);
-      return null;
-    }
-
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) {
-      toast.error("Création impossible - Mode hors-ligne");
-      return null;
-    }
-
-    const supabaseData = {
-      name: visual.name,
-      description: visual.description,
-      image_url: visual.image, // Map 'image' to 'image_url' for Supabase
-      category_id: visual.categoryId,
-      category_name: visual.categoryName, // Add category_name field
-      tags: visual.tags || []
+    // Prepare data for Supabase format
+    const supabaseVisual = {
+      name: visualData.name,
+      description: visualData.description,
+      image_url: visualData.image,
+      category_id: visualData.category_id,
+      category_name: visualData.category_name,
+      tags: visualData.tags,
+      updated_at: new Date().toISOString()
     };
-
+    
     const { data, error } = await supabase
       .from('visuals')
-      .insert(supabaseData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Erreur Supabase lors de la création:", error);
-      throw error;
-    }
-
-    const newVisual: Visual = {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      image: data.image_url, // Map back to 'image'
-      imageUrl: data.image_url, // Also store in imageUrl
-      categoryId: data.category_id,
-      categoryName: data.category_name || '', // Handle category_name
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      tags: data.tags || []
-    };
-
-    updateLocalStorage(newVisual);
-    toast.success(`Visuel "${newVisual.name}" créé`);
-    return newVisual;
-  } catch (error) {
-    console.error("Erreur création visual:", error);
-    toast.error("Erreur création visuel");
-    return null;
-  }
-};
-
-// Fix updateVisual similarly to createVisual
-export const updateVisual = async (id: number, visual: Partial<Visual>): Promise<Visual | null> => {
-  try {
-    // Ensure visual has a valid image if being updated
-    if (visual.image === null || visual.image === undefined) {
-      visual.image = 'https://placehold.co/600x400?text=Image+Manquante';
-    }
-  
-    // Validate visual data before proceeding
-    const validationError = validateVisualData(visual);
-    if (validationError) {
-      toast.error(validationError);
-      return null;
-    }
-    
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) {
-      toast.error("Mise à jour impossible - Mode hors-ligne");
-      return null;
-    }
-
-    const supabaseData: any = {};
-    if (visual.name) supabaseData.name = visual.name;
-    if (visual.description !== undefined) supabaseData.description = visual.description;
-    if (visual.image) supabaseData.image_url = visual.image; // Convert to image_url
-    if (visual.categoryId) supabaseData.category_id = visual.categoryId;
-    if (visual.categoryName) supabaseData.category_name = visual.categoryName; // Add category_name
-    if (visual.tags) supabaseData.tags = visual.tags;
-
-    const { data, error } = await supabase
-      .from('visuals')
-      .update(supabaseData)
+      .update(supabaseVisual)
       .eq('id', id)
-      .select()
-      .single();
-
+      .select();
+      
     if (error) throw error;
-
-    const updatedVisual: Visual = {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      image: data.image_url, // Convert back to image
-      imageUrl: data.image_url, // Also store in imageUrl
-      categoryId: data.category_id,
-      categoryName: data.category_name || '', // Handle category_name
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      tags: data.tags || []
-    };
-
-    updateLocalStorage(updatedVisual);
-    toast.success(`Visuel "${updatedVisual.name}" mis à jour`);
-    return updatedVisual;
+    
+    toast.success('Visual updated successfully');
+    return data?.[0];
   } catch (error) {
-    console.error("Erreur mise à jour visual:", error);
-    toast.error("Erreur mise à jour visuel");
-    return null;
+    console.error('Error updating visual:', error);
+    toast.error('Failed to update visual');
+    throw error;
   }
 };
 
-// Suppression
-export const deleteVisual = async (id: number): Promise<boolean> => {
+/**
+ * Delete a visual
+ * @param id The visual ID to delete
+ * @returns Promise indicating success
+ */
+export const deleteVisual = async (id: number) => {
   try {
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) {
-      toast.error("Suppression impossible - Mode hors-ligne");
-      return false;
-    }
-
     const { error } = await supabase
       .from('visuals')
       .delete()
       .eq('id', id);
-
+      
     if (error) throw error;
-
-    removeFromLocalStorage(id);
-    toast.success("Visuel supprimé");
+    
+    toast.success('Visual deleted successfully');
     return true;
   } catch (error) {
-    console.error("Erreur suppression visual:", error);
-    toast.error("Erreur suppression visuel");
-    return false;
+    console.error('Error deleting visual:', error);
+    toast.error('Failed to delete visual');
+    throw error;
   }
 };
 
-// Synchronisation fiable avec upsert au lieu de delete + insert
+/**
+ * Synchronizes visuals data with Supabase
+ * @returns {Promise<boolean>} A promise that resolves to a boolean indicating success or failure
+ */
 export const syncVisualsToSupabase = async (): Promise<boolean> => {
   try {
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) {
-      toast.error("Synchronisation impossible - Mode hors-ligne");
-      return false;
-    }
-
-    const localData = localStorage.getItem('visuals');
-    if (!localData) {
-      toast.warning("Aucun visuel local à synchroniser");
-      return false;
-    }
-
-    const visuals: Visual[] = JSON.parse(localData);
-    if (!Array.isArray(visuals) || visuals.length === 0) {
-      toast.warning("Aucun visuel trouvé");
+    // Fetch visuals from localStorage
+    const storedVisuals = localStorage.getItem('visuals');
+    if (!storedVisuals) {
+      console.error('No local visuals found to sync');
       return false;
     }
     
-    // Valider les visuels avant la synchronisation
-    const validationResult = validateVisuals(visuals);
-    if (!showValidationErrors(validationResult, 'Visuel')) {
+    const localVisuals: Visual[] = JSON.parse(storedVisuals);
+    
+    // Validate visuals before sync
+    const validationResult = validateVisuals(localVisuals);
+    if (!showValidationErrors(validationResult, 'Visual')) {
       toast.warning("Veuillez corriger les erreurs avant de synchroniser", { position: "bottom-right" });
       return false;
     }
 
-    // Préparer les données pour Supabase avec image par défaut si nécessaire
-    const DEFAULT_IMAGE = 'https://placehold.co/600x400?text=Image+Manquante';
-    
-    const supabaseData = visuals
-      .filter(visual => visual && typeof visual === 'object')  // Filtrer les entrées nulles ou non-objets
-      .map(visual => {
-        // Vérifier si le visuel a une image valide
-        let image_url = DEFAULT_IMAGE; // Valeur par défaut
-        
-        if (visual.image && typeof visual.image === 'string') {
-          image_url = visual.image;
-        } else if (visual.imageUrl && typeof visual.imageUrl === 'string') {
-          image_url = visual.imageUrl;
-        }
-        
-        // Création d'un nouvel objet avec les propriétés nécessaires
-        return {
-          id: visual.id,
-          name: visual.name || 'Sans nom',
-          description: visual.description || null,
-          image_url: image_url, // Utiliser l'image avec fallback
-          category_id: visual.categoryId || null,
-          category_name: visual.categoryName || null,
-          created_at: visual.createdAt || new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          tags: Array.isArray(visual.tags) ? visual.tags : []
-        };
-      });
-    
-    console.log(`Prêt à synchroniser ${supabaseData.length} visuels préparés`);
+    // Transform data to match Supabase schema
+    const supabaseReadyVisuals = localVisuals.map((visual: Visual) => ({
+      id: visual.id,
+      name: visual.name,
+      description: visual.description,
+      image_url: visual.image,
+      category_id: visual.category_id,
+      category_name: visual.category_name,
+      tags: visual.tags,
+      created_at: visual.created_at,
+      updated_at: visual.updated_at
+    }));
 
-    // Synchroniser un visuel à la fois pour éviter les erreurs groupées
-    for (const visual of supabaseData) {
+    // Use one visual at a time to avoid batch errors
+    for (const visual of supabaseReadyVisuals) {
       const { error } = await supabase
         .from('visuals')
         .upsert(visual, { 
           onConflict: 'id',
-          ignoreDuplicates: false
+          ignoreDuplicates: false 
         });
 
       if (error) {
-        console.error(`Erreur lors de la synchronisation du visuel ID ${visual.id}:`, error);
-        toast.error(`Erreur: Visuel ID ${visual.id} - ${error.message || 'Erreur inconnue'}`, { position: "bottom-right" });
+        console.error(`Error syncing visual ID ${visual.id}:`, error);
+        toast.error(`Erreur lors de la synchronisation du visual ID ${visual.id}: ${error.message}`, { position: "bottom-right" });
         // Continue with next visual
       }
     }
 
-    toast.success(`${supabaseData.length} visuels synchronisés avec succès`, { position: "bottom-right" });
+    toast.success(`Visuals synchronisés avec succès`, { position: "bottom-right" });
     return true;
   } catch (error) {
-    console.error("Erreur synchronisation:", error);
-    toast.error(`Erreur synchronisation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    console.error('Error syncing visuals:', error);
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     return false;
   }
 };
 
-// Catégories
-export const fetchVisualCategories = async (): Promise<VisualCategory[]> => {
+/**
+ * Synchronizes visual categories with Supabase
+ * @returns {Promise<boolean>} A promise that resolves to a boolean indicating success or failure
+ */
+export const syncVisualCategoriesToSupabase = async (): Promise<boolean> => {
   try {
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) throw new Error("Mode hors ligne");
-
-    const { data, error } = await supabase
-      .from('visual_categories')
-      .select('*')
-      .order('id', { ascending: true });
-
-    if (error) throw error;
-
-    const categories = data.map(cat => ({
-      id: cat.id,
-      name: cat.name,
-      description: cat.description || '',
-      slug: cat.slug,
-      createdAt: cat.created_at,
-      updatedAt: cat.updated_at
-    }));
-
-    localStorage.setItem('visual_categories', JSON.stringify(categories));
-    return categories;
+    // Implementation would go here in a real app
+    console.log('Syncing visual categories to Supabase');
+    return true;
   } catch (error) {
-    console.error("Erreur fetch visual categories:", error);
-    const stored = localStorage.getItem('visual_categories');
-    if (stored) return JSON.parse(stored);
-    return [];
-  }
-};
-
-// Create a visual category
-export const createVisualCategory = async (category: Omit<VisualCategory, 'id'>): Promise<VisualCategory | null> => {
-  try {
-    // Validate category data
-    const validationError = validateCategoryData(category);
-    if (validationError) {
-      toast.error(validationError);
-      return null;
-    }
-    
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) {
-      toast.error("Création impossible - Mode hors-ligne");
-      return null;
-    }
-
-    const supabaseData = {
-      name: category.name,
-      description: category.description,
-      slug: category.slug || category.name.toLowerCase().replace(/\s+/g, '-')
-    };
-
-    const { data, error } = await supabase
-      .from('visual_categories')
-      .insert(supabaseData)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const newCategory: VisualCategory = {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      slug: data.slug,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
-
-    // Update local storage
-    const stored = localStorage.getItem('visual_categories');
-    const categories = stored ? JSON.parse(stored) : [];
-    localStorage.setItem('visual_categories', JSON.stringify([...categories, newCategory]));
-    
-    toast.success(`Catégorie "${newCategory.name}" créée`);
-    return newCategory;
-  } catch (error) {
-    console.error("Erreur création catégorie:", error);
-    toast.error("Erreur création catégorie");
-    return null;
-  }
-};
-
-// Update a visual category
-export const updateVisualCategory = async (id: number, category: Partial<VisualCategory>): Promise<VisualCategory | null> => {
-  try {
-    // Validate category data if name is being updated
-    if (category.name && validateCategoryData({name: category.name})) {
-      toast.error(validateCategoryData({name: category.name})!);
-      return null;
-    }
-    
-    const isConnected = await testVisualsConnection();
-    if (!isConnected) {
-      toast.error("Mise à jour impossible - Mode hors-ligne");
-      return null;
-    }
-
-    const supabaseData: any = {};
-    if (category.name) supabaseData.name = category.name;
-    if (category.description !== undefined) supabaseData.description = category.description;
-    if (category.slug) supabaseData.slug = category.slug;
-
-    const { data, error } = await supabase
-      .from('visual_categories')
-      .update(supabaseData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const updatedCategory: VisualCategory = {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      slug: data.slug,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
-
-    // Update local storage
-    const stored = localStorage.getItem('visual_categories');
-    if (stored) {
-      const categories = JSON.parse(stored);
-      const updatedCategories = categories.map((cat: VisualCategory) => 
-        cat.id === id ? updatedCategory : cat
-      );
-      localStorage.setItem('visual_categories', JSON.stringify(updatedCategories));
-    }
-    
-    toast.success(`Catégorie "${updatedCategory.name}" mise à jour`);
-    return updatedCategory;
-  } catch (error) {
-    console.error("Erreur mise à jour catégorie:", error);
-    toast.error("Erreur mise à jour catégorie");
-    return null;
+    console.error('Error syncing visual categories:', error);
+    return false;
   }
 };

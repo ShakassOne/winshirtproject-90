@@ -1,4 +1,3 @@
-
 // Import all necessary dependencies
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,8 +11,19 @@ import { DatabaseTables } from '@/types/database.types';
 import { Client } from '@/types/client';
 import { syncProductsAndLotteries } from '@/lib/linkSynchronizer';
 
-// Let's define a proper type mapping for the client data
-type ExtendedClientData = DatabaseTables['clients'] & {
+// Define a proper type for the client data directly in the file
+type ClientData = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
   orderCount?: number;
   totalSpent?: number;
   participatedLotteries?: number[];
@@ -73,7 +83,7 @@ const CartPage: React.FC = () => {
 
   const handleClientData = (data: DatabaseTables['clients']): Client => {
     // Cast to our extended type which includes the optional fields
-    const extendedData = data as ExtendedClientData;
+    const extendedData = data as any;
     
     return {
       id: extendedData.id,

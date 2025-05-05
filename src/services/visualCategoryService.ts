@@ -1,90 +1,56 @@
 
-import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
 import { VisualCategory } from '@/types/visual';
 import { toast } from '@/lib/toast';
+import { supabase } from '@/integrations/supabase/client';
 
-// Create visual category
-export const createVisualCategory = async (data: Partial<VisualCategory>) => {
-  try {
-    const { data: result, error } = await supabase
-      .from('visual_categories')
-      .insert([data]);
-
-    if (error) throw error;
-    
-    return result;
-  } catch (error) {
-    console.error('Error creating visual category:', error);
-    throw error;
-  }
-};
-
-// Update visual category
-export const updateVisualCategory = async (id: number, data: Partial<VisualCategory>) => {
-  try {
-    const { data: result, error } = await supabase
-      .from('visual_categories')
-      .update(data)
-      .eq('id', id);
-
-    if (error) throw error;
-    
-    return result;
-  } catch (error) {
-    console.error('Error updating visual category:', error);
-    throw error;
-  }
-};
-
-// Delete visual category
-export const deleteVisualCategory = async (id: number) => {
-  try {
-    const { data, error } = await supabase
-      .from('visual_categories')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    
-    return data;
-  } catch (error) {
-    console.error('Error deleting visual category:', error);
-    throw error;
-  }
-};
-
-// Get all visual categories hook
+/**
+ * Hook to fetch and manage visual categories
+ */
 export const useVisualCategories = () => {
-  const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
+  const [categories, setCategories] = useState<VisualCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchVisualCategories = async () => {
+  const fetchCategories = async () => {
     setLoading(true);
     try {
       // Try to fetch from Supabase first
       const { data, error } = await supabase
         .from('visual_categories')
-        .select('*')
-        .order('name');
+        .select('*');
       
       if (error) throw error;
       
       if (data && data.length > 0) {
-        setVisualCategories(data as VisualCategory[]);
+        // Transform data to match VisualCategory type
+        const formattedCategories = data.map(category => ({
+          id: category.id,
+          name: category.name,
+          description: category.description || '',
+          slug: category.slug || '',
+          created_at: category.created_at,
+          updated_at: category.updated_at,
+          // Add camelCase aliases
+          createdAt: category.created_at,
+          updatedAt: category.updated_at
+        })) as VisualCategory[];
+        
+        setCategories(formattedCategories);
         
         // Store in localStorage as fallback
-        localStorage.setItem('visual_categories', JSON.stringify(data));
+        localStorage.setItem('visual_categories', JSON.stringify(formattedCategories));
       } else {
         // Fallback to localStorage
         const storedCategories = localStorage.getItem('visual_categories');
         if (storedCategories) {
-          setVisualCategories(JSON.parse(storedCategories));
+          setCategories(JSON.parse(storedCategories));
         } else {
-          setVisualCategories([]);
+          // If no data in localStorage, use empty array
+          setCategories([]);
         }
       }
+      return true;
     } catch (err) {
       console.error("Error fetching visual categories:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -93,56 +59,114 @@ export const useVisualCategories = () => {
       const storedCategories = localStorage.getItem('visual_categories');
       if (storedCategories) {
         try {
-          setVisualCategories(JSON.parse(storedCategories));
+          setCategories(JSON.parse(storedCategories));
         } catch (e) {
-          setVisualCategories([]);
+          setCategories([]);
         }
       } else {
-        setVisualCategories([]);
+        setCategories([]);
       }
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshVisualCategories = async () => {
-    await fetchVisualCategories();
+  const refreshCategories = async (): Promise<boolean> => {
+    return await fetchCategories();
   };
 
   useEffect(() => {
-    fetchVisualCategories();
+    fetchCategories();
   }, []);
 
-  return { visualCategories, loading, error, refreshVisualCategories };
+  return { categories, loading, error, refreshCategories };
 };
 
-// Sync visual categories to Supabase
-export const syncVisualCategoriesToSupabase = async () => {
+/**
+ * Create a new visual category
+ * @param categoryData The category data to create
+ * @returns Promise with the created category
+ */
+export const createVisualCategory = async (categoryData: Partial<VisualCategory>) => {
   try {
-    const storedCategories = localStorage.getItem('visual_categories');
-    if (!storedCategories) {
-      toast.error("No local visual categories to sync");
-      return false;
-    }
+    // Prepare data for Supabase format
+    const supabaseCategory = {
+      name: categoryData.name,
+      description: categoryData.description,
+      slug: categoryData.slug || categoryData.name?.toLowerCase().replace(/\s+/g, '-'),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
     
-    const categories = JSON.parse(storedCategories);
-    
-    for (const category of categories) {
-      const { error } = await supabase
-        .from('visual_categories')
-        .upsert(category, { onConflict: 'id' });
+    const { data, error } = await supabase
+      .from('visual_categories')
+      .insert([supabaseCategory])
+      .select();
       
-      if (error) {
-        console.error(`Error syncing category ID ${category.id}:`, error);
-        toast.error(`Error syncing category: ${error.message}`);
-      }
-    }
+    if (error) throw error;
     
-    toast.success("Visual categories synced successfully");
+    toast.success('Category created successfully');
+    return data?.[0];
+  } catch (error) {
+    console.error('Error creating category:', error);
+    toast.error('Failed to create category');
+    throw error;
+  }
+};
+
+/**
+ * Update a visual category
+ * @param id The category ID to update
+ * @param categoryData The updated category data
+ * @returns Promise with the updated category
+ */
+export const updateVisualCategory = async (id: number, categoryData: Partial<VisualCategory>) => {
+  try {
+    // Prepare data for Supabase format
+    const supabaseCategory = {
+      name: categoryData.name,
+      description: categoryData.description,
+      slug: categoryData.slug || categoryData.name?.toLowerCase().replace(/\s+/g, '-'),
+      updated_at: new Date().toISOString()
+    };
+    
+    const { data, error } = await supabase
+      .from('visual_categories')
+      .update(supabaseCategory)
+      .eq('id', id)
+      .select();
+      
+    if (error) throw error;
+    
+    toast.success('Category updated successfully');
+    return data?.[0];
+  } catch (error) {
+    console.error('Error updating category:', error);
+    toast.error('Failed to update category');
+    throw error;
+  }
+};
+
+/**
+ * Delete a visual category
+ * @param id The category ID to delete
+ * @returns Promise indicating success
+ */
+export const deleteVisualCategory = async (id: number) => {
+  try {
+    const { error } = await supabase
+      .from('visual_categories')
+      .delete()
+      .eq('id', id);
+      
+    if (error) throw error;
+    
+    toast.success('Category deleted successfully');
     return true;
   } catch (error) {
-    console.error('Error syncing visual categories:', error);
-    toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return false;
+    console.error('Error deleting category:', error);
+    toast.error('Failed to delete category');
+    throw error;
   }
 };

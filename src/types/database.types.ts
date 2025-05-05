@@ -467,6 +467,34 @@ export type Table<
   TableName extends keyof Database["public"]["Tables"]
 > = Database["public"]["Tables"][TableName]
 
+// Add the DatabaseTables type for use in other parts of the application
+export type DatabaseTables = {
+  clients: {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
+    created_at?: string;
+    updated_at?: string;
+    user_id?: string;
+  };
+  orders: {
+    id: number;
+    user_id?: string;
+    status?: string;
+    payment_status?: string;
+    amount_total?: number;
+    created_at?: string;
+    updated_at?: string;
+    order_number?: string;
+  };
+  // Add other table types as needed
+};
+
 // Add the Product type
 export interface Product {
   id: number;
