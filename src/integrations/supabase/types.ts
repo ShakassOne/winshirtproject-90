@@ -480,6 +480,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_role_to_user: {
+        Args: {
+          user_id_param: string
+          role_param: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: undefined
+      }
       create_increment_function: {
         Args: Record<PropertyKey, never>
         Returns: undefined

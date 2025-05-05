@@ -1,177 +1,244 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import {
-  syncLotteriesToSupabase,
-  syncProductsToSupabase,
-  useLotteries,
-  useProducts,
-} from '@/services/productService';
-import { syncVisualsToSupabase, syncVisualCategoriesToSupabase } from '@/api/visualApi';
-import { useVisualCategories } from '@/services/visualCategoryService';
-import { getDataCounts } from '@/lib/syncManager';
-import { checkSupabaseConnection, checkTableExists, requiredTables } from '@/integrations/supabase/client';
-import { Database } from '@/types/supabase';
-import { supabase } from '@/integrations/supabase/client';
-import { ValidTableName } from '@/integrations/supabase/client';
+import StarBackground from '@/components/StarBackground';
+import AdminNavigation from '@/components/admin/AdminNavigation';
+import { syncProductsToSupabase } from '@/services/productService';
+import { syncClientsToSupabase } from '@/services/clientService';
+import { useLotteries } from '@/services/lotteryService';
+import { syncOrdersToSupabase } from '@/services/orderService';
+import { syncVisualCategoriesToSupabase } from '@/api/visualApi';
+import { checkSupabaseConnection } from '@/lib/supabase';
+import AdminSetup from '@/components/AdminSetup';
 
 const AdminSyncPage: React.FC = () => {
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [supabaseStatus, setSupabaseStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
-  const [tableStatuses, setTableStatuses] = useState<Record<ValidTableName, boolean>>({
-    lotteries: false,
-    products: false,
-    clients: false,
-    orders: false,
-    order_items: false,
-    lottery_participants: false,
-    lottery_winners: false,
-    visuals: false,
-    visual_categories: false,
-    user_roles: false
-  });
-  const [dataCounts, setDataCounts] = useState<Record<ValidTableName, number>>({
-    lotteries: 0,
-    products: 0,
-    clients: 0,
-    orders: 0,
-    order_items: 0,
-    lottery_participants: 0,
-    lottery_winners: 0,
-    visuals: 0,
-    visual_categories: 0,
-    user_roles: 0
-  });
-  const [apiKey, setApiKey] = useState('');
-  const [url, setUrl] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const { lotteries } = useLotteries();
 
   useEffect(() => {
-    const checkConnectionAndTables = async () => {
-      // Check Supabase connection
-      const isConnected = await checkSupabaseConnection();
-      setSupabaseStatus(isConnected ? 'connected' : 'disconnected');
-
-      // Check table existence
-      const tableChecks: Partial<Record<ValidTableName, boolean>> = {};
-      for (const tableName of requiredTables) {
-        tableChecks[tableName] = await checkTableExists(tableName);
-      }
-      setTableStatuses(tableChecks as Record<ValidTableName, boolean>);
+    const checkConnection = async () => {
+      const connected = await checkSupabaseConnection();
+      setIsConnected(connected);
     };
-
-    checkConnectionAndTables();
+    
+    checkConnection();
   }, []);
 
-  useEffect(() => {
-    const fetchDataCounts = async () => {
-      const counts = await getDataCounts();
-      setDataCounts(counts);
-    };
-
-    fetchDataCounts();
-  }, []);
-
-  const handleSync = async () => {
-    setIsSyncing(true);
+  const handleSyncProducts = async () => {
     try {
-      // Sync all data to Supabase
-      const syncLotteries = await syncLotteriesToSupabase();
-      const syncProducts = await syncProductsToSupabase();
-      const syncVisuals = await syncVisualsToSupabase();
-      const syncVisualCategories = await syncVisualCategoriesToSupabase();
-
-      if (syncLotteries && syncProducts && syncVisuals && syncVisualCategories) {
-        toast.success('Toutes les données ont été synchronisées avec succès!');
+      const success = await syncProductsToSupabase();
+      if (success) {
+        toast.success("Produits synchronisés avec succès");
       } else {
-        toast.error('Erreur lors de la synchronisation des données. Veuillez vérifier les détails.');
+        toast.error("Erreur lors de la synchronisation des produits");
       }
     } catch (error) {
-      console.error('Erreur lors de la synchronisation:', error);
-      toast.error('Erreur lors de la synchronisation des données.');
-    } finally {
-      setIsSyncing(false);
+      console.error("Error syncing products:", error);
+      toast.error("Erreur lors de la synchronisation des produits");
     }
   };
 
+  const handleSyncClients = async () => {
+    try {
+      const success = await syncClientsToSupabase();
+      if (success) {
+        toast.success("Clients synchronisés avec succès");
+      } else {
+        toast.error("Erreur lors de la synchronisation des clients");
+      }
+    } catch (error) {
+      console.error("Error syncing clients:", error);
+      toast.error("Erreur lors de la synchronisation des clients");
+    }
+  };
+
+  const handleSyncOrders = async () => {
+    try {
+      const success = await syncOrdersToSupabase();
+      if (success) {
+        toast.success("Commandes synchronisées avec succès");
+      } else {
+        toast.error("Erreur lors de la synchronisation des commandes");
+      }
+    } catch (error) {
+      console.error("Error syncing orders:", error);
+      toast.error("Erreur lors de la synchronisation des commandes");
+    }
+  };
+
+  const handleSyncLotteries = async () => {
+    try {
+      // Implement lottery sync
+      toast.info("Synchronisation des loteries non implémentée");
+    } catch (error) {
+      console.error("Error syncing lotteries:", error);
+      toast.error("Erreur lors de la synchronisation des loteries");
+    }
+  };
+
+  const handleSyncVisualCategories = async () => {
+    try {
+      const success = await syncVisualCategoriesToSupabase();
+      if (success) {
+        toast.success("Catégories visuelles synchronisées avec succès");
+      } else {
+        toast.error("Erreur lors de la synchronisation des catégories visuelles");
+      }
+    } catch (error) {
+      console.error("Error syncing visual categories:", error);
+      toast.error("Erreur lors de la synchronisation des catégories visuelles");
+    }
+  };
+
+  const handleSyncAll = async () => {
+    try {
+      toast.info("Début de la synchronisation complète...");
+      
+      // Sync in sequence to avoid race conditions
+      await handleSyncProducts();
+      await handleSyncClients();
+      await handleSyncOrders();
+      await handleSyncLotteries();
+      await handleSyncVisualCategories();
+      
+      toast.success("Synchronisation complète terminée");
+    } catch (error) {
+      console.error("Error in complete sync:", error);
+      toast.error("Erreur lors de la synchronisation complète");
+    }
+  };
+  
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Synchronisation des données</h1>
-
-      <Card className="mb-4">
-        <CardHeader>
-          <h2 className="text-lg font-semibold">État de la connexion Supabase</h2>
-        </CardHeader>
-        <CardContent>
-          {supabaseStatus === 'checking' && <p>Vérification de la connexion...</p>}
-          {supabaseStatus === 'connected' && <p className="text-green-500">Connecté à Supabase</p>}
-          {supabaseStatus === 'disconnected' && <p className="text-red-500">Déconnecté de Supabase</p>}
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4">
-        <CardHeader>
-          <h2 className="text-lg font-semibold">État des tables Supabase</h2>
-        </CardHeader>
-        <CardContent>
-          {Object.entries(tableStatuses).map(([tableName, exists]) => (
-            <p key={tableName}>
-              {tableName}: {exists ? <span className="text-green-500">Existe</span> : <span className="text-red-500">N'existe pas</span>}
-            </p>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4">
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Nombre de données locales</h2>
-        </CardHeader>
-        <CardContent>
-          {Object.entries(dataCounts).map(([tableName, count]) => (
-            <p key={tableName}>
-              {tableName}: {count}
-            </p>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4">
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Configuration Supabase</h2>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div>
-            <Label htmlFor="supabase-url">URL Supabase</Label>
-            <Input
-              id="supabase-url"
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://your-supabase-url.co"
-            />
+    <>
+      <StarBackground />
+      <AdminNavigation />
+      
+      <section className="pt-32 pb-24">
+        <div className="container mx-auto px-4">
+          <h1 className="text-3xl md:text-4xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
+            Synchronisation avec Supabase
+          </h1>
+          
+          {/* Admin Setup Component for creating/configuring admin user */}
+          <AdminSetup />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30">
+              <h2 className="text-xl font-semibold mb-4 text-white">État de la connexion</h2>
+              <div className="flex items-center mb-4">
+                <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-white">{isConnected ? 'Connecté à Supabase' : 'Non connecté à Supabase'}</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                {isConnected 
+                  ? 'Vous pouvez synchroniser vos données avec Supabase.' 
+                  : 'Vérifiez votre connexion internet et les paramètres de Supabase.'}
+              </p>
+              <button 
+                onClick={handleSyncAll}
+                disabled={!isConnected}
+                className="w-full py-2 px-4 bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Synchroniser toutes les données
+              </button>
+            </div>
+            
+            <div className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30">
+              <h2 className="text-xl font-semibold mb-4 text-white">Statistiques locales</h2>
+              <ul className="space-y-2 text-white">
+                <li className="flex justify-between">
+                  <span>Produits:</span>
+                  <span className="font-semibold">0</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Clients:</span>
+                  <span className="font-semibold">0</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Commandes:</span>
+                  <span className="font-semibold">0</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Loteries:</span>
+                  <span className="font-semibold">{lotteries?.length || 0}</span>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="supabase-api-key">Clé API Supabase</Label>
-            <Input
-              id="supabase-api-key"
-              type="text"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Your Supabase API Key"
-            />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30">
+              <h3 className="text-lg font-semibold mb-4 text-white">Produits</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Synchronisez les produits entre le stockage local et Supabase.
+              </p>
+              <button 
+                onClick={handleSyncProducts}
+                disabled={!isConnected}
+                className="w-full py-2 px-4 bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Synchroniser les produits
+              </button>
+            </div>
+            
+            <div className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30">
+              <h3 className="text-lg font-semibold mb-4 text-white">Clients</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Synchronisez les données clients entre le stockage local et Supabase.
+              </p>
+              <button 
+                onClick={handleSyncClients}
+                disabled={!isConnected}
+                className="w-full py-2 px-4 bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Synchroniser les clients
+              </button>
+            </div>
+            
+            <div className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30">
+              <h3 className="text-lg font-semibold mb-4 text-white">Commandes</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Synchronisez les commandes entre le stockage local et Supabase.
+              </p>
+              <button 
+                onClick={handleSyncOrders}
+                disabled={!isConnected}
+                className="w-full py-2 px-4 bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Synchroniser les commandes
+              </button>
+            </div>
+            
+            <div className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30">
+              <h3 className="text-lg font-semibold mb-4 text-white">Loteries</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Synchronisez les loteries entre le stockage local et Supabase.
+              </p>
+              <button 
+                onClick={handleSyncLotteries}
+                disabled={!isConnected}
+                className="w-full py-2 px-4 bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Synchroniser les loteries
+              </button>
+            </div>
+            
+            <div className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30">
+              <h3 className="text-lg font-semibold mb-4 text-white">Catégories visuelles</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Synchronisez les catégories visuelles entre le stockage local et Supabase.
+              </p>
+              <button 
+                onClick={handleSyncVisualCategories}
+                disabled={!isConnected}
+                className="w-full py-2 px-4 bg-winshirt-purple hover:bg-winshirt-purple-dark text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Synchroniser les catégories
+              </button>
+            </div>
           </div>
-        </CardContent>
-        <CardFooter>
-          <Button>Mettre à jour la configuration</Button>
-        </CardFooter>
-      </Card>
-
-      <Button onClick={handleSync} disabled={isSyncing}>
-        {isSyncing ? 'Synchronisation en cours...' : 'Synchroniser les données avec Supabase'}
-      </Button>
-    </div>
+        </div>
+      </section>
+    </>
   );
 };
 

@@ -22,19 +22,19 @@ const AdminSetup: React.FC = () => {
         
         // Store admin credentials for synchronization
         localStorage.setItem('winshirt_admin', JSON.stringify({
-          email: 'admin@winshirt.com',
+          email: 'alan@shakass.com',
           password: 'admin123'
         }));
         
         toast.success("Identifiants admin stockés pour la synchronisation");
       } else {
         if (result.error?.message?.includes('email already')) {
-          toast.info("L'utilisateur admin existe déjà. Connectez-vous avec admin@winshirt.com/admin123");
+          toast.info("L'utilisateur admin existe déjà. Connectez-vous avec alan@shakass.com/admin123");
           setCreated(true);
           
           // Store credentials anyway since the user exists
           localStorage.setItem('winshirt_admin', JSON.stringify({
-            email: 'admin@winshirt.com',
+            email: 'alan@shakass.com',
             password: 'admin123'
           }));
           
@@ -77,7 +77,7 @@ const AdminSetup: React.FC = () => {
               Cette opération va créer un utilisateur admin dans Supabase avec les identifiants suivants:
             </p>
             <ul className="list-disc pl-6 mb-4 text-sm">
-              <li>Email: admin@winshirt.com</li>
+              <li>Email: alan@shakass.com</li>
               <li>Mot de passe: admin123</li>
             </ul>
             <p className="mb-4 text-amber-600 text-sm">

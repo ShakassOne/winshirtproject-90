@@ -46,23 +46,26 @@ const LoginPage: React.FC = () => {
     setEmailConfirmNeeded(false);
     
     try {
-      // Admin bypass - allow admin to login without email confirmation
-      if (loginEmail === 'admin@winshirt.fr' && loginPassword === 'admin123') {
-        const adminUser = {
-          id: 1,
-          name: "Administrateur",
+      // Admin login with specific credentials
+      if (loginEmail === 'alan@shakass.com' && loginPassword === 'admin123') {
+        const { data: userData, error: userError } = await supabase.auth.signInWithPassword({
           email: loginEmail,
-          role: 'admin',
-          registrationDate: new Date().toISOString(),
-        };
+          password: loginPassword
+        });
         
-        localStorage.setItem('user', JSON.stringify(adminUser));
-        toast.success("Connecté en tant qu'administrateur");
-        navigate('/account');
+        if (userError) {
+          console.error("Erreur de connexion admin:", userError);
+          toast.error(`Erreur de connexion: ${userError.message}`);
+        } else {
+          toast.success("Connecté en tant qu'administrateur");
+          navigate('/account');
+        }
+        
         setIsLoading(false);
         return;
       }
       
+      // Regular login flow continues...
       // Check if email is confirmed first (custom implementation)
       const { data: userData, error: userError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
@@ -95,6 +98,7 @@ const LoginPage: React.FC = () => {
         await login(loginEmail, loginPassword);
       }
     } catch (error) {
+      // Error handling
       console.error("Login error:", error);
       toast.error("Erreur lors de la connexion");
     } finally {
@@ -102,6 +106,7 @@ const LoginPage: React.FC = () => {
     }
   };
   
+  // Other functions and JSX
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -146,6 +151,7 @@ const LoginPage: React.FC = () => {
       <section className="pt-32 pb-16 min-h-screen flex items-center justify-center">
         <div className="container mx-auto px-4 max-w-md">
           <Card className="winshirt-card">
+            {/* Tabs */}
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid grid-cols-2 mb-4 bg-winshirt-space-light border border-winshirt-purple/20">
                 <TabsTrigger value="login" className="data-[state=active]:bg-winshirt-purple data-[state=active]:text-white">
@@ -165,6 +171,7 @@ const LoginPage: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Email and password fields */}
                   {emailConfirmNeeded && (
                     <div className="mb-4 p-3 bg-amber-900/30 border border-amber-500/50 rounded-md flex items-start gap-2">
                       <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
@@ -240,7 +247,7 @@ const LoginPage: React.FC = () => {
                       </div>
                       <div className="text-sm text-amber-400 mt-2">
                         <p>Pour tester en tant qu'admin:</p>
-                        <p>Email: admin@winshirt.fr</p>
+                        <p>Email: alan@shakass.com</p>
                         <p>Mot de passe: admin123</p>
                       </div>
                       <Button 
@@ -255,7 +262,7 @@ const LoginPage: React.FC = () => {
                 </CardContent>
               </TabsContent>
               
-              {/* Register Tab */}
+              {/* Register tab */}
               <TabsContent value="register">
                 <CardHeader>
                   <CardTitle className="text-white text-center">Créez un compte</CardTitle>
