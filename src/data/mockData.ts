@@ -1,4 +1,3 @@
-
 import { ExtendedProduct } from '@/types/product';
 import { Visual } from '@/types/visual';
 import { Client } from '@/types/client';
@@ -238,6 +237,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "coton",
       fit: "regular",
       brand: "Winshirt",
+      participants: [], // Add empty participants array
       printAreas: [
         {
           id: 1,
@@ -291,6 +291,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "coton bio",
       fit: "regular",
       brand: "Winshirt",
+      participants: [], // Add empty participants array
       printAreas: [
         {
           id: 1,
@@ -360,6 +361,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "céramique",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -405,6 +407,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "plastique",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -450,6 +453,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "papier",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -495,6 +499,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "coton",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -540,6 +545,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "polyester",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -585,6 +591,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "coton",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -630,6 +637,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "acier inoxydable",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -675,6 +683,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "papier",
       fit: null,
       brand: "Winshirt",
+      participants: [],
       printAreas: [
         {
           id: 1,
@@ -686,7 +695,10 @@ export const getMockProducts = (): ExtendedProduct[] => {
         },
       ],
     },
-  ];
+  ].map(product => ({
+    ...product,
+    participants: product.participants || []
+  }));
 };
 
 // Export a constant for backward compatibility
@@ -820,68 +832,4 @@ export const getMockClients = (): Client[] => {
       country: "France",
       registrationDate: "2023-01-15",
       orderCount: 5,
-      totalSpent: 250.00,
-    },
-    {
-      id: 2,
-      name: "Alice Martin",
-      email: "alice.martin@example.com",
-      phone: "0798765432",
-      address: "25 avenue des Champs-Élysées",
-      city: "Paris",
-      postalCode: "75008",
-      country: "France",
-      registrationDate: "2023-02-20",
-      orderCount: 3,
-      totalSpent: 180.50,
-    },
-    {
-      id: 3,
-      name: "Pierre Lefevre",
-      email: "pierre.lefevre@example.com",
-      phone: "0655555555",
-      address: "5 rue du Louvre",
-      city: "Paris",
-      postalCode: "75001",
-      country: "France",
-      registrationDate: "2023-03-10",
-      orderCount: 2,
-      totalSpent: 120.00,
-    },
-    {
-      id: 4,
-      name: "Sophie Dubois",
-      email: "sophie.dubois@example.com",
-      phone: "0711111111",
-      address: "15 boulevard Saint-Germain",
-      city: "Paris",
-      postalCode: "75006",
-      country: "France",
-      registrationDate: "2023-04-05",
-      orderCount: 7,
-      totalSpent: 350.25,
-    },
-    {
-      id: 5,
-      name: "Thomas Bernard",
-      email: "thomas.bernard@example.com",
-      phone: "0622222222",
-      address: "8 rue de Rivoli",
-      city: "Paris",
-      postalCode: "75004",
-      country: "France",
-      registrationDate: "2023-05-12",
-      orderCount: 1,
-      totalSpent: 45.00,
-    }
-  ];
-};
-
-// Add function to initialize lottery data for backward compatibility
-export const initializeLotteryData = () => {
-  // This function is for backward compatibility with existing code
-  return getMockLotteries();
-};
-
-// Export mock clients for compatibility
-export const mockClients = getMockClients();
+      total

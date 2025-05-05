@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react'; // Add the missing icon imports
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import {
   createProduct,
@@ -11,7 +12,7 @@ import {
 } from '@/services/productService';
 import { useLotteries } from '@/services/lotteryService';
 import { useVisualCategories } from '@/services/visualCategoryService';
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedProduct, PrintArea } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
 import { VisualCategory } from '@/types/visual';
 import StarBackground from '@/components/StarBackground';

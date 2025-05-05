@@ -67,7 +67,7 @@ export interface ExtendedProduct extends Product {
   fit?: string;
   gender?: string;
   material?: string;
-  participants: Participant[]; // Keep this required field that was added previously
+  participants: Participant[]; // Keep this required field
   lotteryName?: string; // Add this to match usage in mockData
   lotteryImage?: string; // Add this for consistency
   deliveryInfo?: any; // Add for mock data

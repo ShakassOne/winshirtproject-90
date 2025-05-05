@@ -52,7 +52,7 @@ const LotteriesAdminPage: React.FC = () => {
   
   useEffect(() => {
     if (lotteriesError) {
-      setError(lotteriesError.message);
+      setError(typeof lotteriesError === 'string' ? lotteriesError : lotteriesError.message);
       setLoading(false);
     }
   }, [lotteriesError]);
@@ -60,10 +60,9 @@ const LotteriesAdminPage: React.FC = () => {
   const fetchLotteries = async () => {
     setLoading(true);
     try {
-      // Use the useLotteries hook data instead of calling getLotteries
-      // The lotteries data will already be available from the useLotteries hook
-      setLotteries(lotteries || []);
-      setFilteredLotteries(lotteries || []);
+      // Use the lotteries data from the hook instead
+      setLotteries(lotteriesData || []);
+      setFilteredLotteries(lotteriesData || []);
     } catch (error) {
       console.error('Error fetching lotteries:', error);
       setError('Failed to load lotteries');
@@ -102,7 +101,7 @@ const LotteriesAdminPage: React.FC = () => {
         image: lottery.image,
         endDate: lottery.endDate ? new Date(lottery.endDate).toISOString().split('T')[0] : '',
         ticketPrice: lottery.ticketPrice || 5,
-        totalParticipants: lottery.totalParticipants || 100,
+        totalParticipants: lottery.targetParticipants || 100,
         status: lottery.status || 'active',
         value: lottery.value || 0,
         linkedProducts: lottery.linkedProducts?.map(id => String(id)) || [],
@@ -116,8 +115,7 @@ const LotteriesAdminPage: React.FC = () => {
       try {
         await deleteLottery(lotteryId);
         // Refresh lotteries after deletion
-        // Instead of calling getLotteries, we'll set the state directly
-        const updatedLotteries = lotteries.filter(lottery => lottery.id !== lotteryId);
+        const updatedLotteries = await refreshLotteries();
         setLotteries(updatedLotteries);
         setFilteredLotteries(updatedLotteries);
         
@@ -150,7 +148,6 @@ const LotteriesAdminPage: React.FC = () => {
       }
       
       // Refresh lotteries after creation/update
-      await refreshLotteries();
       const updatedLotteries = await refreshLotteries();
       setLotteries(updatedLotteries);
       setFilteredLotteries(updatedLotteries);
@@ -179,7 +176,6 @@ const LotteriesAdminPage: React.FC = () => {
       toast.success(`Winner drawn: ${winner.name}!`);
       
       // Refresh lotteries after drawing winner
-      await refreshLotteries();
       const updatedLotteries = await refreshLotteries();
       setLotteries(updatedLotteries);
       setFilteredLotteries(updatedLotteries);
@@ -197,7 +193,6 @@ const LotteriesAdminPage: React.FC = () => {
         toast.success(`Lottery ${featured ? 'featured' : 'unfeatured'} successfully!`);
         
         // Refresh lotteries after updating featured status
-        await refreshLotteries();
         const updatedLotteries = await refreshLotteries();
         setLotteries(updatedLotteries);
         setFilteredLotteries(updatedLotteries);

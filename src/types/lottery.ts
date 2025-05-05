@@ -1,5 +1,4 @@
 
-// Check if this file exists, if not create it with the proper type definitions
 export interface Participant {
   id: number;
   name: string;
@@ -21,8 +20,15 @@ export interface Lottery {
   drawDate?: string;
   featured?: boolean;
   participants: Participant[];
+  ticketPrice?: number; // Added to match usage in LotteriesAdminPage
+}
+
+export interface NewLottery extends Omit<Lottery, 'id'> {
+  id?: number;
 }
 
 export interface ExtendedLottery extends Lottery {
   winner?: Participant | null;
+  ticketPrice?: number; // Add this to match usage in LotteriesAdminPage
+  totalParticipants?: number; // Add this to match usage in LotteriesAdminPage
 }

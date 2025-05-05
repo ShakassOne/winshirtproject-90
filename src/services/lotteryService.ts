@@ -1,5 +1,6 @@
 import { ExtendedLottery, Lottery, NewLottery, Participant } from '@/types/lottery';
 import { supabase } from '@/lib/supabase';
+import React, { useState, useEffect } from 'react';
 
 const mapLottery = (lottery: any): ExtendedLottery => {
   return {
@@ -48,7 +49,7 @@ const fetchAndCacheLotteries = async (forceRefresh: boolean = false): Promise<Ex
   try {
     console.log("Attempting to fetch lotteries from Supabase...");
     const fetchedLotteries = await fetchLotteriesFromSupabase();
-    // Replace fetchLotteries with fetchedLotteries
+    // Use fetchedLotteries instead of fetchLotteries
     const lotteries = fetchedLotteries;
     
     // Cache the lotteries in localStorage
@@ -63,11 +64,11 @@ const fetchAndCacheLotteries = async (forceRefresh: boolean = false): Promise<Ex
 };
 
 export const useLotteries = () => {
-  const [lotteries, setLotteries] = React.useState<ExtendedLottery[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const loadLotteries = async () => {
       setLoading(true);
       setError(null);
@@ -90,8 +91,10 @@ export const useLotteries = () => {
     try {
       const lotteries = await fetchAndCacheLotteries(true);
       setLotteries(lotteries);
+      return lotteries; // Return the lotteries for direct use
     } catch (e: any) {
       setError(e.message || 'Failed to refresh lotteries');
+      return [];
     } finally {
       setLoading(false);
     }
@@ -163,8 +166,8 @@ export const deleteLottery = async (id: number): Promise<boolean> => {
   return true;
 };
 
-export const drawLotteryWinner = async (lotteryId: number): Promise<Participant | null> => {
+export const drawLotteryWinner = async (lotteryId: number, winner: Participant): Promise<Participant | null> => {
   // Logic to draw a winner (simplified for example)
-  console.log(`Drawing winner for lottery ID: ${lotteryId}`);
-  return null;
+  console.log(`Drawing winner for lottery ID: ${lotteryId}`, winner);
+  return winner;
 };

@@ -164,9 +164,10 @@ export const useProductForm = (
       id: newId,
       name: printAreaData.name,
       position: printAreaData.position,
-      format: printAreaData.format,
       bounds: printAreaData.bounds,
-      allowCustomPosition: printAreaData.allowCustomPosition || true
+      allowCustomPosition: printAreaData.allowCustomPosition || true,
+      constraints: printAreaData.constraints,
+      format: printAreaData.format
     };
     
     form.setValue('printAreas', [...currentPrintAreas, newPrintArea] as PrintArea[]);
