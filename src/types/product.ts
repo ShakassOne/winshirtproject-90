@@ -1,4 +1,3 @@
-
 import { ProductVisualSettings } from './visual';
 
 export interface ExtendedProduct {
@@ -26,17 +25,17 @@ export interface ExtendedProduct {
   // Nouveaux champs pour la gestion des visuels
   allowCustomization?: boolean; // Si le produit permet la personnalisation visuelle
   defaultVisualId?: number | null; // ID du visuel par défaut
-  defaultVisualSettings?: ProductVisualSettings; // Paramètres du visuel par défaut
+  defaultVisualSettings?: ProductVisualSettings | any; // Paramètres du visuel par défaut - added any for compatibility
   visualCategoryId?: number | null; // ID de la catégorie de visuels associée
   
   // Nouveaux filtres avancés
-  gender?: 'homme' | 'femme' | 'enfant' | 'unisexe'; // Genre
+  gender?: 'homme' | 'femme' | 'enfant' | 'unisexe' | string; // Genre - added string for compatibility
   material?: string; // Matière: coton, polyester, bio, technique
-  fit?: 'regular' | 'ajusté' | 'oversize'; // Coupe
+  fit?: 'regular' | 'ajusté' | 'oversize' | string; // Coupe - added string for compatibility
   brand?: string; // Marque - Nouveau champ ajouté à la base de données
   
   // Zones d'impression
-  printAreas?: PrintArea[]; // Zones d'impression disponibles
+  printAreas?: PrintArea[] | any[]; // Zones d'impression disponibles - added any[] for compatibility
 }
 
 export interface DeliveryInfo {
@@ -55,8 +54,8 @@ export interface DeliveryInfo {
 export interface PrintArea {
   id: number;
   name: string; // Nom de la zone (ex: "Recto", "Verso")
-  position: 'front' | 'back'; // Recto ou verso
-  format: 'custom'; // Format personnalisé (rendu optional)
+  position: 'front' | 'back' | string; // Recto ou verso - added string for compatibility
+  format: 'custom' | string; // Format personnalisé (rendu optional) - added string for compatibility
   bounds: {
     x: number;
     y: number;
@@ -64,6 +63,7 @@ export interface PrintArea {
     height: number;
   }; // Coordonnées et dimensions de la zone
   allowCustomPosition?: boolean; // Si le client peut repositionner dans la zone (toujours true maintenant)
+  [key: string]: any; // Add index signature for compatibility with JSON
 }
 
 // Interface pour les filtres disponibles
@@ -77,3 +77,6 @@ export interface ProductFilters {
   sizes: string[]; // XS, S, M, L, XL, etc.
   colors: string[]; // Couleurs disponibles
 }
+
+// Add a type to handle JSON data from Supabase
+export type Json = any;

@@ -1,4 +1,3 @@
-
 import { ExtendedLottery, Participant } from "@/types/lottery";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
@@ -65,7 +64,7 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       description: lottery.description || '',
       image: lottery.image || '',
       value: lottery.value,
-      status: lottery.status,
+      status: lottery.status as "active" | "completed" | "relaunched" | "cancelled", // Type assertion
       featured: lottery.featured || false,
       targetParticipants: lottery.target_participants,
       currentParticipants: lottery.current_participants || 0,
@@ -73,8 +72,6 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       endDate: lottery.end_date,
       linkedProducts: lottery.linked_products || [],
     }));
-    
-    console.log(`Retrieved ${lotteries.length} lotteries from Supabase`);
     
     // Ensure data consistency by storing in both storages
     if (lotteries.length > 0) {
@@ -135,7 +132,7 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
       description: data.description || '',
       image: data.image || '',
       value: data.value,
-      status: data.status,
+      status: data.status as "active" | "completed" | "relaunched" | "cancelled", // Type assertion
       featured: data.featured || false,
       targetParticipants: data.target_participants,
       currentParticipants: data.current_participants || 0,
@@ -222,7 +219,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
       description: data.description || '',
       image: data.image || '',
       value: data.value,
-      status: data.status,
+      status: data.status as "active" | "completed" | "relaunched" | "cancelled", // Type assertion
       featured: data.featured || false,
       targetParticipants: data.target_participants,
       currentParticipants: data.current_participants || 0,
@@ -246,7 +243,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
 export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery>): Promise<ExtendedLottery | null> => {
   try {
     // First, ensure we have a connection to Supabase
-    const connected = await checkSupabaseConnection();
+    const connected = await testSupabaseConnection();
     if (!connected) {
       console.error("Cannot update lottery: No connection to Supabase");
       toast.error("Impossible de mettre à jour la loterie: Pas de connexion à Supabase", { position: "bottom-right" });
@@ -302,7 +299,7 @@ export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery
       description: data.description || '',
       image: data.image || '',
       value: data.value,
-      status: data.status,
+      status: data.status as "active" | "completed" | "relaunched" | "cancelled", // Type assertion
       featured: data.featured || false,
       targetParticipants: data.target_participants,
       currentParticipants: data.current_participants || 0,
@@ -404,7 +401,7 @@ export const addLotteryParticipant = async (
       .from('lottery_participants')
       .select('*')
       .eq('lottery_id', lotteryId)
-      .eq('user_id', participant.userId);
+      .eq('user_id', participant.userId.toString()); // Convert to string as Supabase expects string for user_id
       
     if (fetchError) throw fetchError;
     
@@ -419,7 +416,7 @@ export const addLotteryParticipant = async (
       .from('lottery_participants')
       .insert({
         lottery_id: lotteryId,
-        user_id: participant.userId,
+        user_id: participant.userId.toString(), // Convert to string
         name: participant.name || '',
         email: participant.email || '',
         avatar: participant.avatar || '',
@@ -436,7 +433,7 @@ export const addLotteryParticipant = async (
       // If the RPC fails, try direct update
       const { error: fallbackError } = await supabase
         .from('lotteries')
-        .update({ current_participants: supabase.rpc('inc', { count: 1 }) })
+        .update({ current_participants: supabase.rpc('increment_lottery_participants', { lottery_id_param: lotteryId }) })
         .eq('id', lotteryId);
         
       if (fallbackError) {

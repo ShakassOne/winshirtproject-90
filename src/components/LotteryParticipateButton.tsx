@@ -27,9 +27,13 @@ const LotteryParticipateButton: React.FC<LotteryParticipateButtonProps> = ({ lot
       
       const user = data.user;
       
+      // Generate a numeric user ID from the UUID for compatibility
+      // This generates a unique number from the UUID
+      const userId = parseInt(user.id.replace(/-/g, '').substring(0, 8), 16);
+      
       // Create participant object with userId field
       const participant = {
-        userId: user.id ? parseInt(user.id.replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000000), 
+        userId: userId,
         name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur',
         email: user.email || '',
         avatar: user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${user.email?.split('@')[0] || 'User'}`

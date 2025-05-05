@@ -1,4 +1,3 @@
-
 export interface ExtendedLottery {
   id: number;
   title: string;
@@ -60,3 +59,6 @@ export interface LotteryParticipant {
   userName?: string;
   userEmail?: string;
 }
+
+// Add JSON type to handle Supabase JSON data
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
