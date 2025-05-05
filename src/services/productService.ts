@@ -91,6 +91,13 @@ export const useProducts = () => {
 
   React.useEffect(() => {
     fetchProducts();
+    
+    // Set up a refresh interval to check for updates
+    const interval = setInterval(() => {
+      fetchProducts();
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
   return { products, loading, error, refreshProducts: fetchProducts };
