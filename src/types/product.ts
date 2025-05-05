@@ -17,8 +17,8 @@ export interface PrintArea {
     minHeight?: number;
     maxHeight?: number;
   };
-  format?: string; // Added to match usage in mockData
-  allowCustomPosition?: boolean; // Added to match usage in PrintAreaManager
+  format?: string;
+  allowCustomPosition?: boolean;
 }
 
 export interface Product {
@@ -67,8 +67,8 @@ export interface ExtendedProduct extends Product {
   fit?: string;
   gender?: string;
   material?: string;
-  participants: Participant[]; // Keep this required field
-  lotteryName?: string; // Add this to match usage in mockData
-  lotteryImage?: string; // Add this for consistency
-  deliveryInfo?: any; // Add for mock data
+  participants: Participant[];
+  lotteryName?: string;
+  lotteryImage?: string;
+  deliveryInfo?: any;
 }

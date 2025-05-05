@@ -1,4 +1,3 @@
-
 import { ExtendedProduct } from '@/types/product';
 import { Visual } from '@/types/visual';
 import { Client } from '@/types/client';
@@ -200,10 +199,25 @@ export const getLotteryById = (id: number) => {
 };
 
 /**
+ * Initialize lottery data if it doesn't exist in localStorage
+ */
+export const initializeLotteryData = () => {
+  try {
+    const lotteriesData = localStorage.getItem('lotteries');
+    if (!lotteriesData) {
+      localStorage.setItem('lotteries', JSON.stringify(getMockLotteries()));
+      console.log('Initialized lottery data in localStorage');
+    }
+  } catch (error) {
+    console.error('Error initializing lottery data:', error);
+  }
+};
+
+/**
  * Mock data for products
  */
 export const getMockProducts = (): ExtendedProduct[] => {
-  return [
+  const products = [
     {
       id: 1,
       name: "T-shirt imprimé personnalisé",
@@ -238,12 +252,12 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "coton",
       fit: "regular",
       brand: "Winshirt",
-      participants: [], // Add empty participants array
+      participants: [],
       printAreas: [
         {
           id: 1,
           name: "Recto",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -251,7 +265,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 2,
           name: "Verso",
-          position: "back",
+          position: "back" as "back",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -292,12 +306,12 @@ export const getMockProducts = (): ExtendedProduct[] => {
       material: "coton bio",
       fit: "regular",
       brand: "Winshirt",
-      participants: [], // Add empty participants array
+      participants: [],
       printAreas: [
         {
           id: 1,
           name: "Recto",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -305,7 +319,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 2,
           name: "Verso",
-          position: "back",
+          position: "back" as "back",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -313,7 +327,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 3,
           name: "Manche gauche",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -321,7 +335,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 4,
           name: "Manche droite",
-          position: "back",
+          position: "back" as "back",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -367,7 +381,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -413,7 +427,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -459,7 +473,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -505,7 +519,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -551,7 +565,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -597,7 +611,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -643,7 +657,7 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
@@ -689,14 +703,17 @@ export const getMockProducts = (): ExtendedProduct[] => {
         {
           id: 1,
           name: "Zone d'impression",
-          position: "front",
+          position: "front" as "front",
           format: "custom",
           bounds: { x: 10, y: 10, width: 80, height: 80 },
           allowCustomPosition: true,
         },
       ],
     },
-  ].map(product => ({
+  ];
+
+  // Make sure all products have a participants array
+  return products.map(product => ({
     ...product,
     participants: product.participants || []
   }));
@@ -810,32 +827,4 @@ export const getMockVisuals = (): Visual[] => {
       id: 10,
       name: "Nourriture",
       image: "/img/visuals/food.png",
-      categoryId: 8, // "Nourriture" category
-      categoryName: "Nourriture",
-      tags: ["délicieux", "gourmand", "saveurs"],
-    },
-  ];
-};
-
-/**
- * Mock data for clients
- */
-export const getMockClients = (): Client[] => {
-  return [
-    {
-      id: 1,
-      name: "Jean Dupont",
-      email: "jean.dupont@example.com",
-      phone: "0612345678",
-      address: "10 rue de la Paix",
-      city: "Paris",
-      postalCode: "75001",
-      country: "France",
-      registrationDate: "2023-01-15",
-      orderCount: 5,
-      totalSpent: 450.75  // Fixed the incomplete property
-    }
-  ];
-};
-
-// Add any additional mock data exports needed
+      categoryId: 8, // "Nourriture"

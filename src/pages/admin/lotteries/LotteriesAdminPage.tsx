@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/lib/toast';
@@ -52,7 +53,8 @@ const LotteriesAdminPage: React.FC = () => {
   
   useEffect(() => {
     if (lotteriesError) {
-      setError(typeof lotteriesError === 'string' ? lotteriesError : lotteriesError.message);
+      // Handle error without accessing .message
+      setError(typeof lotteriesError === 'string' ? lotteriesError : 'An error occurred while loading lotteries');
       setLoading(false);
     }
   }, [lotteriesError]);
@@ -116,8 +118,10 @@ const LotteriesAdminPage: React.FC = () => {
         await deleteLottery(lotteryId);
         // Refresh lotteries after deletion
         const updatedLotteries = await refreshLotteries();
-        setLotteries(updatedLotteries);
-        setFilteredLotteries(updatedLotteries);
+        if (updatedLotteries) {
+          setLotteries(updatedLotteries);
+          setFilteredLotteries(updatedLotteries);
+        }
         
         setIsCreating(false);
         setSelectedLotteryId(null);
@@ -149,8 +153,10 @@ const LotteriesAdminPage: React.FC = () => {
       
       // Refresh lotteries after creation/update
       const updatedLotteries = await refreshLotteries();
-      setLotteries(updatedLotteries);
-      setFilteredLotteries(updatedLotteries);
+      if (updatedLotteries) {
+        setLotteries(updatedLotteries);
+        setFilteredLotteries(updatedLotteries);
+      }
       
       // Reset form and state
       setIsCreating(false);
@@ -177,8 +183,10 @@ const LotteriesAdminPage: React.FC = () => {
       
       // Refresh lotteries after drawing winner
       const updatedLotteries = await refreshLotteries();
-      setLotteries(updatedLotteries);
-      setFilteredLotteries(updatedLotteries);
+      if (updatedLotteries) {
+        setLotteries(updatedLotteries);
+        setFilteredLotteries(updatedLotteries);
+      }
     } catch (error) {
       console.error('Error drawing winner:', error);
       toast.error('Failed to draw winner');
@@ -194,8 +202,10 @@ const LotteriesAdminPage: React.FC = () => {
         
         // Refresh lotteries after updating featured status
         const updatedLotteries = await refreshLotteries();
-        setLotteries(updatedLotteries);
-        setFilteredLotteries(updatedLotteries);
+        if (updatedLotteries) {
+          setLotteries(updatedLotteries);
+          setFilteredLotteries(updatedLotteries);
+        }
       }
     } catch (error) {
       console.error('Error toggling featured status:', error);
@@ -241,7 +251,7 @@ const LotteriesAdminPage: React.FC = () => {
     if (term) {
       filtered = filtered.filter(lottery => 
         lottery.title.toLowerCase().includes(term) || 
-        lottery.description.toLowerCase().includes(term)
+        lottery.description?.toLowerCase().includes(term)
       );
     }
     
