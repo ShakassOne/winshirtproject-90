@@ -1,5 +1,5 @@
-
-import { ValidTableName, requiredTables } from '@/integrations/supabase/client';
+import { requiredTables } from '@/integrations/supabase/client';
+import type { ValidTableName } from '@/integrations/supabase/client';
 
 // Define and export the SyncStatus type
 export interface SyncStatus {
@@ -213,4 +213,4 @@ export const getAllValidTableNames = (): ValidTableName[] => {
 };
 
 // Re-export ValidTableName so it can be imported from this file
-export { ValidTableName };
+export type { ValidTableName };

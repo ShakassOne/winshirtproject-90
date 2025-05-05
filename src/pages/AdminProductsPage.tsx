@@ -32,7 +32,7 @@ const AdminProductsPage: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const { products, loading, error, refreshProducts } = useProducts();
   const { lotteries } = useLotteries();
-  const { visualCategories } = useVisualCategories();
+  const { categories, visualCategories } = useVisualCategories();
   const [activeLotteries, setActiveLotteries] = useState<ExtendedLottery[]>([]);
   const [selectedLotteries, setSelectedLotteries] = useState<string[]>([]);
   
@@ -221,8 +221,8 @@ const AdminProductsPage: React.FC = () => {
       accessorKey: 'visualCategoryId',
       header: 'Catégorie',
       cell: ({ row }) => {
-        const visualCategory = row.original.visualCategory;
-        return visualCategory?.name || '';
+        const visualCategoryId = row.original.visualCategoryId;
+        return visualCategories?.find(cat => cat.id === visualCategoryId)?.name || '';
       },
     },
     {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { VisualCategory } from '@/types/visual';
 import { toast } from '@/lib/toast';
@@ -80,7 +79,7 @@ export const useVisualCategories = () => {
     fetchCategories();
   }, []);
 
-  return { categories, loading, error, refreshCategories };
+  return { categories, loading, error, refreshCategories, visualCategories: categories };
 };
 
 /**

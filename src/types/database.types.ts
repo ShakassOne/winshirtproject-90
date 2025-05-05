@@ -426,13 +426,13 @@ export interface Database {
           category_id?: number | null
           category_name?: string | null
           created_at?: string
-          description?: string | null
-          id?: number
-          image?: string | null
-          image_url?: string | null
-          name?: string | null
-          tags?: string[] | null
-          updated_at?: string | null
+          description: string | null
+          id: number
+          image: string | null
+          image_url: string | null
+          name: string | null
+          tags: string[] | null
+          updated_at: string | null
         }
         Relationships: []
       }
@@ -453,22 +453,20 @@ export interface Database {
 }
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"] & { step: { Row: { current: number; total: number; }; Insert: never; Update: never; Relationships: never; }; })
-    | { schema: keyof Database },
+  PublicTableNameOrOptions extends keyof Database['public']['Tables'],
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
     : never = never
 > = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName]
-  : Database["public"]["Tables"][PublicTableNameOrOptions]
+  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName]
+  : Database['public']['Tables'][PublicTableNameOrOptions]
 
 export type Table<
-  TableName extends keyof Database["public"]["Tables"]
-> = Database["public"]["Tables"][TableName]
+  TableName extends keyof Database['public']['Tables']
+> = Database['public']['Tables'][TableName]
 
 // Add the DatabaseTables type for use in other parts of the application
-export type DatabaseTables = {
+export interface DatabaseTables {
   clients: {
     id: number;
     name: string;
@@ -524,3 +522,6 @@ export interface Product {
   gender?: string;
   material?: string;
 }
+
+// Additional type exports
+export { type ValidTableName } from "@/integrations/supabase/client";
