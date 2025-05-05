@@ -1,7 +1,37 @@
+
 import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { toast } from '@/lib/toast';
+
+// Define default values inline to avoid type issues
+const defaultValues: ExtendedProduct = {
+  id: 0,
+  name: '',
+  description: '',
+  price: 0,
+  image: '',
+  secondaryImage: '',
+  sizes: [] as string[],
+  colors: [] as string[],
+  type: 'standard',
+  productType: '',
+  sleeveType: '',
+  linkedLotteries: [] as number[],
+  popularity: 0,
+  tickets: 1,
+  weight: 0,
+  deliveryPrice: 0,
+  allowCustomization: false,
+  defaultVisualId: null,
+  defaultVisualSettings: null,
+  visualCategoryId: null,
+  printAreas: [] as PrintArea[],
+  brand: '',
+  fit: '',
+  gender: '',
+  material: ''
+};
 
 export const useProductForm = (
   initialProducts: ExtendedProduct[],
@@ -11,63 +41,13 @@ export const useProductForm = (
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   
   const form = useForm<ExtendedProduct>({
-    defaultValues: {
-      name: '',
-      description: '',
-      price: 0,
-      image: '',
-      secondaryImage: '',
-      sizes: [],
-      colors: [],
-      type: 'standard',
-      productType: '',
-      sleeveType: '',
-      linkedLotteries: [],
-      popularity: 0,
-      tickets: 1,
-      weight: 0,
-      deliveryPrice: 0,
-      allowCustomization: false,
-      defaultVisualId: null,
-      defaultVisualSettings: null,
-      visualCategoryId: null,
-      printAreas: [],
-      brand: '',
-      fit: '',
-      gender: '',
-      material: ''
-    }
+    defaultValues
   });
   
   const handleCreateProduct = () => {
     setIsCreating(true);
     setSelectedProductId(null);
-    form.reset({
-      name: '',
-      description: '',
-      price: 0,
-      image: '',
-      secondaryImage: '',
-      sizes: [],
-      colors: [],
-      type: 'standard',
-      productType: '',
-      sleeveType: '',
-      linkedLotteries: [],
-      popularity: 0,
-      tickets: 1,
-      weight: 0,
-      deliveryPrice: 0,
-      allowCustomization: false,
-      defaultVisualId: null,
-      defaultVisualSettings: null,
-      visualCategoryId: null,
-      printAreas: [],
-      brand: '',
-      fit: '',
-      gender: '',
-      material: ''
-    });
+    form.reset(defaultValues);
   };
   
   const handleEditProduct = (product: ExtendedProduct) => {
@@ -126,49 +106,50 @@ export const useProductForm = (
   const handleCancel = () => {
     setIsCreating(false);
     setSelectedProductId(null);
-    form.reset();
+    form.reset(defaultValues);
   };
   
   const addSize = (size: string) => {
     const sizes = form.getValues().sizes || [];
     if (!sizes.includes(size)) {
-      form.setValue('sizes', [...sizes, size]);
+      form.setValue('sizes', [...sizes, size] as string[]);
     }
   };
   
   const removeSize = (size: string) => {
     const sizes = form.getValues().sizes || [];
-    form.setValue('sizes', sizes.filter(s => s !== size));
+    form.setValue('sizes', sizes.filter(s => s !== size) as string[]);
   };
   
   const addColor = (color: string) => {
     const colors = form.getValues().colors || [];
     if (!colors.includes(color)) {
-      form.setValue('colors', [...colors, color]);
+      form.setValue('colors', [...colors, color] as string[]);
     }
   };
   
   const removeColor = (color: string) => {
     const colors = form.getValues().colors || [];
-    form.setValue('colors', colors.filter(c => c !== color));
+    form.setValue('colors', colors.filter(c => c !== color) as string[]);
   };
   
   const toggleLottery = (lotteryId: string) => {
     const linkedLotteries = form.getValues().linkedLotteries || [];
-    if (linkedLotteries.includes(Number(lotteryId))) {
-      form.setValue('linkedLotteries', linkedLotteries.filter(id => id !== Number(lotteryId)));
+    const numId = Number(lotteryId);
+    if (linkedLotteries.includes(numId)) {
+      form.setValue('linkedLotteries', linkedLotteries.filter(id => id !== numId) as number[]);
     } else {
-      form.setValue('linkedLotteries', [...linkedLotteries, Number(lotteryId)]);
+      form.setValue('linkedLotteries', [...linkedLotteries, numId] as number[]);
     }
   };
   
   const selectAllLotteries = (availableLotteryIds: string[]) => {
     const lotteryIds = availableLotteryIds.map(id => Number(id));
-    form.setValue('linkedLotteries', lotteryIds);
+    form.setValue('linkedLotteries', lotteryIds as number[]);
   };
   
   const deselectAllLotteries = () => {
-    form.setValue('linkedLotteries', []);
+    form.setValue('linkedLotteries', [] as number[]);
   };
 
   // Fix the addPrintArea function with proper type structure
@@ -188,7 +169,7 @@ export const useProductForm = (
       allowCustomPosition: printAreaData.allowCustomPosition || true
     };
     
-    form.setValue('printAreas', [...currentPrintAreas, newPrintArea]);
+    form.setValue('printAreas', [...currentPrintAreas, newPrintArea] as PrintArea[]);
   };
   
   const updatePrintArea = (id: number, data: Partial<PrintArea>) => {
@@ -199,12 +180,12 @@ export const useProductForm = (
       }
       return area;
     });
-    form.setValue('printAreas', updatedPrintAreas);
+    form.setValue('printAreas', updatedPrintAreas as PrintArea[]);
   };
   
   const removePrintArea = (id: number) => {
     const printAreas = form.getValues().printAreas || [];
-    form.setValue('printAreas', printAreas.filter(area => area.id !== id));
+    form.setValue('printAreas', printAreas.filter(area => area.id !== id) as PrintArea[]);
   };
 
   return {

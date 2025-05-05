@@ -199,7 +199,10 @@ const AdminProductsPage: React.FC = () => {
   // Handler function that converts boolean result to void return
   const handleRefreshProducts = async () => {
     try {
-      await refreshProducts();
+      const success = await syncProductsToSupabase();
+      if (success) {
+        await refreshProducts();
+      }
     } catch (error) {
       console.error("Error refreshing products:", error);
     }
@@ -215,18 +218,22 @@ const AdminProductsPage: React.FC = () => {
       header: 'Prix',
     },
     {
-      accessorKey: 'visualCategory',
+      accessorKey: 'visualCategoryId',
       header: 'Catégorie',
-      cell: ({ row }) => row.visualCategory?.name,
+      cell: ({ row }) => {
+        const visualCategory = row.original.visualCategory;
+        return visualCategory?.name || '';
+      },
     },
     {
       id: 'actions',
+      header: 'Actions',
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => onEditProduct(row.id)}
+            onClick={() => onEditProduct(row.original.id)}
           >
             <Edit className="h-4 w-4 mr-2" />
             Modifier
@@ -234,7 +241,7 @@ const AdminProductsPage: React.FC = () => {
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => onDeleteProduct(row.id)}
+            onClick={() => onDeleteProduct(row.original.id)}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Supprimer
