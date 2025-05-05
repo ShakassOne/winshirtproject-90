@@ -1,12 +1,11 @@
+
 import { supabase as supabaseClient, requiredTables, ValidTableName, checkSupabaseConnection as checkConnection } from '@/integrations/supabase/client';
 
 // Re-export the supabase client
 export const supabase = supabaseClient;
 
-// Check Supabase connection
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  return checkConnection();
-};
+// Export the checkSupabaseConnection function from the client
+export const checkSupabaseConnection = checkConnection;
 
 // Implement the forceSupabaseConnection function that was missing
 export const forceSupabaseConnection = async (): Promise<boolean> => {
@@ -182,45 +181,6 @@ export const ensureDatabaseSchema = async (): Promise<boolean> => {
     return tables.exists;
   } catch (error) {
     console.error("Error ensuring database schema:", error);
-    return false;
-  }
-};
-
-// Helper function to check supabase connection
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  try {
-    // In development mode, always return true for easier testing
-    if (process.env.NODE_ENV === 'development') {
-      console.log("DEV MODE: Simulating successful Supabase connection");
-      return true;
-    }
-    
-    // Use a simple query instead of getUser to verify connection
-    const { data, error } = await supabase.from('lotteries').select('count').limit(1);
-    
-    if (error) {
-      console.error("Supabase connection error:", error.message);
-      return false;
-    }
-    
-    // Also check if user is authenticated (optional, doesn't fail the connection check)
-    const { data: userData } = await supabase.auth.getUser();
-    if (userData?.user) {
-      console.log("Supabase connection successful with authenticated user:", userData.user.email);
-    } else {
-      console.log("Supabase connection successful but no authenticated user");
-    }
-    
-    return true;
-  } catch (err) {
-    console.error("Supabase connection check failed:", err);
-    
-    // In development mode, return true for easier testing even after error
-    if (process.env.NODE_ENV === 'development') {
-      console.log("DEV MODE: Returning true after connection error for development");
-      return true;
-    }
-    
     return false;
   }
 };

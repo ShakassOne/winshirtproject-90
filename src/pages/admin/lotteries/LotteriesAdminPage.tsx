@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
-import AdminSetup from '@/components/AdminSetup';
+import AdminSetup from '@/components/admin/AdminSetup';
 import LotteryList from '@/components/admin/lotteries/LotteryList';
 import LotteryForm from '@/components/admin/lotteries/LotteryForm';
 import { useForm } from 'react-hook-form';
@@ -158,7 +158,8 @@ const LotteriesAdminPage: React.FC = () => {
         image: data.image,
         linkedProducts,
         endDate: data.endDate,
-        featured: data.featured || false
+        featured: data.featured || false,
+        participants: [] // Add this missing property to fix the type error
       };
       
       if (isCreating) {

@@ -1,153 +1,138 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
-import AdminSetup from '@/components/AdminSetup';
+import AdminSetup from '@/components/admin/AdminSetup';
 import ProductTable from '@/components/admin/products/ProductTable';
-import ProductForm from '@/components/admin/products/ProductForm';
+import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
+import { useProducts, createProduct, updateProduct, deleteProduct, syncProductsToSupabase } from '@/services/productService';
+import { getLotteries } from '@/services/lotteryService';
 import { useProductForm } from '@/hooks/useProductForm';
-import { createProduct, updateProduct, deleteProduct } from '@/api/productApi';
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedLottery } from '@/types/lottery';
 import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
+import { VisualCategory } from '@/types/visual';
+import { getVisualCategories } from '@/utils/visualUtils';
+import { Sync } from 'lucide-react';
 
-const ProductsAdminPage: React.FC = () => {
-  const [products, setProducts] = useState<ExtendedProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const AdminProductsPage: React.FC = () => {
+  const { products, loading: productsLoading, refreshProducts } = useProducts();
+  const [visualCategories, setVisualCategories] = useState<VisualCategory[]>([]);
+  const [activeLotteries, setActiveLotteries] = useState<ExtendedLottery[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const refreshProducts = async () => {
-    setIsLoading(true);
-    try {
-      // Try to get from localStorage first
-      const storedProducts = localStorage.getItem('products');
-      if (storedProducts) {
-        const parsedProducts = JSON.parse(storedProducts);
-        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-          setProducts(parsedProducts);
-        } else {
-          console.log("Admin: No products found, initializing empty array");
-          setProducts([]);
-        }
-      } else {
-        console.log("Admin: No products found, initializing empty array");
-        setProducts([]);
-      }
-    } catch (error) {
-      console.error("Error refreshing products:", error);
-      toast.error("Erreur lors du chargement des produits");
-      setProducts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Create productForm with the imported custom hook
+  const productForm = useProductForm(products, refreshProducts);
   
-  // Update to use our API hooks
-  const {
-    isCreating,
-    selectedProductId,
-    form,
-    handleCreateProduct,
-    handleEditProduct,
-    handleDeleteProduct,
-    onSubmit,
-    handleCancel,
-    addSize,
-    removeSize,
-    addColor,
-    removeColor,
-    toggleLottery,
-    selectAllLotteries,
-    deselectAllLotteries,
-    addPrintArea,
-    updatePrintArea,
-    removePrintArea
-  } = useProductForm(products, refreshProducts);
-  
+  // Load necessary data
   useEffect(() => {
-    refreshProducts();
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load visual categories
+        const categories = getVisualCategories();
+        setVisualCategories(categories);
+        
+        // Load active lotteries
+        const lotteries = await getLotteries(true);
+        setActiveLotteries(lotteries);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast.error("Erreur lors du chargement des données");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
   
-  // Override submit handler to use our API
-  const handleSubmit = async (data: ExtendedProduct) => {
-    try {
-      if (isCreating) {
-        const newProduct = await createProduct(data);
-        if (newProduct) {
-          toast.success(`Produit "${data.name}" créé avec succès`);
-          refreshProducts();
-          handleCancel();
-        }
-      } else if (selectedProductId) {
-        const updatedProduct = await updateProduct(data);
-        if (updatedProduct) {
-          toast.success(`Produit "${data.name}" mis à jour avec succès`);
-          refreshProducts();
-          handleCancel();
-        }
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error("Erreur lors de la soumission du formulaire");
-    }
+  // Define adapter functions to match the expected function signatures
+  const selectAllLotteriesAdapter = () => {
+    const availableLotteryIds = activeLotteries.map(lottery => lottery.id.toString());
+    productForm.selectAllLotteries(availableLotteryIds);
   };
   
-  // Override delete handler to use our API
-  const handleProductDelete = async (productId: number) => {
-    try {
-      const success = await deleteProduct(productId);
-      if (success) {
-        toast.success("Produit supprimé avec succès");
-        refreshProducts();
-        if (selectedProductId === productId) {
-          handleCancel();
-        }
-      }
-    } catch (error) {
-      console.error("Error deleting product:", error);
-      toast.error("Erreur lors de la suppression du produit");
-    }
+  const addPrintAreaAdapter = (position: 'front' | 'back') => {
+    const newArea: Omit<PrintArea, 'id'> = {
+      name: `Zone ${position === 'front' ? 'Recto' : 'Verso'}`,
+      position,
+      format: 'custom',
+      bounds: {
+        x: 50,
+        y: 50,
+        width: 200,
+        height: 200
+      },
+      allowCustomPosition: true
+    };
+    
+    productForm.addPrintArea(newArea);
   };
   
   return (
     <>
       <StarBackground />
       <AdminNavigation />
-      
+
       <section className="pt-32 pb-24">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl md:text-4xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
-            Gestion des Produits
+            Gestion des produits
           </h1>
-          
-          <AdminSetup />
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="md:col-span-2">
-              <ProductTable 
-                products={products}
-                loading={isLoading}
-                onEditProduct={handleEditProduct}
-                onDeleteProduct={handleProductDelete}
-                onCreateProduct={handleCreateProduct}
+
+          <div className="mb-8 flex items-center justify-between">
+            <Button
+              onClick={productForm.handleCreateProduct}
+              className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+            >
+              Ajouter un produit
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const success = await syncProductsToSupabase();
+                if (success) {
+                  await productForm.refreshProducts();
+                }
+              }}
+              className="border-winshirt-purple/30 text-white"
+            >
+              <Sync className="h-4 w-4 mr-2 animate-spin" />
+              Synchroniser
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="col-span-1">
+              <ProductTable
+                products={products || []}
+                loading={productsLoading}
+                onEditProduct={productForm.handleEditProduct}
+                onDeleteProduct={productForm.handleDeleteProduct}
+                onCreateProduct={productForm.handleCreateProduct}
               />
             </div>
-            
-            <div>
-              <ProductForm
-                form={form}
-                isCreating={isCreating}
-                selectedProductId={selectedProductId}
-                onSubmit={handleSubmit}
-                onCancel={handleCancel}
-                addSize={addSize}
-                removeSize={removeSize}
-                addColor={addColor}
-                removeColor={removeColor}
-                toggleLottery={toggleLottery}
-                selectAllLotteries={selectAllLotteries}
-                deselectAllLotteries={deselectAllLotteries}
-                addPrintArea={addPrintArea}
-                updatePrintArea={updatePrintArea}
-                removePrintArea={removePrintArea}
+
+            <div className="col-span-1">
+              <EnhancedProductForm
+                isCreating={productForm.isCreating}
+                selectedProductId={productForm.selectedProductId}
+                form={productForm.form}
+                activeLotteries={activeLotteries}
+                visualCategories={visualCategories || []}
+                onCancel={productForm.handleCancel}
+                onSubmit={productForm.onSubmit}
+                onCreateProduct={productForm.handleCreateProduct}
+                addSize={productForm.addSize}
+                removeSize={productForm.removeSize}
+                addColor={productForm.addColor}
+                removeColor={productForm.removeColor}
+                toggleLottery={productForm.toggleLottery}
+                selectAllLotteries={selectAllLotteriesAdapter}
+                deselectAllLotteries={productForm.deselectAllLotteries}
+                addPrintArea={addPrintAreaAdapter}
+                updatePrintArea={productForm.updatePrintArea}
+                removePrintArea={productForm.removePrintArea}
               />
             </div>
           </div>
@@ -157,4 +142,4 @@ const ProductsAdminPage: React.FC = () => {
   );
 };
 
-export default ProductsAdminPage;
+export default AdminProductsPage;

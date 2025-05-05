@@ -1,8 +1,46 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { ExtendedLottery, Lottery } from '@/types/lottery';
+import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
 import { checkSupabaseConnection } from '@/integrations/supabase/client';
+import React from 'react';
+
+/**
+ * Hook to fetch lotteries data
+ */
+export const useLotteries = () => {
+  const [lotteries, setLotteries] = React.useState<ExtendedLottery[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<Error | null>(null);
+  
+  const fetchLotteries = async (activeOnly = false) => {
+    setLoading(true);
+    try {
+      const lotteriesData = await getLotteries(activeOnly);
+      setLotteries(lotteriesData);
+      return true;
+    } catch (err) {
+      console.error("Error fetching lotteries:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchLotteries();
+    
+    // Set up a refresh interval to check for updates
+    const interval = setInterval(() => {
+      fetchLotteries();
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return { lotteries, loading, error, refreshLotteries: fetchLotteries };
+};
 
 /**
  * Fetch all lotteries from Supabase or localStorage
@@ -274,7 +312,8 @@ const createLocalLottery = (lottery: Omit<Lottery, 'id'>): ExtendedLottery => {
     image: lottery.image || '',
     linkedProducts: lottery.linkedProducts || [],
     endDate: lottery.endDate || new Date().toISOString(),
-    featured: lottery.featured || false
+    featured: lottery.featured || false,
+    participants: [] // Add empty participants array to fix type error
   };
   
   // Add to array and save to localStorage
@@ -342,6 +381,11 @@ const updateLocalLotteriesWithNew = (lottery: ExtendedLottery): void => {
   // Get existing lotteries from localStorage
   const storedLotteries = localStorage.getItem('lotteries');
   const lotteries: ExtendedLottery[] = storedLotteries ? JSON.parse(storedLotteries) : [];
+  
+  // Add empty participants array if it's undefined
+  if (!lottery.participants) {
+    lottery.participants = [];
+  }
   
   // Remove any existing lottery with the same ID
   const filteredLotteries = lotteries.filter(l => l.id !== lottery.id);
