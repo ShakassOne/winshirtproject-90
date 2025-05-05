@@ -85,6 +85,7 @@ export const supabaseToAppLottery = (lottery: any): ExtendedLottery => {
     drawDate: lottery.draw_date,
     endDate: lottery.end_date,
     linkedProducts: lottery.linked_products || [],
+    participants: [] // Add empty participants array to fix the type error
   };
 };
 

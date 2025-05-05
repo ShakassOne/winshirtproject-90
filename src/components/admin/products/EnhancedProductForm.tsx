@@ -30,7 +30,7 @@ interface EnhancedProductFormProps {
   toggleLottery: (lotteryId: string) => void;
   selectAllLotteries: () => void;
   deselectAllLotteries: () => void;
-  addPrintArea: (printArea: Omit<PrintArea, 'id'>) => void;
+  addPrintArea: (position: "front" | "back") => void;
   updatePrintArea: (id: number, data: Partial<PrintArea>) => void;
   removePrintArea: (id: number) => void;
 }
@@ -57,42 +57,7 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
 }) => {
   const [selectedTab, setSelectedTab] = useState("basic-info");
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
-  
-  // Create a handler that adapts between the two interfaces
-  const handleAddPrintAreaAdapter = (position: 'front' | 'back') => {
-    if (addPrintArea) {
-      const newArea: Omit<PrintArea, 'id'> = {
-        name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${form.getValues().printAreas.filter((a: PrintArea) => a.position === position).length + 1}`,
-        position,
-        format: 'custom',
-        bounds: {
-          x: 50,
-          y: 50,
-          width: 200,
-          height: 200
-        },
-        allowCustomPosition: true
-      };
-      
-      addPrintArea(newArea);
-    }
-  };
-  
-  const handleUpdatePrintArea = (id: number, data: Partial<PrintArea>) => {
-    if (updatePrintArea) {
-      updatePrintArea(id, data);
-    }
-  };
-  
-  const handleRemovePrintArea = (id: number) => {
-    if (removePrintArea) {
-      removePrintArea(id);
-      if (selectedAreaId === id) {
-        setSelectedAreaId(null);
-      }
-    }
-  };
-  
+
   // Update print area position when drag in visualizer
   const handleUpdateAreaPosition = (areaId: number, x: number, y: number) => {
     if (updatePrintArea) {
@@ -148,7 +113,7 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
               toggleLottery={toggleLottery}
               selectAllLotteries={selectAllLotteries}
               deselectAllLotteries={deselectAllLotteries}
-              addPrintArea={handleAddPrintAreaAdapter}
+              addPrintArea={addPrintArea}
               updatePrintArea={updatePrintArea}
               removePrintArea={removePrintArea}
               hideTabList={true} // Ajouter cette prop pour cacher les onglets internes
@@ -169,9 +134,9 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <PrintAreaManager
                 printAreas={form.getValues().printAreas || []}
-                onAddArea={handleAddPrintAreaAdapter}
-                onRemoveArea={handleRemovePrintArea}
-                onUpdateArea={handleUpdatePrintArea}
+                onAddArea={addPrintArea}
+                onRemoveArea={removePrintArea}
+                onUpdateArea={updatePrintArea}
                 selectedAreaId={selectedAreaId}
                 onSelectArea={setSelectedAreaId}
               />

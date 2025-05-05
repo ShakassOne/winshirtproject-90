@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
 import { toast } from '@/lib/toast';
-import { checkSupabaseConnection } from '@/integrations/supabase/client';
+import { checkSupabaseConnection } from '@/lib/supabase';
 import React from 'react';
 
 /**
@@ -383,15 +383,16 @@ const updateLocalLotteriesWithNew = (lottery: ExtendedLottery): void => {
   const lotteries: ExtendedLottery[] = storedLotteries ? JSON.parse(storedLotteries) : [];
   
   // Add empty participants array if it's undefined
-  if (!lottery.participants) {
-    lottery.participants = [];
-  }
+  const extendedLottery: ExtendedLottery = {
+    ...lottery,
+    participants: lottery.participants || []
+  };
   
   // Remove any existing lottery with the same ID
   const filteredLotteries = lotteries.filter(l => l.id !== lottery.id);
   
   // Add the new lottery
-  filteredLotteries.push(lottery);
+  filteredLotteries.push(extendedLottery);
   
   // Save to localStorage
   localStorage.setItem('lotteries', JSON.stringify(filteredLotteries));

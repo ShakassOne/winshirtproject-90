@@ -71,6 +71,7 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       drawDate: lottery.draw_date,
       endDate: lottery.end_date,
       linkedProducts: lottery.linked_products || [],
+      participants: [] // Add empty participants array to fix type error
     }));
     
     // Ensure data consistency by storing in both storages
@@ -139,6 +140,7 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
       drawDate: data.draw_date,
       endDate: data.end_date,
       linkedProducts: data.linked_products || [],
+      participants: [] // Add empty participants array to fix type error
     };
   } catch (error) {
     console.error(`Error fetching lottery ${id}, trying local storage:`, error);
@@ -229,6 +231,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
         drawDate: lottery.drawDate || null,
         endDate: lottery.endDate || null,
         linkedProducts: lottery.linkedProducts || [],
+        participants: [] // Add empty participants array to fix type error
       };
       
       // Stocker dans localStorage
@@ -263,6 +266,7 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
       drawDate: data.draw_date,
       endDate: data.end_date,
       linkedProducts: data.linked_products || [],
+      participants: [] // Add empty participants array to fix type error
     };
     
     // Update local storage with the new lottery
@@ -343,6 +347,7 @@ export const updateLottery = async (id: number, lottery: Partial<ExtendedLottery
       drawDate: data.draw_date,
       endDate: data.end_date,
       linkedProducts: data.linked_products || [],
+      participants: [] // Add empty participants array to fix type error
     };
     
     // Update the lottery in local storage

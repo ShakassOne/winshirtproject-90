@@ -159,7 +159,7 @@ const LotteriesAdminPage: React.FC = () => {
         linkedProducts,
         endDate: data.endDate,
         featured: data.featured || false,
-        participants: [] // Add this missing property to fix the type error
+        participants: [] // Add this for type compatibility
       };
       
       if (isCreating) {
