@@ -10,7 +10,17 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
 // Define the valid table names
-export type ValidTableName = keyof Database['public']['Tables'];
+export type ValidTableName = 
+  | 'lotteries'
+  | 'products'
+  | 'clients'
+  | 'orders'
+  | 'order_items'
+  | 'lottery_participants'
+  | 'lottery_winners'
+  | 'visuals'
+  | 'visual_categories'
+  | 'user_roles';
 
 // List of required tables for the application to work
 export const requiredTables: ValidTableName[] = [

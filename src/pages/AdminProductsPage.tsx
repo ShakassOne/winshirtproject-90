@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StarBackground from '@/components/StarBackground';
 import { ExtendedProduct } from '@/types/product';

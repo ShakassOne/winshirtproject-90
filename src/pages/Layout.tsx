@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import DynamicBackground from '@/components/backgrounds/DynamicBackground';
 import { Toaster } from '@/components/ui/toaster';
-import { forceSupabaseConnection, checkRequiredTables } from '@/lib/supabase';
+import { checkSupabaseConnection, isSupabaseInitialized } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 
 const Layout = () => {
@@ -24,13 +24,13 @@ const Layout = () => {
         }
         
         // Try to establish Supabase connection
-        const isConnected = await forceSupabaseConnection();
+        const isConnected = await checkSupabaseConnection();
         
         if (isConnected) {
-          // Check required tables
-          const tablesStatus = await checkRequiredTables();
-          if (!tablesStatus.exists) {
-            console.warn("Missing required tables:", tablesStatus.missing);
+          // Check if Supabase is fully initialized
+          const isInitialized = await isSupabaseInitialized();
+          if (!isInitialized) {
+            console.warn("Supabase is not fully initialized.");
           }
           
           // Remove sync attempt since syncLocalDataToSupabase might not be fully implemented
