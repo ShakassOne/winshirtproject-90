@@ -17,6 +17,8 @@ export interface PrintArea {
     minHeight?: number;
     maxHeight?: number;
   };
+  format?: string; // Added to match usage in mockData
+  allowCustomPosition?: boolean; // Added to match usage in PrintAreaManager
 }
 
 export interface Product {
@@ -29,6 +31,16 @@ export interface Product {
   colors?: string[];
   type?: string;
   productType?: string;
+}
+
+export interface ProductFilters {
+  categories: string[];
+  price: {
+    min: number;
+    max: number;
+  };
+  colors: string[];
+  sizes: string[];
 }
 
 export interface ExtendedProduct extends Product {
@@ -48,5 +60,5 @@ export interface ExtendedProduct extends Product {
   fit?: string;
   gender?: string;
   material?: string;
-  participants: Participant[]; // Add participants array to match with ExtendedLottery type
+  participants: Participant[]; // Keep this required field that was added previously
 }

@@ -1,9 +1,60 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ExtendedLottery } from "@/types/lottery";
+import { ExtendedLottery, Participant } from "@/types/lottery";
 import { toast } from "@/lib/toast";
 import { useState, useEffect, useCallback } from "react";
-import { fetchLotteries, createLottery, updateLottery, deleteLottery } from "@/api/lotteryApi";
+import { fetchLotteries as apiFetchLotteries, createLottery as apiCreateLottery, updateLottery as apiUpdateLottery, deleteLottery as apiDeleteLottery } from "@/api/lotteryApi";
+
+// Export the API functions so they can be used directly
+export const createLottery = apiCreateLottery;
+export const updateLottery = apiUpdateLottery;
+export const deleteLottery = apiDeleteLottery;
+
+// Standalone function to get lotteries (not hook-based)
+export const getLotteries = async (activeOnly = false): Promise<ExtendedLottery[]> => {
+  try {
+    console.log("Getting lotteries from Supabase, activeOnly:", activeOnly);
+    const fetchedLotteries = await apiFetchLotteries();
+    
+    // Filter by active status if needed
+    const filteredLotteries = activeOnly 
+      ? fetchedLotteries.filter(lottery => lottery.status === 'active')
+      : fetchedLotteries;
+    
+    console.log(`Retrieved ${filteredLotteries.length} lotteries from Supabase`);
+    return filteredLotteries;
+  } catch (err) {
+    console.error("Error fetching lotteries:", err);
+    throw err instanceof Error ? err : new Error(String(err));
+  }
+};
+
+// Add drawLotteryWinner function
+export const drawLotteryWinner = async (lotteryId: number): Promise<Participant | null> => {
+  try {
+    // For now, simulate a winner draw by randomly selecting from participants
+    const lottery = await apiFetchLotteries()
+      .then(lotteries => lotteries.find(l => l.id === lotteryId));
+    
+    if (!lottery || !lottery.participants || lottery.participants.length === 0) {
+      toast.error("No participants found for this lottery");
+      return null;
+    }
+    
+    // Randomly select a winner
+    const randomIndex = Math.floor(Math.random() * lottery.participants.length);
+    const winner = lottery.participants[randomIndex];
+    
+    // Mark lottery as completed
+    await apiUpdateLottery(lotteryId, { status: 'completed' });
+    
+    return winner;
+  } catch (error) {
+    console.error('Error drawing winner:', error);
+    toast.error(`Error drawing winner: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return null;
+  }
+};
 
 /**
  * Hook for lottery management

@@ -27,7 +27,7 @@ const LotterySelection: React.FC<LotterySelectionProps> = ({
     const loadActiveLotteries = async () => {
       setIsLoading(true);
       try {
-        // Make direct call to the Supabase client to get fresh data
+        // Make direct call to the service to get fresh data
         const allLotteries = await getLotteries(true); // Only get active lotteries
         
         console.log("LotterySelection - Active lotteries loaded:", allLotteries);

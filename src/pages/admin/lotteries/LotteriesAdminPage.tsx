@@ -1,22 +1,23 @@
-
 import React, { useState, useEffect } from 'react';
+import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
+import { useProducts } from '@/services/productService';
+import { useLotteries } from '@/services/lotteryService';
+import { createLottery, updateLottery, deleteLottery, drawLotteryWinner } from '@/services/lotteryService';
+import { ExtendedLottery, Participant } from '@/types/lottery';
+import { ExtendedProduct } from '@/types/product';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import AdminSetup from '@/components/admin/AdminSetup';
 import LotteryList from '@/components/admin/lotteries/LotteryList';
 import LotteryForm from '@/components/admin/lotteries/LotteryForm';
 import { useForm } from 'react-hook-form';
-import { createLottery, updateLottery, deleteLottery, getLotteries, drawLotteryWinner } from '@/services/lotteryService';
-import { ExtendedLottery, Participant } from '@/types/lottery';
-import { ExtendedProduct } from '@/types/product';
-import { toast } from '@/lib/toast';
 
 const LotteriesAdminPage: React.FC = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [products, setProducts] = useState<ExtendedProduct[]>([]);
   const [selectedLotteryId, setSelectedLotteryId] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const lotteryStatuses = ["active", "completed", "relaunched", "cancelled"];
   
@@ -140,47 +141,41 @@ const LotteriesAdminPage: React.FC = () => {
   };
   
   const handleSubmit = async (data: any) => {
-    setIsSubmitting(true);
-    console.log("Submitting lottery form:", data);
-    
     try {
-      // Convert linkedProducts back to numbers
-      const linkedProducts = data.linkedProducts
-        ? data.linkedProducts.map((id: string) => parseInt(id))
-        : [];
-      
-      const lotteryData = {
-        title: data.title,
-        description: data.description,
-        value: Number(data.value),
-        targetParticipants: Number(data.targetParticipants),
-        status: data.status,
-        image: data.image,
-        linkedProducts,
-        endDate: data.endDate,
-        featured: data.featured || false,
-        participants: [] // Add this for type compatibility
-      };
-      
       if (isCreating) {
-        // Create new lottery
-        await createLottery(lotteryData);
+        const newLottery = await createLottery({
+          ...data,
+          participants: [] // Add missing participants array
+        });
+        
+        if (newLottery) {
+          // Refresh lotteries
+          const lotteriesData = await getLotteries(false);
+          setLotteries(lotteriesData);
+          
+          // Reset form
+          handleCancel();
+          
+          toast.success("Loterie créée avec succès");
+        }
       } else if (selectedLotteryId) {
         // Update existing lottery
-        await updateLottery(selectedLotteryId, lotteryData);
+        const updatedLottery = await updateLottery(selectedLotteryId, data);
+        
+        if (updatedLottery) {
+          // Refresh lotteries
+          const lotteriesData = await getLotteries(false);
+          setLotteries(lotteriesData);
+          
+          // Reset form
+          handleCancel();
+          
+          toast.success("Loterie mise à jour avec succès");
+        }
       }
-      
-      // Refresh lotteries
-      const lotteriesData = await getLotteries(false);
-      setLotteries(lotteriesData);
-      
-      // Reset form
-      handleCancel();
     } catch (error) {
       console.error("Error submitting lottery:", error);
       toast.error("Erreur lors de l'enregistrement de la loterie");
-    } finally {
-      setIsSubmitting(false);
     }
   };
   
@@ -274,7 +269,6 @@ const LotteriesAdminPage: React.FC = () => {
                 toggleProduct={toggleProduct}
                 selectAllProducts={selectAllProducts}
                 deselectAllProducts={deselectAllProducts}
-                isSubmitting={isSubmitting}
               />
             </div>
           </div>

@@ -1,19 +1,14 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react';
-import { toast } from '@/lib/toast';
-import {
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  useProducts,
-  syncProductsToSupabase,
-} from '@/services/productService';
-import { getLotteries } from '@/services/lotteryService';
-import { useVisualCategories } from '@/services/visualCategoryService';
+import React, { useState, useEffect } from 'react';
+import { useProducts, createProduct, updateProduct, deleteProduct, syncProductsToSupabase } from '@/services/productService';
+import { useLotteries } from '@/services/lotteryService';
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { ExtendedLottery } from '@/types/lottery';
-import { VisualCategory } from '@/types/visual';
+import { toast } from '@/lib/toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { productSchema } from '@/lib/validations/product';
+import { useNavigate } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Button } from '@/components/ui/button';
@@ -21,19 +16,19 @@ import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { ProductColumn } from '@/components/admin/products/ProductColumn';
 import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { productSchema } from '@/lib/validations/product';
+import { VisualCategory } from '@/types/visual';
+import { useVisualCategories } from '@/services/visualCategoryService';
 import { useAuth } from '@/contexts/AuthContext';
 
-const ProductsAdminPage: React.FC = () => {
+const ProductsAdminPage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const { products, loading, error, refreshProducts } = useProducts();
-  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const { lotteries } = useLotteries();
   const { categories, visualCategories } = useVisualCategories();
   const [activeLotteries, setActiveLotteries] = useState<ExtendedLottery[]>([]);
   const [selectedLotteries, setSelectedLotteries] = useState<string[]>([]);
+  const navigate = useNavigate();
   
   // Use auth context
   const { isAdmin } = useAuth();
@@ -62,19 +57,11 @@ const ProductsAdminPage: React.FC = () => {
   }, [error]);
 
   useEffect(() => {
-    // Load lotteries when component mounts
-    const loadLotteries = async () => {
-      try {
-        const lotteriesData = await getLotteries(false);
-        setLotteries(lotteriesData);
-        setActiveLotteries(lotteriesData);
-      } catch (error) {
-        console.error("Error loading lotteries:", error);
-      }
-    };
-    
-    loadLotteries();
-  }, []);
+    // Initialize activeLotteries when lotteries data is available
+    if (lotteries) {
+      setActiveLotteries(lotteries);
+    }
+  }, [lotteries]);
 
   useEffect(() => {
     // When a product is selected, populate the form with its data
@@ -186,9 +173,18 @@ const ProductsAdminPage: React.FC = () => {
   };
   
   const addPrintArea = (printArea: Omit<PrintArea, "id">) => {
+    // Ensure the printArea has the correct properties
+    const newPrintArea = {
+      position: printArea.position,
+      name: printArea.name,
+      bounds: printArea.bounds,
+      constraints: printArea.constraints,
+      // Add any other required properties
+    };
+    
     const printAreas = form.getValues().printAreas || [];
     const newId = printAreas.length > 0 ? Math.max(...printAreas.map((a: any) => a.id)) + 1 : 1;
-    form.setValue("printAreas", [...printAreas, { ...printArea, id: newId }]);
+    form.setValue("printAreas", [...printAreas, { ...newPrintArea, id: newId }]);
   };
   
   const updatePrintArea = (id: number, data: Partial<PrintArea>) => {
@@ -203,19 +199,13 @@ const ProductsAdminPage: React.FC = () => {
     form.setValue("printAreas", filteredAreas);
   };
 
-  // Handler function for syncing products
+  // Convert async function to void return type
   const handleSyncProducts = async () => {
     try {
-      const success = await syncProductsToSupabase();
-      if (success) {
-        await refreshProducts();
-        toast.success("Produits synchronisés avec succès!");
-      } else {
-        toast.error("Erreur lors de la synchronisation des produits");
-      }
+      await syncProductsToSupabase();
+      await refreshProducts();
     } catch (error) {
       console.error("Error syncing products:", error);
-      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -233,7 +223,6 @@ const ProductsAdminPage: React.FC = () => {
       header: 'Catégorie',
       cell: ({ row }) => {
         const visualCategoryId = row.original.visualCategoryId;
-        if (!visualCategoryId) return '';
         return visualCategories?.find(cat => cat.id === visualCategoryId)?.name || '';
       },
     },
@@ -263,24 +252,6 @@ const ProductsAdminPage: React.FC = () => {
     },
   ];
 
-  // Helper function to adapt the addPrintArea function to the interface expected by EnhancedProductForm
-  const handleAddPrintArea = (position: "front" | "back") => {
-    const newArea: Omit<PrintArea, "id"> = {
-      name: `Zone ${position === 'front' ? 'Recto' : 'Verso'} ${form.getValues().printAreas.filter((a: PrintArea) => a.position === position).length + 1}`,
-      position,
-      format: 'custom',
-      bounds: {
-        x: 50,
-        y: 50,
-        width: 200,
-        height: 200
-      },
-      allowCustomPosition: true
-    };
-    
-    addPrintArea(newArea);
-  };
-
   return (
     <>
       <StarBackground />
@@ -302,10 +273,15 @@ const ProductsAdminPage: React.FC = () => {
             </Button>
             <Button
               variant="outline"
-              onClick={handleSyncProducts}
+              onClick={async () => {
+                const success = await syncProductsToSupabase();
+                if (success) {
+                  await handleSyncProducts();
+                }
+              }}
               className="border-winshirt-purple/30 text-white"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
               Synchroniser
             </Button>
           </div>
@@ -340,7 +316,7 @@ const ProductsAdminPage: React.FC = () => {
                 toggleLottery={toggleLottery}
                 selectAllLotteries={selectAllLotteries}
                 deselectAllLotteries={deselectAllLotteries}
-                addPrintArea={handleAddPrintArea}
+                addPrintArea={addPrintArea}
                 updatePrintArea={updatePrintArea}
                 removePrintArea={removePrintArea}
               />

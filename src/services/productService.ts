@@ -6,6 +6,40 @@ import { snakeToCamel, camelToSnake } from "@/lib/utils";
 import { checkSupabaseConnection } from '@/integrations/supabase/client';
 
 /**
+ * Helper function to convert Supabase product to app format
+ */
+export const supabaseToAppProduct = (product: any): ExtendedProduct => {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description || '',
+    price: product.price,
+    image: product.image || '',
+    secondaryImage: product.secondary_image || '',
+    sizes: product.sizes || [],
+    colors: product.colors || [],
+    type: product.type || 'standard',
+    productType: product.product_type || '',
+    sleeveType: product.sleeve_type || '',
+    linkedLotteries: product.linked_lotteries || [],
+    popularity: product.popularity || 0,
+    tickets: product.tickets || 1,
+    weight: product.weight || 0,
+    deliveryPrice: product.delivery_price || 0,
+    allowCustomization: product.allow_customization || false,
+    defaultVisualId: product.default_visual_id || null,
+    defaultVisualSettings: product.default_visual_settings || null,
+    visualCategoryId: product.visual_category_id || null,
+    printAreas: product.print_areas || [],
+    brand: product.brand || '',
+    fit: product.fit || '',
+    gender: product.gender || '',
+    material: product.material || '',
+    participants: [] // Add empty participants array to fix the type error
+  };
+};
+
+/**
  * Hook to fetch products data
  */
 export const useProducts = () => {
@@ -454,37 +488,6 @@ const saveProductsToLocalStorage = (products: ExtendedProduct[]) => {
 /**
  * Helper function to convert Supabase product to app format
  */
-export const supabaseToAppProduct = (product: any): ExtendedProduct => {
-  return {
-    id: product.id,
-    name: product.name,
-    description: product.description || '',
-    price: product.price,
-    image: product.image || '',
-    secondaryImage: product.secondary_image || '',
-    sizes: product.sizes || [],
-    colors: product.colors || [],
-    type: product.type || 'standard',
-    productType: product.product_type || '',
-    sleeveType: product.sleeve_type || '',
-    linkedLotteries: product.linked_lotteries || [],
-    popularity: product.popularity || 0,
-    tickets: product.tickets || 1,
-    weight: product.weight || 0,
-    deliveryPrice: product.delivery_price || 0,
-    allowCustomization: product.allow_customization || false,
-    defaultVisualId: product.default_visual_id || null,
-    defaultVisualSettings: product.default_visual_settings || null,
-    visualCategoryId: product.visual_category_id || null,
-    printAreas: product.print_areas || [],
-    brand: product.brand || '',
-    fit: product.fit || '',
-    gender: product.gender || '',
-    material: product.material || ''
-  };
-};
-
-// Add function to sync products to Supabase
 export const syncProductsToSupabase = async (): Promise<boolean> => {
   try {
     // Check if Supabase is configured

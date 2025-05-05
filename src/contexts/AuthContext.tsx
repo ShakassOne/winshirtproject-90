@@ -1,8 +1,14 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { toast } from '@/lib/toast';
+
+// Extend the User type to include name
+declare module '@supabase/supabase-js' {
+  interface User {
+    name?: string;
+  }
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -12,7 +18,17 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkIfAdmin: (userId: string) => Promise<boolean>;
+  register: (email: string, password: string, name?: string) => Promise<boolean>;
+  loginWithSocialMedia: (provider: string) => Promise<void>;
 }
+
+// Utility function to simulate sending emails (for development)
+export const simulateSendEmail = async (to: string, subject: string, body: string) => {
+  console.log(`Email would be sent to ${to}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Body: ${body}`);
+  return true;
+};
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
@@ -21,7 +37,9 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   login: async () => false,
   logout: async () => {},
-  checkIfAdmin: async () => false
+  checkIfAdmin: async () => false,
+  register: async () => false,
+  loginWithSocialMedia: async () => {}
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -96,6 +114,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Erreur lors de la connexion:", error);
       return false;
+    }
+  };
+
+  // Register a new user
+  const register = async (email: string, password: string, name?: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
+
+      if (error) {
+        console.error("Error during registration:", error);
+        toast.error(error.message);
+        return false;
+      }
+
+      toast.success("Registration successful! Please check your email to confirm your account.");
+      return true;
+    } catch (error) {
+      console.error("Error during registration:", error);
+      toast.error("Registration failed. Please try again.");
+      return false;
+    }
+  };
+
+  // Login with social media
+  const loginWithSocialMedia = async (provider: string): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider as any,
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        console.error("Error logging in with social media:", error);
+        toast.error(error.message);
+      }
+    } catch (error) {
+      console.error("Error logging in with social media:", error);
+      toast.error("Social login failed. Please try again.");
     }
   };
 
@@ -188,7 +254,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     login,
     logout,
-    checkIfAdmin
+    checkIfAdmin,
+    register,
+    loginWithSocialMedia
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

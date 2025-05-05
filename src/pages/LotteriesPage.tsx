@@ -1,78 +1,69 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { getLotteries } from '@/services/lotteryService';
-import LotteryGrid from '@/components/lottery/LotteryGrid';
-import FeaturedLotterySlider from '@/components/FeaturedLotterySlider';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { useState, useEffect } from 'react';
 import { ExtendedLottery } from '@/types/lottery';
+import StarBackground from '@/components/StarBackground';
+import LotteryCard from '@/components/LotteryCard';
 
-const LotteriesPage: React.FC = () => {
+const LotteriesPage = () => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  
-  const fetchLotteries = async () => {
-    setLoading(true);
-    try {
-      const data = await getLotteries();
-      setLotteries(data as ExtendedLottery[]);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching lotteries:", err);
-      setError(err as Error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   useEffect(() => {
+    const fetchLotteries = async () => {
+      setLoading(true);
+      try {
+        const lotteries = await getLotteries(true); // Only active lotteries
+        setLotteries(lotteries);
+      } catch (error) {
+        console.error('Error fetching lotteries:', error);
+        setErrorMessage('Could not load lotteries');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchLotteries();
   }, []);
-  
-  // Filtrer les loteries en vedette pour le slider
-  const featuredLotteries = lotteries.filter(lottery => lottery.featured === true);
+
+  if (loading) {
+    return (
+      <>
+        <StarBackground />
+        <div className="pt-32 pb-8 text-center">
+          <h1 className="text-2xl text-white">Loading lotteries...</h1>
+        </div>
+      </>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <>
+        <StarBackground />
+        <div className="pt-32 pb-8 text-center">
+          <h1 className="text-2xl text-red-500">{errorMessage}</h1>
+        </div>
+      </>
+    );
+  }
 
   return (
-    <section className="min-h-screen">
-      {/* Afficher le slider des loteries en vedette seulement s'il y en a */}
-      {featuredLotteries.length > 0 && (
-        <FeaturedLotterySlider lotteries={featuredLotteries} />
-      )}
-
-      <section className="pt-32 pb-32">
+    <>
+      <StarBackground />
+      <section className="pt-32 pb-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">Nos Loteries</h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Participez à nos loteries pour tenter de remporter des produits exclusifs WinShirt.
-            </p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-winshirt-purple to-winshirt-blue">
+            Active Lotteries
+          </h1>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {lotteries.map((lottery) => (
+              <LotteryCard key={lottery.id} lottery={lottery} />
+            ))}
           </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <LoadingSpinner size="large" />
-            </div>
-          ) : error ? (
-            <div className="text-center text-red-500 py-10">
-              Une erreur est survenue lors du chargement des loteries.
-              <button 
-                onClick={() => fetchLotteries()}
-                className="mt-4 bg-winshirt-pink hover:bg-winshirt-pink-dark text-black font-bold py-2 px-4 rounded"
-              >
-                Réessayer
-              </button>
-            </div>
-          ) : lotteries.length > 0 ? (
-            <LotteryGrid lotteries={lotteries} />
-          ) : (
-            <div className="text-center text-gray-300 py-10">
-              Aucune loterie n'est disponible pour le moment.
-            </div>
-          )}
         </div>
       </section>
-    </section>
+    </>
   );
 };
 
