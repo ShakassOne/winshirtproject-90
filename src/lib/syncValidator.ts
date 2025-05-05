@@ -69,3 +69,14 @@ export const validateProducts = (products: any[]): boolean => {
     );
   });
 };
+
+/**
+ * Shows validation errors as toast messages and returns validation result
+ */
+export const showValidationErrors = (isValid: boolean, entityName: string): boolean => {
+  if (!isValid) {
+    console.error(`${entityName} validation failed`);
+    return false;
+  }
+  return true;
+};

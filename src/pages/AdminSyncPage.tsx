@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, Check, Database, RefreshCw, Server, Shield } from 'lucide-react';
 import StarBackground from '@/components/StarBackground';
@@ -66,8 +65,10 @@ const AdminSyncPage: React.FC = () => {
     updateSyncHistory();
   }, []);
   
-  const updateSyncHistory = () => {
-    setSyncHistory(getSyncHistory());
+  // Fixed function to update sync history
+  const updateSyncHistory = async () => {
+    const history = await getSyncHistory();
+    setSyncHistory(history);
   };
 
   // Check Supabase connection
@@ -77,7 +78,8 @@ const AdminSyncPage: React.FC = () => {
       const result = await checkSupabaseConnectionWithDetails();
       setIsConnected(result.connected);
       setConnectionError(result.error || null);
-      setStatusCode(result.status || null);
+      // Remove reference to non-existent status property
+      setStatusCode(null);
     } catch (error) {
       setIsConnected(false);
       setConnectionError(error instanceof Error ? error.message : 'Unknown error');
@@ -125,7 +127,7 @@ const AdminSyncPage: React.FC = () => {
     }
   };
   
-  // Sync all tables
+  // Fixed function to sync all tables
   const handleSyncAll = async (direction: 'push' | 'pull') => {
     // Mark all tables as syncing
     const newSyncingState: Record<string, boolean> = {};
@@ -138,7 +140,7 @@ const AdminSyncPage: React.FC = () => {
       await syncAllTables(direction);
       // Refresh counts after sync
       await loadDataCounts();
-      updateSyncHistory();
+      await updateSyncHistory();
     } finally {
       // Mark all tables as not syncing
       const completedState: Record<string, boolean> = {};
@@ -481,14 +483,14 @@ const AdminSyncPage: React.FC = () => {
                         </TableHeader>
                         <TableBody>
                           {syncHistory
-                            .sort((a, b) => b.timestamp - a.timestamp)
+                            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
                             .map((item, index) => (
                               <TableRow key={index}>
                                 <TableCell className="whitespace-nowrap">
-                                  {formatDistanceToNow(new Date(item.timestamp), { 
+                                  {item.timestamp ? formatDistanceToNow(new Date(item.timestamp), { 
                                     addSuffix: true,
                                     locale: fr
-                                  })}
+                                  }) : 'Unknown'}
                                 </TableCell>
                                 <TableCell>
                                   {item.operation === 'push' ? (
@@ -503,7 +505,7 @@ const AdminSyncPage: React.FC = () => {
                                     </span>
                                   )}
                                 </TableCell>
-                                <TableCell>{formatTableName(item.tableName)}</TableCell>
+                                <TableCell>{item.tableName ? formatTableName(item.tableName) : 'Unknown'}</TableCell>
                                 <TableCell>
                                   {item.success ? (
                                     <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/40">
@@ -519,8 +521,8 @@ const AdminSyncPage: React.FC = () => {
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap">
                                   {item.operation === 'push' ? 
-                                    `${item.localCount} → ${item.remoteCount}` :
-                                    `${item.remoteCount} → ${item.localCount}`
+                                    `${item.localCount || 0} → ${item.remoteCount || 0}` :
+                                    `${item.remoteCount || 0} → ${item.localCount || 0}`
                                   }
                                 </TableCell>
                                 <TableCell className="max-w-[200px] truncate">

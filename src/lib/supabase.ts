@@ -84,6 +84,7 @@ export interface SlideType {
   textColor: string;
   buttonText?: string;
   buttonLink?: string;
+  image?: string; // Add this missing property
 }
 
 export interface HomeIntroConfig {
@@ -153,7 +154,7 @@ export const saveHomeIntroConfig = async (config: HomeIntroConfig): Promise<bool
 };
 
 // Upload image utility for home intro slides
-export const uploadImage = async (file: File): Promise<string> => {
+export const uploadImage = async (file: File, folder?: string): Promise<string> => {
   try {
     // For now, just create a URL for the file - in a real app, this would upload to storage
     return URL.createObjectURL(file);

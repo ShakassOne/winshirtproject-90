@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { validateVisualCategories } from '@/lib/syncValidator';
 
 // Define the valid table names
 export type ValidTableName = 'clients' | 'lotteries' | 'lottery_participants' | 
@@ -14,6 +14,9 @@ export interface SyncStatus {
   error?: string;
   remoteCount?: number;
   localCount?: number;
+  timestamp?: number; // Add timestamp
+  operation?: 'push' | 'pull'; // Add operation
+  tableName?: string; // Add tableName
 }
 
 // Get all valid table names
@@ -42,7 +45,10 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       return {
         success: false,
         lastSync: null,
-        error: `No local data found for ${tableName}`
+        error: `No local data found for ${tableName}`,
+        timestamp: Date.now(),
+        operation: 'push',
+        tableName
       };
     }
     
@@ -52,7 +58,10 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
         success: true,
         lastSync: new Date().toISOString(),
         localCount: 0,
-        remoteCount: 0
+        remoteCount: 0,
+        timestamp: Date.now(),
+        operation: 'push',
+        tableName
       };
     }
     
@@ -67,7 +76,10 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
         success: false,
         lastSync: null,
         error: error.message,
-        localCount: data.length
+        localCount: data.length,
+        timestamp: Date.now(),
+        operation: 'push',
+        tableName
       };
     }
     
@@ -76,7 +88,10 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
       success: true,
       lastSync: new Date().toISOString(),
       localCount: data.length,
-      remoteCount: result ? result.length : 0
+      remoteCount: result ? result.length : 0,
+      timestamp: Date.now(),
+      operation: 'push',
+      tableName
     };
     
     setSyncStatus(tableName, status);
@@ -87,7 +102,10 @@ export const pushDataToSupabase = async (tableName: ValidTableName): Promise<Syn
     return {
       success: false,
       lastSync: null,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: Date.now(),
+      operation: 'push',
+      tableName
     };
   }
 };
@@ -103,7 +121,10 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       return {
         success: false,
         lastSync: null,
-        error: error.message
+        error: error.message,
+        timestamp: Date.now(),
+        operation: 'pull',
+        tableName
       };
     }
     
@@ -112,7 +133,10 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
       return {
         success: true,
         lastSync: new Date().toISOString(),
-        remoteCount: 0
+        remoteCount: 0,
+        timestamp: Date.now(),
+        operation: 'pull',
+        tableName
       };
     }
     
@@ -123,7 +147,11 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     const status: SyncStatus = {
       success: true,
       lastSync: new Date().toISOString(),
-      remoteCount: data.length
+      remoteCount: data.length,
+      localCount: data.length,
+      timestamp: Date.now(),
+      operation: 'pull',
+      tableName
     };
     
     setSyncStatus(tableName, status);
@@ -139,7 +167,10 @@ export const pullDataFromSupabase = async (tableName: ValidTableName): Promise<S
     return {
       success: false,
       lastSync: null,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: Date.now(),
+      operation: 'pull',
+      tableName
     };
   }
 };
@@ -164,11 +195,15 @@ export const clearLocalStorage = async (tableName?: ValidTableName): Promise<boo
 };
 
 // Sync all tables
-export const syncAllTables = async (): Promise<Record<string, SyncStatus>> => {
+export const syncAllTables = async (direction: 'push' | 'pull' = 'push'): Promise<Record<string, SyncStatus>> => {
   const results: Record<string, SyncStatus> = {};
   
   for (const tableName of getAllValidTableNames()) {
-    results[tableName] = await pushDataToSupabase(tableName);
+    if (direction === 'push') {
+      results[tableName] = await pushDataToSupabase(tableName);
+    } else {
+      results[tableName] = await pullDataFromSupabase(tableName);
+    }
   }
   
   return results;
@@ -181,10 +216,20 @@ export const getSyncStatus = async (tableName: ValidTableName): Promise<SyncStat
     if (statusJson) {
       return JSON.parse(statusJson);
     }
-    return { success: true, lastSync: null };
+    return { 
+      success: true, 
+      lastSync: null,
+      timestamp: Date.now(),
+      tableName,
+    };
   } catch (error) {
     console.error(`Error getting sync status for ${tableName}:`, error);
-    return { success: false, lastSync: null };
+    return { 
+      success: false, 
+      lastSync: null,
+      timestamp: Date.now(),
+      tableName,
+    };
   }
 };
 
@@ -197,12 +242,15 @@ export const setSyncStatus = async (tableName: ValidTableName, status: SyncStatu
   }
 };
 
-// Get sync history 
-export const getSyncHistory = async (): Promise<Record<string, SyncStatus>> => {
-  const history: Record<string, SyncStatus> = {};
+// Get sync history
+export const getSyncHistory = async (): Promise<SyncStatus[]> => {
+  const history: SyncStatus[] = [];
   
   for (const tableName of getAllValidTableNames()) {
-    history[tableName] = await getSyncStatus(tableName);
+    const status = await getSyncStatus(tableName);
+    if (status.lastSync) { // Only add entries that have synced before
+      history.push(status);
+    }
   }
   
   return history;

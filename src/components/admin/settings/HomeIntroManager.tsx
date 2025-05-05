@@ -131,7 +131,7 @@ const HomeIntroManager: React.FC = () => {
   // Upload d'image pour le background
   const handleImageUpload = async (id: number, file: File) => {
     try {
-      const imageUrl = await uploadImage(file, 'slides');
+      const imageUrl = await uploadImage(file);
       if (imageUrl) {
         handleUpdateSlide(id, 'backgroundImage', imageUrl);
         toast.success("Image téléchargée avec succès");
