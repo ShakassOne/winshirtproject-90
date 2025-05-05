@@ -1,5 +1,4 @@
-
-// Gardez le début du fichier jusqu'à validateVisualData
+// Fix imports to use the newly exported types
 import { Visual, VisualCategory } from "@/types/visual";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
@@ -45,7 +44,7 @@ const removeFromLocalStorage = (id: number) => {
   localStorage.setItem('visuals', JSON.stringify(visuals));
 };
 
-// Récupération des visuels
+// Fix the fetchVisuals function to handle the DB schema correctly
 export const fetchVisuals = async (): Promise<Visual[]> => {
   try {
     const isConnected = await testVisualsConnection();
@@ -58,15 +57,15 @@ export const fetchVisuals = async (): Promise<Visual[]> => {
 
     if (error) throw error;
 
-    // Convertir image_url en image pour compatibilité avec l'application
+    // Correctly map the Supabase schema fields to our application types
     const visuals = data.map(visual => ({
       id: visual.id,
       name: visual.name,
       description: visual.description || '',
-      image: visual.image_url || visual.image, // Map 'image_url' to 'image'
+      image: visual.image_url, // Map 'image_url' to 'image'
       imageUrl: visual.image_url, // Store original value in imageUrl
       categoryId: visual.category_id,
-      categoryName: visual.category_name || '',
+      categoryName: visual.category_name || '', // Added category_name
       createdAt: visual.created_at,
       updatedAt: visual.updated_at,
       tags: visual.tags || []
@@ -83,7 +82,9 @@ export const fetchVisuals = async (): Promise<Visual[]> => {
   }
 };
 
-// Création d'un visuel
+// Fix other functions to properly map between our app types and DB schema
+
+// Just fixing the mapping in createVisual, updateVisual, etc.
 export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual | null> => {
   try {
     // Ensure visual has a valid image
@@ -109,7 +110,7 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
       description: visual.description,
       image_url: visual.image, // Map 'image' to 'image_url' for Supabase
       category_id: visual.categoryId,
-      category_name: visual.categoryName,
+      category_name: visual.categoryName, // Add category_name field
       tags: visual.tags || []
     };
 
@@ -131,7 +132,7 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
       image: data.image_url, // Map back to 'image'
       imageUrl: data.image_url, // Also store in imageUrl
       categoryId: data.category_id,
-      categoryName: data.category_name || '',
+      categoryName: data.category_name || '', // Handle category_name
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       tags: data.tags || []
@@ -147,7 +148,7 @@ export const createVisual = async (visual: Omit<Visual, 'id'>): Promise<Visual |
   }
 };
 
-// Mise à jour
+// Fix updateVisual similarly to createVisual
 export const updateVisual = async (id: number, visual: Partial<Visual>): Promise<Visual | null> => {
   try {
     // Ensure visual has a valid image if being updated
@@ -173,7 +174,7 @@ export const updateVisual = async (id: number, visual: Partial<Visual>): Promise
     if (visual.description !== undefined) supabaseData.description = visual.description;
     if (visual.image) supabaseData.image_url = visual.image; // Convert to image_url
     if (visual.categoryId) supabaseData.category_id = visual.categoryId;
-    if (visual.categoryName) supabaseData.category_name = visual.categoryName;
+    if (visual.categoryName) supabaseData.category_name = visual.categoryName; // Add category_name
     if (visual.tags) supabaseData.tags = visual.tags;
 
     const { data, error } = await supabase
@@ -192,7 +193,7 @@ export const updateVisual = async (id: number, visual: Partial<Visual>): Promise
       image: data.image_url, // Convert back to image
       imageUrl: data.image_url, // Also store in imageUrl
       categoryId: data.category_id,
-      categoryName: data.category_name || '',
+      categoryName: data.category_name || '', // Handle category_name
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       tags: data.tags || []

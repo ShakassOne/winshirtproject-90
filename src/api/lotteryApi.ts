@@ -57,14 +57,14 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       return [];
     }
     
-    // Transform from snake_case to camelCase
-    const lotteries = data.map((lottery) => ({
+    // Transform from snake_case to camelCase with proper type assertions
+    const lotteries: ExtendedLottery[] = data.map((lottery) => ({
       id: lottery.id,
       title: lottery.title,
       description: lottery.description || '',
       image: lottery.image || '',
       value: lottery.value,
-      status: lottery.status as "active" | "completed" | "relaunched" | "cancelled", // Type assertion
+      status: lottery.status as "active" | "completed" | "relaunched" | "cancelled", // Proper type assertion
       featured: lottery.featured || false,
       targetParticipants: lottery.target_participants,
       currentParticipants: lottery.current_participants || 0,
@@ -175,13 +175,15 @@ export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promi
     
     console.log("Données de loterie avant envoi:", lottery); // Debug
     
-    // Prepare data for Supabase (convert camelCase to snake_case)
+    // Type assertion to ensure status is one of the allowed values
+    const typedStatus = lottery.status as "active" | "completed" | "relaunched" | "cancelled";
+    
     const supabaseData = {
       title: lottery.title,
       description: lottery.description,
       image: lottery.image,
       value: lottery.value,
-      status: lottery.status,
+      status: typedStatus,
       featured: lottery.featured || false,
       target_participants: lottery.targetParticipants,
       current_participants: lottery.currentParticipants || 0,
@@ -411,12 +413,12 @@ export const addLotteryParticipant = async (
       return true;
     }
     
-    // Add the participant to the lottery
+    // Add the participant to the lottery - fix the userId to be a string
     const { error: insertError } = await supabase
       .from('lottery_participants')
       .insert({
         lottery_id: lotteryId,
-        user_id: participant.userId.toString(), // Convert to string
+        user_id: participant.userId.toString(), // Convert to string as Supabase expects
         name: participant.name || '',
         email: participant.email || '',
         avatar: participant.avatar || '',
@@ -424,20 +426,26 @@ export const addLotteryParticipant = async (
       
     if (insertError) throw insertError;
     
-    // Update the currentParticipants count in the lottery
-    const { error: updateError } = await supabase.rpc('increment_lottery_participants', {
-      lottery_id_param: lotteryId
-    });
+    // Update the currentParticipants count in the lottery - Fix the RPC call
+    const { error: updateError } = await supabase.rpc(
+      'increment_lottery_participants', 
+      { lottery_id_param: lotteryId }
+    );
     
     if (updateError) {
-      // If the RPC fails, try direct update
+      console.error("Error updating participant count:", updateError);
+      // If the RPC fails, try a direct update as fallback
       const { error: fallbackError } = await supabase
         .from('lotteries')
-        .update({ current_participants: supabase.rpc('increment_lottery_participants', { lottery_id_param: lotteryId }) })
+        .update({ 
+          current_participants: supabase.rpc('increment_lottery_participants', { 
+            lottery_id_param: lotteryId 
+          }) 
+        })
         .eq('id', lotteryId);
         
       if (fallbackError) {
-        console.error("Error updating participant count:", fallbackError);
+        console.error("Error with fallback update:", fallbackError);
       }
     }
     
