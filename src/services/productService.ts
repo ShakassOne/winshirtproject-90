@@ -1,8 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Product, ExtendedProduct } from '@/types/product';
+import { ExtendedProduct } from '@/types/product';
 import { toast } from '@/lib/toast';
 import React from 'react';
 import { snakeToCamel, camelToSnake } from "@/lib/utils";
+import { checkSupabaseConnection } from '@/integrations/supabase/client';
 
 /**
  * Hook to fetch products data
