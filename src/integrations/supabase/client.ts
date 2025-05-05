@@ -39,11 +39,22 @@ export const requiredTables: ValidTableName[] = [
 // Helper function to check supabase connection
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.auth.getUser();
+    // Use a simple query instead of getUser to verify connection
+    const { data, error } = await supabase.from('lotteries').select('count').limit(1);
+    
     if (error) {
       console.error("Supabase connection error:", error.message);
       return false;
     }
+    
+    // Also check if user is authenticated (optional, doesn't fail the connection check)
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user) {
+      console.log("Supabase connection successful with authenticated user:", userData.user.email);
+    } else {
+      console.log("Supabase connection successful but no authenticated user");
+    }
+    
     return true;
   } catch (err) {
     console.error("Supabase connection check failed:", err);

@@ -1,112 +1,208 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { createAdminUserWithSignup } from '@/scripts/createAdminUser';
+import { Card } from '@/components/ui/card';
 import { toast } from '@/lib/toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon, Check, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-const AdminSetup: React.FC = () => {
+const AdminSetup = () => {
   const [isCreating, setIsCreating] = useState(false);
-  const [created, setCreated] = useState(false);
-  
-  const handleCreateAdminUser = async () => {
-    setIsCreating(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminEmail] = useState('alan@shakass.com');
+  const [adminPassword] = useState('admin123');
+
+  // Vérifier si l'utilisateur est déjà authentifié
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          console.log("Utilisateur déjà authentifié:", data.user.email);
+          setIsAuthenticated(true);
+          // Vérifier si l'utilisateur est admin
+          checkIfAdmin(data.user.id);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la vérification de l'authentification:", error);
+      }
+    };
+    
+    checkAuth();
+  }, []);
+
+  // Vérifier si l'utilisateur est admin
+  const checkIfAdmin = async (userId: string) => {
     try {
-      const result = await createAdminUserWithSignup();
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
       
-      if (result.success) {
-        toast.success("L'utilisateur admin a été créé avec succès dans Supabase");
-        setCreated(true);
-        
-        // Store admin credentials for synchronization
-        localStorage.setItem('winshirt_admin', JSON.stringify({
-          email: 'alan@shakass.com',
-          password: 'admin123'
-        }));
-        
-        toast.success("Identifiants admin stockés pour la synchronisation");
+      if (error) {
+        console.error("Erreur lors de la vérification du rôle admin:", error);
+        return;
+      }
+      
+      if (data) {
+        console.log("L'utilisateur est un administrateur");
+        toast.success("Vous êtes connecté en tant qu'administrateur", { position: "bottom-right" });
       } else {
-        if (result.error?.message?.includes('email already')) {
-          toast.info("L'utilisateur admin existe déjà. Connectez-vous avec alan@shakass.com/admin123");
-          setCreated(true);
-          
-          // Store credentials anyway since the user exists
-          localStorage.setItem('winshirt_admin', JSON.stringify({
-            email: 'alan@shakass.com',
-            password: 'admin123'
-          }));
-          
-          toast.success("Identifiants admin stockés pour la synchronisation");
+        console.log("L'utilisateur n'est pas un administrateur");
+        toast.warning("Vous êtes connecté mais n'avez pas les droits d'administrateur", { position: "bottom-right" });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification du rôle admin:", error);
+    }
+  };
+
+  const createAdminUser = async () => {
+    setIsCreating(true);
+    setIsLoading(true);
+
+    try {
+      // Tenter de créer l'admin
+      const { data, error } = await supabase.auth.signUp({
+        email: adminEmail,
+        password: adminPassword,
+        options: {
+          data: {
+            name: 'Admin User',
+            isAdmin: true
+          }
+        }
+      });
+
+      if (error) {
+        // Si l'utilisateur existe déjà, on tente de se connecter
+        if (error.message.includes('already been registered')) {
+          toast.info("L'utilisateur admin existe déjà, tentative de connexion...", { position: "bottom-right" });
+          await loginAsAdmin();
+          return;
         } else {
-          toast.error(`Erreur lors de la création: ${result.error?.message || 'Erreur inconnue'}`);
+          throw error;
+        }
+      }
+
+      if (data?.user?.id) {
+        // Ajouter le rôle admin
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert([
+            { 
+              user_id: data.user.id, 
+              role: 'admin' 
+            }
+          ]);
+
+        if (roleError) {
+          console.error("Erreur lors de l'attribution du rôle admin:", roleError);
+          toast.error(`Erreur lors de l'attribution du rôle admin: ${roleError.message}`, { position: "bottom-right" });
+        } else {
+          toast.success("Utilisateur admin créé et rôle attribué avec succès", { position: "bottom-right" });
+          setIsAuthenticated(true);
         }
       }
     } catch (error) {
-      console.error("Error creating admin user:", error);
-      toast.error("Erreur lors de la création de l'utilisateur admin");
+      console.error("Erreur lors de la création de l'utilisateur admin:", error);
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
     } finally {
       setIsCreating(false);
+      setIsLoading(false);
     }
   };
-  
+
+  const loginAsAdmin = async () => {
+    setIsSigningIn(true);
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.user) {
+        toast.success("Connecté en tant qu'admin avec succès", { position: "bottom-right" });
+        setIsAuthenticated(true);
+        checkIfAdmin(data.user.id);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la connexion admin:", error);
+      toast.error(`Erreur de connexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    } finally {
+      setIsSigningIn(false);
+      setIsLoading(false);
+    }
+  };
+
+  // Déconnexion
+  const logoutAdmin = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setIsAuthenticated(false);
+      toast.success("Déconnexion réussie", { position: "bottom-right" });
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, { position: "bottom-right" });
+    }
+  };
+
   return (
-    <Card className="w-full mb-8 border-orange-300 border-2 shadow-md">
-      <CardHeader className="bg-orange-50">
-        <CardTitle className="flex items-center text-orange-700">
-          <InfoIcon className="mr-2 h-5 w-5" /> 
-          Configuration Admin Requise
-        </CardTitle>
-        <CardDescription className="text-orange-600">
-          Vous devez créer un utilisateur admin dans Supabase pour activer la synchronisation
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-4">
-        {created ? (
-          <Alert className="bg-green-50 border-green-300">
-            <Check className="h-4 w-4 text-green-700" />
-            <AlertTitle>Utilisateur admin configuré</AlertTitle>
-            <AlertDescription>
-              L'utilisateur admin a été configuré avec succès. Vous pouvez maintenant utiliser la synchronisation.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            <p className="mb-4 text-sm">
-              Cette opération va créer un utilisateur admin dans Supabase avec les identifiants suivants:
-            </p>
-            <ul className="list-disc pl-6 mb-4 text-sm">
-              <li>Email: alan@shakass.com</li>
-              <li>Mot de passe: admin123</li>
-            </ul>
-            <p className="mb-4 text-amber-600 text-sm">
-              <strong>IMPORTANT:</strong> Cet utilisateur est nécessaire pour la synchronisation avec Supabase.
-            </p>
-          </>
-        )}
-      </CardContent>
-      <CardFooter className="bg-orange-50">
-        <Button 
-          onClick={handleCreateAdminUser} 
-          disabled={isCreating || created}
-          className="w-full bg-orange-500 hover:bg-orange-600"
-        >
-          {isCreating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Création en cours...
-            </>
-          ) : created ? (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Utilisateur admin créé
-            </>
-          ) : (
-            'Créer utilisateur admin'
-          )}
-        </Button>
-      </CardFooter>
+    <Card className="bg-winshirt-space-light p-6 rounded-lg border border-winshirt-purple/30 mb-8">
+      <h2 className="text-xl font-semibold mb-4 text-white">Configuration Administrateur</h2>
+      
+      {isAuthenticated ? (
+        <div className="space-y-4">
+          <div className="bg-green-500/20 p-3 rounded-md text-white">
+            <p>Vous êtes connecté en tant qu'administrateur</p>
+          </div>
+          <div className="flex space-x-2">
+            <Button 
+              onClick={logoutAdmin}
+              variant="outline" 
+              className="border-winshirt-purple text-white"
+            >
+              Se déconnecter
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="bg-amber-500/20 p-3 rounded-md text-white">
+            <p>Pour utiliser les fonctionnalités d'administration, connectez-vous ou créez un compte administrateur</p>
+            <p className="text-sm mt-2">Identifiants par défaut: {adminEmail} / {adminPassword}</p>
+          </div>
+          <div className="flex space-x-2">
+            <Button 
+              onClick={loginAsAdmin}
+              disabled={isLoading}
+              className="bg-winshirt-purple hover:bg-winshirt-purple-dark"
+            >
+              {isSigningIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Se connecter en tant qu'admin
+            </Button>
+            <Button 
+              onClick={createAdminUser}
+              disabled={isLoading}
+              variant="outline" 
+              className="border-winshirt-purple text-white"
+            >
+              {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Créer un utilisateur admin
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
