@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { mockProducts } from '@/data/mockData';
-import { ExtendedProduct } from '@/types/product';
+import { ExtendedProduct, ProductFilters } from '@/types/product';
 import StarBackground from '@/components/StarBackground';
 import ProductCard from '@/components/product/ProductCard';
 import { Input } from '@/components/ui/input';
@@ -52,7 +51,7 @@ const ProductsPage: React.FC = () => {
   }, []);
   
   // Extract available filters
-  const availableFilters = {
+  const availableFilters: ProductFilters = {
     productTypes: [...new Set(products.map(p => p.productType).filter(Boolean))],
     sleeveTypes: [...new Set(products.map(p => p.sleeveType).filter(Boolean))],
     genders: [...new Set(products.map(p => p.gender).filter(Boolean))],
@@ -63,6 +62,8 @@ const ProductsPage: React.FC = () => {
     brands: [...new Set(products.map(p => p.brand).filter(Boolean))],
     sizes: [...new Set(products.flatMap(p => p.sizes || []))],
     colors: [...new Set(products.flatMap(p => p.colors || []))],
+    categories: [...new Set(products.map(p => p.productType).filter(Boolean))], // Add categories
+    price: { min: 0, max: 1000 } // Add price range
   };
   
   // Filter and sort products

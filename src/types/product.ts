@@ -41,6 +41,13 @@ export interface ProductFilters {
   };
   colors: string[];
   sizes: string[];
+  // Additional properties needed for AdvancedFilters
+  productTypes: string[];
+  sleeveTypes: string[];
+  genders: string[];
+  materials: string[];
+  fits: string[];
+  brands: string[];
 }
 
 export interface ExtendedProduct extends Product {
@@ -61,4 +68,7 @@ export interface ExtendedProduct extends Product {
   gender?: string;
   material?: string;
   participants: Participant[]; // Keep this required field that was added previously
+  lotteryName?: string; // Add this to match usage in mockData
+  lotteryImage?: string; // Add this for consistency
+  deliveryInfo?: any; // Add for mock data
 }

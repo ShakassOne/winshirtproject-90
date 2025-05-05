@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useProducts, createProduct, updateProduct, deleteProduct, syncProductsToSupabase } from '@/services/productService';
-import { useLotteries } from '@/services/lotteryService';
-import { ExtendedProduct, PrintArea } from '@/types/product';
-import { ExtendedLottery } from '@/types/lottery';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react'; // Add the missing icon imports
 import { toast } from '@/lib/toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { productSchema } from '@/lib/validations/product';
-import { useNavigate } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  useProducts,
+  syncProductsToSupabase,
+} from '@/services/productService';
+import { useLotteries } from '@/services/lotteryService';
+import { useVisualCategories } from '@/services/visualCategoryService';
+import { ExtendedProduct } from '@/types/product';
+import { ExtendedLottery } from '@/types/lottery';
+import { VisualCategory } from '@/types/visual';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { Button } from '@/components/ui/button';
@@ -16,8 +21,11 @@ import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { ProductColumn } from '@/components/admin/products/ProductColumn';
 import EnhancedProductForm from '@/components/admin/products/EnhancedProductForm';
-import { VisualCategory } from '@/types/visual';
-import { useVisualCategories } from '@/services/visualCategoryService';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { productSchema } from '@/lib/validations/product';
+import { Product } from '@/types/database.types';
+import { supabaseToAppProduct } from '@/lib/dataConverters';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ProductsAdminPage = () => {

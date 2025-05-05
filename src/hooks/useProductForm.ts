@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { ExtendedProduct, PrintArea } from '@/types/product';
@@ -30,7 +29,8 @@ const defaultValues: ExtendedProduct = {
   brand: '',
   fit: '',
   gender: '',
-  material: ''
+  material: '',
+  participants: [] // Add this to match the ExtendedProduct type
 };
 
 export const useProductForm = (
