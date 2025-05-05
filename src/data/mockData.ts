@@ -1,3 +1,4 @@
+
 import { ExtendedProduct } from '@/types/product';
 import { Visual } from '@/types/visual';
 import { Client } from '@/types/client';
@@ -705,6 +706,30 @@ export const getMockProducts = (): ExtendedProduct[] => {
 export const mockProducts = getMockProducts();
 
 /**
+ * Get a visual by its ID
+ * @param id The ID of the visual to retrieve
+ * @returns The visual object if found, undefined otherwise
+ */
+export const getVisualById = (id: number) => {
+  try {
+    // First, try to get from localStorage
+    const visualsStr = localStorage.getItem('visuals');
+    if (visualsStr) {
+      const visuals = JSON.parse(visualsStr);
+      const visual = visuals.find((v: any) => v.id === id);
+      if (visual) return visual;
+    }
+    
+    // If not found in localStorage, check mock data (fallback)
+    const mockVisuals = getMockVisuals();
+    return mockVisuals.find(visual => visual.id === id);
+  } catch (error) {
+    console.error(`Error getting visual with ID ${id}:`, error);
+    return undefined;
+  }
+};
+
+/**
  * Mock data for visuals - Updated to use categoryId and categoryName instead of category
  */
 export const getMockVisuals = (): Visual[] => {
@@ -793,30 +818,6 @@ export const getMockVisuals = (): Visual[] => {
 };
 
 /**
- * Get a visual by its ID
- * @param id The ID of the visual to retrieve
- * @returns The visual object if found, undefined otherwise
- */
-export const getVisualById = (id: number) => {
-  try {
-    // First, try to get from localStorage
-    const visualsStr = localStorage.getItem('visuals');
-    if (visualsStr) {
-      const visuals = JSON.parse(visualsStr);
-      const visual = visuals.find((v: any) => v.id === id);
-      if (visual) return visual;
-    }
-    
-    // If not found in localStorage, check mock data (fallback)
-    const mockVisuals = getMockVisuals();
-    return mockVisuals.find(visual => visual.id === id);
-  } catch (error) {
-    console.error(`Error getting visual with ID ${id}:`, error);
-    return undefined;
-  }
-};
-
-/**
  * Mock data for clients
  */
 export const getMockClients = (): Client[] => {
@@ -832,4 +833,9 @@ export const getMockClients = (): Client[] => {
       country: "France",
       registrationDate: "2023-01-15",
       orderCount: 5,
-      total
+      totalSpent: 450.75  // Fixed the incomplete property
+    }
+  ];
+};
+
+// Add any additional mock data exports needed
