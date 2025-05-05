@@ -18,19 +18,21 @@ const LotteryParticipateButton: React.FC<LotteryParticipateButtonProps> = ({ lot
     
     try {
       // Check if user is logged in
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.auth.getUser();
       
-      if (!user) {
+      if (error || !data?.user) {
         toast.error("Veuillez vous connecter pour participer à cette loterie.");
         return;
       }
       
+      const user = data.user;
+      
       // Create participant object with userId field
       const participant = {
         userId: user.id ? parseInt(user.id.replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000000), 
-        name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Utilisateur',
+        name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur',
         email: user.email || '',
-        avatar: user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${user.email?.split('@')[0]}`
+        avatar: user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${user.email?.split('@')[0] || 'User'}`
       };
       
       console.log("Adding participant to lottery:", {lotteryId, participant});

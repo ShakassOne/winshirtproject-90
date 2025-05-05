@@ -1,15 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { testSupabaseConnection } from './lotteryApi';
 
 // Initialisation de la base de données Supabase
 export const initializeSupabase = async (): Promise<boolean> => {
   try {
     // On s'assure que la connexion est bien établie
-    const { data, error } = await supabase.from('lotteries').select('count').limit(1);
+    const isConnected = await testSupabaseConnection();
     
-    if (error) {
-      console.error("Erreur de connexion Supabase:", error);
+    if (!isConnected) {
+      console.error("Erreur de connexion Supabase");
       return false;
     }
 
@@ -73,13 +74,5 @@ export const initializeSupabase = async (): Promise<boolean> => {
   }
 };
 
-// Fonction pour vérifier directement une connexion à Supabase
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  try {
-    const { data, error } = await supabase.from('lotteries').select('count').limit(1);
-    return !error;
-  } catch (error) {
-    console.error("Erreur lors de la vérification de connexion Supabase:", error);
-    return false;
-  }
-};
+// Use the testSupabaseConnection function from lotteryApi
+export const checkSupabaseConnection = testSupabaseConnection;

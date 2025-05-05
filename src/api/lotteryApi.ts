@@ -1,5 +1,6 @@
+
 import { ExtendedLottery, Participant } from "@/types/lottery";
-import { supabase, checkSupabaseConnection } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
 
 // Function to test connection to Supabase
@@ -52,8 +53,13 @@ export const fetchLotteries = async (): Promise<ExtendedLottery[]> => {
       throw error;
     }
     
+    if (!data) {
+      console.log("No data returned from Supabase, returning empty array");
+      return [];
+    }
+    
     // Transform from snake_case to camelCase
-    const lotteries = data.map((lottery: any) => ({
+    const lotteries = data.map((lottery) => ({
       id: lottery.id,
       title: lottery.title,
       description: lottery.description || '',
@@ -119,6 +125,10 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
       throw error;
     }
     
+    if (!data) {
+      return null;
+    }
+    
     return {
       id: data.id,
       title: data.title,
@@ -159,7 +169,7 @@ export const fetchLotteryById = async (id: number): Promise<ExtendedLottery | nu
 export const createLottery = async (lottery: Omit<ExtendedLottery, 'id'>): Promise<ExtendedLottery | null> => {
   try {
     // First, ensure we have a connection to Supabase
-    const connected = await checkSupabaseConnection();
+    const connected = await testSupabaseConnection();
     if (!connected) {
       console.error("Cannot create lottery: No connection to Supabase");
       toast.error("Impossible de créer une loterie: Pas de connexion à Supabase", { position: "bottom-right" });
