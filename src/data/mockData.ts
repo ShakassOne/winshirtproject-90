@@ -1,3 +1,4 @@
+
 import { ExtendedProduct } from '@/types/product';
 import { Visual } from '@/types/visual';
 import { Client } from '@/types/client';
@@ -827,4 +828,14 @@ export const getMockVisuals = (): Visual[] => {
       id: 10,
       name: "Nourriture",
       image: "/img/visuals/food.png",
-      categoryId: 8, // "Nourriture"
+      categoryId: 8, // "Nourriture" category
+      categoryName: "Nourriture",
+      tags: ["cuisine", "gastronomie", "délicieux"],
+    }
+  ];
+};
+
+/**
+ * Export a constant for backwards compatibility
+ */
+export const mockVisuals = getMockVisuals();
