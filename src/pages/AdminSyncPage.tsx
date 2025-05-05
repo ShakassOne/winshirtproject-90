@@ -4,7 +4,7 @@ import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { syncProductsToSupabase } from '@/services/productService';
 import { syncClientsToSupabase } from '@/services/clientService';
-import { useLotteries } from '@/services/lotteryService';
+import { useLotteries } from '@/services/productService';
 import { syncOrdersToSupabase } from '@/services/orderService';
 import { syncVisualCategoriesToSupabase } from '@/api/visualApi';
 import { checkSupabaseConnection } from '@/lib/supabase';
