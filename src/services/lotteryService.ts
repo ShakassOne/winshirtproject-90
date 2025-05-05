@@ -1,457 +1,334 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { ExtendedLottery, Lottery, Participant } from '@/types/lottery';
-import { toast } from '@/lib/toast';
-import { checkSupabaseConnection } from '@/lib/supabase';
-import React from 'react';
+import { supabase } from "@/integrations/supabase/client";
+import { ExtendedLottery } from "@/types/lottery";
+import { toast } from "@/lib/toast";
+import { useState, useEffect, useCallback } from "react";
+import { fetchLotteries, createLottery, updateLottery, deleteLottery } from "@/api/lotteryApi";
 
 /**
- * Hook to fetch lotteries data
+ * Hook for lottery management
  */
 export const useLotteries = () => {
-  const [lotteries, setLotteries] = React.useState<ExtendedLottery[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
-  
-  const fetchLotteries = async (activeOnly = false) => {
+  const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Fetch lotteries from API
+  const getLotteries = useCallback(async (activeOnly = false) => {
     setLoading(true);
     try {
-      const lotteriesData = await getLotteries(activeOnly);
-      setLotteries(lotteriesData);
-      return true;
+      console.log("Getting lotteries from Supabase, activeOnly:", activeOnly);
+      const fetchedLotteries = await fetchLotteries();
+      
+      // Filter by active status if needed
+      const filteredLotteries = activeOnly 
+        ? fetchedLotteries.filter(lottery => lottery.status === 'active')
+        : fetchedLotteries;
+      
+      console.log(`Retrieved ${filteredLotteries.length} lotteries from Supabase`);
+      setLotteries(filteredLotteries);
+      return filteredLotteries;
     } catch (err) {
       console.error("Error fetching lotteries:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
-      return false;
+      return [];
     } finally {
       setLoading(false);
     }
-  };
-
-  React.useEffect(() => {
-    fetchLotteries();
-    
-    // Set up a refresh interval to check for updates
-    const interval = setInterval(() => {
-      fetchLotteries();
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(interval);
   }, []);
 
-  return { lotteries, loading, error, refreshLotteries: fetchLotteries };
+  // Initial data load
+  useEffect(() => {
+    getLotteries();
+  }, [getLotteries]);
+
+  return { 
+    lotteries, 
+    loading, 
+    error, 
+    getLotteries
+  };
 };
 
 /**
- * Fetch all lotteries from Supabase or localStorage
+ * Hook for lottery form management
  */
-export const getLotteries = async (activeOnly = false): Promise<ExtendedLottery[]> => {
-  console.log("Getting lotteries from Supabase, activeOnly:", activeOnly);
-  try {
-    const isConnected = await checkSupabaseConnection();
-    
-    if (isConnected) {
-      // Try to fetch from Supabase
-      let query = supabase.from('lotteries').select('*');
-      
-      if (activeOnly) {
-        query = query.eq('status', 'active');
-      }
-      
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        // Store in localStorage for offline use
-        localStorage.setItem('lotteries', JSON.stringify(data));
-        console.log(`Retrieved ${data.length} lotteries from Supabase`);
-        return data as ExtendedLottery[];
-      }
-    }
-    
-    // Fallback to localStorage
-    console.log("Storage debug: \n      LocalStorage:", localStorage.getItem('lotteries') ? "has lotteries" : "empty lotteries",
-                 "\n      SessionStorage:", sessionStorage.getItem('lotteries') ? "has lotteries" : "empty lotteries");
-    const storedLotteries = localStorage.getItem('lotteries');
-    
-    if (storedLotteries) {
-      let lotteries = JSON.parse(storedLotteries) as ExtendedLottery[];
-      
-      if (activeOnly) {
-        lotteries = lotteries.filter(lottery => lottery.status === 'active');
-      }
-      
-      return lotteries;
-    }
-    
-    // Return empty array if no data available
-    return [];
-  } catch (error) {
-    console.error("Error fetching lotteries:", error);
-    
-    // Try to get from localStorage as fallback
-    const storedLotteries = localStorage.getItem('lotteries');
-    if (storedLotteries) {
-      try {
-        let lotteries = JSON.parse(storedLotteries) as ExtendedLottery[];
-        
-        if (activeOnly) {
-          lotteries = lotteries.filter(lottery => lottery.status === 'active');
-        }
-        
-        return lotteries;
-      } catch (e) {
-        return [];
-      }
-    }
-    
-    return [];
-  }
-};
-
-/**
- * Create a new lottery
- */
-export const createLottery = async (lottery: Omit<Lottery, 'id'>): Promise<ExtendedLottery | null> => {
-  console.log("Données de loterie avant envoi:", lottery);
+export const useLotteryForm = (
+  lotteries: ExtendedLottery[], 
+  setLotteries: React.Dispatch<React.SetStateAction<ExtendedLottery[]>>,
+  products: any[] = []
+) => {
+  const [isCreating, setIsCreating] = useState(false);
+  const [selectedLotteryId, setSelectedLotteryId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  try {
-    // Check if Supabase is connected
-    const isConnected = await checkSupabaseConnection();
-    
-    if (isConnected) {
-      console.log("Création de loterie dans Supabase:", lottery);
-      
-      // Try to insert in Supabase
-      const { data, error } = await supabase
-        .from('lotteries')
-        .insert([lottery])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("Erreur lors de la création de loterie dans Supabase:", error);
-        // If RBAC error, fall back to local storage
-        if (error.code === '42501') {
-          return createLocalLottery(lottery);
-        }
-        throw error;
-      }
-      
-      // Store in localStorage for offline use
-      updateLocalLotteriesWithNew(data as ExtendedLottery);
-      
-      toast.success(`Loterie "${data.title}" créée avec succès`);
-      return data as ExtendedLottery;
-    } else {
-      // Fallback to localStorage if Supabase is not connected
-      return createLocalLottery(lottery);
-    }
-  } catch (error) {
-    console.error("Error creating lottery:", error);
-    
-    // Try to create in localStorage
-    return createLocalLottery(lottery);
-  }
-};
+  const [form, setForm] = useState({
+    id: null as number | null,
+    title: '',
+    description: '',
+    value: 0,
+    targetParticipants: 10,
+    status: 'active' as 'active' | 'completed' | 'relaunched' | 'cancelled',
+    image: '',
+    linkedProducts: [] as number[],
+    endDate: '',
+    featured: false
+  });
 
-/**
- * Update an existing lottery
- */
-export const updateLottery = async (id: number, lottery: Partial<Lottery>): Promise<ExtendedLottery | null> => {
-  try {
-    // Check if Supabase is connected
-    const isConnected = await checkSupabaseConnection();
-    
-    if (isConnected) {
-      // Try to update in Supabase
-      const { data, error } = await supabase
-        .from('lotteries')
-        .update(lottery)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) {
-        // If permission error, fall back to local storage
-        if (error.code === '42501') {
-          return updateLocalLottery(id, lottery);
-        }
-        throw error;
-      }
-      
-      // Update in localStorage for offline use
-      updateLocalLottery(id, data as ExtendedLottery);
-      
-      toast.success(`Loterie "${data.title}" mise à jour avec succès`);
-      return data as ExtendedLottery;
-    } else {
-      // Fallback to localStorage if Supabase is not connected
-      return updateLocalLottery(id, lottery);
-    }
-  } catch (error) {
-    console.error("Error updating lottery:", error);
-    
-    // Try to update in localStorage
-    return updateLocalLottery(id, lottery);
-  }
-};
-
-/**
- * Delete a lottery
- */
-export const deleteLottery = async (id: number): Promise<boolean> => {
-  try {
-    // Check if Supabase is connected
-    const isConnected = await checkSupabaseConnection();
-    
-    if (isConnected) {
-      // Try to delete from Supabase
-      const { error } = await supabase
-        .from('lotteries')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        // If permission error, fall back to local storage
-        if (error.code === '42501') {
-          return deleteLocalLottery(id);
-        }
-        throw error;
-      }
-      
-      // Remove from localStorage
-      deleteLocalLottery(id);
-      
-      toast.success("Loterie supprimée avec succès");
-      return true;
-    } else {
-      // Fallback to localStorage if Supabase is not connected
-      return deleteLocalLottery(id);
-    }
-  } catch (error) {
-    console.error("Error deleting lottery:", error);
-    
-    // Try to delete from localStorage
-    return deleteLocalLottery(id);
-  }
-};
-
-/**
- * Draw a winner for a lottery
- */
-export const drawLotteryWinner = async (lotteryId: number): Promise<any> => {
-  try {
-    // In a real app, this would call Supabase procedure
-    // For now, just implement local logic to pick a random winner
-    
-    // Get the lottery
-    const lotteries = await getLotteries();
-    const lottery = lotteries.find(l => l.id === lotteryId);
-    
-    if (!lottery) {
-      throw new Error("Lottery not found");
-    }
-    
-    // For demo, just create a fake winner
-    const winner = {
-      id: Math.floor(Math.random() * 1000),
-      name: `Winner #${Math.floor(Math.random() * 100)}`,
-      email: `winner${Math.floor(Math.random() * 100)}@example.com`,
-      avatar: 'https://source.unsplash.com/random/100x100/?person'
-    };
-    
-    // Update lottery status to completed
-    await updateLottery(lotteryId, { 
-      status: 'completed',
-      // In a real app, we'd store winner ID in the DB
-      // For now, just make it part of the lottery object
+  // Reset form for new lottery
+  const handleCreateLottery = () => {
+    setIsCreating(true);
+    setSelectedLotteryId(null);
+    setForm({
+      id: null,
+      title: '',
+      description: '',
+      value: 0,
+      targetParticipants: 10,
+      status: 'active',
+      image: '',
+      linkedProducts: [],
+      endDate: '',
+      featured: false
     });
-    
-    // Store winner in localStorage for demo
-    const lotteriesWinnersKey = 'lotteryWinners';
-    const storedWinners = localStorage.getItem(lotteriesWinnersKey);
-    let winners = storedWinners ? JSON.parse(storedWinners) : {};
-    
-    winners[lotteryId] = winner;
-    localStorage.setItem(lotteriesWinnersKey, JSON.stringify(winners));
-    
-    toast.success(`Gagnant tiré pour la loterie "${lottery.title}"`);
-    
-    return winner;
-  } catch (error) {
-    console.error("Error drawing lottery winner:", error);
-    toast.error("Erreur lors du tirage du gagnant");
-    throw error;
-  }
-};
-
-/**
- * Helper: Create a lottery in localStorage
- */
-const createLocalLottery = (lottery: Omit<Lottery, 'id'>): ExtendedLottery => {
-  // Get existing lotteries from localStorage
-  const storedLotteries = localStorage.getItem('lotteries');
-  const lotteries: ExtendedLottery[] = storedLotteries ? JSON.parse(storedLotteries) : [];
-  
-  // Generate a new ID (in production this would be a UUID or from the server)
-  const newId = lotteries.length > 0 
-    ? Math.max(...lotteries.map(l => l.id)) + 1
-    : 1;
-  
-  // Create new lottery with ID
-  const newLottery: ExtendedLottery = {
-    id: newId,
-    title: lottery.title,
-    description: lottery.description || '',
-    value: lottery.value,
-    targetParticipants: lottery.targetParticipants,
-    currentParticipants: lottery.currentParticipants || 0,
-    status: lottery.status,
-    image: lottery.image || '',
-    linkedProducts: lottery.linkedProducts || [],
-    endDate: lottery.endDate || new Date().toISOString(),
-    featured: lottery.featured || false,
-    participants: [] // Add empty participants array to fix type error
   };
-  
-  // Add to array and save to localStorage
-  lotteries.push(newLottery);
-  localStorage.setItem('lotteries', JSON.stringify(lotteries));
-  
-  toast.success(`Loterie "${newLottery.title}" créée en mode local`);
-  
-  return newLottery;
-};
 
-/**
- * Helper: Update a lottery in localStorage
- */
-const updateLocalLottery = (id: number, lottery: Partial<Lottery> | ExtendedLottery): ExtendedLottery | null => {
-  // Get existing lotteries from localStorage
-  const storedLotteries = localStorage.getItem('lotteries');
-  if (!storedLotteries) return null;
-  
-  let lotteries: ExtendedLottery[] = JSON.parse(storedLotteries);
-  
-  // Find the lottery to update
-  const index = lotteries.findIndex(l => l.id === id);
-  if (index === -1) return null;
-  
-  // Update the lottery
-  lotteries[index] = { ...lotteries[index], ...lottery };
-  
-  // Save to localStorage
-  localStorage.setItem('lotteries', JSON.stringify(lotteries));
-  
-  toast.success(`Loterie mise à jour en mode local`);
-  
-  return lotteries[index];
-};
-
-/**
- * Helper: Delete a lottery from localStorage
- */
-const deleteLocalLottery = (id: number): boolean => {
-  // Get existing lotteries from localStorage
-  const storedLotteries = localStorage.getItem('lotteries');
-  if (!storedLotteries) return false;
-  
-  let lotteries: ExtendedLottery[] = JSON.parse(storedLotteries);
-  
-  // Filter out the lottery to delete
-  const filteredLotteries = lotteries.filter(l => l.id !== id);
-  
-  // If no lottery was removed, return false
-  if (filteredLotteries.length === lotteries.length) return false;
-  
-  // Save to localStorage
-  localStorage.setItem('lotteries', JSON.stringify(filteredLotteries));
-  
-  toast.success("Loterie supprimée en mode local");
-  
-  return true;
-};
-
-/**
- * Helper: Update localStorage lotteries with a new lottery
- */
-const updateLocalLotteriesWithNew = (lottery: ExtendedLottery): void => {
-  // Get existing lotteries from localStorage
-  const storedLotteries = localStorage.getItem('lotteries');
-  const lotteries: ExtendedLottery[] = storedLotteries ? JSON.parse(storedLotteries) : [];
-  
-  // Add empty participants array if it's undefined
-  const extendedLottery: ExtendedLottery = {
-    ...lottery,
-    participants: lottery.participants || []
-  };
-  
-  // Remove any existing lottery with the same ID
-  const filteredLotteries = lotteries.filter(l => l.id !== lottery.id);
-  
-  // Add the new lottery
-  filteredLotteries.push(extendedLottery);
-  
-  // Save to localStorage
-  localStorage.setItem('lotteries', JSON.stringify(filteredLotteries));
-};
-
-/**
- * Sync lotteries to Supabase
- */
-export const syncLotteriesToSupabase = async (): Promise<boolean> => {
-  try {
-    const isConnected = await checkSupabaseConnection();
-    
-    if (!isConnected) {
-      toast.error("Synchronisation impossible - Mode hors-ligne");
-      return false;
-    }
-    
-    const storedLotteries = localStorage.getItem('lotteries');
-    if (!storedLotteries) {
-      toast.warning("Aucune loterie locale à synchroniser");
-      return false;
-    }
-    
-    const lotteries: ExtendedLottery[] = JSON.parse(storedLotteries);
-    if (lotteries.length === 0) {
-      toast.warning("Aucune loterie trouvée");
-      return false;
-    }
-    
-    // Convert lotteries to Supabase format
-    const supabaseData = lotteries.map(lottery => ({
-      id: lottery.id,
-      title: lottery.title,
-      description: lottery.description || null,
-      value: lottery.value,
-      target_participants: lottery.targetParticipants,
-      current_participants: lottery.currentParticipants || 0,
-      status: lottery.status,
-      image: lottery.image || null,
-      linked_products: lottery.linkedProducts || [],
-      end_date: lottery.endDate || new Date().toISOString(),
-      featured: lottery.featured || false
-    }));
-    
-    // Upsert to Supabase
-    const { error } = await supabase
-      .from('lotteries')
-      .upsert(supabaseData, {
-        onConflict: 'id',
-        ignoreDuplicates: false // Update existing records on conflict
+  // Load lottery data for editing
+  const handleEditLottery = (lotteryId: number) => {
+    const lotteryToEdit = lotteries.find(lottery => lottery.id === lotteryId);
+    if (lotteryToEdit) {
+      setIsCreating(false);
+      setSelectedLotteryId(lotteryId);
+      setForm({
+        id: lotteryToEdit.id,
+        title: lotteryToEdit.title || '',
+        description: lotteryToEdit.description || '',
+        value: lotteryToEdit.value || 0,
+        targetParticipants: lotteryToEdit.targetParticipants || 10,
+        status: lotteryToEdit.status as 'active' | 'completed' | 'relaunched' | 'cancelled',
+        image: lotteryToEdit.image || '',
+        linkedProducts: lotteryToEdit.linkedProducts || [],
+        endDate: lotteryToEdit.endDate || '',
+        featured: lotteryToEdit.featured || false
       });
-    
-    if (error) throw error;
-    
-    toast.success(`${lotteries.length} loteries synchronisées`);
-    return true;
-  } catch (error) {
-    console.error("Erreur de synchronisation des loteries:", error);
-    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    return false;
-  }
+    }
+  };
+
+  // Delete lottery
+  const handleDeleteLottery = async (lotteryId: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette loterie ?')) {
+      try {
+        await deleteLottery(lotteryId);
+        // Update local state after successful deletion
+        setLotteries(prevLotteries => prevLotteries.filter(lottery => lottery.id !== lotteryId));
+        // Reset form if the deleted lottery was selected
+        if (selectedLotteryId === lotteryId) {
+          handleCancel();
+        }
+      } catch (error) {
+        console.error('Error deleting lottery:', error);
+        toast.error(`Erreur lors de la suppression: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      }
+    }
+  };
+
+  // Handle form submission
+  const onSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      if (isCreating) {
+        // Create new lottery
+        const newLottery = await createLottery({
+          title: form.title,
+          description: form.description,
+          value: form.value,
+          targetParticipants: form.targetParticipants,
+          status: form.status,
+          image: form.image,
+          linkedProducts: form.linkedProducts,
+          endDate: form.endDate,
+          featured: form.featured,
+          participants: [] // Add empty participants array to fix the type error
+        });
+        
+        if (newLottery) {
+          // Update local state with new lottery
+          setLotteries(prevLotteries => [...prevLotteries, newLottery]);
+          handleCancel(); // Reset form after creation
+        }
+      } else if (selectedLotteryId) {
+        // Update existing lottery
+        const updatedLottery = await updateLottery(selectedLotteryId, {
+          title: form.title,
+          description: form.description,
+          value: form.value,
+          targetParticipants: form.targetParticipants,
+          status: form.status,
+          image: form.image,
+          linkedProducts: form.linkedProducts,
+          endDate: form.endDate,
+          featured: form.featured
+        });
+        
+        if (updatedLottery) {
+          // Update local state with updated lottery
+          setLotteries(prevLotteries => prevLotteries.map(lottery => 
+            lottery.id === selectedLotteryId ? updatedLottery : lottery
+          ));
+          handleCancel(); // Reset form after update
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting lottery form:', error);
+      toast.error(`Erreur lors de la soumission: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reset form
+  const handleCancel = () => {
+    setIsCreating(false);
+    setSelectedLotteryId(null);
+    setForm({
+      id: null,
+      title: '',
+      description: '',
+      value: 0,
+      targetParticipants: 10,
+      status: 'active',
+      image: '',
+      linkedProducts: [],
+      endDate: '',
+      featured: false
+    });
+  };
+
+  // Toggle product selection
+  const toggleProduct = (productId: number) => {
+    setForm(prevForm => {
+      const linkedProducts = [...prevForm.linkedProducts];
+      const index = linkedProducts.indexOf(productId);
+      
+      if (index !== -1) {
+        linkedProducts.splice(index, 1);
+      } else {
+        linkedProducts.push(productId);
+      }
+      
+      return {
+        ...prevForm,
+        linkedProducts
+      };
+    });
+  };
+
+  // Select all products
+  const selectAllProducts = () => {
+    if (products.length > 0) {
+      setForm(prevForm => ({
+        ...prevForm,
+        linkedProducts: products.map(product => product.id)
+      }));
+    }
+  };
+
+  // Deselect all products
+  const deselectAllProducts = () => {
+    setForm(prevForm => ({
+      ...prevForm,
+      linkedProducts: []
+    }));
+  };
+
+  // Handle drawing a winner for a lottery
+  const handleDrawWinner = async (lotteryId: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir effectuer le tirage au sort pour cette loterie ?')) {
+      try {
+        // TODO: Implement winner drawing logic
+        
+        // For now, simulate a winner draw by marking the lottery as completed
+        const updatedLottery = await updateLottery(lotteryId, { status: 'completed' });
+        
+        if (updatedLottery) {
+          // Update local state with updated lottery
+          setLotteries(prevLotteries => prevLotteries.map(lottery => 
+            lottery.id === lotteryId ? updatedLottery : lottery
+          ));
+          
+          toast.success('Tirage au sort effectué avec succès!');
+        }
+      } catch (error) {
+        console.error('Error drawing winner:', error);
+        toast.error(`Erreur lors du tirage au sort: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      }
+    }
+  };
+
+  // Check if lotteries are ready for drawing
+  const checkLotteriesReadyForDraw = () => {
+    return lotteries.filter(lottery => {
+      // Lottery is ready if it has reached the target number of participants
+      const targetReached = lottery.currentParticipants >= lottery.targetParticipants;
+      
+      // Or if it has passed its end date
+      const endDatePassed = lottery.endDate && new Date(lottery.endDate) < new Date();
+      
+      // And it must be active
+      const isActive = lottery.status === 'active';
+      
+      return isActive && (targetReached || endDatePassed);
+    });
+  };
+
+  // Toggle featured status
+  const handleToggleFeatured = async (lotteryId: number) => {
+    const lotteryToUpdate = lotteries.find(lottery => lottery.id === lotteryId);
+    if (lotteryToUpdate) {
+      try {
+        const updatedLottery = await updateLottery(lotteryId, { 
+          featured: !lotteryToUpdate.featured 
+        });
+        
+        if (updatedLottery) {
+          // Update local state with updated lottery
+          setLotteries(prevLotteries => prevLotteries.map(lottery => 
+            lottery.id === lotteryId ? updatedLottery : lottery
+          ));
+          
+          toast.success(`Loterie ${updatedLottery.featured ? 'ajoutée aux' : 'retirée des'} favoris`);
+        }
+      } catch (error) {
+        console.error('Error toggling featured status:', error);
+        toast.error(`Erreur lors de la mise à jour: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      }
+    }
+  };
+
+  // Handle form field changes
+  const handleChange = (field: string, value: any) => {
+    setForm(prevForm => ({
+      ...prevForm,
+      [field]: value
+    }));
+  };
+
+  return {
+    isCreating,
+    selectedLotteryId,
+    form,
+    isSubmitting,
+    handleCreateLottery,
+    handleEditLottery,
+    handleDeleteLottery,
+    onSubmit,
+    handleCancel,
+    handleChange,
+    toggleProduct,
+    selectAllProducts,
+    deselectAllProducts,
+    handleDrawWinner,
+    checkLotteriesReadyForDraw,
+    handleToggleFeatured
+  };
 };

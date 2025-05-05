@@ -30,7 +30,7 @@ interface EnhancedProductFormProps {
   toggleLottery: (lotteryId: string) => void;
   selectAllLotteries: () => void;
   deselectAllLotteries: () => void;
-  addPrintArea: (position: "front" | "back") => void;
+  addPrintArea: (printArea: Omit<PrintArea, "id">) => void;
   updatePrintArea: (id: number, data: Partial<PrintArea>) => void;
   removePrintArea: (id: number) => void;
 }
@@ -57,6 +57,29 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
 }) => {
   const [selectedTab, setSelectedTab] = useState("basic-info");
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+
+  // Add a helper method to create a print area from position
+  const handleAddPrintArea = (position: "front" | "back") => {
+    // Create a default print area based on position
+    const newPrintArea: Omit<PrintArea, "id"> = {
+      position: position,
+      name: position === "front" ? "Face avant" : "Face arrière",
+      bounds: {
+        x: 100, 
+        y: 100,
+        width: 200,
+        height: 200
+      },
+      constraints: {
+        minWidth: 50,
+        maxWidth: 300,
+        minHeight: 50,
+        maxHeight: 300
+      }
+    };
+    
+    addPrintArea(newPrintArea);
+  };
 
   // Update print area position when drag in visualizer
   const handleUpdateAreaPosition = (areaId: number, x: number, y: number) => {
@@ -113,7 +136,7 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
               toggleLottery={toggleLottery}
               selectAllLotteries={selectAllLotteries}
               deselectAllLotteries={deselectAllLotteries}
-              addPrintArea={addPrintArea}
+              addPrintArea={handleAddPrintArea}
               updatePrintArea={updatePrintArea}
               removePrintArea={removePrintArea}
               hideTabList={true} // Ajouter cette prop pour cacher les onglets internes
@@ -134,7 +157,7 @@ const EnhancedProductForm: React.FC<EnhancedProductFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <PrintAreaManager
                 printAreas={form.getValues().printAreas || []}
-                onAddArea={addPrintArea}
+                onAddArea={handleAddPrintArea}
                 onRemoveArea={removePrintArea}
                 onUpdateArea={updatePrintArea}
                 selectedAreaId={selectedAreaId}

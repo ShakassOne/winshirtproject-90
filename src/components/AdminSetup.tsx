@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/lib/toast';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AdminSetup = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, isAdmin, login, logout, checkIfAdmin } = useAuth();
+  
   const [adminEmail] = useState('alan@shakass.com');
   const [adminPassword] = useState('admin123');
 
@@ -21,7 +23,6 @@ const AdminSetup = () => {
         const { data } = await supabase.auth.getUser();
         if (data.user) {
           console.log("Utilisateur déjà authentifié:", data.user.email);
-          setIsAuthenticated(true);
           // Vérifier si l'utilisateur est admin
           checkIfAdmin(data.user.id);
         }
@@ -32,33 +33,6 @@ const AdminSetup = () => {
     
     checkAuth();
   }, []);
-
-  // Vérifier si l'utilisateur est admin
-  const checkIfAdmin = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .single();
-      
-      if (error) {
-        console.error("Erreur lors de la vérification du rôle admin:", error);
-        return;
-      }
-      
-      if (data) {
-        console.log("L'utilisateur est un administrateur");
-        toast.success("Vous êtes connecté en tant qu'administrateur", { position: "bottom-right" });
-      } else {
-        console.log("L'utilisateur n'est pas un administrateur");
-        toast.warning("Vous êtes connecté mais n'avez pas les droits d'administrateur", { position: "bottom-right" });
-      }
-    } catch (error) {
-      console.error("Erreur lors de la vérification du rôle admin:", error);
-    }
-  };
 
   const createAdminUser = async () => {
     setIsCreating(true);
@@ -104,7 +78,7 @@ const AdminSetup = () => {
           toast.error(`Erreur lors de l'attribution du rôle admin: ${roleError.message}`, { position: "bottom-right" });
         } else {
           toast.success("Utilisateur admin créé et rôle attribué avec succès", { position: "bottom-right" });
-          setIsAuthenticated(true);
+          await login(adminEmail, adminPassword);
         }
       }
     } catch (error) {
@@ -121,19 +95,11 @@ const AdminSetup = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: adminEmail,
-        password: adminPassword
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.user) {
+      const success = await login(adminEmail, adminPassword);
+      if (success) {
         toast.success("Connecté en tant qu'admin avec succès", { position: "bottom-right" });
-        setIsAuthenticated(true);
-        checkIfAdmin(data.user.id);
+      } else {
+        toast.error("Impossible de se connecter avec les identifiants fournis", { position: "bottom-right" });
       }
     } catch (error) {
       console.error("Erreur lors de la connexion admin:", error);
@@ -147,9 +113,7 @@ const AdminSetup = () => {
   // Déconnexion
   const logoutAdmin = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setIsAuthenticated(false);
+      await logout();
       toast.success("Déconnexion réussie", { position: "bottom-right" });
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
@@ -163,15 +127,20 @@ const AdminSetup = () => {
       
       {isAuthenticated ? (
         <div className="space-y-4">
-          <div className="bg-green-500/20 p-3 rounded-md text-white">
-            <p>Vous êtes connecté en tant qu'administrateur</p>
+          <div className={isAdmin ? "bg-green-500/20 p-3 rounded-md text-white" : "bg-yellow-500/20 p-3 rounded-md text-white"}>
+            <p>{isAdmin 
+              ? "Vous êtes connecté en tant qu'administrateur" 
+              : "Vous êtes connecté mais vous n'avez pas les droits d'administrateur"}
+            </p>
           </div>
           <div className="flex space-x-2">
             <Button 
               onClick={logoutAdmin}
               variant="outline" 
               className="border-winshirt-purple text-white"
+              disabled={isLoading}
             >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Se déconnecter
             </Button>
           </div>

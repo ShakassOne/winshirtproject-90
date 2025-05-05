@@ -1,7 +1,8 @@
+
 import { ExtendedProduct } from "@/types/product";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/toast";
-import { snakeToCamel, camelToSnake } from "@/lib/utils";
+import { appToSupabaseProduct, supabaseToAppProduct } from "@/lib/dataConverters";
 
 // Helper function to check if Supabase is configured
 const isSupabaseConfigured = (): boolean => {
@@ -26,68 +27,43 @@ const getNextProductId = (products: ExtendedProduct[]): number => {
 
 // Fonction pour récupérer tous les produits
 export const fetchProducts = async (): Promise<ExtendedProduct[]> => {
+  // Always use localStorage as fallback first
+  const storedProducts = localStorage.getItem('products');
+  let localProducts: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+  
   if (!isSupabaseConfigured()) {
     console.log('Supabase n\'est pas configuré. Utilisation du localStorage uniquement.');
-    const storedProducts = localStorage.getItem('products');
-    return storedProducts ? JSON.parse(storedProducts) : [];
+    return localProducts;
   }
 
   try {
+    // Try to fetch from Supabase
     const { data, error } = await supabase
       .from('products')
       .select('*');
     
-    if (error) throw error;
+    if (error) {
+      console.error('Erreur lors de la récupération des produits:', error);
+      // Return localStorage data on error
+      return localProducts;
+    }
     
     // Convertir les données au format ExtendedProduct
-    const products: ExtendedProduct[] = data.map(item => {
-      return {
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        image: item.image || '',
-        secondaryImage: item.secondary_image,
-        sizes: item.sizes || [],
-        colors: item.colors || [],
-        type: item.type || 'standard',
-        productType: item.product_type || '',
-        sleeveType: item.sleeve_type || '',
-        linkedLotteries: item.linked_lotteries || [],
-        popularity: item.popularity || 0,
-        tickets: item.tickets || 1,
-        weight: item.weight,
-        deliveryPrice: item.delivery_price,
-        allowCustomization: item.allow_customization === true, // Conversion explicite en booléen
-        defaultVisualId: item.default_visual_id,
-        defaultVisualSettings: item.default_visual_settings, // No conversion needed with more flexible types
-        visualCategoryId: item.visual_category_id,
-        printAreas: item.print_areas || [], // Use directly with more flexible types
-        brand: item.brand || '',
-        fit: item.fit || '',
-        gender: item.gender || '',
-        material: item.material || '',
-      };
-    });
-    
-    // Sauvegarder dans localStorage comme fallback
-    saveProductsToLocalStorage(products);
-    
-    return products;
+    if (data && data.length > 0) {
+      const products: ExtendedProduct[] = data.map(item => supabaseToAppProduct(item));
+      
+      // Sauvegarder dans localStorage comme fallback
+      saveProductsToLocalStorage(products);
+      
+      return products;
+    } else {
+      // If no data from Supabase, return localStorage data
+      return localProducts;
+    }
   } catch (error) {
     console.error('Erreur lors de la récupération des produits:', error);
-    toast.error("Erreur de connexion: utilisation des données locales");
-    
     // Fallback au localStorage en cas d'erreur
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      try {
-        return JSON.parse(storedProducts);
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
+    return localProducts;
   }
 };
 
@@ -104,7 +80,8 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       const newId = getNextProductId(products);
       const newProduct: ExtendedProduct = {
         ...product,
-        id: newId
+        id: newId,
+        participants: [] // Add empty participants array to fix the type error
       };
       
       products.push(newProduct);
@@ -120,37 +97,12 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
   }
 
   try {
-    // Convert product to Supabase format with proper types
-    const supabaseData = {
-      name: product.name,
-      description: product.description || null,
-      price: product.price,
-      image: product.image || null,
-      secondary_image: product.secondaryImage || null,
-      sizes: product.sizes || [],
-      colors: product.colors || [],
-      type: product.type || 'standard',
-      product_type: product.productType || null,
-      sleeve_type: product.sleeveType || null,
-      linked_lotteries: product.linkedLotteries || [],
-      popularity: product.popularity || Math.random() * 100,
-      tickets: product.tickets || 1,
-      weight: product.weight || null,
-      delivery_price: product.deliveryPrice || null,
-      allow_customization: Boolean(product.allowCustomization), // Convert to boolean
-      default_visual_id: product.defaultVisualId || null,
-      default_visual_settings: product.defaultVisualSettings || null, // Use directly
-      visual_category_id: product.visualCategoryId || null,
-      print_areas: product.printAreas || [], // Use directly
-      brand: product.brand || null,
-      fit: product.fit || null,
-      gender: product.gender || null,
-      material: product.material || null
-    };
+    // Convert product to Supabase format
+    const supabaseData = appToSupabaseProduct(product as ExtendedProduct);
     
     console.log('Données envoyées à Supabase:', supabaseData); // Debug
     
-    // IMPORTANT: Ne pas inclure l'ID lors de la création, laisser Supabase le générer
+    // Try to create in Supabase
     const { data, error } = await supabase
       .from('products')
       .insert([supabaseData]) // Use array for insert
@@ -159,7 +111,23 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
     
     if (error) {
       console.error('Erreur Supabase lors de la création:', error);
-      throw error;
+      
+      // Create locally if Supabase fails
+      const storedProducts = localStorage.getItem('products');
+      const products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+      
+      const newId = getNextProductId(products);
+      const newProduct: ExtendedProduct = {
+        ...product,
+        id: newId,
+        participants: [] // Add empty participants array to fix the type error
+      };
+      
+      products.push(newProduct);
+      saveProductsToLocalStorage(products);
+      
+      toast.warning("Produit créé localement (échec de Supabase)");
+      return newProduct;
     }
     
     if (!data) {
@@ -168,36 +136,10 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
     
     console.log('Données reçues de Supabase après création:', data); // Debug
     
-    // Convertir au format ExtendedProduct
-    const createdProduct: ExtendedProduct = {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      price: data.price,
-      image: data.image || '',
-      secondaryImage: data.secondary_image,
-      sizes: data.sizes || [],
-      colors: data.colors || [],
-      type: data.type || 'standard',
-      productType: data.product_type || '',
-      sleeveType: data.sleeve_type || '',
-      linkedLotteries: data.linked_lotteries || [],
-      popularity: data.popularity || 0,
-      tickets: data.tickets || 1,
-      weight: data.weight,
-      deliveryPrice: data.delivery_price,
-      allowCustomization: Boolean(data.allow_customization),
-      defaultVisualId: data.default_visual_id,
-      defaultVisualSettings: data.default_visual_settings, // Use directly
-      visualCategoryId: data.visual_category_id,
-      printAreas: data.print_areas || [], // Use directly
-      brand: data.brand || '',
-      fit: data.fit || '',
-      gender: data.gender || '',
-      material: data.material || '',
-    };
+    // Convert to ExtendedProduct
+    const createdProduct = supabaseToAppProduct(data);
     
-    // Mettre à jour le localStorage pour la cohérence
+    // Update local storage to include the new product
     const products = await fetchProducts();
     products.push(createdProduct);
     saveProductsToLocalStorage(products);
@@ -208,7 +150,7 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
     console.error('Erreur lors de la création du produit:', error);
     toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     
-    // Fallback au localStorage
+    // Fallback to localStorage if all else fails
     try {
       const storedProducts = localStorage.getItem('products');
       const products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
@@ -216,12 +158,14 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
       const newId = getNextProductId(products);
       const newProduct: ExtendedProduct = {
         ...product,
-        id: newId
+        id: newId,
+        participants: [] // Add empty participants array to fix the type error
       };
       
       products.push(newProduct);
       saveProductsToLocalStorage(products);
       
+      toast.warning("Produit créé localement suite à une erreur");
       return newProduct;
     } catch (localError) {
       console.error('Erreur lors du fallback local:', localError);
@@ -231,150 +175,76 @@ export const createProduct = async (product: Omit<ExtendedProduct, 'id'>): Promi
   }
 };
 
-export const updateProduct = async (product: ExtendedProduct): Promise<ExtendedProduct | null> => {
-  console.log('Mise à jour du produit:', product); // Debug
+// Fonction pour mettre à jour un produit existant
+export const updateProduct = async (id: number, product: ExtendedProduct): Promise<ExtendedProduct | null> => {
+  // Always update local storage first for reliability
+  try {
+    const storedProducts = localStorage.getItem('products');
+    let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+    
+    products = products.map(p => p.id === id ? {...product, id} : p);
+    saveProductsToLocalStorage(products);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du localStorage:', error);
+  }
   
-  // Si Supabase n'est pas configuré, utiliser localStorage
+  // Si Supabase n'est pas configuré, utiliser localStorage uniquement
   if (!isSupabaseConfigured()) {
-    try {
-      const storedProducts = localStorage.getItem('products');
-      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
-      
-      products = products.map(p => p.id === product.id ? product : p);
-      saveProductsToLocalStorage(products);
-      
-      toast.success("Produit mis à jour avec succès (stockage local)");
-      return product;
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du produit en local:', error);
-      toast.error("Erreur lors de la mise à jour du produit");
-      return null;
-    }
+    toast.success("Produit mis à jour avec succès (stockage local uniquement)");
+    return product;
   }
 
   try {
-    const supabaseData = {
-      name: product.name,
-      description: product.description || null,
-      price: product.price,
-      image: product.image || null,
-      secondary_image: product.secondaryImage || null,
-      sizes: product.sizes || [],
-      colors: product.colors || [],
-      type: product.type || 'standard',
-      product_type: product.productType || null,
-      sleeve_type: product.sleeveType || null,
-      linked_lotteries: product.linkedLotteries || [],
-      popularity: product.popularity || 0,
-      tickets: product.tickets || 1,
-      weight: product.weight || null,
-      delivery_price: product.deliveryPrice || null,
-      allow_customization: Boolean(product.allowCustomization),
-      default_visual_id: product.defaultVisualId || null,
-      default_visual_settings: product.defaultVisualSettings || null, // Use directly
-      visual_category_id: product.visualCategoryId || null,
-      print_areas: product.printAreas || [], // Use directly
-      brand: product.brand || null,
-      fit: product.fit || null,
-      gender: product.gender || null,
-      material: product.material || null,
-    };
+    // Convert to Supabase format
+    const supabaseData = appToSupabaseProduct(product);
     
-    console.log('Données envoyées à Supabase pour mise à jour:', supabaseData); // Debug
-    
+    // Try to update in Supabase
     const { data, error } = await supabase
       .from('products')
       .update(supabaseData)
-      .eq('id', product.id)
+      .eq('id', id)
       .select()
       .single();
     
     if (error) {
       console.error('Erreur Supabase lors de la mise à jour:', error);
-      throw error;
+      toast.warning("Produit mis à jour localement uniquement (échec de Supabase)");
+      return product;
     }
     
     if (!data) {
       throw new Error('Aucune donnée retournée après mise à jour');
     }
     
-    console.log('Données reçues de Supabase après mise à jour:', data); // Debug
-    
-    // Convertir au format ExtendedProduct
-    const updatedProduct: ExtendedProduct = {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      price: data.price,
-      image: data.image || '',
-      secondaryImage: data.secondary_image,
-      sizes: data.sizes || [],
-      colors: data.colors || [],
-      type: data.type || 'standard',
-      productType: data.product_type || '',
-      sleeveType: data.sleeve_type || '',
-      linkedLotteries: data.linked_lotteries || [],
-      popularity: data.popularity || 0,
-      tickets: data.tickets || 1,
-      weight: data.weight,
-      deliveryPrice: data.delivery_price,
-      allowCustomization: Boolean(data.allow_customization),
-      defaultVisualId: data.default_visual_id,
-      defaultVisualSettings: data.default_visual_settings, // Use directly
-      visualCategoryId: data.visual_category_id,
-      printAreas: data.print_areas || [], // Use directly
-      brand: data.brand || '',
-      fit: data.fit || '',
-      gender: data.gender || '',
-      material: data.material || '',
-    };
-    
-    // Mettre à jour le localStorage pour la cohérence
-    const products = await fetchProducts();
-    const updatedProducts = products.map(p => p.id === product.id ? updatedProduct : p);
-    saveProductsToLocalStorage(updatedProducts);
+    // Convert back to app format
+    const updatedProduct = supabaseToAppProduct(data);
     
     toast.success(`Produit "${updatedProduct.name}" mis à jour avec succès`);
     return updatedProduct;
   } catch (error) {
     console.error('Erreur lors de la mise à jour du produit:', error);
     toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    
-    // Fallback au localStorage
-    try {
-      const storedProducts = localStorage.getItem('products');
-      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
-      
-      products = products.map(p => p.id === product.id ? product : p);
-      saveProductsToLocalStorage(products);
-      
-      return product;
-    } catch (localError) {
-      console.error('Erreur lors du fallback local:', localError);
-      toast.error("Erreur lors de la mise à jour du produit");
-      return null;
-    }
+    return product; // Return the original product since it's already in localStorage
   }
 };
 
 // Fonction pour supprimer un produit
 export const deleteProduct = async (productId: number): Promise<boolean> => {
-  // Si Supabase n'est pas configuré, utiliser localStorage
+  // Always remove from localStorage first
+  try {
+    const storedProducts = localStorage.getItem('products');
+    let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
+    
+    products = products.filter(p => p.id !== productId);
+    saveProductsToLocalStorage(products);
+  } catch (error) {
+    console.error('Erreur lors de la suppression du produit en local:', error);
+  }
+  
+  // Si Supabase n'est pas configuré, succès après localStorage
   if (!isSupabaseConfigured()) {
-    try {
-      const storedProducts = localStorage.getItem('products');
-      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
-      
-      products = products.filter(p => p.id !== productId);
-      saveProductsToLocalStorage(products);
-      
-      toast.success("Produit supprimé avec succès (stockage local)");
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de la suppression du produit en local:', error);
-      toast.error("Erreur lors de la suppression du produit");
-      return false;
-    }
+    toast.success("Produit supprimé avec succès (stockage local)");
+    return true;
   }
 
   try {
@@ -383,39 +253,18 @@ export const deleteProduct = async (productId: number): Promise<boolean> => {
       .delete()
       .eq('id', productId);
     
-    if (error) throw error;
-    
-    // Mettre à jour le localStorage pour la cohérence
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      try {
-        let products: ExtendedProduct[] = JSON.parse(storedProducts);
-        products = products.filter(p => p.id !== productId);
-        saveProductsToLocalStorage(products);
-      } catch (e) {
-        console.error('Erreur lors de la mise à jour du localStorage:', e);
-      }
+    if (error) {
+      console.error('Erreur lors de la suppression du produit dans Supabase:', error);
+      toast.warning("Produit supprimé localement uniquement (échec de Supabase)");
+      return true; // Still return true since we deleted from localStorage
     }
     
+    toast.success("Produit supprimé avec succès");
     return true;
   } catch (error) {
     console.error('Erreur lors de la suppression du produit:', error);
-    toast.error("Erreur de connexion: supprimé localement");
-    
-    // Fallback au localStorage
-    try {
-      const storedProducts = localStorage.getItem('products');
-      let products: ExtendedProduct[] = storedProducts ? JSON.parse(storedProducts) : [];
-      
-      products = products.filter(p => p.id !== productId);
-      saveProductsToLocalStorage(products);
-      
-      return true;
-    } catch (localError) {
-      console.error('Erreur lors du fallback local:', localError);
-      toast.error("Erreur lors de la suppression du produit");
-      return false;
-    }
+    toast.error(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return true; // Still return true since we deleted from localStorage
   }
 };
 
@@ -439,34 +288,8 @@ export const syncProductsToSupabase = async (): Promise<boolean> => {
       return false;
     }
 
-    // Convert data from camelCase to snake_case for Supabase
-    const supabaseData = products.map(product => ({
-      id: product.id,
-      name: product.name,
-      description: product.description || null,
-      price: product.price,
-      image: product.image || null,
-      secondary_image: product.secondaryImage || null,
-      sizes: product.sizes || [],
-      colors: product.colors || [],
-      type: product.type || 'standard',
-      product_type: product.productType || null,
-      sleeve_type: product.sleeveType || null,
-      linked_lotteries: product.linkedLotteries || [],
-      popularity: product.popularity || 0,
-      tickets: product.tickets || 1,
-      weight: product.weight || null,
-      delivery_price: product.deliveryPrice || null,
-      allow_customization: Boolean(product.allowCustomization),
-      default_visual_id: product.defaultVisualId || null,
-      default_visual_settings: product.defaultVisualSettings || null, // Use directly
-      visual_category_id: product.visualCategoryId || null,
-      print_areas: product.printAreas || [], // Added to handle the new column
-      brand: product.brand || null,
-      fit: product.fit || null,
-      gender: product.gender || null,
-      material: product.material || null,
-    }));
+    // Convert data for Supabase
+    const supabaseData = products.map(product => appToSupabaseProduct(product));
 
     // Upsert (insert or update automatically)
     const { error } = await supabase

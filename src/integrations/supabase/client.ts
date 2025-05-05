@@ -7,7 +7,16 @@ const supabaseUrl = 'https://aquxtqmotbiimahboqlo.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxdXh0cW1vdGJpaW1haGJvcWxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0NTA1MzcsImV4cCI6MjA2MjAyNjUzN30.znxP9tr78wQPVVFVMj2BLYaVOGHRzde9X0MUnRzeoxY';
 
 // Create a type-safe supabase client
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+export const supabase = createClient<Database>(
+  supabaseUrl, 
+  supabaseKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    }
+  }
+);
 
 // Define the valid table names
 export type ValidTableName = 
@@ -36,6 +45,25 @@ export const requiredTables: ValidTableName[] = [
   'user_roles'
 ];
 
+// Helper function to check table existence
+export async function checkTableExists(tableName: ValidTableName): Promise<boolean> {
+  try {
+    // Use the validTableName which has the correct type
+    const { data, error } = await supabase.from(tableName).select('*').limit(1);
+    
+    if (error) {
+      console.error(`Error checking table ${tableName}:`, error);
+      return false;
+    }
+    
+    // If no error, table exists
+    return true;
+  } catch (error) {
+    console.error(`Error checking table ${tableName}:`, error);
+    return false;
+  }
+}
+
 // Helper function to check supabase connection
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
@@ -45,7 +73,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
       return true;
     }
     
-    // Use a simple query instead of getUser to verify connection
+    // Use a simple query to verify connection
     const { data, error } = await supabase.from('lotteries').select('count').limit(1);
     
     if (error) {
@@ -74,24 +102,5 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     return false;
   }
 };
-
-// Helper function to check table existence
-export async function checkTableExists(tableName: ValidTableName): Promise<boolean> {
-  try {
-    // Use the validTableName which has the correct type
-    const { data, error } = await supabase.from(tableName).select('*').limit(1);
-    
-    if (error) {
-      console.error(`Error checking table ${tableName}:`, error);
-      return false;
-    }
-    
-    // If no error, table exists
-    return true;
-  } catch (error) {
-    console.error(`Error checking table ${tableName}:`, error);
-    return false;
-  }
-}
 
 export default supabase;

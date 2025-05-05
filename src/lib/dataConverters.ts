@@ -32,6 +32,7 @@ export const supabaseToAppProduct = (item: any): ExtendedProduct => {
     fit: item.fit,
     gender: item.gender,
     material: item.material,
+    participants: [] // Add empty participants array to fix the type error
   };
 };
 
