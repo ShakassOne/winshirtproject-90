@@ -1,5 +1,6 @@
 
 import { Visual, VisualCategory } from '@/types/visual';
+import { toast } from '@/lib/toast';
 
 /**
  * Validates that visual categories meet the required format
@@ -76,6 +77,7 @@ export const validateProducts = (products: any[]): boolean => {
 export const showValidationErrors = (isValid: boolean, entityName: string): boolean => {
   if (!isValid) {
     console.error(`${entityName} validation failed`);
+    toast.error(`Validation des ${entityName}s a échoué. Vérifiez le format de vos données.`);
     return false;
   }
   return true;

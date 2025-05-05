@@ -1,39 +1,33 @@
-
-// Define and export the Visual interface
+// Export the Visual type
 export interface Visual {
   id: number;
   name: string;
   description?: string;
   image: string;
-  imageUrl?: string; // For compatibility
-  categoryId?: number | null;
-  categoryName?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  category_id?: number;
+  category_name?: string;
   tags?: string[];
+  created_at?: string;
+  updated_at?: string;
+  image_url?: string; // For compatibility with Supabase schema
 }
 
-// Define and export the VisualCategory interface
+// Export the VisualCategory type
 export interface VisualCategory {
   id: number;
   name: string;
   description?: string;
   slug?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-// If this file doesn't exist yet, we'll create it
-export interface ProductVisualSettings {
+// Add exportable type for VisualSelection
+export interface VisualSelection {
+  visualId: number;
+  visualName: string;
+  visualImage: string;
+  position?: { x: number; y: number };
   scale?: number;
-  position?: {
-    x: number;
-    y: number;
-  };
   rotation?: number;
-  color?: string;
-  [key: string]: any; // Add index signature for flexibility with JSON data
 }
-
-// Add JSON type to handle Supabase JSON data
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];

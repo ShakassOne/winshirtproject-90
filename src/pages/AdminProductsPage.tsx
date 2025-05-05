@@ -75,7 +75,11 @@ const AdminProductsPage: React.FC = () => {
       const productToEdit = products.find(product => product.id === selectedProductId);
       if (productToEdit) {
         form.reset(productToEdit);
-        setSelectedLotteries(productToEdit.linkedLotteries || []);
+        // Convert lottery IDs from numbers to strings
+        const lotteryIds = productToEdit.linkedLotteries ? 
+          productToEdit.linkedLotteries.map(id => String(id)) : 
+          [];
+        setSelectedLotteries(lotteryIds);
       }
     }
   }, [selectedProductId, products, form]);
@@ -192,9 +196,13 @@ const AdminProductsPage: React.FC = () => {
     form.setValue("printAreas", filteredAreas);
   };
 
-  // Handler function that returns void instead of boolean for refreshProducts
+  // Handler function that converts boolean result to void return
   const handleRefreshProducts = async () => {
-    await refreshProducts();
+    try {
+      await refreshProducts();
+    } catch (error) {
+      console.error("Error refreshing products:", error);
+    }
   };
 
   const columns: ProductColumn[] = [
@@ -260,7 +268,7 @@ const AdminProductsPage: React.FC = () => {
               onClick={async () => {
                 const success = await syncProductsToSupabase();
                 if (success) {
-                  await refreshProducts();
+                  await handleRefreshProducts();
                 }
               }}
               className="border-winshirt-purple/30 text-white"

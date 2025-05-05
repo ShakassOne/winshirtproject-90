@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 import { validateVisualCategories } from '@/lib/syncValidator';
@@ -14,9 +15,9 @@ export interface SyncStatus {
   error?: string;
   remoteCount?: number;
   localCount?: number;
-  timestamp?: number; // Add timestamp
-  operation?: 'push' | 'pull'; // Add operation
-  tableName?: string; // Add tableName
+  timestamp?: number;
+  operation?: 'push' | 'pull';
+  tableName?: string;
 }
 
 // Get all valid table names
