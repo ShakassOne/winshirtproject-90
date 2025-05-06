@@ -28,6 +28,8 @@ import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import WinnerPage from './pages/WinnerPage';
 import ThemeToggle from './components/ThemeToggle';
 import Navbar from './components/Navbar';
+import Contact from './pages/Contact';
+import ProductDetailPage from './pages/ProductDetailPage';
 
 function App() {
   return (
@@ -46,6 +48,7 @@ function App() {
           <Route path="/admin/orders" element={<AdminOrdersPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
+          <Route path="/products/:id" element={<ProductDetailPage />} />
           <Route path="/lotteries" element={<LotteriesPage />} />
           <Route path="/lottery/:id" element={<LotteryDetailsPage />} />
           <Route path="/shop" element={<ShopPage />} />
@@ -53,6 +56,7 @@ function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
           <Route path="/winner/:lotteryId" element={<WinnerPage />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AdminNavigationHandler>

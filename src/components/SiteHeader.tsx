@@ -18,16 +18,16 @@ const SiteHeader: React.FC = () => {
           <Link to="/" className="text-white hover:text-winshirt-purple-light">
             Accueil
           </Link>
-          <Link to="/products" className="text-white hover:text-winshirt-purple-light">
+          <Link to="/shop" className="text-white hover:text-winshirt-purple-light">
             Boutique
           </Link>
           <Link to="/lotteries" className="text-white hover:text-winshirt-purple-light">
             Loteries
           </Link>
-          <Link to="/winners" className="text-white hover:text-winshirt-purple-light">
+          <Link to="/winner" className="text-white hover:text-winshirt-purple-light">
             Gagnants
           </Link>
-          <Link to="/about" className="text-white hover:text-winshirt-purple-light">
+          <Link to="/contact" className="text-white hover:text-winshirt-purple-light">
             À propos
           </Link>
         </nav>
