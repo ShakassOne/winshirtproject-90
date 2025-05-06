@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
 import StarBackground from '@/components/StarBackground';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import { syncProductsToSupabase } from '@/services/productService';
 import { syncClientsToSupabase } from '@/services/clientService';
-import { useLotteries } from '@/services/productService';
+import { useLotteries } from '@/services/lotteryService'; // Correction: import depuis lotteryService au lieu de productService
 import { syncOrdersToSupabase } from '@/services/orderService';
 import { syncVisualCategoriesToSupabase } from '@/api/visualApi';
 import { checkSupabaseConnection } from '@/lib/supabase';

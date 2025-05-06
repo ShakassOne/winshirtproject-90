@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "@/lib/toast";
 import { supabase } from "@/lib/supabase";
-import { Lottery, ExtendedLottery } from "@/types/lottery";
+import { Lottery, ExtendedLottery, Participant } from "@/types/lottery";
 
 // Hook pour récupérer les loteries
 export const useLotteries = (activeOnly: boolean = false) => {
@@ -223,6 +222,66 @@ export const deleteLottery = async (id: number): Promise<boolean> => {
     console.error('Error deleting lottery:', error);
     toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     
+    return false;
+  }
+};
+
+// Fonction pour tirer au sort un gagnant de loterie
+export const drawLotteryWinner = async (lotteryId: number, winner: Participant): Promise<boolean> => {
+  try {
+    // Mise à jour du statut de la loterie
+    await updateLottery(lotteryId, { 
+      status: 'completed',
+      // Autres champs à mettre à jour si nécessaire
+    });
+    
+    // Enregistrement du gagnant dans Supabase si la connexion est disponible
+    const connected = await supabase.from('lottery_winners').select('id').limit(1).then(() => true).catch(() => false);
+    
+    if (connected) {
+      // Enregistrer le gagnant dans la table lottery_winners
+      const { error } = await supabase.from('lottery_winners').insert({
+        lottery_id: lotteryId,
+        user_id: winner.id || null,
+        name: winner.name || 'Anonymous',
+        email: winner.email || '',
+        avatar: winner.avatar || '',
+        drawn_at: new Date().toISOString()
+      });
+      
+      if (error) {
+        console.error('Error recording lottery winner:', error);
+      }
+    }
+    
+    // Mise à jour du cache local
+    const storedLotteries = localStorage.getItem('lotteries');
+    if (storedLotteries) {
+      try {
+        const lotteries: ExtendedLottery[] = JSON.parse(storedLotteries);
+        const updatedLotteries = lotteries.map(lottery => {
+          if (lottery.id === lotteryId) {
+            return { 
+              ...lottery, 
+              status: 'completed',
+              winner: winner
+            };
+          }
+          return lottery;
+        });
+        
+        localStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+        sessionStorage.setItem('lotteries', JSON.stringify(updatedLotteries));
+      } catch (e) {
+        console.error('Error updating local winner data:', e);
+      }
+    }
+    
+    toast.success(`Le gagnant ${winner.name} a été tiré au sort!`);
+    return true;
+  } catch (error) {
+    console.error('Error drawing lottery winner:', error);
+    toast.error(`Erreur lors du tirage au sort: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     return false;
   }
 };

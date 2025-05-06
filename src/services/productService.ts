@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { ExtendedProduct } from "@/types/product";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/lib/toast";

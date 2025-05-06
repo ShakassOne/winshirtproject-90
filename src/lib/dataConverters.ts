@@ -1,6 +1,7 @@
 
 import { ExtendedProduct, PrintArea } from '@/types/product';
 import { Product } from '@/types/database.types';
+import { ExtendedLottery } from '@/types/lottery';
 
 export const appToSupabaseProduct = (product: ExtendedProduct): any => {
   // Convertir notre modèle d'application en format compatible avec Supabase
@@ -69,4 +70,43 @@ export const supabaseToAppProduct = (data: any): ExtendedProduct => {
   };
 
   return product;
+};
+
+// Ajout des fonctions manquantes pour la conversion des loteries
+export const appToSupabaseLottery = (lottery: ExtendedLottery): any => {
+  // Conversion de notre modèle d'application au format Supabase
+  const { id, participants, winner, ...rest } = lottery;
+
+  return {
+    ...rest,
+    id: id, // Gardez l'ID pour les mises à jour
+    target_participants: rest.targetParticipants,
+    current_participants: rest.currentParticipants || 0,
+    draw_date: rest.drawDate,
+    end_date: rest.endDate,
+    linked_products: Array.isArray(rest.linkedProducts) ? rest.linkedProducts : []
+  };
+};
+
+export const supabaseToAppLottery = (data: any): ExtendedLottery => {
+  // Conversion des données Supabase en notre modèle d'application
+  const lottery: ExtendedLottery = {
+    id: data.id,
+    title: data.title || '',
+    description: data.description || '',
+    image: data.image || '',
+    value: data.value || 0,
+    status: data.status || 'active',
+    featured: data.featured || false,
+    targetParticipants: data.target_participants || data.targetParticipants || 0,
+    currentParticipants: data.current_participants || data.currentParticipants || 0,
+    drawDate: data.draw_date || data.drawDate || null,
+    endDate: data.end_date || data.endDate || null,
+    linkedProducts: Array.isArray(data.linked_products) ? data.linked_products : 
+                   Array.isArray(data.linkedProducts) ? data.linkedProducts : [],
+    participants: [], // Les participants sont généralement chargés séparément
+    winner: null // De même pour le gagnant
+  };
+
+  return lottery;
 };

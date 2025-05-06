@@ -1,8 +1,8 @@
-
 import { ExtendedLottery, Participant } from "@/types/lottery";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/lib/toast';
-import { supabaseToAppLottery, appToSupabaseLottery } from "@/lib/dataConverters";
+// Suppression des imports incorrects
+// import { supabaseToAppLottery, appToSupabaseLottery } from "@/lib/dataConverters";
 
 // Function to test connection to Supabase
 export const testSupabaseConnection = async (): Promise<boolean> => {

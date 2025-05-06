@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/lib/toast';
@@ -116,12 +115,9 @@ const LotteriesAdminPage: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this lottery?')) {
       try {
         await deleteLottery(lotteryId);
-        // Refresh lotteries after deletion
-        const updatedLotteries = await refreshLotteries();
-        if (updatedLotteries) {
-          setLotteries(updatedLotteries);
-          setFilteredLotteries(updatedLotteries);
-        }
+        // Modification: Ne pas tester refreshLotteries() qui retourne void
+        await refreshLotteries();
+        fetchLotteries();
         
         setIsCreating(false);
         setSelectedLotteryId(null);
@@ -152,11 +148,9 @@ const LotteriesAdminPage: React.FC = () => {
       }
       
       // Refresh lotteries after creation/update
-      const updatedLotteries = await refreshLotteries();
-      if (updatedLotteries) {
-        setLotteries(updatedLotteries);
-        setFilteredLotteries(updatedLotteries);
-      }
+      await refreshLotteries();
+      // Modification: Ne pas tester refreshLotteries() qui retourne void
+      fetchLotteries(); // Appel direct de fetchLotteries au lieu de vérifier refreshLotteries
       
       // Reset form and state
       setIsCreating(false);
@@ -181,12 +175,9 @@ const LotteriesAdminPage: React.FC = () => {
       await drawLotteryWinner(lotteryId, winner);
       toast.success(`Winner drawn: ${winner.name}!`);
       
-      // Refresh lotteries after drawing winner
-      const updatedLotteries = await refreshLotteries();
-      if (updatedLotteries) {
-        setLotteries(updatedLotteries);
-        setFilteredLotteries(updatedLotteries);
-      }
+      // Modification: Ne pas tester refreshLotteries() qui retourne void
+      await refreshLotteries();
+      fetchLotteries();
     } catch (error) {
       console.error('Error drawing winner:', error);
       toast.error('Failed to draw winner');
@@ -200,12 +191,9 @@ const LotteriesAdminPage: React.FC = () => {
         await updateLottery(lotteryId, { ...lottery, featured });
         toast.success(`Lottery ${featured ? 'featured' : 'unfeatured'} successfully!`);
         
-        // Refresh lotteries after updating featured status
-        const updatedLotteries = await refreshLotteries();
-        if (updatedLotteries) {
-          setLotteries(updatedLotteries);
-          setFilteredLotteries(updatedLotteries);
-        }
+        // Modification: Ne pas tester refreshLotteries() qui retourne void
+        await refreshLotteries();
+        fetchLotteries();
       }
     } catch (error) {
       console.error('Error toggling featured status:', error);
