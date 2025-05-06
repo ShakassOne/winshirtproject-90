@@ -6,7 +6,7 @@ interface Column<T> {
   accessorKey?: string;
   id?: string;
   header: React.ReactNode;
-  cell?: (info: { row: T }) => React.ReactNode;
+  cell?: (info: { row: { original: T } }) => React.ReactNode;
 }
 
 interface DataTableProps<T> {
@@ -28,26 +28,27 @@ export function DataTable<T>({ columns, data }: DataTableProps<T>) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((row, rowIndex) => (
-            <TableRow key={rowIndex}>
-              {columns.map((column, columnIndex) => {
-                const cellValue = column.accessorKey
-                  ? row[column.accessorKey as keyof T]
-                  : undefined;
+          {data.length > 0 ? (
+            data.map((row, rowIndex) => (
+              <TableRow key={rowIndex}>
+                {columns.map((column, columnIndex) => {
+                  const cellValue = column.accessorKey
+                    ? row[column.accessorKey as keyof T]
+                    : undefined;
 
-                return (
-                  <TableCell key={column.id || column.accessorKey || columnIndex}>
-                    {column.cell
-                      ? column.cell({ row })
-                      : cellValue !== undefined
-                      ? String(cellValue)
-                      : null}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          ))}
-          {data.length === 0 && (
+                  return (
+                    <TableCell key={column.id || column.accessorKey || columnIndex}>
+                      {column.cell
+                        ? column.cell({ row: { original: row } })
+                        : cellValue !== undefined
+                        ? String(cellValue)
+                        : null}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))
+          ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center">
                 Aucune donnée disponible

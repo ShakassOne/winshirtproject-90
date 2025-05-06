@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -221,7 +222,12 @@ const AdminProductsPage: React.FC = () => {
       accessorKey: 'visualCategoryId',
       header: 'Catégorie',
       cell: ({ row }) => {
-        const visualCategoryId = row.original.visualCategoryId;
+        const product = row.original;
+        // Add null check before accessing visualCategoryId
+        if (!product || product.visualCategoryId === undefined || product.visualCategoryId === null) {
+          return 'Non défini';
+        }
+        const visualCategoryId = product.visualCategoryId;
         return visualCategories?.find(cat => cat.id === visualCategoryId)?.name || '';
       },
     },
