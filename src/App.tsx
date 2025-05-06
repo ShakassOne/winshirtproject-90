@@ -1,113 +1,70 @@
 
-import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { ThemeContextProvider } from './contexts/ThemeContext';
+import { ToastContainer, Slide } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import StarBackground from './components/StarBackground';
+import AdminNavigationHandler from './components/AdminNavigationHandler';
+import AuthHandler from './components/AuthHandler';
 
-// Layouts
-import Layout from './pages/Layout';
-
-// Pages
+// Import your pages
 import HomePage from './pages/HomePage';
-import ProductsPage from './pages/ProductsPage';
-import ProductDetailPage from './pages/ProductDetailPage';
-import LotteriesPage from './pages/LotteriesPage';
-import LotteryDetailPage from './pages/LotteryDetailPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import AdminPage from './pages/admin/AdminPlaceholder';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminLotteriesPage from './pages/AdminLotteriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
-import AdminVisualsPage from './pages/AdminVisualsPage';
-import AdminOrdersPage from './pages/AdminCommandesPage'; // Renamed from AdminOrdersPage
-import AdminClientsPage from './pages/AdminClientsPage';
+import AdminCustomizationPage from './pages/AdminCustomizationPage';
+import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
-import AdminSyncPage from './pages/AdminSyncPage';
-import AboutPage from './pages/AboutPage';
-import ContactPage from './pages/ContactPage';
-import HowItWorksPage from './pages/HowItWorksPage';
+import ProductPage from './pages/ProductPage';
 import NotFoundPage from './pages/NotFoundPage';
-import PreviousWinnersPage from './pages/PreviousWinnersPage';
-import TermsAndConditionsPage from './pages/TermsAndConditionsPage';
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import LotteriesPage from './pages/LotteriesPage';
+import LotteryDetailsPage from './pages/LotteryDetailsPage';
+import ShopPage from './pages/ShopPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import WinnerPage from './pages/WinnerPage';
 
 function App() {
-  // Add code to initialize the T-Shirt 3D product with print areas to localStorage if it doesn't exist
-  React.useEffect(() => {
-    const initializeProductWithPrintAreas = () => {
-      const storedProducts = localStorage.getItem('products');
-      if (storedProducts) {
-        const products = JSON.parse(storedProducts);
-        const tshirt3D = products.find((p: any) => p.name === "T-Shirt 3D" || p.id === 1);
-        
-        if (tshirt3D && (!tshirt3D.printAreas || tshirt3D.printAreas.length === 0)) {
-          // Add print areas to the T-Shirt 3D product
-          tshirt3D.allowCustomization = true;
-          tshirt3D.printAreas = [
-            {
-              id: Date.now(),
-              name: "Recto",
-              position: "front",
-              format: "custom",
-              bounds: {
-                x: 100,
-                y: 100,
-                width: 200,
-                height: 250
-              },
-              allowCustomPosition: true
-            },
-            {
-              id: Date.now() + 1,
-              name: "Verso",
-              position: "back",
-              format: "custom",
-              bounds: {
-                x: 100,
-                y: 100,
-                width: 200,
-                height: 250
-              },
-              allowCustomPosition: true
-            }
-          ];
-          
-          // Save the updated product back to localStorage
-          localStorage.setItem('products', JSON.stringify(products));
-          
-          console.log('Customization enabled for T-Shirt 3D product');
-        }
-      }
-    };
-    
-    initializeProductWithPrintAreas();
-  }, []);
-
   return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<HomePage />} />
-        <Route path="shop" element={<ProductsPage />} />
-        <Route path="products/:productId" element={<ProductDetailPage />} />
-        <Route path="lotteries" element={<LotteriesPage />} />
-        <Route path="lotteries/:lotteryId" element={<LotteryDetailPage />} />
-        <Route path="cart" element={<CartPage />} />
-        <Route path="checkout" element={<CheckoutPage />} />
-        <Route path="admin" element={<AdminPage />} />
-        <Route path="admin/lotteries" element={<AdminLotteriesPage />} />
-        <Route path="admin/products" element={<AdminProductsPage />} />
-        <Route path="admin/visuals" element={<AdminVisualsPage />} />
-        <Route path="admin/orders" element={<AdminOrdersPage />} />
-        <Route path="admin/clients" element={<AdminClientsPage />} />
-        <Route path="admin/settings" element={<AdminSettingsPage />} />
-        <Route path="admin/sync" element={<AdminSyncPage />} />
-        <Route path="about" element={<AboutPage />} />
-        <Route path="contact" element={<ContactPage />} />
-        <Route path="how-it-works" element={<HowItWorksPage />} />
-        <Route path="winners" element={<PreviousWinnersPage />} />
-        <Route path="terms" element={<TermsAndConditionsPage />} />
-        <Route path="privacy" element={<PrivacyPolicyPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+    <ThemeContextProvider>
+      <Router>
+        <AuthHandler />
+        <AdminNavigationHandler>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
+            <Route path="/admin/products" element={<AdminProductsPage />} />
+            <Route path="/admin/customization" element={<AdminCustomizationPage />} />
+            <Route path="/admin/orders" element={<AdminOrdersPage />} />
+            <Route path="/admin/settings" element={<AdminSettingsPage />} />
+            <Route path="/product/:id" element={<ProductPage />} />
+            <Route path="/lotteries" element={<LotteriesPage />} />
+            <Route path="/lottery/:id" element={<LotteryDetailsPage />} />
+            <Route path="/shop" element={<ShopPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+            <Route path="/winner/:lotteryId" element={<WinnerPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </AdminNavigationHandler>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+          transition={Slide}
+        />
+      </Router>
+    </ThemeContextProvider>
   );
 }
 

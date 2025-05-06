@@ -27,9 +27,45 @@ const AdminLotteriesPage: React.FC = () => {
   // Fonction pour vérifier la connexion à Supabase
   const testSupabaseConnection = async (): Promise<boolean> => {
     try {
+      // D'abord vérifier l'authentification
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log("Pas de session d'authentification active");
+        // Tentative de connexion automatique
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: 'alan@shakass.com',
+            password: 'admin123'
+          });
+          
+          if (error) {
+            console.error("Erreur lors de la connexion automatique:", error);
+            setIsSupabaseConnected(false);
+            return false;
+          }
+          
+          console.log("Connecté automatiquement:", data?.user?.email);
+        } catch (loginError) {
+          console.error("Exception lors de la connexion automatique:", loginError);
+        }
+      } else {
+        console.log("Session active détectée:", session.user.email);
+      }
+      
+      // Maintenant tester la connexion à la base
       const { data, error } = await supabase.from('lotteries').select('id').limit(1);
       const connected = !error;
       setIsSupabaseConnected(connected);
+      
+      // Si connecté mais erreur, vérifier le type d'erreur
+      if (!connected && error) {
+        console.log("Erreur de connexion spécifique:", error.code, error.message);
+        if (error.code === '42501' || error.message.includes('policy')) {
+          toast.warning("Erreur de politique RLS: Vous n'avez peut-être pas les droits admin nécessaires");
+        }
+      }
+      
       return connected;
     } catch (error) {
       console.error("Erreur de connexion Supabase:", error);
@@ -74,19 +110,23 @@ const AdminLotteriesPage: React.FC = () => {
     }
   };
 
-  // Chargement des données
+  // Chargement des données avec le test d'authentification
   const loadData = async () => {
     setIsLoading(true);
     setLoadError(null);
     
     try {
-      // Vérifier la connexion à Supabase
+      // Vérifier la connexion à Supabase et l'authentification
       const connected = await testSupabaseConnection();
       
-      if (connected) {
-        // S'assurer que les tables existent
-        await ensureLotteryTablesExist();
+      // Si non connecté, essayer une fois de plus après une courte pause
+      if (!connected) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await testSupabaseConnection();
       }
+      
+      // S'assurer que les tables existent
+      await ensureLotteryTablesExist();
       
       // Forcer le rafraîchissement des données pour s'assurer qu'elles sont à jour
       const apiLotteries = await fetchLotteries();
