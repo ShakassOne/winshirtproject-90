@@ -1,14 +1,14 @@
 
 export interface User {
-  id: number;
-  name: string;
+  id: string;
+  name?: string;
   email: string;
   role: 'user' | 'admin';
   registrationDate?: string;
   provider?: 'email' | 'facebook' | 'google';
   profilePicture?: string;
   phoneNumber?: string;
-  phone?: string; // Adding this property to fix the error
+  phone?: string; 
   socialMediaDetails?: {
     providerId?: string;
     displayName?: string;
@@ -20,11 +20,14 @@ export interface User {
 
 export interface AuthContextType {
   user: User | null;
+  session: any | null;
+  isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => void;
-  loginWithSocialMedia: (provider: 'facebook' | 'google') => void;
-  register: (name: string, email: string, password: string) => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<any>;
+  logout: () => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<any>;
+  loginWithSocialMedia: (provider: 'facebook' | 'google') => Promise<any>;
+  checkIfAdmin: (userId: string) => Promise<void>;
   getAllUsers: () => User[];
 }
