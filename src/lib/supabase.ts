@@ -108,16 +108,21 @@ export interface FtpConfig {
   username: string;
   password: string;
   directory: string;
+  enabled: boolean;
+  uploadEndpoint: string;
+  baseUrl: string;
 }
 
-export const ftpConfig = async (): Promise<FtpConfig> => {
-  return {
-    host: '',
-    port: 21,
-    username: '',
-    password: '',
-    directory: ''
-  };
+// Update ftpConfig to return an object directly instead of a promise
+export const ftpConfig: FtpConfig = {
+  host: '',
+  port: 21,
+  username: '',
+  password: '',
+  directory: '',
+  enabled: false,
+  uploadEndpoint: '',
+  baseUrl: ''
 };
 
 // Database schema validation

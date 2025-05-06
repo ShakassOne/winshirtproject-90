@@ -31,7 +31,7 @@ const convertSupabaseUser = (supabaseUser: SupabaseUser): User => {
     name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
     role: supabaseUser.user_metadata?.isAdmin ? 'admin' : 'user',
     registrationDate: supabaseUser.created_at,
-    provider: supabaseUser.app_metadata?.provider || 'email'
+    provider: (supabaseUser.app_metadata?.provider as 'email' | 'facebook' | 'google') || 'email'
   };
 };
 

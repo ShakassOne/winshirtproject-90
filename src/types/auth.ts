@@ -30,4 +30,8 @@ export interface AuthContextType {
   loginWithSocialMedia: (provider: 'facebook' | 'google') => Promise<any>;
   checkIfAdmin: (userId: string) => Promise<void>;
   getAllUsers: () => User[];
+  // Additional aliases for consistent naming
+  signIn?: (email: string, password: string) => Promise<any>;
+  signOut?: () => Promise<void>;
+  signUp?: (name: string, email: string, password: string) => Promise<any>;
 }

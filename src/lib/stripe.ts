@@ -1,3 +1,4 @@
+
 import { toast } from '@/lib/toast';
 import { simulateSendEmail } from '@/utils/mailUtils';
 
@@ -140,8 +141,61 @@ export const verifyPayment = async (sessionId: string) => {
   }
 };
 
+// Add initiateStripeCheckout function that was missing
+export const initiateStripeCheckout = async (items: any[]) => {
+  try {
+    if (!stripeClient) {
+      await initializeStripe();
+    }
+    
+    console.log('Initiating Stripe checkout for items:', items);
+    
+    // Calculate total amount from items
+    const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Create a mock checkout session
+    const session = await stripeClient.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: items.map(item => ({
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: item.name,
+            images: [item.image]
+          },
+          unit_amount: item.price,
+        },
+        quantity: item.quantity,
+      })),
+      mode: 'payment',
+      success_url: `${window.location.origin}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${window.location.origin}/cart`,
+      metadata: {
+        items: JSON.stringify(items.map(item => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity
+        })))
+      },
+    });
+    
+    return {
+      success: true,
+      url: session.url,
+      sessionId: session.id
+    };
+  } catch (error) {
+    console.error('Error initiating Stripe checkout:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+
 export default {
   initializeStripe,
   processPayment,
   verifyPayment,
+  initiateStripeCheckout
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +24,7 @@ import { HomeIntroConfig, SlideType, getHomeIntroConfig, saveHomeIntroConfig, up
 const HomeIntroManager: React.FC = () => {
   const [config, setConfig] = useState<HomeIntroConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeSlideId, setActiveSlideId] = useState<number | null>(null);
+  const [activeSlideId, setActiveSlideId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('slides');
   const [previewMode, setPreviewMode] = useState(false);
 
@@ -65,15 +66,15 @@ const HomeIntroManager: React.FC = () => {
   const handleAddSlide = () => {
     if (!config) return;
 
-    const newSlideId = Math.max(0, ...config.slides.map(s => s.id)) + 1;
+    // Convert IDs to numbers for comparison, then back to string for the new slide
+    const highestId = Math.max(0, ...config.slides.map(s => parseInt(s.id, 10)));
+    const newSlideId = String(highestId + 1);
+    
     const newSlide: SlideType = {
       id: newSlideId,
       title: "Nouveau slide",
       subtitle: "Description du nouveau slide",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb", // Required field
-      buttonText: "En savoir plus",
-      buttonLink: "/",
-      backgroundImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
+      backgroundImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb", 
       textColor: "#FFFFFF",
       order: config.slides.length + 1
     };
@@ -87,7 +88,7 @@ const HomeIntroManager: React.FC = () => {
   };
 
   // Supprimer un slide
-  const handleDeleteSlide = (id: number) => {
+  const handleDeleteSlide = (id: string) => {
     if (!config) return;
 
     if (config.slides.length <= 1) {
@@ -115,7 +116,7 @@ const HomeIntroManager: React.FC = () => {
   };
 
   // Mettre à jour un slide
-  const handleUpdateSlide = (id: number, field: keyof SlideType, value: string | number) => {
+  const handleUpdateSlide = (id: string, field: keyof SlideType, value: string | number) => {
     if (!config) return;
 
     const updatedSlides = config.slides.map(slide => 
@@ -129,7 +130,7 @@ const HomeIntroManager: React.FC = () => {
   };
 
   // Upload d'image pour le background
-  const handleImageUpload = async (id: number, file: File) => {
+  const handleImageUpload = async (id: string, file: File) => {
     try {
       const imageUrl = await uploadImage(file);
       if (imageUrl) {
@@ -155,7 +156,7 @@ const HomeIntroManager: React.FC = () => {
   };
 
   // Réorganiser les slides
-  const handleMoveSlide = (id: number, direction: 'up' | 'down') => {
+  const handleMoveSlide = (id: string, direction: 'up' | 'down') => {
     if (!config) return;
 
     const slideIndex = config.slides.findIndex(slide => slide.id === id);
