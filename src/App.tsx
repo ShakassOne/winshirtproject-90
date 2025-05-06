@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { ThemeContextProvider } from './contexts/ThemeContext';
 import { ToastContainer, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -32,50 +32,48 @@ import Navbar from './components/Navbar';
 function App() {
   return (
     <ThemeContextProvider>
-      <Router>
-        <StarBackground />
-        <Navbar />
-        <ThemeToggle />
-        <AuthHandler />
-        <AdminNavigationHandler>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
-            <Route path="/admin/products" element={<AdminProductsPage />} />
-            <Route path="/admin/customization" element={<AdminCustomizationPage />} />
-            <Route path="/admin/orders" element={<AdminOrdersPage />} />
-            <Route path="/admin/settings" element={<AdminSettingsPage />} />
-            <Route path="/product/:id" element={<ProductPage />} />
-            <Route path="/lotteries" element={<LotteriesPage />} />
-            <Route path="/lottery/:id" element={<LotteryDetailsPage />} />
-            <Route path="/shop" element={<ShopPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
-            <Route path="/winner/:lotteryId" element={<WinnerPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </AdminNavigationHandler>
-        
-        {/* Toast notifications system */}
-        <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="dark"
-          transition={Slide}
-        />
-        
-        {/* Shadcn Toaster */}
-        <Toaster />
-      </Router>
+      <StarBackground />
+      <Navbar />
+      <ThemeToggle />
+      <AuthHandler />
+      <AdminNavigationHandler>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/lotteries" element={<AdminLotteriesPage />} />
+          <Route path="/admin/products" element={<AdminProductsPage />} />
+          <Route path="/admin/customization" element={<AdminCustomizationPage />} />
+          <Route path="/admin/orders" element={<AdminOrdersPage />} />
+          <Route path="/admin/settings" element={<AdminSettingsPage />} />
+          <Route path="/product/:id" element={<ProductPage />} />
+          <Route path="/lotteries" element={<LotteriesPage />} />
+          <Route path="/lottery/:id" element={<LotteryDetailsPage />} />
+          <Route path="/shop" element={<ShopPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+          <Route path="/winner/:lotteryId" element={<WinnerPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </AdminNavigationHandler>
+      
+      {/* Toast notifications system */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+        transition={Slide}
+      />
+      
+      {/* Shadcn Toaster */}
+      <Toaster />
     </ThemeContextProvider>
   );
 }
