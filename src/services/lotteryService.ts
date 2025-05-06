@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "@/lib/toast";
 import { supabase } from "@/lib/supabase";
@@ -236,22 +237,26 @@ export const drawLotteryWinner = async (lotteryId: number, winner: Participant):
     });
     
     // Enregistrement du gagnant dans Supabase si la connexion est disponible
-    const connected = await supabase.from('lottery_winners').select('id').limit(1).then(() => true).catch(() => false);
-    
-    if (connected) {
-      // Enregistrer le gagnant dans la table lottery_winners
-      const { error } = await supabase.from('lottery_winners').insert({
-        lottery_id: lotteryId,
-        user_id: winner.id || null,
-        name: winner.name || 'Anonymous',
-        email: winner.email || '',
-        avatar: winner.avatar || '',
-        drawn_at: new Date().toISOString()
-      });
+    try {
+      const connected = await supabase.from('lottery_winners').select('id').limit(1);
       
-      if (error) {
-        console.error('Error recording lottery winner:', error);
+      if (connected) {
+        // Enregistrer le gagnant dans la table lottery_winners
+        const { error } = await supabase.from('lottery_winners').insert({
+          lottery_id: lotteryId,
+          user_id: winner.id || null,
+          name: winner.name || 'Anonymous',
+          email: winner.email || '',
+          avatar: winner.avatar || '',
+          drawn_at: new Date().toISOString()
+        });
+        
+        if (error) {
+          console.error('Error recording lottery winner:', error);
+        }
       }
+    } catch (err) {
+      console.error('Could not connect to Supabase:', err);
     }
     
     // Mise à jour du cache local
