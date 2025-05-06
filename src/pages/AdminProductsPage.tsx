@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -115,6 +114,7 @@ const AdminProductsPage: React.FC = () => {
 
   const onSubmit = async (data: any) => {
     try {
+      console.log("Submitting form with data:", data);
       if (isCreating) {
         await createProduct(data);
         toast.success('Produit créé avec succès!');
@@ -278,15 +278,10 @@ const AdminProductsPage: React.FC = () => {
             </Button>
             <Button
               variant="outline"
-              onClick={async () => {
-                const success = await syncProductsToSupabase();
-                if (success) {
-                  await handleRefreshProducts();
-                }
-              }}
+              onClick={handleRefreshProducts}
               className="border-winshirt-purple/30 text-white"
             >
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              <RefreshCw className="h-4 w-4 mr-2" />
               Synchroniser
             </Button>
           </div>

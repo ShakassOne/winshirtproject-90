@@ -1,173 +1,228 @@
-import { ExtendedLottery, Lottery, NewLottery, Participant } from '@/types/lottery';
-import { supabase } from '@/lib/supabase';
-import React, { useState, useEffect } from 'react';
 
-const mapLottery = (lottery: any): ExtendedLottery => {
-  return {
-    ...lottery,
-    current_participants: lottery.current_participants || 0, // Provide a default value
-  };
-};
+import { useState, useEffect } from 'react';
+import { toast } from "@/lib/toast";
+import { supabase } from "@/lib/supabase";
+import { Lottery, ExtendedLottery } from "@/types/lottery";
 
-const fetchLotteriesFromSupabase = async (activeOnly: boolean = false): Promise<ExtendedLottery[]> => {
-  let query = supabase.from('lotteries').select('*');
-  
-  if (activeOnly) {
-    query = query.eq('status', 'active');
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error("Error fetching lotteries from Supabase:", error);
-    throw error;
-  }
-
-  return data.map(mapLottery);
-};
-
-const fetchAndCacheLotteries = async (forceRefresh: boolean = false): Promise<ExtendedLottery[]> => {
-  console.log("Getting lotteries from Supabase, activeOnly:", false);
-  
-  // Check if we have cached lotteries in localStorage and if we're not forcing a refresh
-  if (!forceRefresh) {
-    const cachedLotteries = localStorage.getItem('lotteries');
-    if (cachedLotteries) {
-      try {
-        const parsedLotteries = JSON.parse(cachedLotteries);
-        if (Array.isArray(parsedLotteries) && parsedLotteries.length > 0) {
-          console.log("Using cached lotteries");
-          return parsedLotteries as ExtendedLottery[];
-        }
-      } catch (error) {
-        console.error("Error parsing cached lotteries:", error);
-      }
-    }
-  }
-  
-  // If no cache or forcing refresh, fetch from Supabase
-  try {
-    console.log("Attempting to fetch lotteries from Supabase...");
-    const fetchedLotteries = await fetchLotteriesFromSupabase();
-    // Use fetchedLotteries instead of fetchLotteries
-    const lotteries = fetchedLotteries;
-    
-    // Cache the lotteries in localStorage
-    localStorage.setItem('lotteries', JSON.stringify(lotteries));
-    console.log(`Cached ${lotteries.length} lotteries in localStorage`);
-    
-    return lotteries;
-  } catch (error) {
-    console.error("Error fetching lotteries:", error);
-    return [];
-  }
-};
-
-export const useLotteries = () => {
+// Hook pour récupérer les loteries
+export const useLotteries = (activeOnly: boolean = false) => {
   const [lotteries, setLotteries] = useState<ExtendedLottery[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const loadLotteries = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const lotteries = await fetchAndCacheLotteries();
-        setLotteries(lotteries);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load lotteries');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadLotteries();
-  }, []);
-
-  const refreshLotteries = async () => {
+  const fetchLotteries = async () => {
     setLoading(true);
-    setError(null);
     try {
-      const lotteries = await fetchAndCacheLotteries(true);
-      setLotteries(lotteries);
-      return lotteries; // Return the lotteries for direct use
-    } catch (e: any) {
-      setError(e.message || 'Failed to refresh lotteries');
-      return [];
+      console.log(`Getting lotteries from Supabase, activeOnly: ${activeOnly}`);
+      
+      // Essayer de récupérer du cache d'abord
+      const cachedLotteries = localStorage.getItem('lotteries');
+      let localLotteries: ExtendedLottery[] = [];
+      
+      if (cachedLotteries) {
+        console.log('Using cached lotteries');
+        localLotteries = JSON.parse(cachedLotteries);
+        // Filtrer si nécessaire
+        if (activeOnly) {
+          localLotteries = localLotteries.filter(lottery => lottery.status === 'active');
+        }
+        setLotteries(localLotteries);
+      }
+      
+      // Ensuite, essayer de récupérer de Supabase
+      let query = supabase.from('lotteries').select('*');
+      
+      if (activeOnly) {
+        query = query.eq('status', 'active');
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      // Convertir les données au format ExtendedLottery
+      if (data && data.length > 0) {
+        const extendedLotteries: ExtendedLottery[] = data.map(lottery => ({
+          ...lottery,
+          participants: [], // On remplira cela plus tard si nécessaire
+          winner: null
+        }));
+        
+        // Mettre à jour le localStorage
+        localStorage.setItem('lotteries', JSON.stringify(extendedLotteries));
+        
+        // Mettre à jour l'état
+        setLotteries(extendedLotteries);
+        
+        console.log(`Fetched ${extendedLotteries.length} lotteries`);
+      }
+      
+    } catch (err) {
+      console.error("Error fetching lotteries:", err);
+      
+      // Déjà défini à partir du cache, donc ne pas mettre à jour l'erreur
+      if (!lotteries.length) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  return { lotteries, loading, error, refreshLotteries };
+  useEffect(() => {
+    fetchLotteries();
+  }, [activeOnly]);
+
+  return { lotteries, loading, error, refreshLotteries: fetchLotteries };
 };
 
+// Fonction pour récupérer toutes les loteries
 export const getLotteries = async (activeOnly: boolean = false): Promise<ExtendedLottery[]> => {
   try {
-    return await fetchAndCacheLotteries(activeOnly);
+    // Essayer d'abord de récupérer les loteries de Supabase
+    let query = supabase.from('lotteries').select('*');
+    
+    if (activeOnly) {
+      query = query.eq('status', 'active');
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      // Convertir en ExtendedLottery
+      const lotteries: ExtendedLottery[] = data.map(lottery => ({
+        ...lottery,
+        participants: [],
+        winner: null
+      }));
+      
+      // Mettre en cache
+      localStorage.setItem('lotteries', JSON.stringify(lotteries));
+      
+      return lotteries;
+    }
+    
+    // Fallback au localStorage
+    const cachedLotteries = localStorage.getItem('lotteries');
+    if (cachedLotteries) {
+      const parsed = JSON.parse(cachedLotteries) as ExtendedLottery[];
+      return activeOnly ? parsed.filter(lottery => lottery.status === 'active') : parsed;
+    }
+    
+    return [];
   } catch (error) {
     console.error("Error getting lotteries:", error);
+    
+    // Fallback au localStorage
+    const cachedLotteries = localStorage.getItem('lotteries');
+    if (cachedLotteries) {
+      const parsed = JSON.parse(cachedLotteries) as ExtendedLottery[];
+      return activeOnly ? parsed.filter(lottery => lottery.status === 'active') : parsed;
+    }
+    
     return [];
   }
 };
 
-export const createLottery = async (lottery: NewLottery): Promise<Lottery | null> => {
-  const { data, error } = await supabase
-    .from('lotteries')
-    .insert([lottery])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error creating lottery:", error);
-    throw error;
+// Créer une nouvelle loterie
+export const createLottery = async (lottery: Omit<Lottery, 'id'>): Promise<Lottery | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('lotteries')
+      .insert([lottery])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (!data) throw new Error('No data returned after creating lottery');
+    
+    // Mettre à jour le cache
+    const cachedLotteries = localStorage.getItem('lotteries');
+    let lotteries: ExtendedLottery[] = [];
+    
+    if (cachedLotteries) {
+      lotteries = JSON.parse(cachedLotteries);
+    }
+    
+    const newLottery: ExtendedLottery = {
+      ...data,
+      participants: [],
+      winner: null
+    };
+    
+    lotteries.push(newLottery);
+    localStorage.setItem('lotteries', JSON.stringify(lotteries));
+    
+    toast.success(`Loterie "${newLottery.title}" créée avec succès`);
+    
+    return newLottery;
+  } catch (error) {
+    console.error('Error creating lottery:', error);
+    toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    
+    return null;
   }
-
-  // Force refresh after creating a lottery
-  await fetchAndCacheLotteries(true);
-
-  return data;
 };
 
-export const updateLottery = async (id: number, updates: Partial<Lottery>): Promise<Lottery | null> => {
-  const { data, error } = await supabase
-    .from('lotteries')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error updating lottery:", error);
-    throw error;
+// Mettre à jour une loterie
+export const updateLottery = async (id: number, lottery: Partial<Lottery>): Promise<boolean> => {
+  try {
+    // Mettre à jour dans Supabase
+    const { error } = await supabase
+      .from('lotteries')
+      .update(lottery)
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    // Mettre à jour le cache
+    const cachedLotteries = localStorage.getItem('lotteries');
+    if (cachedLotteries) {
+      let lotteries: ExtendedLottery[] = JSON.parse(cachedLotteries);
+      lotteries = lotteries.map(l => l.id === id ? { ...l, ...lottery } : l);
+      localStorage.setItem('lotteries', JSON.stringify(lotteries));
+    }
+    
+    toast.success('Loterie mise à jour avec succès');
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating lottery:', error);
+    toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    
+    return false;
   }
-
-  // Force refresh after updating a lottery
-  await fetchAndCacheLotteries(true);
-
-  return data;
 };
 
+// Supprimer une loterie
 export const deleteLottery = async (id: number): Promise<boolean> => {
-  const { error } = await supabase
-    .from('lotteries')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error("Error deleting lottery:", error);
-    throw error;
+  try {
+    // Supprimer de Supabase
+    const { error } = await supabase
+      .from('lotteries')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    // Mettre à jour le cache
+    const cachedLotteries = localStorage.getItem('lotteries');
+    if (cachedLotteries) {
+      let lotteries: ExtendedLottery[] = JSON.parse(cachedLotteries);
+      lotteries = lotteries.filter(l => l.id !== id);
+      localStorage.setItem('lotteries', JSON.stringify(lotteries));
+    }
+    
+    toast.success('Loterie supprimée avec succès');
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting lottery:', error);
+    toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    
+    return false;
   }
-
-  // Force refresh after deleting a lottery
-  await fetchAndCacheLotteries(true);
-
-  return true;
-};
-
-export const drawLotteryWinner = async (lotteryId: number, winner: Participant): Promise<Participant | null> => {
-  // Logic to draw a winner (simplified for example)
-  console.log(`Drawing winner for lottery ID: ${lotteryId}`, winner);
-  return winner;
 };

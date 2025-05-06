@@ -510,6 +510,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_user_role: {
+        Args: { _role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
       increment_lottery_participants: {
         Args: { lottery_id_param: number }
         Returns: undefined
