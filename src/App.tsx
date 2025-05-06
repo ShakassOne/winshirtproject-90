@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ThemeContextProvider } from './contexts/ThemeContext';
 import { ToastContainer, Slide } from 'react-toastify';
@@ -6,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import StarBackground from './components/StarBackground';
 import AdminNavigationHandler from './components/AdminNavigationHandler';
 import AuthHandler from './components/AuthHandler';
+import { Toaster } from '@/components/ui/toaster';
 
 // Import your pages
 import HomePage from './pages/HomePage';
@@ -24,11 +26,16 @@ import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import WinnerPage from './pages/WinnerPage';
+import ThemeToggle from './components/ThemeToggle';
+import Navbar from './components/Navbar';
 
 function App() {
   return (
     <ThemeContextProvider>
       <Router>
+        <StarBackground />
+        <Navbar />
+        <ThemeToggle />
         <AuthHandler />
         <AdminNavigationHandler>
           <Routes>
@@ -50,6 +57,8 @@ function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </AdminNavigationHandler>
+        
+        {/* Toast notifications system */}
         <ToastContainer
           position="top-right"
           autoClose={5000}
@@ -63,6 +72,9 @@ function App() {
           theme="dark"
           transition={Slide}
         />
+        
+        {/* Shadcn Toaster */}
+        <Toaster />
       </Router>
     </ThemeContextProvider>
   );
