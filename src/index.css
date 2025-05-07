@@ -1,0 +1,510 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 260 60% 55%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 225 70% 40%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 195 80% 50%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.75rem;
+    --glare-position: 50% 50%;
+  }
+.dark text-xl {
+    color: white;
+}
+  .dark {
+    --background: 260 50% 7%;
+    --foreground: 0 0% 98%;
+    --card: 260 40% 15%;
+    --card-foreground: 0 0% 98%;
+    --popover: 260 40% 15%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 260 60% 55%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 225 70% 40%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 260 30% 20%;
+    --muted-foreground: 0 0% 80%;
+    --accent: 195 80% 50%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 260 30% 20%;
+    --input: 260 30% 20%;
+    --ring: 195 80% 50%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background antialiased pt-24;
+  }
+
+  /* Styles pour le mode sombre */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark body {
+    color: white;
+  }
+
+  /* Styles pour le mode clair */
+  body:not(.dark) {
+    color: #131313;
+  }
+
+  /* Assurer la lisibilité du texte en fonction du mode */
+  .text-theme-content {
+    @apply text-foreground;
+  }
+
+  /* Background stars effect - enhanced to make it more visible */
+  .stars-container {
+    position: fixed !important;
+    width: 100% !important;
+    height: 170vh !important;
+    top: 0 !important;
+    left: 0 !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    z-index: -1 !important;
+    display: block !important;
+    pointer-events: none !important;
+  }
+
+  .stars-container .star {
+    position: absolute !important;
+    top: 0 !important;
+    height: 2px !important;
+    background: linear-gradient(45deg, #9b87f5, rgba(155, 135, 245, 0.2)) !important;
+    border-radius: 50% !important;
+    filter: drop-shadow(0 0 6px #9b87f5) !important;
+    animation: stars-move 100s linear infinite !important;
+    display: block !important;
+  }
+
+  .stars-container .star::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: #9b87f5 !important;
+    border-radius: 50% !important;
+    filter: drop-shadow(0 0 10px #9b87f5) !important;
+  }
+
+  /* Force stars to appear on all browsers */
+  #root::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background);
+    z-index: -2;
+  }
+
+  @keyframes stars-move {
+    0% {
+      transform: translateY(-100vh);
+    }
+    100% {
+      transform: translateY(100vh);
+    }
+  }
+
+  /* Animation for burger menu icon */
+  @keyframes menu-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(90deg); }
+  }
+
+  @keyframes menu-rotate-reverse {
+    from { transform: rotate(90deg); }
+    to { transform: rotate(0deg); }
+  }
+
+  h1 { @apply text-3xl md:text-4xl font-bold; }
+  h2 { @apply text-2xl md:text-3xl font-semibold; }
+  h3 { @apply text-xl md:text-2xl font-semibold; }
+  p { @apply text-base md:text-lg; }
+}
+
+@layer components {
+  /* Product card with enhanced glassmorphism and 3D tilt */
+  .product-card {
+    @apply relative overflow-hidden transition-all duration-300;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+    will-change: transform;
+  }
+  
+  .product-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom right,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05)
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .product-card img {
+    @apply w-full object-cover rounded-t-lg transition-transform duration-300;
+  }
+  
+  .product-card:hover {
+    box-shadow: 16px 16px 30px rgba(0, 0, 0, 0.35);
+  }
+  
+  /* JS Tilt creates this element for the glare effect */
+  .js-tilt-glare {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  /* Enhanced glassmorphism with 3D tilt effect */
+  .enhanced-glass-card {
+    @apply border rounded-xl overflow-hidden transition-all duration-500 relative cursor-pointer;
+    background:  linear-gradient(to bottom right, #23c8d626, #44c91a1a);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.6);
+    border-left: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 10px 10px 20px rgba(0, 0, 0, 0.2);
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    will-change: transform, box-shadow;
+  }
+  
+  .enhanced-glass-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom right,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05)
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .card-glare {
+    background: radial-gradient(
+      circle at var(--glare-position),
+      rgba(255, 255, 255, 0.8) 0%,
+      rgba(255, 255, 255, 0) 60%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 2;
+    mix-blend-mode: overlay;
+  }
+  
+  .enhanced-glass-card:hover .card-glare {
+    opacity: 0.6;
+  }
+  
+  .enhanced-glass-card:hover {
+    box-shadow: 20px 20px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Nouvel effet glassmorphism avec animation au survol */
+  .nft-glass-card {
+    @apply border border-white/20 rounded-xl overflow-hidden transition-all duration-500 relative;
+    background: linear-gradient(0deg, rgba(26, 31, 44, 0.8) 0%, rgba(41, 18, 77, 0.5) 100%);
+    box-shadow: 0 7px 20px 5px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+  
+  .nft-glass-card::before {
+    position: absolute;
+    content: "";
+    box-shadow: 0 0 100px 40px rgba(255, 255, 255, 0.05);
+    top: -10%;
+    left: -100%;
+    transform: rotate(-45deg);
+    height: 60rem;
+    transition: 0.7s all;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .nft-glass-card:hover {
+    @apply border-white/40;
+    box-shadow: 0 7px 50px 10px rgba(0, 0, 0, 0.6);
+    transform: scale(1.015);
+    filter: brightness(1.2);
+  }
+  
+  .nft-glass-card:hover::before {
+    filter: brightness(0.5);
+    top: -100%;
+    left: 200%;
+  }
+  
+  .nft-glass-card img {
+    @apply transition-all duration-500;
+    z-index: 2;
+    position: relative;
+  }
+  
+  .nft-glass-card:hover img {
+    filter: brightness(1.1);
+  }
+
+  .nav-link {
+    @apply hover:text-winshirt-blue-light transition-colors text-lg relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-winshirt-blue-light after:transition-all after:duration-300 hover:after:w-full;
+  }
+
+  .dark .nav-link {
+    @apply text-white;
+  }
+
+  body:not(.dark) .nav-link {
+    color: hsl(var(--foreground));
+  }
+
+  .nav-link.active {
+    @apply text-winshirt-blue-light font-semibold after:w-full;
+  }
+
+  /* Effet glassmorphism amélioré pour le menu flottant */
+  .glass-effect {
+    @apply bg-winshirt-space/40 backdrop-blur-lg border border-winshirt-purple/30 shadow-lg shadow-winshirt-purple/20;
+  }
+
+  /* Menu flottant */
+  .floating-menu {
+    @apply rounded-2xl shadow-xl shadow-winshirt-purple/10 transition-all duration-300 hover:shadow-2xl hover:shadow-winshirt-purple/20;
+  }
+
+  /* Reste des styles */
+  .btn-primary {
+    @apply bg-winshirt-purple text-white hover:bg-winshirt-purple-dark transition-colors rounded-full px-8 py-3 text-lg font-medium;
+  }
+
+  .btn-secondary {
+    @apply bg-winshirt-blue text-white hover:bg-winshirt-blue-dark transition-colors rounded-full px-8 py-3 text-lg font-medium;
+  }
+
+  .winshirt-card {
+    @apply rounded-xl bg-gradient-to-br from-winshirt-purple/20 to-winshirt-blue/20 backdrop-blur-sm border border-winshirt-purple/30 overflow-hidden;
+  }
+
+  .winshirt-card-hover {
+    @apply hover:shadow-[0_0_30px_rgba(155,135,245,0.4)] transition-all duration-300 hover:-translate-y-1;
+  }
+
+  /* Style pour le menu transparent avec effet de flou */
+  .menu-gray {
+    background-color: rgba(26, 31, 44, 0.5) !important;
+  }
+
+  /* Style pour les pastilles de taille et couleur */
+  .size-circle {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #222222; /* Arrière-plan noir pour la pastille de taille */
+    color: white; /* Texte blanc */
+  }
+  
+  .color-circle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .color-circle-inner {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+  }
+  
+  .size-circle.selected, 
+  .color-circle.selected {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px #9b87f5, 0 0 10px rgba(155, 135, 245, 0.5);
+  }
+
+  /* Override z-index for toast */
+  div[role="status"] {
+    z-index: 9999 !important;
+  }
+
+  /* Force Sonner toast container to be visible */
+  .sonner-toast-container {
+    z-index: 9999 !important;
+    position: fixed !important;
+  }
+
+  /* Fix pour les sliders en plein écran */
+  .fullscreen-slider {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    margin-top: -6rem !important; /* Supprime la marge/padding du haut */
+    padding-top: 0 !important;
+  }
+
+  /* Améliorations pour les selects et dropdowns */
+  select {
+    @apply bg-card text-card-foreground border-input;
+  }
+  
+  select option {
+    @apply bg-popover text-popover-foreground;
+  }
+  
+  /* Corrections pour z-index des dropdowns */
+  [role="combobox"],
+  [role="listbox"],
+  [role="option"],
+  .select-content,
+  [data-radix-popper-content-wrapper] {
+    z-index: 50 !important;
+  }
+}
+
+/* Ajout de styles supplémentaires pour les indicateurs de pagination en forme de cercles numérotés */
+.carousel-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.pagination-item {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid rgba(155, 135, 245, 0.5);
+  background: transparent;
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.pagination-item.active {
+  background: rgba(155, 135, 245, 0.3);
+  border-color: rgb(155, 135, 245);
+  transform: scale(1.15);
+}
+input,
+textarea,
+select {
+  color: white; /* Définit la couleur du texte saisi en blanc */
+}
+
+/* --- Optionnel : Style du texte de placeholder (la suggestion qui apparaît dans le champ vide) --- */
+/* Cela permet aussi de mettre le texte de suggestion en blanc (ou une couleur proche) */
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: white; /* Couleur du texte de placeholder en blanc */
+  opacity: 1; /* S'assure que l'opacité n'est pas réduite par défaut dans certains navigateurs */
+}
+
+/* Règles spécifiques pour la compatibilité navigateur des placeholders */
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder,
+select::-webkit-input-placeholder {
+  color: white;
+}
+
+input::-moz-placeholder,
+textarea::-moz-placeholder,
+select::-moz-placeholder {
+  color: white;
+  opacity: 1; /* Important pour Firefox */
+}
+
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder,
+select:-ms-input-placeholder {
+  color: white;
+}
+
+input::-ms-input-placeholder,
+textarea::-ms-input-placeholder,
+select::-ms-input-placeholder {
+  color: white;
+}
+.dark button, input, optgroup, select, textarea {
+    color: white;
+}
+.font-medium {
+    font-weight: 500;
+    color: white;
+}
+.font-bold {
+    font-weight: 700;
+    color: white;
+}
+.font-semibold {
+    font-weight: 600;
+    color: white;
+}
+.text-sm {
+  color: white;
+}
+.text-xs truncate {
+  color: white;
+}
+.flex items-center mt-2 {
+  color: white;
+}
+.dark bg-white {
+    background-color: black;
+}
