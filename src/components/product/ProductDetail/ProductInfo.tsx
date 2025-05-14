@@ -10,13 +10,19 @@ interface ProductInfoProps {
 }
 
 const ProductInfo: React.FC<ProductInfoProps> = ({ name, price, description, tickets }) => {
+  // Ensure price is a number and format it safely
+  const formatPrice = (value: number | undefined): string => {
+    if (value === undefined || isNaN(value)) return '0.00';
+    return value.toFixed(2);
+  };
+
   return (
     <div className="space-y-6">
       {/* Product Title and Price */}
       <div>
         <h1 className="text-3xl font-bold text-white">{name}</h1>
         <div className="flex items-center mt-2">
-          <span className="text-2xl font-bold text-winshirt-purple-light">{price.toFixed(2)} €</span>
+          <span className="text-2xl font-bold text-winshirt-purple-light">{formatPrice(price)} €</span>
           {tickets && tickets > 0 && (
             <span className="ml-2 bg-winshirt-purple text-white text-sm px-2 py-1 rounded-full flex items-center">
               <Ticket size={14} className="mr-1" />

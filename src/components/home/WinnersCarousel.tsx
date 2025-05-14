@@ -27,6 +27,12 @@ const WinnersCarousel: React.FC<WinnersCarouselProps> = ({ winners }) => {
     });
   };
 
+  // Safe formatting for currency values
+  const formatCurrency = (value: number | undefined): string => {
+    if (value === undefined || isNaN(value)) return '0';
+    return value.toString();
+  };
+
   // If no winners, display a message
   if (!winners || winners.length === 0) {
     return (
@@ -58,7 +64,7 @@ const WinnersCarousel: React.FC<WinnersCarouselProps> = ({ winners }) => {
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80"></div>
                   <div className="absolute bottom-0 left-0 p-4 text-white">
                     <h3 className="text-2xl font-bold">{winner.lotteryTitle}</h3>
-                    <p className="text-xl">Value: ${winner.lotteryValue}</p>
+                    <p className="text-xl">Value: ${formatCurrency(winner.lotteryValue)}</p>
                   </div>
                 </div>
                 <CardContent className="p-4 winshirt-card">

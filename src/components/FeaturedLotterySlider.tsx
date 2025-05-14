@@ -104,6 +104,11 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
     return num < 10 ? `0${num}` : `${num}`;
   };
 
+  // Ensure we have a valid value before using toFixed
+  const formatCurrency = (value: number | undefined): string => {
+    return value !== undefined ? value.toFixed(2) : '0.00';
+  };
+
   return (
     <div className="relative w-full h-screen bg-gradient-to-b from-winshirt-space to-winshirt-space-dark overflow-hidden fullscreen-slider">
       {/* Background image with overlay */}
@@ -130,7 +135,7 @@ const FeaturedLotterySlider: React.FC<FeaturedLotterySliderProps> = ({ lotteries
           
           <div className="flex items-center gap-6 mb-8">
             <div className="bg-winshirt-purple/20 border border-winshirt-purple/40 rounded-lg px-6 py-3 white-text">
-              <span className="text-xl font-semibold">{currentLottery.value.toFixed(2)} €</span>
+              <span className="text-xl font-semibold">{formatCurrency(currentLottery.value)} €</span>
             </div>
             
             <div className="flex items-center text-winshirt-purple-light gap-2">

@@ -49,6 +49,12 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
     });
   };
 
+  // Safe formatting for currency values
+  const formatCurrency = (value: number | undefined): string => {
+    if (value === undefined || isNaN(value)) return '0.00';
+    return value.toFixed(2);
+  };
+
   const getStatusStyle = () => {
     switch (lottery.status) {
       case 'active':
@@ -102,7 +108,7 @@ const LotteryCard: React.FC<LotteryCardProps> = ({ lottery }) => {
           <div className="flex justify-between text-sm text-gray-300 mb-2 relative z-10">
             <span className="flex items-center gap-1">
               <Gift size={16} className="text-winshirt-purple-light" />
-              {lottery.value.toFixed(2)} €
+              {formatCurrency(lottery.value)} €
             </span>
             <span className="flex items-center gap-1">
               <Calendar size={16} className="text-winshirt-blue-light" />

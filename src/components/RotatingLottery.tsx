@@ -35,6 +35,12 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
     return Math.min((current / target) * 100, 100);
   };
 
+  // Safe formatting for currency values
+  const formatCurrency = (value: number | undefined): string => {
+    if (value === undefined || isNaN(value)) return '0.00';
+    return value.toFixed(2);
+  };
+
   // If no lotteries, display a message
   if (!lotteries || lotteries.length === 0) {
     return (
@@ -77,7 +83,7 @@ const RotatingLottery: React.FC<RotatingLotteryProps> = ({ lotteries }) => {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute top-4 right-4 bg-winshirt-blue-dark/80 white-text px-4 py-1.5 rounded-full text-base font-medium z-20">
-                        {lottery.value.toFixed(2)} €
+                        {formatCurrency(lottery.value)} €
                       </div>
                       
                       {/* Lottery details overlay */}
